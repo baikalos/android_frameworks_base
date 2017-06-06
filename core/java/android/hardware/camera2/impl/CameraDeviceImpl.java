@@ -1519,7 +1519,6 @@ public class CameraDeviceImpl extends CameraDevice
 
     private boolean checkPrivilegedAppList() {
         String packageName = ActivityThread.currentOpPackageName();
-        String packageList = SystemProperties.get("persist.vendor.camera.privapp.list");
 
         /**
          * e.g.
@@ -1530,6 +1529,8 @@ public class CameraDeviceImpl extends CameraDevice
         if (!cameraPackage.equals("") && packageName.toLowerCase().contains(cameraPackage.toLowerCase())) {
             return true;
         }
+
+        String packageList = SystemProperties.get("persist.vendor.camera.privapp.list");
 
         if (packageList.length() > 0) {
             TextUtils.StringSplitter splitter = new TextUtils.SimpleStringSplitter(',');
@@ -1585,6 +1586,17 @@ public class CameraDeviceImpl extends CameraDevice
                         inputConfig.getWidth() + "x" + inputConfig.getHeight() + " is not valid");
             }
         } else {
+<<<<<<< HEAD
+=======
+            /*
+             * don't check input format and size,
+             * if the package name is in the white list
+             */
+            if (isPrivilegedApp()) {
+                Log.w(TAG, "ignore input format/size check for white listed app");
+                return;
+            }
+>>>>>>> 599b3c1559d5 (Camera: Skip stream size check for whitelisted apps..)
 
             if (!checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/false) &&
                     !checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/true)) {
