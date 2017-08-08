@@ -305,8 +305,6 @@ public class SurfaceUtils {
 
     private static boolean isPrivilegedApp() {
         String packageName = ActivityThread.currentOpPackageName();
-        List<String> packageList = new ArrayList<>(Arrays.asList(
-                SystemProperties.get("persist.vendor.camera.privapp.list", ",").split(",")));
 
         /**
          * e.g.
@@ -317,6 +315,9 @@ public class SurfaceUtils {
         if (!cameraPackage.equals("") && packageName.toLowerCase().contains(cameraPackage.toLowerCase()) ) {
             return true;
         }
+
+        List<String> packageList = new ArrayList<>(Arrays.asList(
+                SystemProperties.get("persist.vendor.camera.privapp.list", ",").split(",")));
 
         // Append packages from lineage-sdk resources
         Resources res = ActivityThread.currentApplication().getResources();
