@@ -1586,8 +1586,6 @@ public class CameraDeviceImpl extends CameraDevice
                         inputConfig.getWidth() + "x" + inputConfig.getHeight() + " is not valid");
             }
         } else {
-<<<<<<< HEAD
-=======
             /*
              * don't check input format and size,
              * if the package name is in the white list
@@ -1596,15 +1594,16 @@ public class CameraDeviceImpl extends CameraDevice
                 Log.w(TAG, "ignore input format/size check for white listed app");
                 return;
             }
->>>>>>> 599b3c1559d5 (Camera: Skip stream size check for whitelisted apps..)
 
-            if (!checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/false) &&
-                    !checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/true)) {
-                if (isPrivilegedApp()) return;
-                throw new IllegalArgumentException("Input config with format " +
-                        inputFormat + " and size " + inputConfig.getWidth() + "x" +
-                        inputConfig.getHeight() + " not supported by camera id " + mCameraId);
-
+            boolean skipInputConfigCheck =
+                SystemProperties.getBoolean("persist.camera.skip_input_config_check", true);
+            if (!skipInputConfigCheck) {
+              if (!checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/false) &&
+                      !checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/true)) {
+                  throw new IllegalArgumentException("Input config with format " +
+                          inputFormat + " and size " + inputConfig.getWidth() + "x" +
+                          inputConfig.getHeight() + " not supported by camera id " + mCameraId);
+              }
             }
         }
     }
