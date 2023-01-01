@@ -111,7 +111,7 @@
          alpha compositing functionality in hardware.  If set, the window
          manager will disable alpha trasformation in animations where not
          strictly needed. -->
-    <bool name="config_sf_limitedAlpha">false</bool>
+    <bool name="config_sf_limitedAlpha">true</bool>
 
     <!-- Default value used to block data calls if ims is not
          connected.  If you use the ims apn DCT will block
@@ -122,7 +122,7 @@
          at performing a blur.  Used by parts of the UI to turn off
          the blur effect where it isn't worth the performance hit.
          As of Honeycomb, blurring is not supported anymore. -->
-    <bool name="config_sf_slowBlur">true</bool>
+    <bool name="config_sf_slowBlur">false</bool>
 
     <!-- Flag indicating that the media framework should support playing of sounds on volume
          key usage.  This adds noticeable additional overhead to volume key processing, so
@@ -207,7 +207,7 @@
          is true (in that case this is assumed true as well).  It can allow you to tune down
          your device's memory use without going to the point of causing applications to turn
          off features. -->
-    <bool name="config_avoidGfxAccel">false</bool>
+    <bool name="config_avoidGfxAccel">true</bool>
 
     <!-- Device configuration setting the minfree tunable in the lowmemorykiller in the kernel.
          A high value will cause the lowmemorykiller to fire earlier, keeping more memory
