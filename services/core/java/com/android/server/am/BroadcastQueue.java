@@ -39,6 +39,10 @@ import static com.android.server.am.ActivityManagerDebugConfig.POSTFIX_MU;
 import static com.android.server.am.OomAdjuster.OOM_ADJ_REASON_FINISH_RECEIVER;
 import static com.android.server.am.OomAdjuster.OOM_ADJ_REASON_START_RECEIVER;
 
+import static android.os.PowerExemptionManager.REASON_SYSTEM_ALLOW_LISTED;
+import static android.os.PowerExemptionManager.TEMPORARY_ALLOW_LIST_TYPE_FOREGROUND_SERVICE_ALLOWED;
+import static android.os.PowerExemptionManager.TEMPORARY_ALLOW_LIST_TYPE_NONE;
+
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -88,6 +92,8 @@ import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.LocalServices;
 import com.android.server.pm.UserManagerInternal;
+
+import com.android.server.BaikalSystemService;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -1086,13 +1092,24 @@ public final class BroadcastQueue {
 
     void maybeScheduleTempAllowlistLocked(int uid, BroadcastRecord r,
             @Nullable BroadcastOptions brOptions) {
-        if (brOptions == null || brOptions.getTemporaryAppAllowlistDuration() <= 0) {
+
+        long baikalDuration = BaikalSystemService.getTemporaryAppWhitelistDuration(uid, r.intent.getPackage(), r.intent.getAction()); 
+
+        if (baikalDuration <= 0 && (brOptions == null || brOptions.getTemporaryAppAllowlistDuration() <= 0)) {
             return;
         }
-        long duration = brOptions.getTemporaryAppAllowlistDuration();
-        final @TempAllowListType int type = brOptions.getTemporaryAppAllowlistType();
-        final @ReasonCode int reasonCode = brOptions.getTemporaryAppAllowlistReasonCode();
-        final String reason = brOptions.getTemporaryAppAllowlistReason();
+        long brDuration = brOptions == null ? 0 : brOptions.getTemporaryAppAllowlistDuration();
+        long duration = baikalDuration >= brDuration ? baikalDuration : brDuration;
+
+        @TempAllowListType int type = TEMPORARY_ALLOW_LIST_TYPE_NONE;
+        @ReasonCode int reasonCode = REASON_SYSTEM_ALLOW_LISTED;
+        String reason = "baikal push";
+
+        if( brOptions != null ) {
+            type = brOptions.getTemporaryAppAllowlistType();
+            reasonCode = brOptions.getTemporaryAppAllowlistReasonCode();
+            brOptions.getTemporaryAppAllowlistReason();
+        } 
 
         if (duration > Integer.MAX_VALUE) {
             duration = Integer.MAX_VALUE;
@@ -1859,8 +1876,12 @@ public final class BroadcastQueue {
                     + info.activityInfo + ", callingUid = " + r.callingUid + ", uid = "
                     + receiverUid);
         }
-        final boolean isActivityCapable =
-                (brOptions != null && brOptions.getTemporaryAppAllowlistDuration() > 0);
+
+        long baikalDuration = BaikalSystemService.getTemporaryAppWhitelistDuration(receiverUid, r.intent.getPackage(), r.intent.getAction()); 
+
+        boolean isActivityCapable =
+                (baikalDuration > 0 || (brOptions != null && brOptions.getTemporaryAppAllowlistDuration() > 0));
+
         maybeScheduleTempAllowlistLocked(receiverUid, r, brOptions);
 
         // Report that a component is used for explicit broadcasts.
