@@ -64,7 +64,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import com.android.internal.util.crdroid.PixelPropsUtils;
+//import com.android.internal.util.crdroid.PixelPropsUtils;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 /**
  * Base class for implementing application instrumentation code.  When running
@@ -1245,7 +1246,8 @@ public class Instrumentation {
                 .instantiateApplication(cl, className);
         app.attach(context);
         String packageName = context.getPackageName();
-        PixelPropsUtils.setProps(packageName);
+        //PixelPropsUtils.setProps(packageName);
+	BaikalSpoofer.maybeSpoofProperties(app,context);
         return app;
     }
     
@@ -1264,7 +1266,8 @@ public class Instrumentation {
         Application app = (Application)clazz.newInstance();
         app.attach(context);
         String packageName = context.getPackageName();
-        PixelPropsUtils.setProps(packageName);
+        //PixelPropsUtils.setProps(packageName);
+	BaikalSpoofer.maybeSpoofProperties(app,context);
         return app;
     }
 
