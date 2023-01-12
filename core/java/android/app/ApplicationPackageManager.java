@@ -142,6 +142,8 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 /** @hide */
 public class ApplicationPackageManager extends PackageManager {
     private static final String TAG = "ApplicationPackageManager";
@@ -856,7 +858,17 @@ public class ApplicationPackageManager extends PackageManager {
 
     @Override
     public boolean hasSystemFeature(String name, int version) {
-        String packageName = ActivityThread.currentPackageName();
+	String packageName = ActivityThread.currentPackageName();
+	int spoof = BaikalSpoofer.maybeSpoofFeature(packageName,name,version);
+	switch( spoof ) {
+	    case 1:
+		return true;
+	    case 0:
+		return false;
+	    default:
+	    	return mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version));
+	}
+	/*
         if (packageName != null &&
                 packageName.equals("com.google.android.apps.photos") &&
                 SystemProperties.getBoolean("persist.sys.pixelprops.gphotos", true)) {
@@ -870,6 +882,7 @@ public class ApplicationPackageManager extends PackageManager {
             return false;
         }
         return mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version));
+	*/
     }
 
     /** @hide */
