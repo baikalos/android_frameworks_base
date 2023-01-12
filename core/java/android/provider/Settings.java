@@ -12051,6 +12051,39 @@ public final class Settings {
          */
         public static final String FACE_UNLOCK_METHOD = "face_unlock_method";
 
+
+        /* Start of BaikalOS Secure Settings */
+
+        /**
+         * BaikalOS Trust Settings
+         * @hide
+         */
+
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_ENABLED = "baikalos_trust_enabled";
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_ALWAYS = "baikalos_trust_always";
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_BTLE_DEV = "baikalos_trust_btle_dev";
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_WIFI_DEV = "baikalos_trust_wifi_dev";
+
+        /* End of BaikalOS Secure Settings */
+
         /**
          * Control whether GMS is enabled for this user.
          * @hide
@@ -17013,6 +17046,66 @@ public final class Settings {
          * @hide
          */
         public static final String BLUETOOTH_OFF_TIMEOUT = "bluetooth_off_timeout";
+
+        /* Start of BaikalOS Global Settings */
+
+        /**
+         * This preference enables Aggressive Idle.
+         * @hide
+         */
+        public static final String BAIKALOS_AGGRESSIVE_IDLE = "baikalos_aggressive_idle";
+
+        /**
+         * This preference enables Extreme Idle.
+         * @hide
+         */
+        public static final String BAIKALOS_EXTREME_IDLE = "baikalos_extreme_idle";
+
+        /**
+         * This preference enables Aggressive Device Idle.
+         * @hide
+         */
+        public static final String BAIKALOS_AGGRESSIVE_DEVICE_IDLE = "baikalos_aggressive_device_idle";
+
+        /**
+         * This preference disables Alarm wakeups for regular apps.
+         * @hide
+         */
+        public static final String BAIKALOS_ALARMS_NOWAKE = "baikalos_alarms_no_wake";
+
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_KILL_IN_BACKGROUND = "baikalos_kill_in_background";
+
+        /**
+         * This preference enables Stamina Mode.
+         * @hide
+         */
+        public static final String BAIKALOS_STAMINA_ENABLED = "baikalos_stamina_enabled";
+
+        /**
+         * This preference enables Hide GMS powersave option.
+         * @hide
+         */
+        public static final String BAIKALOS_UNRESTRICTED_NET = "baikalos_unrestricted_net";
+
+        /**
+         * This preference holds SBC priority option.
+         * @hide
+         */
+        public static final String BAIKALOS_BT_SBC_PRIORITY = "baikalos_bt_sbc_priority";
+
+        /**
+         * This preference enabled forced fullscreen Incoming Call UI
+         * @hide
+         */
+        public static final String BAIKALOS_HEADSUP_INCALL = "baikalos_headsup_incall";
+
+        /* End of BaikalOS Global Settings */
+
 
         /**
          * Keys we no longer back up under the current schema, but want to continue to
