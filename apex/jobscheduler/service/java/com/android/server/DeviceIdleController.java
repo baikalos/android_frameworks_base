@@ -30,6 +30,7 @@ import android.app.ActivityManager;
 import android.app.ActivityManagerInternal;
 import android.app.AlarmManager;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -37,6 +38,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.PackageManagerInternal;
+import android.database.ContentObserver;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -76,6 +78,7 @@ import android.os.SystemClock;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.provider.DeviceConfig;
+import android.provider.Settings;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.AtomicFile;
@@ -355,6 +358,11 @@ public class DeviceIdleController extends SystemService
     private boolean mScreenLocked;
     @GuardedBy("this")
     private int mNumBlockingConstraints = 0;
+
+    @GuardedBy("this")
+    private boolean mUnrestrictedNetwork;
+    @GuardedBy("this")
+    private boolean mAggressiveDeviceIdleMode;
 
     /**
      * Constraints are the "handbrakes" that stop the device from moving into a lower state until
@@ -945,7 +953,7 @@ public class DeviceIdleController extends SystemService
      * global Settings. Any access to this class or its fields should be done while
      * holding the DeviceIdleController lock.
      */
-    public final class Constants implements DeviceConfig.OnPropertiesChangedListener {
+    public final class Constants extends ContentObserver implements DeviceConfig.OnPropertiesChangedListener {
         // Key names stored in the settings value.
         private static final String KEY_FLEX_TIME_SHORT = "flex_time_short";
         private static final String KEY_LIGHT_IDLE_AFTER_INACTIVE_TIMEOUT =
@@ -1283,9 +1291,13 @@ public class DeviceIdleController extends SystemService
          */
         public boolean USE_WINDOW_ALARMS = DEFAULT_USE_WINDOW_ALARMS;
 
+        private final ContentResolver mResolver;
         private final boolean mSmallBatteryDevice;
 
-        public Constants() {
+        public Constants(Handler handler, ContentResolver resolver) {
+            super(handler);
+            mResolver = resolver;
+
             mSmallBatteryDevice = ActivityManager.isSmallBatteryDevice();
             if (mSmallBatteryDevice) {
                 INACTIVE_TIMEOUT = DEFAULT_INACTIVE_TIMEOUT_SMALL_BATTERY;
@@ -1295,6 +1307,54 @@ public class DeviceIdleController extends SystemService
                     JobSchedulerBackgroundThread.getExecutor(), this);
             // Load all the constants.
             onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_DEVICE_IDLE));
+
+            mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE),
+                    false, this);
+
+            mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_UNRESTRICTED_NET),
+                    false, this);
+
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_DEVICE_IDLE));
+            
+            mAggressiveDeviceIdleMode = Settings.Global.getInt(mResolver,
+                    Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE,0) == 1;
+
+            mUnrestrictedNetwork = Settings.Global.getInt(mResolver,
+                    Settings.Global.BAIKALOS_UNRESTRICTED_NET,0) == 1;
+
+            if( mAggressiveDeviceIdleMode ) {
+                LIGHT_IDLE_AFTER_INACTIVE_TIMEOUT = 3 * 60 * 1000L;
+                INACTIVE_TIMEOUT = 15 * 1000L;
+                MIN_LIGHT_MAINTENANCE_TIME = 15 * 1000L;
+                MIN_DEEP_MAINTENANCE_TIME = 10 * 1000L;
+                SENSING_TIMEOUT = 0;
+                LOCATING_TIMEOUT = 0;
+                LOCATION_ACCURACY = 500;
+                MOTION_INACTIVE_TIMEOUT = 0;
+                IDLE_AFTER_INACTIVE_TIMEOUT = 0L;
+                IDLE_PENDING_TIMEOUT = 3000L;
+                MAX_IDLE_PENDING_TIMEOUT = 15000L;
+
+                IDLE_TIMEOUT = 30 * 60 * 1000L;
+                MAX_IDLE_TIMEOUT = 360 * 60 * 1000L;
+
+                IDLE_FACTOR = 2f;
+                MIN_TIME_TO_ALARM = 1 * 1000L;
+                MAX_TEMP_APP_ALLOWLIST_DURATION_MS = 10 * 1000L;
+                MMS_TEMP_APP_ALLOWLIST_DURATION_MS = 10 * 1000L;
+                SMS_TEMP_APP_ALLOWLIST_DURATION_MS = 10 * 1000L;
+                NOTIFICATION_ALLOWLIST_DURATION_MS = 10 * 1000L;
+                //WAIT_FOR_UNLOCK = false;
+
+                PRE_IDLE_FACTOR_LONG = 1.67f;
+                PRE_IDLE_FACTOR_SHORT = 0.33f;
+            }
         }
 
 
@@ -1660,7 +1720,7 @@ public class DeviceIdleController extends SystemService
                         lightChanged = mLocalPowerManager.setLightDeviceIdleMode(true);
                     }
                     try {
-                        mNetworkPolicyManager.setDeviceIdleMode(true);
+                        mNetworkPolicyManager.setDeviceIdleMode(!mUnrestrictedNetwork);
                         mBatteryStats.noteDeviceIdleMode(msg.what == MSG_REPORT_IDLE_ON
                                 ? BatteryStats.DEVICE_IDLE_MODE_DEEP
                                 : BatteryStats.DEVICE_IDLE_MODE_LIGHT, null, Process.myUid());
@@ -2167,9 +2227,10 @@ public class DeviceIdleController extends SystemService
             return mConnectivityManager;
         }
 
-        Constants getConstants(DeviceIdleController controller) {
+        Constants getConstants(DeviceIdleController controller, Handler handler,
+                ContentResolver resolver) {
             if (mConstants == null) {
-                mConstants = controller.new Constants();
+                mConstants = controller.new Constants(handler,resolver);
             }
             return mConstants;
         }
@@ -2318,7 +2379,7 @@ public class DeviceIdleController extends SystemService
                 }
             }
 
-            mConstants = mInjector.getConstants(this);
+            mConstants = mInjector.getConstants(this, mHandler, getContext().getContentResolver());
 
             readConfigFileLocked();
             updateWhitelistAppIdsLocked();
@@ -3851,6 +3912,7 @@ public class DeviceIdleController extends SystemService
 
     @GuardedBy("this")
     void handleMotionDetectedLocked(long timeout, String type) {
+        if( mAggressiveDeviceIdleMode ) return;
         if (mStationaryListeners.size() > 0) {
             postStationaryStatusUpdated();
             cancelMotionTimeoutAlarmLocked();
@@ -3915,7 +3977,7 @@ public class DeviceIdleController extends SystemService
 
     void startMonitoringMotionLocked() {
         if (DEBUG) Slog.d(TAG, "startMonitoringMotionLocked()");
-        if (mMotionSensor != null && !mMotionListener.active) {
+        if (mMotionSensor != null && !mMotionListener.active && !mAggressiveDeviceIdleMode) {
             mMotionListener.registerLocked();
         }
     }
@@ -3926,7 +3988,7 @@ public class DeviceIdleController extends SystemService
      */
     private void maybeStopMonitoringMotionLocked() {
         if (DEBUG) Slog.d(TAG, "maybeStopMonitoringMotionLocked()");
-        if (mMotionSensor != null && mStationaryListeners.size() == 0) {
+        if (mMotionSensor != null && (mStationaryListeners.size() == 0 || mAggressiveDeviceIdleMode)) {
             if (mMotionListener.active) {
                 mMotionListener.unregisterLocked();
                 cancelMotionTimeoutAlarmLocked();
@@ -4079,6 +4141,7 @@ public class DeviceIdleController extends SystemService
 
     private void scheduleMotionRegistrationAlarmLocked() {
         if (DEBUG) Slog.d(TAG, "scheduleMotionRegistrationAlarmLocked");
+        if( mAggressiveDeviceIdleMode ) return;
         long nextMotionRegistrationAlarmTime =
                 mInjector.getElapsedRealtime() + mConstants.MOTION_INACTIVE_TIMEOUT / 2;
         if (mConstants.USE_WINDOW_ALARMS) {
@@ -4095,6 +4158,7 @@ public class DeviceIdleController extends SystemService
 
     private void scheduleMotionTimeoutAlarmLocked() {
         if (DEBUG) Slog.d(TAG, "scheduleMotionAlarmLocked");
+        if( mAggressiveDeviceIdleMode ) return;
         long nextMotionTimeoutAlarmTime =
                 mInjector.getElapsedRealtime() + mConstants.MOTION_INACTIVE_TIMEOUT;
         if (mConstants.USE_WINDOW_ALARMS) {
@@ -4111,6 +4175,7 @@ public class DeviceIdleController extends SystemService
     @GuardedBy("this")
     void scheduleSensingTimeoutAlarmLocked(long delay) {
         if (DEBUG) Slog.d(TAG, "scheduleSensingAlarmLocked(" + delay + ")");
+        if( mAggressiveDeviceIdleMode ) return;
         mNextSensingTimeoutAlarmTime = SystemClock.elapsedRealtime() + delay;
         if (mConstants.USE_WINDOW_ALARMS) {
             mAlarmManager.setWindow(AlarmManager.ELAPSED_REALTIME_WAKEUP,
