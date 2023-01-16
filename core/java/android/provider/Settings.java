@@ -17104,6 +17104,24 @@ public final class Settings {
          */
         public static final String BAIKALOS_HEADSUP_INCALL = "baikalos_headsup_incall";
 
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_BPCHARGE_FORCE = "baikalos_bpcharge_force";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        public static final String BAIKALOS_APP_PROFILES = "baikalos_app_profiles";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        public static final String BAIKALOS_APP_PROFILES_BACKUP = "baikalos_app_profiles_backup";
+
         /* End of BaikalOS Global Settings */
 
 

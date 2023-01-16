@@ -32,6 +32,9 @@ public class AppProfile {
     public @Nullable String mPackageName;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public int mUid;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public int mBrightness;
 
     @SuppressLint({"MutableBareField","InternalField"})
@@ -41,7 +44,7 @@ public class AppProfile {
     public @Nullable String mThermalProfile;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public int mFrameRate;
+    public int mMaxFrameRate;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public int mMinFrameRate;
@@ -122,6 +125,15 @@ public class AppProfile {
     public boolean mFullScreen;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBAFRecv;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBAFSend;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mSonification;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     private static AppProfile currentAppProfile = new AppProfile();
@@ -144,7 +156,7 @@ public class AppProfile {
         mPerfProfile = "default";
         mThermalProfile = "default";
         mPackageName = "";
-        mFrameRate = 0;
+        mMaxFrameRate = 0;
         mMinFrameRate = 0;
         mRotation = 0;
         mAudioMode = 0;
@@ -159,40 +171,30 @@ public class AppProfile {
         mOverrideFonts = false;
     }
 
-    public boolean isDefault() {
-        if( mBrightness == 0 &&
-            !mReader &&
-            !mPinned &&
-            !mStamina &&
-            !mRequireGms &&
-            !mBootDisabled &&
-            mFrameRate == 0 &&
-            mMinFrameRate == 0 &&
-            mBackground == 0 &&
-            !mIgnoreAudioFocus &&
-            mRotation == 0 &&
-            mAudioMode == 0 &&
-            mSpoofDevice == 0 &&
-            mCamera == 0 &&
-            !mKeepOn &&
-            !mPreventHwKeyAttestation &&
-            !mHideDevMode &&
-            mPerformanceLevel == 0 &&
-            mMicrophone == 0 &&
-            mFreezerMode == 0 &&
-            !mDisableWakeup &&
-            !mDisableJobs &&
-            !mAllowIdleNetwork &&
-            mFileAccess == 0 &&
-            !mForcedScreenshot &&
-            !mOverrideFonts &&
-            !mFullScreen &&
-            ( mPerfProfile == null || "default".equals(mPerfProfile) ) &&
-            ( mThermalProfile == null || "default".equals(mThermalProfile) ) ) return true;
-        return false;
+    public AppProfile(@Nullable String packageName) {
+
+        if( packageName == null ) mPackageName = "";
+        else mPackageName = packageName;
+
+        mPerfProfile = "default";
+        mThermalProfile = "default";
+        mMaxFrameRate = 0;
+        mMinFrameRate = 0;
+        mRotation = 0;
+        mAudioMode = 0;
+        mSpoofDevice = 0;
+        mCamera = 0;
+        mPerformanceLevel = 0;
+        mMicrophone = 0;
+        mFreezerMode = 0;
+        mSystemWhitelisted = false;
+        mAllowIdleNetwork = false;
+        mFileAccess = 0;
+        mOverrideFonts = false;
     }
 
-    public void update(@Nullable AppProfile profile) {
+    public AppProfile(@Nullable AppProfile profile) {
+        if( profile == null ) return;
         this.mPackageName = profile.mPackageName;
         this.mBrightness = profile.mBrightness;
         this.mReader = profile.mReader;
@@ -200,7 +202,7 @@ public class AppProfile {
         this.mStamina = profile.mStamina;
         this.mRequireGms = profile.mRequireGms;
         this.mBootDisabled = profile.mBootDisabled;
-        this.mFrameRate = profile.mFrameRate;
+        this.mMaxFrameRate = profile.mMaxFrameRate;
         this.mMinFrameRate = profile.mMinFrameRate;
         this.mBackground = profile.mBackground;
         this.mIgnoreAudioFocus = profile.mIgnoreAudioFocus;
@@ -223,6 +225,81 @@ public class AppProfile {
         this.mForcedScreenshot = profile.mForcedScreenshot;
         this.mOverrideFonts = profile.mOverrideFonts;
         this.mFullScreen = profile.mFullScreen;
+        this.mBAFRecv = profile.mBAFRecv;
+        this.mBAFSend = profile.mBAFSend;
+        this.mSonification = profile.mSonification;
+    }
+
+    public boolean isDefault() {
+        if( mBrightness == 0 &&
+            !mReader &&
+            !mPinned &&
+            !mStamina &&
+            !mRequireGms &&
+            !mBootDisabled &&
+            mMaxFrameRate == 0 &&
+            mMinFrameRate == 0 &&
+            mBackground == 0 &&
+            !mIgnoreAudioFocus &&
+            mRotation == 0 &&
+            mAudioMode == 0 &&
+            mSpoofDevice == 0 &&
+            mCamera == 0 &&
+            !mKeepOn &&
+            !mPreventHwKeyAttestation &&
+            !mHideDevMode &&
+            mPerformanceLevel == 0 &&
+            mMicrophone == 0 &&
+            mFreezerMode == 0 &&
+            !mDisableWakeup &&
+            !mDisableJobs &&
+            !mAllowIdleNetwork &&
+            mFileAccess == 0 &&
+            !mForcedScreenshot &&
+            !mOverrideFonts &&
+            !mFullScreen &&
+            !mBAFRecv &&
+            !mBAFSend &&
+            !mSonification &&
+            ( mPerfProfile == null || "default".equals(mPerfProfile) ) &&
+            ( mThermalProfile == null || "default".equals(mThermalProfile) ) ) return true;
+        return false;
+    }
+
+    public void update(@Nullable AppProfile profile) {
+        this.mPackageName = profile.mPackageName;
+        this.mBrightness = profile.mBrightness;
+        this.mReader = profile.mReader;
+        this.mPinned = profile.mPinned;
+        this.mStamina = profile.mStamina;
+        this.mRequireGms = profile.mRequireGms;
+        this.mBootDisabled = profile.mBootDisabled;
+        this.mMaxFrameRate = profile.mMaxFrameRate;
+        this.mMinFrameRate = profile.mMinFrameRate;
+        this.mBackground = profile.mBackground;
+        this.mIgnoreAudioFocus = profile.mIgnoreAudioFocus;
+        this.mRotation = profile.mRotation;
+        this.mAudioMode = profile.mAudioMode;
+        this.mSpoofDevice = profile.mSpoofDevice;
+        this.mCamera = profile.mCamera;
+        this.mKeepOn = profile.mKeepOn;
+        this.mPreventHwKeyAttestation = profile.mPreventHwKeyAttestation;
+        this.mHideDevMode = profile.mHideDevMode;
+        this.mPerformanceLevel = profile.mPerformanceLevel;
+        this.mMicrophone = profile.mMicrophone;
+        this.mFreezerMode = profile.mFreezerMode;
+        this.mPerfProfile = profile.mPerfProfile;
+        this.mThermalProfile = profile.mThermalProfile;
+        this.mDisableWakeup = profile.mDisableWakeup;
+        this.mDisableJobs = profile.mDisableJobs;
+        this.mAllowIdleNetwork = profile.mAllowIdleNetwork;
+        this.mFileAccess = profile.mFileAccess;
+        this.mForcedScreenshot = profile.mForcedScreenshot;
+        this.mOverrideFonts = profile.mOverrideFonts;
+        this.mFullScreen = profile.mFullScreen;
+        this.mBAFRecv = profile.mBAFRecv;
+        this.mBAFSend = profile.mBAFSend;
+        this.mSonification = profile.mSonification;
     }
 
 
@@ -234,7 +311,7 @@ public class AppProfile {
         if( ! "default".equals(mThermalProfile) ) result += "," + "tp=" + (mThermalProfile != null ? mThermalProfile : "");
         if( mReader ) result +=  "," + "rm=" + mReader;
         if( mPinned ) result +=  "," + "pd=" + mPinned;
-        if( mFrameRate != 0 ) result +=  "," + "fr=" + mFrameRate;
+        if( mMaxFrameRate != 0 ) result +=  "," + "fr=" + mMaxFrameRate;
         if( mMinFrameRate != 0 ) result +=  "," + "mfr=" + mMinFrameRate;
         if( mStamina ) result +=  "," + "as=" + mStamina;
         if( mBackground != 0 ) result +=  "," + "bk=" + mBackground;
@@ -258,6 +335,9 @@ public class AppProfile {
         if( mDisableJobs ) result +=  "," + "dj=" + mDisableJobs;
         if( mOverrideFonts ) result +=  "," + "of=" + mOverrideFonts;
         if( mFullScreen ) result +=  "," + "fs=" + mFullScreen;
+        if( mBAFRecv ) result +=  "," + "bafr=" + mBAFRecv;
+        if( mBAFSend ) result +=  "," + "bafs=" + mBAFSend;
+        if( mSonification ) result +=  "," + "sonf=" + mSonification;
         return result;
     }
 
@@ -282,7 +362,7 @@ public class AppProfile {
             mReader = parser.getBoolean("rm",false);
             mPinned = parser.getBoolean("pd",false);
             mStamina = parser.getBoolean("as",false);
-            mFrameRate = parser.getInt("fr",0);
+            mMaxFrameRate = parser.getInt("fr",0);
             mBackground = parser.getInt("bk",0);
             mRequireGms = parser.getBoolean("gms",false);
             mBootDisabled = parser.getBoolean("bt",false);
@@ -305,7 +385,9 @@ public class AppProfile {
             mDisableJobs = parser.getBoolean("dj",false);
             mOverrideFonts = parser.getBoolean("of",false);
             mFullScreen = parser.getBoolean("fs",false);
-
+            mBAFRecv = parser.getBoolean("bafr",false);
+            mBAFSend = parser.getBoolean("bafs",false);
+            mSonification = parser.getBoolean("sonf",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
