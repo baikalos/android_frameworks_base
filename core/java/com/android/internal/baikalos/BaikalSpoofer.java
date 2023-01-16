@@ -209,7 +209,7 @@ public class BaikalSpoofer {
         int device_id = -1;
 
         try {
-            AppProfile profile = null; // AppProfileSettings.loadSingleProfile(packageName, context.getContentResolver());
+            AppProfile profile = AppProfileSettings.loadSingleProfile(packageName, context.getContentResolver());
 
             spoofedProfile = profile;
 
@@ -219,33 +219,21 @@ public class BaikalSpoofer {
 
                 android.baikalos.AppProfile.setCurrentAppProfile(profile);
                 
-                //if( profile.mOverrideFonts ) {
+                if( profile.mOverrideFonts ) {
                 //    FontConfig.setBaikalOverride(true);
-                //}
+                }
 
                 final int uid = myUid();
 
-                /*
+                
                 if( profile.mPreventHwKeyAttestation ) {
                     sPreventHwKeyAttestation = true;
-                    AppProfileSettings.setZygoteSettings("b.phka.",profile.mPackageName,"1");
                     Log.e(TAG, "Overriding hardware attestation for :" + packageName + " to " + profile.mLanguage);
-                } else {
-                    if( !SystemProperties.get("b.phka."+profile.mPackageName,"0").equals("0") ) {
-                        AppProfileSettings.setZygoteSettings("b.phka.",profile.mPackageName,"0");
-                    }
-                }
+                } 
                 if( profile.mHideDevMode ) {
                     sHideDevMode = true;
-                    AppProfileSettings.setZygoteSettings("b.hdevm.",profile.mPackageName,"1");
-                    AppProfileSettings.setZygoteSettings("b.hdevm.","" + uid,"1");
                     Log.e(TAG, "Overriding developer mode for :" + packageName + " to " + profile.mLanguage);
-                } else {
-                    if( !SystemProperties.get("b.hdevm."+profile.mPackageName,"0").equals("0") ) {
-                        AppProfileSettings.setZygoteSettings("b.hdevm.",profile.mPackageName,"0");
-                        AppProfileSettings.setZygoteSettings("b.hdevm.","" + uid,"0");
-                    }
-                }*/
+                } 
 
                 //setProcessField("APP_PROFILE", profile);
 
@@ -296,17 +284,6 @@ public class BaikalSpoofer {
         
     }
 
-    /*public static AppProfile getSpoofedProfile() {
-        return AppProfile.get(spoofedProfile);
-    }
-
-    public static AppProfile getSpoofedProfile(String packageName, Context context) {
-        if( spoofedProfile == null ) {
-            spoofedProfile = AppProfileSettings.loadSingleProfile(packageName, context.getContentResolver());
-        }
-        return AppProfile.get(spoofedProfile);
-    }*/
-
     public static boolean isHideDevMode() {
         return sHideDevMode;
     }
@@ -342,5 +319,9 @@ public class BaikalSpoofer {
         if (sIsFinsky) {
             throw new UnsupportedOperationException();
         }
+
+        if(sPreventHwKeyAttestation) {
+            throw new UnsupportedOperationException();
+        } 
     }
 }
