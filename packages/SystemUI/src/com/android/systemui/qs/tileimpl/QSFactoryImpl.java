@@ -34,6 +34,7 @@ import com.android.systemui.qs.tiles.AmbientDisplayTile;
 import com.android.systemui.qs.tiles.AODTile;
 import com.android.systemui.qs.tiles.BatterySaverTile;
 import com.android.systemui.qs.tiles.BluetoothTile;
+import com.android.systemui.qs.tiles.BypassChargingTile;
 import com.android.systemui.qs.tiles.CPUInfoTile;
 import com.android.systemui.qs.tiles.CaffeineTile;
 import com.android.systemui.qs.tiles.CameraToggleTile;
@@ -72,6 +73,7 @@ import com.android.systemui.qs.tiles.ScreenshotTile;
 import com.android.systemui.qs.tiles.SmartPixelsTile;
 import com.android.systemui.qs.tiles.SoundSearchTile;
 import com.android.systemui.qs.tiles.SoundTile;
+import com.android.systemui.qs.tiles.StaminaModeTile;
 import com.android.systemui.qs.tiles.SyncTile;
 import com.android.systemui.qs.tiles.UiModeNightTile;
 import com.android.systemui.qs.tiles.UsbTetherTile;
@@ -146,6 +148,10 @@ public class QSFactoryImpl implements QSFactory {
     private final Provider<SoundSearchTile> mSoundSearchTileProvider;
     private final Provider<LocaleTile> mLocaleTileProvider;
 
+    /* BaikalOS Tiles */
+    private final Provider<BypassChargingTile> mBypassChargingTileProvider;
+    private final Provider<StaminaModeTile> mStaminaModeTileProvider;
+
     private final Lazy<QSHost> mQsHostLazy;
     private final Provider<CustomTile.Builder> mCustomTileBuilderProvider;
 
@@ -205,7 +211,13 @@ public class QSFactoryImpl implements QSFactory {
             Provider<RefreshRateTile> refreshRateTileProvider,
             Provider<ScreenshotTile> screenshotTileProvider,
             Provider<SoundSearchTile> soundSearchTileProvider,
+<<<<<<< HEAD
             Provider<LocaleTile> localeTileProvider) {
+=======
+            Provider<BypassChargingTile> bypassChargingTileProvider,
+            Provider<StaminaModeTile> staminaModeTileProvider
+            ) {
+>>>>>>> 6ecc25893319 (Baikalify SystemUI. Add BPC and Stamina QS Tiles.)
         mQsHostLazy = qsHostLazy;
         mCustomTileBuilderProvider = customTileBuilderProvider;
 
@@ -261,7 +273,13 @@ public class QSFactoryImpl implements QSFactory {
         mRefreshRateTileProvider = refreshRateTileProvider;
         mScreenshotTileProvider = screenshotTileProvider;
         mSoundSearchTileProvider = soundSearchTileProvider;
+<<<<<<< HEAD
         mLocaleTileProvider = localeTileProvider;
+=======
+
+        mBypassChargingTileProvider = bypassChargingTileProvider;
+        mStaminaModeTileProvider = staminaModeTileProvider;
+>>>>>>> 6ecc25893319 (Baikalify SystemUI. Add BPC and Stamina QS Tiles.)
     }
 
     /** Creates a tile with a type based on {@code tileSpec} */
@@ -384,6 +402,10 @@ public class QSFactoryImpl implements QSFactory {
                 return mSoundSearchTileProvider.get();
             case "locale":
                 return mLocaleTileProvider.get();
+            case "bpcharge":
+                return mBypassChargingTileProvider.get();
+            case "stamina":
+                return mStaminaModeTileProvider.get();
         }
 
         // Custom tiles
