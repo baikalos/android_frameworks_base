@@ -80,6 +80,8 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     private TelecomManager mTm;
     private Context mContext;
 
+    private boolean mInCall = false;
+
     @Inject
     public NotificationInterruptStateProviderImpl(
             Context context,
@@ -124,6 +126,11 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                         mHeadsUpManager.releaseAllImmediately();
                     }
                 }
+
+                mInCall = Settings.Global.getInt(
+                        mContentResolver,
+                        Settings.Global.BAIKALOS_HEADSUP_INCALL,0) != 0;
+
             }
         };
 
@@ -323,6 +330,19 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
         if (!inUse) {
             mLogger.logNoHeadsUpNotInUse(entry);
             return false;
+        }
+
+        StatusBarNotification sbn = entry.getSbn();
+        String notificationPackageName = sbn.getPackageName();
+
+        if( notificationPackageName != null ) {
+
+            if( mInCall && notificationPackageName.equals(getDefaultDialerPackage(mTm)) ) {
+                if( sbn.getTag() == null ) {
+                    Log.d(TAG, "No heads up: incoming call notification: " + sbn.getKey());
+                    return false;
+                } 
+            }
         }
 
         for (int i = 0; i < mSuppressors.size(); i++) {
