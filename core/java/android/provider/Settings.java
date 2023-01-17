@@ -6296,6 +6296,16 @@ public final class Settings {
          */
         public static final String SHOW_WIFI_STANDARD_ICON = "show_wifi_standard_icon";
 
+        /* Start of BaikalOS System Settings */
+
+        /**
+         * Whether to fill statusbar with black
+         * @hide
+         */
+        public static final String DISPLAY_CUTOUT_MODE = "display_cutout_mode";
+
+        /* End of BaikalOS System Settings */
+
         /**
          * Bottom screen shortcuts on keyguard
          * Two lists of strings delimeted by ;
@@ -17114,12 +17124,14 @@ public final class Settings {
          * This preference holds app profiles.
          * @hide
          */
+        @Readable
         public static final String BAIKALOS_APP_PROFILES = "baikalos_app_profiles";
 
         /**
          * This preference holds app profiles.
          * @hide
          */
+        @Readable
         public static final String BAIKALOS_APP_PROFILES_BACKUP = "baikalos_app_profiles_backup";
 
         /* End of BaikalOS Global Settings */
