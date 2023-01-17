@@ -6307,6 +6307,17 @@ public final class Settings {
         /* End of BaikalOS System Settings */
 
         /**
+         * Bottom screen shortcuts on keyguard
+         * Two lists of strings delimeted by ;
+         * Each list of string is delimited by ,
+         * Valid strings are: home, wallet, qr, camera, flashlight and none
+         * The order in each list decides the priority for each shortcut
+         * @hide
+         */
+        @Readable
+        public static final String KEYGUARD_QUICK_TOGGLES = "keyguard_quick_toggles";
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
@@ -12044,7 +12055,6 @@ public final class Settings {
          */
         public static final String FACE_UNLOCK_METHOD = "face_unlock_method";
 
-
         /* Start of BaikalOS Secure Settings */
 
         /**
@@ -12076,6 +12086,12 @@ public final class Settings {
         public static final String BAIKALOS_TRUST_WIFI_DEV = "baikalos_trust_wifi_dev";
 
         /* End of BaikalOS Secure Settings */
+
+        /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String GMS_ENABLED = "gms_enabled";
 
         /**
          * These entries are considered common between the personal and the managed profile,
@@ -17112,7 +17128,6 @@ public final class Settings {
         public static final String BAIKALOS_APP_PROFILES_BACKUP = "baikalos_app_profiles_backup";
 
         /* End of BaikalOS Global Settings */
-
 
         /**
          * Keys we no longer back up under the current schema, but want to continue to

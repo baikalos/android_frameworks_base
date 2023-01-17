@@ -858,31 +858,16 @@ public class ApplicationPackageManager extends PackageManager {
 
     @Override
     public boolean hasSystemFeature(String name, int version) {
-	String packageName = ActivityThread.currentPackageName();
-	int spoof = BaikalSpoofer.maybeSpoofFeature(packageName,name,version);
-	switch( spoof ) {
-	    case 1:
-		return true;
-	    case 0:
-		return false;
-	    default:
-	    	return mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version));
-	}
-	/*
-        if (packageName != null &&
-                packageName.equals("com.google.android.apps.photos") &&
-                SystemProperties.getBoolean("persist.sys.pixelprops.gphotos", true)) {
-            if (Arrays.asList(featuresPixel).contains(name)) return false;
-            if (Arrays.asList(featuresP21).contains(name)) return false;
-            if (Arrays.asList(featuresNexus).contains(name)) return true;
-        }
-        if (Arrays.asList(featuresPixel).contains(name)) return true;
-        if (Arrays.asList(featuresP21).contains(name) &&
-                !Arrays.asList(p21Codenames).contains(SystemProperties.get("ro.product.device"))) {
-            return false;
-        }
-        return mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version));
-	*/
+    	String packageName = ActivityThread.currentPackageName();
+    	int spoof = BaikalSpoofer.maybeSpoofFeature(packageName,name,version);
+	    switch( spoof ) {
+	        case 1:
+        		return true;
+	        case 0:
+        		return false;
+	        default:
+	        	return mHasSystemFeatureCache.query(new HasSystemFeatureQuery(name, version));
+    	}
     }
 
     /** @hide */

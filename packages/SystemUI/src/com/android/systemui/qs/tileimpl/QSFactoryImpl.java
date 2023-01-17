@@ -145,7 +145,6 @@ public class QSFactoryImpl implements QSFactory {
     private final Provider<RefreshRateTile> mRefreshRateTileProvider;
     private final Provider<ScreenshotTile> mScreenshotTileProvider;
     private final Provider<SoundSearchTile> mSoundSearchTileProvider;
-
     /* BaikalOS Tiles */
     private final Provider<BypassChargingTile> mBypassChargingTileProvider;
     private final Provider<StaminaModeTile> mStaminaModeTileProvider;
@@ -267,7 +266,6 @@ public class QSFactoryImpl implements QSFactory {
         mRefreshRateTileProvider = refreshRateTileProvider;
         mScreenshotTileProvider = screenshotTileProvider;
         mSoundSearchTileProvider = soundSearchTileProvider;
-
         mBypassChargingTileProvider = bypassChargingTileProvider;
         mStaminaModeTileProvider = staminaModeTileProvider;
     }
@@ -390,12 +388,10 @@ public class QSFactoryImpl implements QSFactory {
                 return mScreenshotTileProvider.get();
             case "soundsearch":
                 return mSoundSearchTileProvider.get();
-
             case "bpcharge":
                 return mBypassChargingTileProvider.get();
             case "stamina":
                 return mStaminaModeTileProvider.get();
-
         }
 
         // Custom tiles
