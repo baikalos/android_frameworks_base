@@ -452,12 +452,12 @@ public class CPUInfoService extends Service {
                     sb.append(sBatTemp == null ? "-" : sBatTemp);
                     sb.append(";");
 
-                    String sPowerProfile = CPUInfoService.readOneProperty("baikal.eng.perf.cur_profile","unsupported");
-                    sb.append(sPowerProfile == null ? "unsupported" : sPowerProfile);
+                    String sPowerProfile = CPUInfoService.readOneProperty("baikal.eng.perf.cur_profile","-");
+                    sb.append(sPowerProfile == null ? "-" : sPowerProfile);
                     sb.append(";");
 
-                    String sThermalProfile = CPUInfoService.readOneProperty("baikal.eng.therm.cur_profile","unsupported");
-                    sb.append(sThermalProfile == null ? "unsupported" : sThermalProfile);
+                    String sThermalProfile = CPUInfoService.readOneProperty("baikal.eng.therm.cur_profile","-");
+                    sb.append(sThermalProfile == null ? "-" : sThermalProfile);
                     sb.append(";");
 
                     String sGpuFreq = CPUInfoService.readOneLine(GPU_FREQ_SENSOR);
@@ -516,6 +516,7 @@ public class CPUInfoService extends Service {
                             currGov="offline";
                         }
 
+                        if( currGov == null ) currGov = "";
                         sb.append(currFreq+":"+currGov+"|");
                     }
                     sb.deleteCharAt(sb.length()-1);
