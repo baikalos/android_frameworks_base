@@ -1125,8 +1125,9 @@ public abstract class PackageManager {
      * In particular, this flag alone will not match APEX files that are staged
      * for activation at next reboot.
      */
-    public static final int MATCH_APEX = 0x40000000;
 
+    public static final int MATCH_APEX = 0x40000000;
+                                        
     /**
      * Flag for {@link #addCrossProfileIntentFilter}: if this flag is set: when
      * resolving an intent that matches the {@code CrossProfileIntentFilter},

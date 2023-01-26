@@ -48,8 +48,6 @@ import android.os.SystemClock;
 
 import com.android.server.SystemService;
 
-import com.android.server.baikalos.BaikalAppManager;
-
 
 import static android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
 import static android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED;
@@ -66,8 +64,6 @@ public class BaikalSystemService extends SystemService {
 
     final MyHandler mHandler;
     final MyHandlerThread mHandlerThread;
-
-    private BaikalAppManager mBaikalAppManager;
 
     public BaikalSystemService(Context context) {
         super(context);

@@ -578,6 +578,10 @@ public final class AudioAttributes implements Parcelable {
         return mContentType;
     }
 
+    public void setContentType(int usage) {
+        mContentType = usage;
+    }
+
     /**
      * Return the usage.
      * @return one of the values that can be set in {@link Builder#setUsage(int)}

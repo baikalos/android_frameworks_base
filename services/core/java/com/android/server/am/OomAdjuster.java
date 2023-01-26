@@ -1068,6 +1068,8 @@ public class OomAdjuster {
                 }
 
                 final ProcessServiceRecord psr = app.mServices;
+
+                if( !app.mAppProfile.mPinned ) {
                 // Count the number of process types.
                 switch (state.getCurProcState()) {
                     case PROCESS_STATE_CACHED_ACTIVITY:
@@ -1121,8 +1123,9 @@ public class OomAdjuster {
                         mNumNonCachedProcs++;
                         break;
                 }
+                }
 
-                if (app.isolated && psr.numberOfRunningServices() <= 0
+                if ( !app.mAppProfile.mPinned && app.isolated && psr.numberOfRunningServices() <= 0
                         && app.getIsolatedEntryPoint() == null) {
                     // If this is an isolated process, there are no services
                     // running in it, and it's not a special process with a
@@ -2593,7 +2596,7 @@ public class OomAdjuster {
         }
 
         if (state.getCurAdj() != state.getSetAdj()) {
-            ProcessList.setOomAdj(app.getPid(), app.uid, state.getCurAdj());
+            ProcessList.setOomAdj(app.getPid(), app.uid, state.getCurAdj(), app.mAppProfile.mPinned);
             if (DEBUG_SWITCH || DEBUG_OOM_ADJ || mService.mCurOomAdjUid == app.info.uid) {
                 String msg = "Set " + app.getPid() + " " + app.processName + " adj "
                         + state.getCurAdj() + ": " + state.getAdjType();
@@ -2607,7 +2610,27 @@ public class OomAdjuster {
         }
 
         final int curSchedGroup = state.getCurrentSchedulingGroup();
-        if (state.getSetSchedGroup() != curSchedGroup) {
+
+        int processGroup;
+        switch (curSchedGroup) {
+            case ProcessList.SCHED_GROUP_BACKGROUND:
+                processGroup = THREAD_GROUP_BACKGROUND;
+                break;
+            case ProcessList.SCHED_GROUP_TOP_APP:
+            case ProcessList.SCHED_GROUP_TOP_APP_BOUND:
+                processGroup = THREAD_GROUP_TOP_APP;
+                break;
+            case ProcessList.SCHED_GROUP_RESTRICTED:
+                processGroup = THREAD_GROUP_RESTRICTED;
+                break;
+            default:
+                processGroup = THREAD_GROUP_DEFAULT;
+                break;
+        }
+
+        processGroup = mService.mAppProfileManager.updateProcSchedGroup(app.mAppProfile, processGroup, curSchedGroup);
+        
+        if (state.getSetSchedGroup() != curSchedGroup || processGroup != state.getCurrentProcSchedGroup() ) {
             int oldSchedGroup = state.getSetSchedGroup();
             state.setSetSchedGroup(curSchedGroup);
             if (DEBUG_SWITCH || DEBUG_OOM_ADJ || mService.mCurOomAdjUid == app.uid) {
@@ -2621,22 +2644,8 @@ public class OomAdjuster {
                         ApplicationExitInfo.SUBREASON_REMOVE_TASK, true);
                 success = false;
             } else {
-                int processGroup;
-                switch (curSchedGroup) {
-                    case ProcessList.SCHED_GROUP_BACKGROUND:
-                        processGroup = THREAD_GROUP_BACKGROUND;
-                        break;
-                    case ProcessList.SCHED_GROUP_TOP_APP:
-                    case ProcessList.SCHED_GROUP_TOP_APP_BOUND:
-                        processGroup = THREAD_GROUP_TOP_APP;
-                        break;
-                    case ProcessList.SCHED_GROUP_RESTRICTED:
-                        processGroup = THREAD_GROUP_RESTRICTED;
-                        break;
-                    default:
-                        processGroup = THREAD_GROUP_DEFAULT;
-                        break;
-                }
+                
+                state.setCurrentProcSchedGroup(processGroup);
                 mProcessGroupHandler.sendMessage(mProcessGroupHandler.obtainMessage(
                         0 /* unused */, app.getPid(), processGroup, app.processName));
                 try {

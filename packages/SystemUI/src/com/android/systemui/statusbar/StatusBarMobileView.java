@@ -164,12 +164,15 @@ public class StatusBarMobileView extends FrameLayout implements DarkReceiver,
             requestLayout = getVisibility() != View.GONE;
             setVisibility(View.GONE);
             mState = null;
+            Log.d(TAG,"requestLayout setVisibility:" + requestLayout + ":" + this);
         } else if (mState == null) {
             requestLayout = true;
             mState = state.copy();
             initViewState();
+            Log.d(TAG,"requestLayout initViewState:" + this);
         } else if (!mState.equals(state)) {
             requestLayout = updateState(state.copy());
+            Log.d(TAG,"requestLayout updateState:" + requestLayout + ":" + this);
         }
 
         if (requestLayout) {
@@ -351,6 +354,7 @@ public class StatusBarMobileView extends FrameLayout implements DarkReceiver,
         if (mForceHidden != forceHidden) {
             mForceHidden = forceHidden;
             updateState(mState);
+            Log.d(TAG,"requestLayout forceHidden:" + this);
             requestLayout();
         }
     }
@@ -401,6 +405,7 @@ public class StatusBarMobileView extends FrameLayout implements DarkReceiver,
         mOldStyleType = oldStyleType;
 
         if (needsLayout) {
+            Log.d(TAG,"requestLayout updateDisplayType:" + needsLayout + ":" + this);
             requestLayout();
         }
     }

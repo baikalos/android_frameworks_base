@@ -27,6 +27,7 @@ import android.graphics.Rect;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -185,12 +186,15 @@ public class StatusBarWifiView extends BaseStatusBarWifiView implements DarkRece
             requestLayout = getVisibility() != View.GONE;
             setVisibility(View.GONE);
             mState = null;
+            Log.d(TAG,"requestLayout setVisibility:" + requestLayout + ":" + this);
         } else if (mState == null) {
             requestLayout = true;
             mState = state.copy();
             initViewState();
+            Log.d(TAG,"requestLayout initViewState:" + requestLayout + ":" + this);
         } else if (!mState.equals(state)) {
             requestLayout = updateState(state.copy());
+            Log.d(TAG,"requestLayout updateState:" + requestLayout + ":" + this);
         }
 
         if (requestLayout) {
@@ -306,6 +310,7 @@ public class StatusBarWifiView extends BaseStatusBarWifiView implements DarkRece
         mShowWifiStandard = showWifiStandard;
 
         if (needsLayout) {
+            Log.d(TAG,"requestLayout updateWifiState:" + needsLayout + ":" + this);
             requestLayout();
         }
     }

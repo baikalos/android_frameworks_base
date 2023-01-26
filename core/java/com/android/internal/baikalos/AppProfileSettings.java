@@ -59,19 +59,22 @@ public class AppProfileSettings extends ContentObserver {
     private static AppProfileSettings sInstance;
 
     private final Context mContext;
-    private final ContentResolver mResolver;
+    private ContentResolver mResolver;
+
     private final TextUtils.StringSplitter mSplitter = new TextUtils.SimpleStringSplitter('|');
 
     private HashMap<String, AppProfile> _profilesByPackageName = new HashMap<String,AppProfile> ();
-    //private HashMap<Integer, AppProfile> _profiles = new HashMap<Integer,AppProfile> ();
 
     private static HashMap<String, AppProfile> _staticProfilesByPackageName = null; 
-    //private static HashMap<Integer, AppProfile> _staticProfiles = null;
 
+    private PowerWhitelistBackend mBackend;
 
-    private final PackageManager mPackageManager;
-    private final PowerWhitelistBackend mBackend;
+    private PackageManager mPackageManager;
     private AppOpsManager mAppOpsManager;
+
+    private static AppProfile sSystemProfile;
+
+    private static boolean mAwaitSystemBoot;
 
     static String [] config_performanceValues = {
         "default",
@@ -109,28 +112,28 @@ public class AppProfileSettings extends ContentObserver {
 
     private IAppProfileSettingsNotifier mNotifier = null;
 
-    private AppProfileSettings(Handler handler,Context context, ContentResolver resolver, IAppProfileSettingsNotifier notifier) {
-        this(handler, context, resolver, notifier, false);
-    }
-
     private static boolean _updating = false;
-    private AppProfileSettings(Handler handler,Context context, ContentResolver resolver, IAppProfileSettingsNotifier notifier, boolean boot) {
+    private AppProfileSettings(Handler handler,Context context) {
         super(handler);
         mContext = context;
-        mResolver = resolver;
-        mNotifier = notifier;
-
-        mPackageManager = mContext.getPackageManager();
-
-        mBackend = PowerWhitelistBackend.getInstance(mContext);
-        //mBackend.refreshList();
 
         for( int i=0; i < config_performanceValues.length;i++ ) {
             _performanceToId.put( config_performanceValues[i], i );    
         }  
 
+        if( sSystemProfile == null ) {
+            sSystemProfile = new AppProfile("android");
+            sSystemProfile.mSystemWhitelisted = true;
+        }
+    }
+
+    public void registerObserver(boolean systemBoot) {
+        mResolver = mContext.getContentResolver();
+        mPackageManager = mContext.getPackageManager();
+        mBackend = PowerWhitelistBackend.getInstance(mContext);
+
         try {
-            resolver.registerContentObserver(
+            mResolver.registerContentObserver(
                 Settings.Global.getUriFor(Settings.Global.BAIKALOS_APP_PROFILES),
                 false, this);
 
@@ -138,12 +141,11 @@ public class AppProfileSettings extends ContentObserver {
         }
         
         synchronized(this) {
-            if( !_updating ) {
-                _updating = true;
-                mBackend.refreshList();
-                updateConstantsLocked();
-                if( boot ) updateProfilesOnBootLocked();
-                _updating = false;
+            mBackend.refreshList();
+            updateConstantsLocked();
+            if( systemBoot ) {
+                mAwaitSystemBoot = true; 
+                updateProfilesOnBootLocked();
             }
         }
     }
@@ -151,12 +153,9 @@ public class AppProfileSettings extends ContentObserver {
     @Override
     public void onChange(boolean selfChange, Uri uri) {
         synchronized(this) {
-            if( !_updating ) {
-                _updating = true;
-                mBackend.refreshList();
-                updateConstantsLocked();
-                _updating = false;
-            }
+            mBackend.refreshList();
+            updateConstantsLocked();
+            //if( mAwaitSystemBoot ) updateProfilesOnBootLocked();
         }
     }
 
@@ -164,11 +163,12 @@ public class AppProfileSettings extends ContentObserver {
         int uid = getAppUidLocked(profile.mPackageName);
         if( uid == -1 )  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Can't get uid for " + profile.mPackageName);
-            return new AppProfile();
+            return new AppProfile(profile.mPackageName);
         }
         boolean isSystemWhitelisted = mBackend.isSysWhitelisted(profile.mPackageName);
         if( isSystemWhitelisted ) {
-            if( profile.mBackground >= 0 )  profile.mBackground = -1;
+            //if( profile.mBackground >= 0 )  profile.mBackground = -1;
+            if( profile.mBackground == -1 ) profile.mBackground = 0;
             profile.mSystemWhitelisted = true;
             return profile;
         }
@@ -234,7 +234,8 @@ public class AppProfileSettings extends ContentObserver {
                     uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;
 
         if( isSystemWhitelisted && profile.mBackground >= 0 ) {
-            profile.mBackground = -1;
+            //profile.mBackground = -1;
+            if( profile.mBackground == -1 ) profile.mBackground = 0;
             profile.mSystemWhitelisted = true;
             return profile;
         }
@@ -282,6 +283,8 @@ public class AppProfileSettings extends ContentObserver {
 
         Slog.e(TAG, "loadSingleProfile:" + packageName);
 
+        if( "android".equals(packageName) || "system".equals(packageName) ) return sSystemProfile;
+
         try {
             String appProfiles = Settings.Global.getString(resolver,
                     Settings.Global.BAIKALOS_APP_PROFILES);
@@ -319,7 +322,6 @@ public class AppProfileSettings extends ContentObserver {
             updateProfileFromSystemSettingsLocked(entry.getValue());
         }*/
         updateProfilesFromInstalledPackagesLocked();
-
     }
 
     private void updateConstantsLocked() {
@@ -348,6 +350,7 @@ public class AppProfileSettings extends ContentObserver {
             HashMap<String,AppProfile> _oldProfiles = _profilesByPackageName;
 
             _profilesByPackageName = new HashMap<String,AppProfile> ();
+            _profilesByPackageName.put(sSystemProfile.mPackageName,sSystemProfile);
 
             for(String profileString:mSplitter) {
                 
@@ -390,6 +393,7 @@ public class AppProfileSettings extends ContentObserver {
         }
 
         _staticProfilesByPackageName =  _profilesByPackageName;
+        Slog.e(TAG, "Loaded " + _profilesByPackageName.size() + " AppProfiles");
     }
 
     private void updateSystemFromInstalledPackagesLocked() {
@@ -530,12 +534,14 @@ public class AppProfileSettings extends ContentObserver {
 
     public AppProfile getProfileLocked(String packageName) {
         if( packageName != null ) {
+            if( "android".equals(packageName) || "system".equals(packageName) ) return sSystemProfile;
 	        return _profilesByPackageName.get(packageName);
         }
         return null;
     }
 
     public void updateProfileLocked(AppProfile profile) {
+        if( "android".equals(profile.mPackageName) || "system".equals(profile.mPackageName) ) return;
         AppProfile newProfile = profile;
         if( !_profilesByPackageName.containsKey(profile.mPackageName) ) {
             _profilesByPackageName.put(profile.mPackageName, profile);
@@ -595,6 +601,8 @@ public class AppProfileSettings extends ContentObserver {
     }
 
     public static AppProfile getProfileStatic(String packageName) {
+        if( "android".equals(packageName) || "system".equals(packageName) ) return sSystemProfile;
+        if( packageName == null ) return null;
         if( _staticProfilesByPackageName == null ) return null;
 	    return _staticProfilesByPackageName.get(packageName);
     }
@@ -606,16 +614,13 @@ public class AppProfileSettings extends ContentObserver {
         return mAppOpsManager;
     }
 
-    public static AppProfileSettings getInstance(Handler handler,Context context, ContentResolver resolver, IAppProfileSettingsNotifier notifier) {
-        if (sInstance == null) {
-            sInstance = new AppProfileSettings(handler,context,resolver,notifier);
-        }
+    public static AppProfileSettings getInstance() {
         return sInstance;
     }
 
-    public static AppProfileSettings getInstance(Handler handler,Context context, ContentResolver resolver, IAppProfileSettingsNotifier notifier, boolean boot) {
+    public static AppProfileSettings getInstance(Handler handler, Context context) {
         if (sInstance == null) {
-            sInstance = new AppProfileSettings(handler,context,resolver,notifier, boot);
+            sInstance = new AppProfileSettings(handler,context);
         }
         return sInstance;
     }

@@ -2501,6 +2501,9 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
         if (!mForcedStatusBarColor) {
             mStatusBarColor = a.getColor(R.styleable.Window_statusBarColor, 0xFF000000);
         }
+
+        Log.e(TAG,"setStatusBarColor :" + mStatusBarColor, new Throwable());
+
         if (!mForcedNavigationBarColor) {
             mNavigationBarColor = a.getColor(R.styleable.Window_navigationBarColor, 0xFF000000);
             mNavigationBarDividerColor = a.getColor(R.styleable.Window_navigationBarDividerColor,
@@ -3823,11 +3826,13 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
 
     @Override
     public int getStatusBarColor() {
+        Log.e(TAG,"setStatusBarColor :" + mStatusBarColor, new Throwable());
         return mStatusBarColor;
     }
 
     @Override
     public void setStatusBarColor(int color) {
+        Log.e(TAG,"setStatusBarColor :" + color, new Throwable());
         mStatusBarColor = color;
         mForcedStatusBarColor = true;
         if (mDecor != null) {

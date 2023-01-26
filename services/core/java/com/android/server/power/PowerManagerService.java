@@ -142,6 +142,12 @@ import dalvik.annotation.optimization.NeverCompile;
 
 import lineageos.providers.LineageSettings;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+import com.android.server.baikalos.AppProfileManager;
+
+
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -345,6 +351,8 @@ public final class PowerManagerService extends SystemService
 
     private final Object mLock = LockGuard.installNewLock(LockGuard.INDEX_POWER);
 
+    private int mBrightnessOverrideFromBaikalService = -1;
+
     // A bitfield that indicates what parts of the power state have
     // changed and need to be recalculated.
     private int mDirty;
@@ -436,6 +444,7 @@ public final class PowerManagerService extends SystemService
 
     // True if the device is plugged into a power source.
     private boolean mIsPowered;
+    private boolean mIsPoweredInitialized = false;
 
     // The current plug type, such as BatteryManager.BATTERY_PLUGGED_WIRELESS.
     private int mPlugType;
@@ -1473,6 +1482,10 @@ public final class PowerManagerService extends SystemService
         filter = new IntentFilter();
         filter.addAction(Intent.ACTION_DOCK_EVENT);
         mContext.registerReceiver(new DockReceiver(), filter, null, mHandler);
+
+        filter = new IntentFilter();
+        filter.addAction(com.android.internal.baikalos.Actions.ACTION_BRIGHTNESS_OVERRIDE);
+        mContext.registerReceiver(new BrightnessOverrideReceiver(), filter, null, mHandler);
     }
 
     @VisibleForTesting
@@ -2585,6 +2598,7 @@ public final class PowerManagerService extends SystemService
     private boolean isProfileBeingKeptAwakeLocked(ProfilePowerState profile, long now) {
         return (profile.mLastUserActivityTime + profile.mScreenOffTimeout > now)
                 || (profile.mWakeLockSummary & WAKE_LOCK_STAY_AWAKE) != 0
+                || (AppProfileManager.getCurrentProfile().mKeepOn && getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE)
                 || (mProximityPositive &&
                     (profile.mWakeLockSummary & WAKE_LOCK_PROXIMITY_SCREEN_OFF) != 0);
     }
@@ -2595,7 +2609,7 @@ public final class PowerManagerService extends SystemService
      */
     @GuardedBy("mLock")
     private void updateIsPoweredLocked(int dirty) {
-        if ((dirty & DIRTY_BATTERY_STATE) != 0) {
+        if ((dirty & DIRTY_BATTERY_STATE) != 0 || !mIsPoweredInitialized) {
             final boolean wasPowered = mIsPowered;
             final int oldPlugType = mPlugType;
             mIsPowered = mBatteryManagerInternal.isPowered(BatteryManager.BATTERY_PLUGGED_ANY);
@@ -2611,7 +2625,7 @@ public final class PowerManagerService extends SystemService
                         + ", mBatteryLevel=" + mBatteryLevel);
             }
 
-            if (wasPowered != mIsPowered || oldPlugType != mPlugType) {
+            if (!mIsPoweredInitialized || wasPowered != mIsPowered || oldPlugType != mPlugType) {
                 mDirty |= DIRTY_IS_POWERED;
 
                 // Update wireless dock detection state.
@@ -2651,6 +2665,9 @@ public final class PowerManagerService extends SystemService
                         mNotifier.onWirelessChargingStarted(mBatteryLevel, mUserId);
                     }
                 }
+
+                Actions.sendChargerModeChanged(mIsPowered);
+        		mIsPoweredInitialized = true;
             }
 
             mBatterySaverStateMachine.setBatteryStatus(mIsPowered, mBatteryLevel, mBatteryLevelLow);
@@ -3674,14 +3691,33 @@ public final class PowerManagerService extends SystemService
                     // bootloader brightness and the default brightness to be identical.
                     autoBrightness = false;
                     screenBrightnessOverride = mScreenBrightnessDefault;
+                } else if (mBrightnessOverrideFromBaikalService == -2 || mBrightnessOverrideFromBaikalService == -3  ) {
+                    //if(DEBUG_SPEW) Slog.d(TAG, "updateDisplayPowerStateLocked: Brightness override auto lowPowerMode=" + mDisplayPowerRequest.lowPowerMode);
+                    //mDisplayPowerRequest.lowPowerMode = true;
+                    autoBrightness = (mScreenBrightnessModeSetting ==
+                        Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC);
+                    screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
+                } else if ( mBrightnessOverrideFromBaikalService > 0 && 
+                        isValidBrightness((float)mBrightnessOverrideFromBaikalService/(float)PowerManager.BRIGHTNESS_ON) ) {
+                    autoBrightness = false;
+                    screenBrightnessOverride =  (float)mBrightnessOverrideFromBaikalService/(float)PowerManager.BRIGHTNESS_ON;
+                    if(DEBUG_SPEW) Slog.d(TAG, "updateDisplayPowerStateLocked: Brightness override fixed screenBrightnessOverride=" + 
+                                mBrightnessOverrideFromBaikalService + ", screenBrightnessOverride=" + screenBrightnessOverride);
                 } else if (isValidBrightness(mScreenBrightnessOverrideFromWindowManager)) {
                     autoBrightness = false;
                     screenBrightnessOverride = mScreenBrightnessOverrideFromWindowManager;
+                } else if (mBrightnessOverrideFromBaikalService == -4) {
+                    autoBrightness = true;
+                    screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
+                } else if (mBrightnessOverrideFromBaikalService == -5) {
+                    autoBrightness = false;
+                    screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
                 } else {
                     autoBrightness = (mScreenBrightnessModeSetting
                             == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC);
                     screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
                 }
+
                 boolean ready = powerGroup.updateLocked(screenBrightnessOverride, autoBrightness,
                         shouldUseProximitySensorLocked(), shouldBoostScreenBrightness(),
                         mDozeScreenStateOverrideFromDreamManager,
@@ -3689,7 +3725,8 @@ public final class PowerManagerService extends SystemService
                         mDrawWakeLockOverrideFromSidekick,
                         mBatterySaverPolicy.getBatterySaverPolicy(ServiceType.SCREEN_BRIGHTNESS),
                         sQuiescent, mDozeAfterScreenOff, mIsVrModeEnabled, mBootCompleted,
-                        mScreenBrightnessBoostInProgress, mRequestWaitForNegativeProximity);
+                        mScreenBrightnessBoostInProgress, mRequestWaitForNegativeProximity,
+                        mBrightnessOverrideFromBaikalService);
                 int wakefulness = powerGroup.getWakefulnessLocked();
                 if (DEBUG_SPEW) {
                     Slog.d(TAG, "updateDisplayPowerStateLocked: displayReady=" + ready
@@ -3817,6 +3854,7 @@ public final class PowerManagerService extends SystemService
             // The order of operations matters here.
             synchronized (mLock) {
                 setPowerModeInternal(MODE_DISPLAY_INACTIVE, allInactive);
+                setBaikalScreenState(allOff);
                 if (allOff) {
                     if (!mDecoupleHalInteractiveModeFromDisplayConfig) {
                         setHalInteractiveModeLocked(false);
@@ -4505,6 +4543,16 @@ public final class PowerManagerService extends SystemService
             return false;
         }
         return mNativeWrapper.nativeSetPowerMode(mode, enabled);
+    }
+
+    boolean mBaikalScreenMode = true;
+    private void setBaikalScreenState(boolean state) {
+        boolean mode = !state;
+        Slog.d(TAG, "setBaikalScreenState: mode=" + mode);
+        if( mBaikalScreenMode != mode ) {   
+            mBaikalScreenMode = mode;
+            Actions.sendScreenModeChanged(mode);
+        }
     }
 
     @VisibleForTesting
@@ -5284,6 +5332,21 @@ public final class PowerManagerService extends SystemService
                     mDockState = dockState;
                     mDirty |= DIRTY_DOCK_STATE;
                     updatePowerStateLocked();
+                }
+            }
+        }
+    }
+
+    private final class BrightnessOverrideReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (mLock) {
+                String action = intent.getAction();
+                int brightness = (int)intent.getExtra(com.android.internal.baikalos.Actions.EXTRA_INT_BRIGHTNESS);
+                if (mBrightnessOverrideFromBaikalService != brightness) {
+                    if(DEBUG) Slog.i(TAG,"BrightnessOverride brightness=" + brightness);
+                    mBrightnessOverrideFromBaikalService = brightness;
+                    updatePowerGroupsLocked(DIRTY_SCREEN_BRIGHTNESS_BOOST);  
                 }
             }
         }

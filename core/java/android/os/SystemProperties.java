@@ -19,6 +19,7 @@ package android.os;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
+import android.baikalos.AppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.util.Log;
 import android.util.MutableInt;
@@ -146,6 +147,7 @@ public class SystemProperties {
     @SystemApi
     public static String get(@NonNull String key) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if( getFilteredKey(key) ) return "";
         return native_get(key);
     }
 
@@ -162,6 +164,7 @@ public class SystemProperties {
     @SystemApi
     public static String get(@NonNull String key, @Nullable String def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if( getFilteredKey(key,def) ) return def;
         return native_get(key, def);
     }
 
@@ -177,6 +180,7 @@ public class SystemProperties {
     @SystemApi
     public static int getInt(@NonNull String key, int def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if( getFilteredKey(key,def) ) return def;
         return native_get_int(key, def);
     }
 
@@ -192,6 +196,7 @@ public class SystemProperties {
     @SystemApi
     public static long getLong(@NonNull String key, long def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if( getFilteredKey(key,def) ) return def;
         return native_get_long(key, def);
     }
 
@@ -212,6 +217,7 @@ public class SystemProperties {
     @SystemApi
     public static boolean getBoolean(@NonNull String key, boolean def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
+        if( getFilteredKey(key,def) ) return def;
         return native_get_boolean(key, def);
     }
 
@@ -325,6 +331,38 @@ public class SystemProperties {
 
     @UnsupportedAppUsage
     private SystemProperties() {
+    }
+
+    private static boolean getFilteredKey(String key) {
+        return getFilteredKey(key, "0");
+    }
+
+
+    private static boolean getFilteredKey(String key,int def) {
+        return getFilteredKey(key, "" + def);
+    }
+
+    private static boolean getFilteredKey(String key,long def) {
+        return getFilteredKey(key, "" + def);
+    }
+
+    private static boolean getFilteredKey(String key,boolean def) {
+        return getFilteredKey(key, "" + def);
+    }
+
+    private static boolean getFilteredKey(String key,String def) {
+        if( "init.svc.adbd".equals(key) ||
+            "sys.usb.state".equals(key) ||
+            "sys.usb.config".equals(key) ) {
+            if( AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                try {
+                    Log.d(TAG, key + ": for " + Process.myUid() + " system property " + key + " def " + def);
+                    return true;
+                } catch(Exception e)  {
+                }
+            }
+        }
+        return false;
     }
 
     /**

@@ -130,6 +130,7 @@ public class CPUInfoService extends Service {
                 if(msg.what==1){
                     String msgData = (String) msg.obj;
                     try {
+                        Log.d(TAG, "msgData " + msgData);
                         String[] parts=msgData.split(";");
                         if( parts.length < 9 ) return;
                         mCpuTemp=parts[0];
@@ -150,7 +151,7 @@ public class CPUInfoService extends Service {
                                 mCurrFreq[i]=cpuInfoParts[0];
                                 mCurrGov[i]=cpuInfoParts[1];
                             } else {
-                                mCurrFreq[i]="-";
+                                mCurrFreq[i]="0";
                                 mCurrGov[i]="";
                             }
                         }
@@ -232,7 +233,7 @@ public class CPUInfoService extends Service {
         }
 
         private String getCpuTemp(String cpuTemp) {
-            if (CPU_TEMP_DIVIDER > 1) {
+            if (!"-".equals(cpuTemp) && CPU_TEMP_DIVIDER > 1) {
                 return String.format("%s",
                         Integer.parseInt(cpuTemp) / CPU_TEMP_DIVIDER);
             } else {
@@ -241,7 +242,7 @@ public class CPUInfoService extends Service {
         }
 
         private String getSysTemp(String sysTemp) {
-            if (SYS_TEMP_DIVIDER > 1) {
+            if (!"-".equals(sysTemp) && SYS_TEMP_DIVIDER > 1) {
                 return String.format("%s",
                         Integer.parseInt(sysTemp) / SYS_TEMP_DIVIDER);
             } else {
@@ -250,7 +251,7 @@ public class CPUInfoService extends Service {
         }
 
         private String getBatTemp(String batTemp) {
-            if (BAT_TEMP_DIVIDER > 1) {
+            if (!"-".equals(batTemp) && BAT_TEMP_DIVIDER > 1) {
                 return String.format("%s",
                         Integer.parseInt(batTemp) / BAT_TEMP_DIVIDER);
             } else {
@@ -383,13 +384,19 @@ public class CPUInfoService extends Service {
         }
 
         private String toMHz(String mhzString, String load ) {
-            if( mhzString.equals("iso") ) return "isolated";
-            if( mhzString.equals("off") ) return "offline";
-            //return new StringBuilder().append(Integer.valueOf(mhzString) / 1000).append(" MHz").toString();
-            if( load != null ) {
-                return new StringBuilder().append(Integer.valueOf(mhzString) / 1000).append(" ").append(String.format("%3s",load)).toString();
+            try {
+                if( mhzString.equals("iso") ) return "isolated";
+                if( mhzString.equals("off") ) return "offline";
+                if( "-".equals(mhzString) ) return "invalid";
+                //return new StringBuilder().append(Integer.valueOf(mhzString) / 1000).append(" MHz").toString();
+                if( load != null && !"null".equals(load) && !"-".equals(load) ) {
+                    return new StringBuilder().append(Integer.valueOf(mhzString) / 1000).append(" ").append(String.format("%3s",load)).toString();
+                }
+                return new StringBuilder().append(Integer.valueOf(mhzString) / 1000).append(" MHz").toString();
+            } catch( Exception ex ) {
+                Log.e(TAG, "Exception in toMHz: " + mhzString + ", " + load, ex);
             }
-            return new StringBuilder().append(Integer.valueOf(mhzString) / 1000).append(" MHz").toString();
+            return "invalid";
         }
 
         public Handler getHandler(){
@@ -516,7 +523,7 @@ public class CPUInfoService extends Service {
                             currGov="offline";
                         }
 
-                        if( currGov == null ) currGov = "";
+                        if( currGov == null ) currGov = "-";
                         sb.append(currFreq+":"+currGov+"|");
                     }
                     sb.deleteCharAt(sb.length()-1);

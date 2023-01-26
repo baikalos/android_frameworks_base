@@ -37,6 +37,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.SearchManager;
 import android.app.WallpaperManager;
+import android.baikalos.AppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -114,6 +115,7 @@ import java.util.Set;
  * The Settings provider contains global system-level device preferences.
  */
 public final class Settings {
+
     /** @hide */
     public static final boolean DEFAULT_OVERRIDEABLE_BY_RESTORE = false;
 
@@ -7044,6 +7046,7 @@ public final class Settings {
                 return Global.putStringForUser(resolver, name, value,
                         tag, makeDefault, userHandle, DEFAULT_OVERRIDEABLE_BY_RESTORE);
             }
+
             return sNameValueCache.putStringForUser(resolver, name, value, tag,
                     makeDefault, userHandle, overrideableByRestore);
         }
@@ -12094,6 +12097,24 @@ public final class Settings {
         public static final String GMS_ENABLED = "gms_enabled";
 
         /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String HMS_ENABLED = "hms_enabled";
+
+        /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String FDROID_ENABLED = "fdroid_enabled";
+
+        /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String AURORA_ENABLED = "aurora_enabled";
+
+        /**
          * These entries are considered common between the personal and the managed profile,
          * since the managed profile doesn't get to change them.
          */
@@ -17101,6 +17122,13 @@ public final class Settings {
          */
         public static final String BAIKALOS_BT_SBC_PRIORITY = "baikalos_bt_sbc_priority";
 
+
+        /**
+         * This preference set current active routation mode
+         * @hide
+         */
+        public static final String BAIKALOS_DEFAULT_ROTATION = "baikalos_default_rotation";
+
         /**
          * This preference enabled forced fullscreen Incoming Call UI
          * @hide
@@ -17215,6 +17243,15 @@ public final class Settings {
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public static String getStringForUser(ContentResolver resolver, String name,
                 int userHandle) {
+
+            if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || ADB_ENABLED.equals(name) ) {
+                Log.d(TAG, "getStringForUser." + name +": " + Process.myUid());
+                if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return "0";
+                }
+            }
+
             if (MOVED_TO_SECURE.contains(name)) {
                 Log.w(TAG, "Setting " + name + " has moved from android.provider.Settings.Global"
                         + " to android.provider.Settings.Secure, returning read-only value.");
@@ -17378,6 +17415,7 @@ public final class Settings {
         public static boolean putStringForUser(@NonNull ContentResolver resolver,
                 @NonNull String name, @Nullable String value, @Nullable String tag,
                 boolean makeDefault, @UserIdInt int userHandle, boolean overrideableByRestore) {
+
             if (LOCAL_LOGV) {
                 Log.v(TAG, "Global.putString(name=" + name + ", value=" + value
                         + " for " + userHandle);
@@ -17425,6 +17463,15 @@ public final class Settings {
          * or not a valid integer.
          */
         public static int getInt(ContentResolver cr, String name, int def) {
+
+            if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || ADB_ENABLED.equals(name) ) {
+                Log.d(TAG, "getStringForUser." + name +": " + Process.myUid());
+                if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return 0;
+                }
+            }
+
             String v = getString(cr, name);
             return parseIntSettingWithDefault(v, def);
         }
@@ -17449,6 +17496,15 @@ public final class Settings {
          */
         public static int getInt(ContentResolver cr, String name)
                 throws SettingNotFoundException {
+
+            if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || ADB_ENABLED.equals(name) ) {
+                Log.d(TAG, "getStringForUser." + name +": " + Process.myUid());
+                if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return 0;
+                }
+            }
+
             String v = getString(cr, name);
             return parseIntSetting(v, name);
         }
@@ -19874,4 +19930,7 @@ public final class Settings {
         }
         return packages[0];
     }
+
 }
+
+
