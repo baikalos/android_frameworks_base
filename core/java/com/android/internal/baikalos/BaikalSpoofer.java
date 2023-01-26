@@ -214,11 +214,12 @@ public class BaikalSpoofer {
             spoofedProfile = profile;
 
             if( profile != null ) {
-                Log.e(TAG, "Loaded profile for :" + packageName);
+                Log.e(TAG, "Loaded profile :" + profile.toString());
                 device_id = profile.mSpoofDevice - 1;
 
                 android.baikalos.AppProfile.setCurrentAppProfile(profile);
                 
+               
                 if( profile.mOverrideFonts ) {
                 //    FontConfig.setBaikalOverride(true);
                 }
@@ -228,21 +229,21 @@ public class BaikalSpoofer {
                 
                 if( profile.mPreventHwKeyAttestation ) {
                     sPreventHwKeyAttestation = true;
-                    Log.e(TAG, "Overriding hardware attestation for :" + packageName + " to " + profile.mLanguage);
+                    Log.e(TAG, "Overriding hardware attestation for :" + packageName + " to " + profile.mPreventHwKeyAttestation);
                 } 
                 if( profile.mHideDevMode ) {
                     sHideDevMode = true;
-                    Log.e(TAG, "Overriding developer mode for :" + packageName + " to " + profile.mLanguage);
+                    Log.e(TAG, "Overriding developer mode for :" + packageName + " to " + profile.mHideDevMode);
                 } 
 
                 //setProcessField("APP_PROFILE", profile);
 
                 //device_id = profile.mSpoofDevice - 1;
             } else {
-                AppProfile newProfile = new AppProfile();
-                newProfile.mPackageName = packageName;
+                AppProfile newProfile = new AppProfile(packageName);
                 //setProcessField("APP_PROFILE", profile);
                 android.baikalos.AppProfile.setCurrentAppProfile(newProfile);
+
             }
 
         } catch(Exception fl) {

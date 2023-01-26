@@ -2867,6 +2867,7 @@ public class ParsingPackageUtils {
             if (name != null) {
                 pkg.addProtectedBroadcast(name);
             }
+            Slog.i(TAG, "add protectedBroadcast:" + R.styleable.AndroidManifestProtectedBroadcast_name + ", name=" + name + ":" + pkg);
             return input.success(pkg);
         } finally {
             sa.recycle();

@@ -38,6 +38,9 @@ import android.os.Trace;
 import android.util.Slog;
 import android.view.Display;
 
+import android.baikalos.AppProfile;
+import com.android.server.baikalos.AppProfileManager;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.LatencyTracker;
 
@@ -52,6 +55,7 @@ import com.android.internal.util.LatencyTracker;
 public class PowerGroup {
     private static final String TAG = PowerGroup.class.getSimpleName();
     private static final boolean DEBUG = false;
+    private static final boolean DEBUG_SPEW = DEBUG && true;
 
     @VisibleForTesting
     final DisplayPowerRequest mDisplayPowerRequest = new DisplayPowerRequest();
@@ -422,6 +426,7 @@ public class PowerGroup {
 
         if ((wakeLockSummary & WAKE_LOCK_SCREEN_BRIGHT) != 0
                 || !bootCompleted
+                || (AppProfileManager.getCurrentProfile().mKeepOn && getWakefulnessLocked() == WAKEFULNESS_AWAKE)
                 || (getUserActivitySummaryLocked() & USER_ACTIVITY_SCREEN_BRIGHT) != 0
                 || screenBrightnessBoostInProgress) {
             return DisplayPowerRequest.POLICY_BRIGHT;
@@ -439,13 +444,35 @@ public class PowerGroup {
             float dozeScreenBrightness, boolean overrideDrawWakeLock,
             PowerSaveState powerSaverState, boolean quiescent, boolean dozeAfterScreenOff,
             boolean vrModeEnabled, boolean bootCompleted, boolean screenBrightnessBoostInProgress,
-            boolean waitForNegativeProximity) {
+            boolean waitForNegativeProximity, int brightnessOverrideFromBaikalService) {
         mDisplayPowerRequest.policy = getDesiredScreenPolicyLocked(quiescent, dozeAfterScreenOff,
                 vrModeEnabled, bootCompleted, screenBrightnessBoostInProgress);
         mDisplayPowerRequest.screenBrightnessOverride = screenBrightnessOverride;
         mDisplayPowerRequest.useAutoBrightness = autoBrightness;
         mDisplayPowerRequest.useProximitySensor = useProximitySensor;
         mDisplayPowerRequest.boostScreenBrightness = boostScreenBrightness;
+
+            if( brightnessOverrideFromBaikalService == -2 ) {
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = 0.5f;
+                if(DEBUG_SPEW) Slog.d(TAG, "updateDisplayPowerStateLocked: (2) lowPowerMode=" + mDisplayPowerRequest.lowPowerMode);
+                mDisplayPowerRequest.lowPowerMode = true;
+            }
+
+            if( brightnessOverrideFromBaikalService == -3 ) {
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = 0.25f;
+                if(DEBUG_SPEW) Slog.d(TAG, "updateDisplayPowerStateLocked: (3) lowPowerMode=" + mDisplayPowerRequest.lowPowerMode);
+                mDisplayPowerRequest.lowPowerMode = true;
+            }
+
+            if( brightnessOverrideFromBaikalService == -6 ) {
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = 1.6f;
+                if(DEBUG_SPEW) Slog.d(TAG, "updateDisplayPowerStateLocked: (3) lowPowerMode=" + mDisplayPowerRequest.lowPowerMode);
+                mDisplayPowerRequest.lowPowerMode = true;
+            } else {
+                mDisplayPowerRequest.lowPowerMode = powerSaverState.batterySaverEnabled;
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = powerSaverState.brightnessFactor;
+            }
+
 
         if (mDisplayPowerRequest.policy == DisplayPowerRequest.POLICY_DOZE) {
             mDisplayPowerRequest.dozeScreenState = dozeScreenState;
@@ -462,8 +489,8 @@ public class PowerGroup {
             mDisplayPowerRequest.dozeScreenState = Display.STATE_UNKNOWN;
             mDisplayPowerRequest.dozeScreenBrightness = PowerManager.BRIGHTNESS_INVALID_FLOAT;
         }
-        mDisplayPowerRequest.lowPowerMode = powerSaverState.batterySaverEnabled;
-        mDisplayPowerRequest.screenLowPowerBrightnessFactor = powerSaverState.brightnessFactor;
+
+
         boolean ready = mDisplayManagerInternal.requestPowerState(mGroupId, mDisplayPowerRequest,
                 waitForNegativeProximity);
         mNotifier.onScreenPolicyUpdate(mGroupId, mDisplayPowerRequest.policy);

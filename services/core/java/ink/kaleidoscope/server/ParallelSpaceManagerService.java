@@ -64,6 +64,8 @@ import com.android.server.SystemService;
 
 import ink.kaleidoscope.IParallelSpaceManager;
 
+import com.android.server.baikalos.BaikalAppManagerService;
+
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.Exception;
@@ -456,7 +458,10 @@ public final class ParallelSpaceManagerService extends SystemService {
         apps.removeAll(Arrays.asList(getContext().getResources().getStringArray(
                 com.android.internal.R.array.config_parallelSpaceWhitelist)));
         // Those packages should be handled by GmsManagerService, always install them.
-        apps.removeAll(Arrays.asList(GmsManagerService.GMS_PACKAGES));
+        apps.removeAll(Arrays.asList(BaikalAppManagerService.GMS_PACKAGES));
+        apps.removeAll(Arrays.asList(BaikalAppManagerService.HMS_PACKAGES));
+        apps.removeAll(Arrays.asList(BaikalAppManagerService.FDROID_PACKAGES));
+        apps.removeAll(Arrays.asList(BaikalAppManagerService.AURORA_PACKAGES));
         apps.addAll(SPACE_BLOCKLIST_PACKAGES);
         apps.addAll(Arrays.asList(getContext().getResources().getStringArray(
                 com.android.internal.R.array.config_parallelSpaceBlocklist)));

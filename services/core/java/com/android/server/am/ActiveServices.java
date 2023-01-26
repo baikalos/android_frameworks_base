@@ -789,6 +789,17 @@ public final class ActiveServices {
             }
         }
 
+
+        if(bgLaunch && mAm.mAppProfileManager.isAppBlocked(null, r.packageName, r.appInfo.uid) ) {
+            Slog.w(TAG, "App service execution blocked: service "
+                    + service + " to " + r.shortInstanceName
+                    + " from pid=" + callingPid + " uid=" + callingUid
+                    + " pkg=" + callingPackage + " startFg?=" + fgRequired);
+
+            r.stopIfKilled = true;
+            return null;
+        }
+
         // If this isn't a direct-to-foreground start, check our ability to kick off an
         // arbitrary service
         if (forcedStandby || (!r.startRequested && !fgRequired)) {

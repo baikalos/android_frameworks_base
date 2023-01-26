@@ -828,6 +828,19 @@
     <protected-broadcast android:name="io.chaldeaprjkt.gamespace.action.GAME_START" />
     <protected-broadcast android:name="io.chaldeaprjkt.gamespace.action.GAME_STOP" />
 
+    <!-- BaikalOS broadcasts -->
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_IDLE_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_POWER_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_CHARGER_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_STAMINA_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_SCREEN_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_READER_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_TOP_APP_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_BRIGHTNESS_OVERRIDE" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_BLUETOOTH_DEVICE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_NET_WIFI_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_NET_MOBILE_DATA_CHANGED" />
+
     <!-- ====================================================================== -->
     <!--                          RUNTIME PERMISSIONS                           -->
     <!-- ====================================================================== -->

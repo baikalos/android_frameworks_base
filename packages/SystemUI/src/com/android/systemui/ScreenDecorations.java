@@ -22,18 +22,21 @@ import static android.view.DisplayCutout.BOUNDS_POSITION_TOP;
 import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
 import static android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
 import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
 
 import android.annotation.IdRes;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.database.ContentObserver;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -43,11 +46,13 @@ import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
 import android.hardware.graphics.common.AlphaInterpretation;
 import android.hardware.graphics.common.DisplayDecorationSupport;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.provider.Settings.Secure;
+import android.provider.Settings.System;
 import android.util.DisplayUtils;
 import android.util.Log;
 import android.util.Size;
@@ -57,6 +62,7 @@ import android.view.DisplayCutout.BoundsPosition;
 import android.view.DisplayInfo;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Surface;
 import android.view.View;
 import android.view.View.OnLayoutChangeListener;
 import android.view.ViewGroup;
@@ -169,6 +175,11 @@ public class ScreenDecorations extends CoreStartable implements Tunable , Dumpab
     private Display.Mode mDisplayMode;
     @VisibleForTesting
     protected DisplayInfo mDisplayInfo = new DisplayInfo();
+
+    private boolean mImmerseMode = false;
+    private int mImmerseModeSetting = 0;
+    private boolean mIsRoundedCornerMultipleRadius;
+
 
     @VisibleForTesting
     protected void showCameraProtection(@NonNull Path protectionPath, @NonNull Rect bounds) {
@@ -331,6 +342,8 @@ public class ScreenDecorations extends CoreStartable implements Tunable , Dumpab
         mExecutor = mThreadFactory.buildDelayableExecutorOnHandler(mHandler);
         mExecutor.execute(this::startOnScreenDecorationsThread);
         mDotViewController.setUiExecutor(mExecutor);
+        mCustomSettingsObserver.observe();
+        mCustomSettingsObserver.update();
     }
 
     private boolean isPrivacyDotEnabled() {
@@ -849,7 +862,14 @@ public class ScreenDecorations extends CoreStartable implements Tunable , Dumpab
             lp.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_IS_ROUNDED_CORNERS_OVERLAY;
         }
 
-        lp.layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        //lp.layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+
+        if (mImmerseMode) {
+            lp.layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
+        } else {
+            lp.layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        }
+
         lp.setFitInsetsTypes(0 /* types */);
         lp.privateFlags |= WindowManager.LayoutParams.PRIVATE_FLAG_COLOR_SPACE_AGNOSTIC;
         return lp;
@@ -991,6 +1011,7 @@ public class ScreenDecorations extends CoreStartable implements Tunable , Dumpab
                 // the rotation before window manager was ready (and was still waiting for sending
                 // the updated rotation).
                 updateLayoutParams();
+                updateCutoutMode();
             }
         });
     }
@@ -1106,11 +1127,16 @@ public class ScreenDecorations extends CoreStartable implements Tunable , Dumpab
     }
 
     private boolean shouldDrawCutout() {
-        return mCutoutFactory.getHasProviders();
+        //return mCutoutFactory.getHasProviders();
+        return shouldDrawCutout(mContext);
     }
 
     static boolean shouldDrawCutout(Context context) {
-        return DisplayCutout.getFillBuiltInDisplayCutout(
+        ContentResolver cr = context.getContentResolver();
+        boolean newImmerseMode = cr != null && System.getIntForUser(cr,
+                        System.DISPLAY_CUTOUT_MODE, 0, UserHandle.USER_CURRENT) != 0;
+
+        return !newImmerseMode && DisplayCutout.getFillBuiltInDisplayCutout(
                 context.getResources(), context.getDisplay().getUniqueId());
     }
 
@@ -1484,4 +1510,60 @@ public class ScreenDecorations extends CoreStartable implements Tunable , Dumpab
             return true;
         }
     }
+
+    private void updateAllForCutout() {
+        onTuningChanged(SIZE, null);
+        updateLayoutParams();
+    }
+
+    private void updateCutoutMode() {
+        boolean newImmerseMode;
+        if (mRotation == Surface.ROTATION_0 || mRotation == Surface.ROTATION_180) {
+            newImmerseMode = mImmerseModeSetting == 1;
+        } else {
+            newImmerseMode = false;
+        }
+        if (mImmerseMode != newImmerseMode) {
+            mImmerseMode = newImmerseMode;
+            if (mOverlays != null) {
+                if (!mHandler.getLooper().isCurrentThread()) {
+                    mHandler.post(() -> updateAllForCutout());
+                } else {
+                    updateAllForCutout();
+                }
+            }
+        }
+    }
+
+    private CustomSettingsObserver mCustomSettingsObserver = new CustomSettingsObserver(mHandler);
+    private class CustomSettingsObserver extends ContentObserver {
+        CustomSettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        void observe() {
+            ContentResolver resolver = mContext.getContentResolver();
+            resolver.registerContentObserver(System.getUriFor(
+                    System.DISPLAY_CUTOUT_MODE), false, this);
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            if (uri.equals(System.getUriFor(System.DISPLAY_CUTOUT_MODE))) {
+                update();
+            }
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            update();
+        }
+
+        public void update() {
+            mImmerseModeSetting = System.getIntForUser(mContext.getContentResolver(),
+                        System.DISPLAY_CUTOUT_MODE, 0, UserHandle.USER_CURRENT);
+            updateCutoutMode();
+        }
+    }
+    
 }

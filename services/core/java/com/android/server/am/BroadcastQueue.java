@@ -55,6 +55,7 @@ import android.app.PendingIntent;
 import android.app.RemoteServiceException.CannotDeliverBroadcastException;
 import android.app.usage.UsageEvents.Event;
 import android.app.usage.UsageStatsManagerInternal;
+import android.baikalos.AppProfile;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.IIntentReceiver;
@@ -74,6 +75,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.PowerExemptionManager.ReasonCode;
 import android.os.PowerExemptionManager.TempAllowListType;
+import android.os.PowerManagerInternal;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.SystemClock;
@@ -94,6 +96,7 @@ import com.android.server.LocalServices;
 import com.android.server.pm.UserManagerInternal;
 
 import com.android.server.BaikalSystemService;
+import com.android.internal.baikalos.AppProfileSettings;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -1725,6 +1728,43 @@ public final class BroadcastQueue {
         ProcessRecord app = mService.getProcessRecordLocked(targetProcess,
                 info.activityInfo.applicationInfo.uid);
 
+        boolean background = mQueueName.equals("background") || mQueueName.equals("offload_bg");
+
+        AppProfile appProfile = null;
+       
+        if( app != null ) appProfile = app.mAppProfile;
+        else appProfile = AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+
+        if( appProfile == null ) appProfile = new AppProfile(info.activityInfo.packageName);
+
+
+        if( Intent.ACTION_BOOT_COMPLETED.equals(r.intent.getAction()) || 
+            Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(r.intent.getAction()) ||
+            Intent.ACTION_PRE_BOOT_COMPLETED.equals(r.intent.getAction()) )  {
+            if( appProfile.mBootDisabled ) {
+                Slog.i(TAG,"Autostart disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
+                skip = true;
+            }
+        }
+
+        if( !skip && background ) {
+            if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
+                if( appProfile.getBackground() > 1 ) {
+                    Slog.w(TAG, "Background execution disabled by baikalos: receiving "
+                            + r.intent + " to "
+                            + component.flattenToShortString());
+                    skip = true;
+                }
+            } else {
+                if( appProfile.getBackground() > 0 ) {
+                    Slog.w(TAG, "Background execution limited by baikalos: receiving "
+                            + r.intent + " to "
+                            + component.flattenToShortString());
+                    skip = true;
+                }
+            }
+        }
+        
         if (!skip) {
             final int allowed = mService.getAppStartModeLOSP(
                     info.activityInfo.applicationInfo.uid, info.activityInfo.packageName,
@@ -1933,6 +1973,9 @@ public final class BroadcastQueue {
             // If a dead object exception was thrown -- fall through to
             // restart the application.
         }
+
+
+        
 
         // Not running -- get it started, to be executed when the app comes up.
         if (DEBUG_BROADCAST)  Slog.v(TAG_BROADCAST,

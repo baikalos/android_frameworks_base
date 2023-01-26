@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package ink.kaleidoscope.server;
+package com.android.server.baikalos;
 
 import static android.os.Process.THREAD_PRIORITY_DEFAULT;
-import static android.provider.Settings.Secure.GMS_ENABLED;
+//import static android.provider.Settings.Secure.GMS_ENABLED;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -49,9 +49,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-public final class GmsManagerService extends SystemService {
+public final class BaikalAppManagerService extends SystemService {
 
-    static final String[] GMS_PACKAGES =
+    public static final String[] GMS_PACKAGES =
     {
         "com.android.vending",
         "com.google.android.gms",
@@ -76,9 +76,26 @@ public final class GmsManagerService extends SystemService {
         "com.google.android.googlequicksearchbox"
     };
 
-    private static final String TAG = "GmsManagerService";
+    public static final String[] HMS_PACKAGES = 
+    {
+        "com.huawei.hwid",
+        "com.huawei.appmarket"
+    };
 
-    private static HashMap<Integer, Boolean> sCachedSettings = new HashMap<>();
+    public static final String[] FDROID_PACKAGES = 
+    {
+        "org.fdroid.fdroid.privileged",
+        "org.fdroid.fdroid"
+    };
+
+    public static final String[] AURORA_PACKAGES = 
+    {
+    };
+
+    private static final String TAG = "BaikalAppManagerService";
+
+    private static HashMap<Integer, BaikalAppManagerEntry[]> sCachedSettings = new HashMap<>();
+
 
     private final Context mContext;
     private final IPackageManager mPM;
@@ -94,26 +111,61 @@ public final class GmsManagerService extends SystemService {
         if (packageName == null)
             return false;
 
-        Boolean enabled = sCachedSettings.get(userId);
-        if (enabled == null)
-            return false;
+        BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
+        if( entries == null ) return false;
 
-        return !enabled.booleanValue() &&
-                Arrays.stream(GMS_PACKAGES).anyMatch(packageName::equals);
+        boolean enabledGms = entries[0].mEnabled;
+        boolean enabledHms = entries[1].mEnabled;
+        boolean enabledFdroid = entries[2].mEnabled;
+        boolean enabledAurora = entries[3].mEnabled;
+
+        if( !enabledGms &&
+                Arrays.stream(GMS_PACKAGES).anyMatch(packageName::equals) ) return true;
+
+        if( !enabledHms &&
+                Arrays.stream(HMS_PACKAGES).anyMatch(packageName::equals) ) return true;
+
+        if( !enabledFdroid &&
+                Arrays.stream(FDROID_PACKAGES).anyMatch(packageName::equals) ) return true;
+
+        if( !enabledAurora &&
+                Arrays.stream(AURORA_PACKAGES).anyMatch(packageName::equals) ) return true;
+        
+        return false;
     }
 
     public static ParceledListSlice<PackageInfo> recreatePackageList(
                             int userId, ParceledListSlice<PackageInfo> list) {
-        Boolean enabled = sCachedSettings.get(userId);
-        if (enabled == null || enabled.booleanValue())
-            return list;
+
+        BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
+        if( entries == null ) return list;
+
+        boolean enabledGms = entries[0].mEnabled;
+        boolean enabledHms = entries[1].mEnabled;
+        boolean enabledFdroid = entries[2].mEnabled;
+        boolean enabledAurora = entries[3].mEnabled;
+
 
         List<PackageInfo> oldList = list.getList();
         ArrayList<PackageInfo> newList = new ArrayList<>();
         for (PackageInfo info : oldList) {
-            if (info.packageName != null &&
+
+            if (!enabledGms && info.packageName != null &&
                     Arrays.stream(GMS_PACKAGES).anyMatch(info.packageName::equals))
                 continue;
+
+            if (!enabledHms && info.packageName != null &&
+                    Arrays.stream(HMS_PACKAGES).anyMatch(info.packageName::equals))
+                continue;
+
+            if (!enabledFdroid && info.packageName != null &&
+                    Arrays.stream(FDROID_PACKAGES).anyMatch(info.packageName::equals))
+                continue;
+
+            if (!enabledAurora && info.packageName != null &&
+                    Arrays.stream(AURORA_PACKAGES).anyMatch(info.packageName::equals))
+                continue;
+
             newList.add(info);
         }
 
@@ -122,15 +174,35 @@ public final class GmsManagerService extends SystemService {
 
     public static List<ApplicationInfo> recreateApplicationList(
                             int userId, List<ApplicationInfo> list) {
-        Boolean enabled = sCachedSettings.get(userId);
-        if (enabled == null || enabled.booleanValue())
-            return list;
+
+        BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
+        if( entries == null ) return list;
+
+        boolean enabledGms = entries[0].mEnabled;
+        boolean enabledHms = entries[1].mEnabled;
+        boolean enabledFdroid = entries[2].mEnabled;
+        boolean enabledAurora = entries[3].mEnabled;
+
 
         ArrayList<ApplicationInfo> newList = new ArrayList<>();
         for (ApplicationInfo info : list) {
-            if (info.packageName != null &&
+
+            if (!enabledGms && info.packageName != null &&
                     Arrays.stream(GMS_PACKAGES).anyMatch(info.packageName::equals))
                 continue;
+
+            if (!enabledHms && info.packageName != null &&
+                    Arrays.stream(HMS_PACKAGES).anyMatch(info.packageName::equals))
+                continue;
+
+            if (!enabledFdroid && info.packageName != null &&
+                    Arrays.stream(FDROID_PACKAGES).anyMatch(info.packageName::equals))
+                continue;
+
+            if (!enabledAurora && info.packageName != null &&
+                    Arrays.stream(AURORA_PACKAGES).anyMatch(info.packageName::equals))
+                continue;
+
             newList.add(info);
         }
 
@@ -138,11 +210,31 @@ public final class GmsManagerService extends SystemService {
     }
 
     private void updateStateForUser(int userId) {
-        boolean enabled = Settings.Secure.getIntForUser(mResolver, GMS_ENABLED, 0, userId) == 1;
-        sCachedSettings.put(userId, enabled);
 
+        boolean enabledGms = Settings.Secure.getIntForUser(mResolver, Settings.Secure.GMS_ENABLED, 0, userId) == 1;
+        boolean enabledHms = Settings.Secure.getIntForUser(mResolver, Settings.Secure.HMS_ENABLED, 0, userId) == 1;
+        boolean enabledFdroid = Settings.Secure.getIntForUser(mResolver, Settings.Secure.FDROID_ENABLED, 0, userId) == 1;
+        boolean enabledAurora = Settings.Secure.getIntForUser(mResolver, Settings.Secure.AURORA_ENABLED, 0, userId) == 1;
+
+        BaikalAppManagerEntry[] managedApps = new BaikalAppManagerEntry[] {
+            new BaikalAppManagerEntry("gms", Settings.Secure.GMS_ENABLED, GMS_PACKAGES, enabledGms),
+            new BaikalAppManagerEntry("hms", Settings.Secure.HMS_ENABLED, HMS_PACKAGES, enabledHms),
+            new BaikalAppManagerEntry("fdroid", Settings.Secure.FDROID_ENABLED, FDROID_PACKAGES, enabledFdroid),
+            new BaikalAppManagerEntry("aurora", Settings.Secure.AURORA_ENABLED, AURORA_PACKAGES, enabledAurora),
+        };
+
+        sCachedSettings.put(userId, managedApps);
+
+        updatePackagesStateForUser(GMS_PACKAGES, enabledGms, userId);
+        updatePackagesStateForUser(HMS_PACKAGES, enabledHms, userId);
+        updatePackagesStateForUser(FDROID_PACKAGES, enabledFdroid, userId);
+        updatePackagesStateForUser(AURORA_PACKAGES, enabledAurora, userId);
+
+    }
+
+    private void updatePackagesStateForUser(String[] packages, boolean enabled, int userId) {
         try {
-            for (String packageName : GMS_PACKAGES) {
+            for (String packageName : packages) {
                 try {
                     if (enabled) {
                         mPM.setApplicationEnabledSetting(packageName,
@@ -165,8 +257,16 @@ public final class GmsManagerService extends SystemService {
             return;
 
         SettingsObserver observer = new SettingsObserver(mHandler, userId);
+
         mResolver.registerContentObserver(
-                Settings.Secure.getUriFor(GMS_ENABLED), false, observer, userId);
+                Settings.Secure.getUriFor(Settings.Secure.GMS_ENABLED), false, observer, userId);
+        mResolver.registerContentObserver(
+                Settings.Secure.getUriFor(Settings.Secure.HMS_ENABLED), false, observer, userId);
+        mResolver.registerContentObserver(
+                Settings.Secure.getUriFor(Settings.Secure.FDROID_ENABLED), false, observer, userId);
+        mResolver.registerContentObserver(
+                Settings.Secure.getUriFor(Settings.Secure.AURORA_ENABLED), false, observer, userId);
+
         mObservers.put(userId, observer);
 
         updateStateForUser(userId);
@@ -210,7 +310,7 @@ public final class GmsManagerService extends SystemService {
         init();
     }
 
-    public GmsManagerService(Context context) {
+    public BaikalAppManagerService(Context context) {
         super(context);
         mContext = context;
         mResolver = context.getContentResolver();
@@ -218,6 +318,7 @@ public final class GmsManagerService extends SystemService {
         mUM = IUserManager.Stub.asInterface(ServiceManager.getService(Context.USER_SERVICE));
         mOpPackageName = context.getOpPackageName();
         mObservers = new HashMap<>();
+        
     }
 
     private final class UserReceiver extends BroadcastReceiver {
@@ -245,4 +346,19 @@ public final class GmsManagerService extends SystemService {
             updateStateForUser(mUserId);
         }
     }
+
+    public class BaikalAppManagerEntry {
+        public final String mName;
+        public final String mSettingsUri;
+        public final String [] mPackages;
+        public boolean mEnabled;
+
+        public BaikalAppManagerEntry(String Name, String SettingsUri, String [] Packages, boolean Enabled) {
+            mName = Name;
+            mPackages = Packages;
+            mEnabled = Enabled;
+            mSettingsUri = SettingsUri;
+        }
+    }
+
 }

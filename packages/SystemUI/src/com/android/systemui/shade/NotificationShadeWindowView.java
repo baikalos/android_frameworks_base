@@ -34,6 +34,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.ActionMode;
 import android.view.DisplayCutout;
 import android.view.InputQueue;
@@ -573,11 +574,13 @@ public class NotificationShadeWindowView extends FrameLayout {
 
         @Override
         public int getStatusBarColor() {
+            Log.w(TAG,"getStatusBarColor", new Throwable());
             return 0;
         }
 
         @Override
         public void setStatusBarColor(@ColorInt int color) {
+            Log.w(TAG,"setStatusBarColor", new Throwable());
         }
 
         @Override

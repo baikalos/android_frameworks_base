@@ -424,6 +424,12 @@ import com.android.server.wm.WindowManagerInternal;
 import com.android.server.wm.WindowManagerService;
 import com.android.server.wm.WindowProcessController;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+
+import com.android.server.baikalos.AppProfileManager;
+
 import dalvik.annotation.optimization.NeverCompile;
 import dalvik.system.VMRuntime;
 
@@ -1454,6 +1460,8 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     final AppRestrictionController mAppRestrictionController;
 
+    static Actions mActions;
+
     private final class AppDeathRecipient implements IBinder.DeathRecipient {
         final ProcessRecord mApp;
         final int mPid;
@@ -1605,6 +1613,9 @@ public class ActivityManagerService extends IActivityManager.Stub
     @Nullable
     volatile ActivityManagerInternal.VoiceInteractionManagerProvider
             mVoiceInteractionManagerProvider;
+
+    final AppProfileSettings mAppProfileSettings;
+    final AppProfileManager mAppProfileManager;
 
     final class UiHandler extends Handler {
         public UiHandler() {
@@ -2313,6 +2324,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         mBatteryStatsService = null;
         mHandler = new MainHandler(handlerThread.getLooper());
         mHandlerThread = handlerThread;
+        mActions = new Actions(mContext, mHandlerThread.getLooper());
         mConstants = new ActivityManagerConstants(mContext, this, mHandler);
         final ActiveUids activeUids = new ActiveUids(this, false /* postChangesToAtm */);
         mPlatformCompat = null;
@@ -2347,6 +2359,9 @@ public class ActivityManagerService extends IActivityManager.Stub
                 mFgOffloadBroadcastQueue = null;
         mComponentAliasResolver = new ComponentAliasResolver(this);
         mSwipeToScreenshotObserver = null;
+
+        mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
+        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext); 
     }
 
     // Note: This method is invoked on the main thread but may need to attach various
@@ -2373,6 +2388,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         mProcStartHandlerThread.start();
         mProcStartHandler = new ProcStartHandler(this, mProcStartHandlerThread.getLooper());
 
+        mActions = new Actions(mContext, mHandlerThread.getLooper());
         mConstants = new ActivityManagerConstants(mContext, this, mHandler);
         final ActiveUids activeUids = new ActiveUids(this, true /* postChangesToAtm */);
         mPlatformCompat = (PlatformCompat) ServiceManager.getService(
@@ -2461,6 +2477,9 @@ public class ActivityManagerService extends IActivityManager.Stub
 
         Watchdog.getInstance().addMonitor(this);
         Watchdog.getInstance().addThread(mHandler);
+
+        mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
+        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext); 
 
         // bind background threads to little cores
         // this is expected to fail inside of framework tests because apps can't touch cpusets directly
@@ -6747,10 +6766,16 @@ public class ActivityManagerService extends IActivityManager.Stub
             }
         }
 
-        if ((info.flags & PERSISTENT_MASK) == PERSISTENT_MASK) {
+        if ((info.flags & PERSISTENT_MASK) == PERSISTENT_MASK && app.mAppProfile.mBackground <= 0 ) {
             app.setPersistent(true);
             app.mState.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
         }
+
+        if( app.mAppProfile != null && app.mAppProfile.mPinned ) {
+            app.mState.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
+            Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
+        }
+
         if (app.getThread() == null && mPersistentStartingProcesses.indexOf(app) < 0) {
             mPersistentStartingProcesses.add(app);
             mProcessList.startProcessLocked(app, new HostingRecord(
@@ -6760,6 +6785,8 @@ public class ActivityManagerService extends IActivityManager.Stub
                     abiOverride);
         }
 
+
+        Slog.d(TAG, "Baikal.AppProfile: addApp profile=" + app.mAppProfile);
         return app;
     }
 
@@ -6844,6 +6871,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 mActivityTaskManager.onScreenAwakeChanged(isAwake);
                 mOomAdjProfiler.onWakefulnessChanged(wakefulness);
                 mOomAdjuster.onWakefulnessChanged(wakefulness);
+                mAppProfileManager.setAwake(isAwake);
             }
             updateOomAdjLocked(OomAdjuster.OOM_ADJ_REASON_UI_VISIBILITY);
         }
@@ -8064,6 +8092,8 @@ public class ActivityManagerService extends IActivityManager.Stub
             mAppOpsService.systemReady();
             mProcessList.onSystemReady();
             mAppRestrictionController.onSystemReady();
+            mAppProfileSettings.registerObserver(true);
+            mAppProfileManager.initialize();
             mSystemReady = true;
             t.traceEnd();
         }
@@ -8763,7 +8793,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 try {
                     String[] clientPackages = pm.getPackagesForUid(appUid);
                     // In shared UID case, don't add the package information
-                    if (clientPackages.length == 1) {
+                    if ( clientPackages != null && clientPackages.length == 1) {
                         appendSdkSandboxClientPackageHeader(sb, clientPackages[0], callingUserId);
                     }
                 } catch (RemoteException e) {
@@ -15532,6 +15562,9 @@ public class ActivityManagerService extends IActivityManager.Stub
                 } finally {
                     Binder.restoreCallingIdentity(identity);
                 }
+
+                // Notify BaikalOS core about top app change
+                if( uid != -1 ) Actions.sendTopAppChanged(mCurResumedUid,mCurResumedPackage);
             }
         }
         return r;
@@ -15836,6 +15869,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         boolean didSomething = false;
         for (int i = mProcessList.mRemovedProcesses.size() - 1; i >= 0; i--) {
             final ProcessRecord app = mProcessList.mRemovedProcesses.get(i);
+            if( app.mAppProfile.mPinned ) continue;
             if (!app.hasActivitiesOrRecentTasks()
                     && app.mReceivers.numberOfCurReceivers() == 0
                     && app.mServices.numberOfRunningServices() == 0) {

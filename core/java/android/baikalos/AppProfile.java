@@ -136,7 +136,7 @@ public class AppProfile {
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
-    private static AppProfile currentAppProfile = new AppProfile();
+    private static AppProfile currentAppProfile = new AppProfile("current");
 
     public static @Nullable AppProfile getCurrentAppProfile() {
         return currentAppProfile;
@@ -146,7 +146,7 @@ public class AppProfile {
         return currentAppProfile = profile;
     }
 
-    private static AppProfile defaultProfile = new AppProfile();
+    private static AppProfile defaultProfile = new AppProfile("default");
 
     public static @Nullable AppProfile getDefaultProfile() {
         return defaultProfile;
@@ -228,6 +228,12 @@ public class AppProfile {
         this.mBAFRecv = profile.mBAFRecv;
         this.mBAFSend = profile.mBAFSend;
         this.mSonification = profile.mSonification;
+        this.mSystemWhitelisted = profile.mSystemWhitelisted;
+    }
+
+    public int getBackground() {
+        if( mSystemWhitelisted && mBackground >=0 ) return -1;
+        return mBackground;
     }
 
     public boolean isDefault() {
@@ -300,6 +306,7 @@ public class AppProfile {
         this.mBAFRecv = profile.mBAFRecv;
         this.mBAFSend = profile.mBAFSend;
         this.mSonification = profile.mSonification;
+        this.mSystemWhitelisted = profile.mSystemWhitelisted;
     }
 
 
@@ -410,4 +417,9 @@ public class AppProfile {
         if( profile != null ) return profile;
         return defaultProfile;
     }
+
+    public String toString() {
+        return this.serialize();
+    }
+
 }

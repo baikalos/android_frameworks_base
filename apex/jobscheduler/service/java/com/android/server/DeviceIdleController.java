@@ -105,6 +105,11 @@ import com.android.server.deviceidle.TvConstraintController;
 import com.android.server.net.NetworkPolicyManagerInternal;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
+
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
@@ -1727,6 +1732,7 @@ public class DeviceIdleController extends SystemService
                     } catch (RemoteException e) {
                     }
                     if (deepChanged) {
+                        Actions.sendIdleModeChanged(msg.what == MSG_REPORT_IDLE_ON);
                         getContext().sendBroadcastAsUser(mIdleIntent, UserHandle.ALL);
                     }
                     if (lightChanged) {
@@ -1748,6 +1754,7 @@ public class DeviceIdleController extends SystemService
                     }
                     if (deepChanged) {
                         incActiveIdleOps();
+                        Actions.sendIdleModeChanged(false);
                         getContext().sendOrderedBroadcastAsUser(mIdleIntent, UserHandle.ALL,
                                 null, mIdleStartedDoneReceiver, null, 0, null, null);
                     }
@@ -1776,6 +1783,7 @@ public class DeviceIdleController extends SystemService
                     } catch (RemoteException e) {
                     }
                     if (deepChanged) {
+                        Actions.sendIdleModeChanged(false);
                         getContext().sendBroadcastAsUser(mIdleIntent, UserHandle.ALL);
                     }
                     if (lightChanged) {

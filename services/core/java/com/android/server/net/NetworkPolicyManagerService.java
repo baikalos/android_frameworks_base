@@ -164,6 +164,7 @@ import android.app.PendingIntent;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.app.usage.UsageStatsManagerInternal;
+import android.baikalos.AppProfile;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -256,6 +257,7 @@ import android.util.Xml;
 import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.messages.nano.SystemMessageProto.SystemMessage;
 import com.android.internal.notification.SystemNotificationChannels;
 import com.android.internal.os.SomeArgs;
@@ -4697,6 +4699,16 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
         if (!deviceIdleMode) {
             isWhitelisted = isWhitelisted || isWhitelistedFromPowerSaveExceptIdleUL(uid);
         }
+
+        if( !isWhitelisted && uid >= Process.FIRST_APPLICATION_UID ) {
+            String[] pkgs = mContext.getPackageManager().getPackagesForUid(uid);
+            if( pkgs != null && pkgs.length > 0 ) {
+                AppProfile profile = AppProfileSettings.getProfileStatic(pkgs[0]);
+                if( profile != null && profile.mAllowIdleNetwork )  return true;
+                if( profile != null && profile.getBackground() < 0 )  return true;
+            }
+        }
+
         return isWhitelisted;
     }
 

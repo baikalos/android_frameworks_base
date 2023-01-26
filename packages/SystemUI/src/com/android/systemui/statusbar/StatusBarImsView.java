@@ -22,6 +22,7 @@ import android.graphics.Rect;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -149,10 +150,12 @@ public class StatusBarImsView extends FrameLayout implements
             requestLayout = getVisibility() != View.GONE;
             setVisibility(View.GONE);
             mState = null;
+            Log.d(TAG,"requestLayout setVisibility:" + requestLayout + ":" + this);
         } else if (mState == null) {
             requestLayout = true;
             mState = state;
             initViewState(state);
+            Log.d(TAG,"requestLayout initViewState:" + requestLayout + ":" + this);
         } else if (!mState.equals(state)) {
             requestLayout = updateState(state);
         }
@@ -170,6 +173,7 @@ public class StatusBarImsView extends FrameLayout implements
                 || mState.volteVisible != state.volteVisible) {
             initViewState(state);
             needsLayout = true;
+            Log.d(TAG,"requestLayout updateState:" + needsLayout + ":" + this);
         }
 
         mState = state;
