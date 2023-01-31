@@ -38,10 +38,10 @@ public class AppProfile {
     public int mBrightness;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public @Nullable String mPerfProfile;
+    public int mPerfProfile;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public @Nullable String mThermalProfile;
+    public int mThermalProfile;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public int mMaxFrameRate;
@@ -136,25 +136,25 @@ public class AppProfile {
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
-    private static AppProfile currentAppProfile = new AppProfile("current");
+    private static AppProfile mCurrentAppProfile = new AppProfile("current");
 
     public static @Nullable AppProfile getCurrentAppProfile() {
-        return currentAppProfile;
+        return mCurrentAppProfile;
     }
 
-    public static @Nullable AppProfile setCurrentAppProfile(@Nullable AppProfile profile) {
-        return currentAppProfile = profile;
+    public static void setCurrentAppProfile(@Nullable AppProfile profile) {
+        mCurrentAppProfile = profile;
     }
 
-    private static AppProfile defaultProfile = new AppProfile("default");
+    private static AppProfile mDefaultProfile = new AppProfile("default");
 
     public static @Nullable AppProfile getDefaultProfile() {
-        return defaultProfile;
+        return mDefaultProfile;
     }
 
     public AppProfile() {
-        mPerfProfile = "default";
-        mThermalProfile = "default";
+        mPerfProfile = 0;
+        mThermalProfile = 0;
         mPackageName = "";
         mMaxFrameRate = 0;
         mMinFrameRate = 0;
@@ -176,8 +176,8 @@ public class AppProfile {
         if( packageName == null ) mPackageName = "";
         else mPackageName = packageName;
 
-        mPerfProfile = "default";
-        mThermalProfile = "default";
+        mPerfProfile = 0;
+        mThermalProfile = 0;
         mMaxFrameRate = 0;
         mMinFrameRate = 0;
         mRotation = 0;
@@ -267,8 +267,8 @@ public class AppProfile {
             !mBAFRecv &&
             !mBAFSend &&
             !mSonification &&
-            ( mPerfProfile == null || "default".equals(mPerfProfile) ) &&
-            ( mThermalProfile == null || "default".equals(mThermalProfile) ) ) return true;
+            mPerfProfile == 0 &&
+            mThermalProfile == 0 ) return true;
         return false;
     }
 
@@ -314,8 +314,8 @@ public class AppProfile {
         if( mPackageName == null || "".equals(mPackageName) ) return null;
         String result =  "pn=" + mPackageName;
         if( mBrightness != 0 ) result += "," + "br=" + mBrightness;
-        if( ! "default".equals(mPerfProfile) ) result += "," + "pp=" + (mPerfProfile != null ? mPerfProfile : "");
-        if( ! "default".equals(mThermalProfile) ) result += "," + "tp=" + (mThermalProfile != null ? mThermalProfile : "");
+        if( mPerfProfile != 0 ) result += "," + "pp=" + mPerfProfile;
+        if( mThermalProfile != 0 ) result += "," + "tp=" + mThermalProfile;
         if( mReader ) result +=  "," + "rm=" + mReader;
         if( mPinned ) result +=  "," + "pd=" + mPinned;
         if( mMaxFrameRate != 0 ) result +=  "," + "fr=" + mMaxFrameRate;
@@ -364,8 +364,8 @@ public class AppProfile {
         if( mPackageName == null || mPackageName.equals("") ) throw new IllegalArgumentException();
         try {
             mBrightness = parser.getInt("br",0);
-            mPerfProfile = parser.getString("pp","default");
-            mThermalProfile = parser.getString("tp","default");
+            mPerfProfile = parser.getInt("pp",0);
+            mThermalProfile = parser.getInt("tp",0);
             mReader = parser.getBoolean("rm",false);
             mPinned = parser.getBoolean("pd",false);
             mStamina = parser.getBoolean("as",false);
@@ -415,7 +415,7 @@ public class AppProfile {
 
     public static @Nullable AppProfile get(@Nullable AppProfile profile) {
         if( profile != null ) return profile;
-        return defaultProfile;
+        return mDefaultProfile;
     }
 
     public String toString() {

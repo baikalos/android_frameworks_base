@@ -154,6 +154,13 @@ import com.android.server.tare.EconomyManagerInternal;
 import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+import com.android.server.baikalos.AppProfileManager;
+
+import com.android.server.baikalos.BaikalAlarmManager;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import libcore.util.EmptyArray;
@@ -192,7 +199,7 @@ public class AlarmManagerService extends SystemService {
 
     static final String TAG = "AlarmManager";
     static final String TIME_TICK_TAG = "TIME_TICK";
-    static final boolean localLOGV = false;
+    static final boolean localLOGV = true;
     static final boolean DEBUG_BATCH = localLOGV || false;
     static final boolean DEBUG_ALARM_CLOCK = localLOGV || false;
     static final boolean DEBUG_LISTENER_CALLBACK = localLOGV || false;
@@ -228,6 +235,9 @@ public class AlarmManagerService extends SystemService {
 
     AppOpsManager mAppOps;
     DeviceIdleInternal mLocalDeviceIdleController;
+    AppProfileSettings mAppProfileSettings;
+    AppProfileManager mAppProfileManager;
+    BaikalAlarmManager mBaikalAlarmManager;
     private UsageStatsManagerInternal mUsageStatsManagerInternal;
     private ActivityManagerInternal mActivityManagerInternal;
     private final EconomyManagerInternal mEconomyManagerInternal;
@@ -2048,6 +2058,10 @@ public class AlarmManagerService extends SystemService {
 
                 mClockReceiver.scheduleTimeTickEvent();
                 mClockReceiver.scheduleDateChangedEvent();
+
+                mAppProfileSettings = AppProfileSettings.getInstance(); 
+                mAppProfileManager = AppProfileManager.getInstance(); 
+                mBaikalAlarmManager = BaikalAlarmManager.getInstance();
             }
             IAppOpsService iAppOpsService = mInjector.getAppOpsService();
             try {
@@ -2866,8 +2880,24 @@ public class AlarmManagerService extends SystemService {
                 flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE);
             }
 
-            final boolean allowWhileIdle = (flags & FLAG_ALLOW_WHILE_IDLE) != 0;
-            final boolean exact = (windowLength == 0);
+            boolean allowWhileIdle = (flags & FLAG_ALLOW_WHILE_IDLE) != 0;
+            boolean exact = (windowLength == 0);
+
+
+            if (alarmClock == null && (exact || allowWhileIdle || (flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0) ) {
+                if(!mBaikalAlarmManager.isAppWakeupAllowed(UserHandle.getAppId(callingUid))) {
+                    if( exact ) {
+                        exact = false;
+                        windowLength = 600000;
+                    }
+                    if( allowWhileIdle ) {
+                        allowWhileIdle = false;
+                    }
+                    flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED | FLAG_ALLOW_WHILE_IDLE_COMPAT);
+                    flags &= ~(FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE);
+                }
+            }
+
 
             // Make sure the caller is allowed to use the requested kind of alarm, and also
             // decide what quota and broadcast options to use.

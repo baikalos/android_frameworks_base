@@ -130,7 +130,7 @@ public class CPUInfoService extends Service {
                 if(msg.what==1){
                     String msgData = (String) msg.obj;
                     try {
-                        Log.d(TAG, "msgData " + msgData);
+                        //Log.d(TAG, "msgData " + msgData);
                         String[] parts=msgData.split(";");
                         if( parts.length < 9 ) return;
                         mCpuTemp=parts[0];

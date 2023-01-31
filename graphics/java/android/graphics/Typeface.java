@@ -655,13 +655,15 @@ public class Typeface {
         }
 
         private Typeface resolveFallbackTypeface() {
+            Log.e(TAG, "resolveFallbackTypeface " + mFallbackFamilyName + ", " + sFallbackName);
             if (mFallbackFamilyName == null) {
                 if( sFallbackName == null )
                     return null;
                  mFallbackFamilyName = sFallbackName;
             }
 
-            final Typeface base =  getSystemDefaultTypeface(mFallbackFamilyName);
+            //final Typeface base =  getSystemDefaultTypeface(mFallbackFamilyName);
+            final Typeface base =  getSystemOverrideTypeface(mFallbackFamilyName);
             if (mWeight == RESOLVE_BY_FONT_TABLE && mItalic == RESOLVE_BY_FONT_TABLE) {
                 return base;
             }
@@ -678,7 +680,8 @@ public class Typeface {
          * @return Newly created Typeface. May return null if some parameters are invalid.
          */
         public Typeface build() {
-            if (mFontBuilder == null || AppProfile.getCurrentAppProfile().mForcedScreenshot) {
+            Log.e(TAG, "Typeface build " + mFallbackFamilyName + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
+            if (mFontBuilder == null || AppProfile.getCurrentAppProfile().mOverrideFonts) {
                 return resolveFallbackTypeface();
             }
 
@@ -1370,8 +1373,10 @@ public class Typeface {
             sDefaults = new Typeface[] {
                 DEFAULT,
                 DEFAULT_BOLD,
-                create(getSystemDefaultTypeface(familyName), Typeface.ITALIC),
-                create(getSystemDefaultTypeface(familyName), Typeface.BOLD_ITALIC),
+                //create(getSystemDefaultTypeface(familyName), Typeface.ITALIC),
+                //create(getSystemDefaultTypeface(familyName), Typeface.BOLD_ITALIC),
+                create(getSystemOverrideTypeface(familyName), Typeface.ITALIC),
+                create(getSystemOverrideTypeface(familyName), Typeface.BOLD_ITALIC),
             };
         }
     }
@@ -1415,6 +1420,7 @@ public class Typeface {
             if (typeface == null) {
                 // This should never happen, but if the system font family name is invalid, just return
                 // instead of crashing the app.
+                Log.e(TAG, "Can't update default font to" + familyName);
                 return;
             }
 
@@ -1422,8 +1428,13 @@ public class Typeface {
             //setFinalField("DEFAULT_FAMILY", familyName);
 
             // Static typefaces in public API
-            setFinalField("DEFAULT", create(getSystemDefaultTypeface(familyName), 0));
-            setFinalField("DEFAULT_BOLD", create(getSystemDefaultTypeface(familyName), Typeface.BOLD));
+            //setFinalField("DEFAULT", create(getSystemDefaultTypeface(familyName), 0));
+            //setFinalField("DEFAULT_BOLD", create(getSystemDefaultTypeface(familyName), Typeface.BOLD));
+            //setFinalField("SANS_SERIF", DEFAULT);
+
+            setFinalField("DEFAULT", create(typeface /*getSystemOverrideTypeface(familyName)*/, 0) );
+            //setFinalField("DEFAULT_BOLD", create(typefaceBold /*getSystemOverrideTypeface(familyName)*/, Typeface.BOLD));
+            setFinalField("DEFAULT_BOLD", create(typeface, 700, false));
             setFinalField("SANS_SERIF", DEFAULT);
 
             sSystemFontOverrides.put("", typeface);

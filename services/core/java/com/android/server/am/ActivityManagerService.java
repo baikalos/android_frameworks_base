@@ -429,6 +429,7 @@ import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
 
 import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAlarmManager;
 
 import dalvik.annotation.optimization.NeverCompile;
 import dalvik.system.VMRuntime;
@@ -1616,6 +1617,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     final AppProfileSettings mAppProfileSettings;
     final AppProfileManager mAppProfileManager;
+    final BaikalAlarmManager mBaikalAlarmManager;
 
     final class UiHandler extends Handler {
         public UiHandler() {
@@ -2362,6 +2364,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
         mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
         mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext); 
+        mBaikalAlarmManager = BaikalAlarmManager.getInstance(mHandlerThread.getLooper(), mContext); 
     }
 
     // Note: This method is invoked on the main thread but may need to attach various
@@ -2480,6 +2483,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
         mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
         mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext); 
+        mBaikalAlarmManager = BaikalAlarmManager.getInstance(mHandlerThread.getLooper(), mContext); 
 
         // bind background threads to little cores
         // this is expected to fail inside of framework tests because apps can't touch cpusets directly
@@ -8094,6 +8098,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             mAppRestrictionController.onSystemReady();
             mAppProfileSettings.registerObserver(true);
             mAppProfileManager.initialize();
+            mBaikalAlarmManager.initialize();
             mSystemReady = true;
             t.traceEnd();
         }

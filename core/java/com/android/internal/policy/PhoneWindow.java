@@ -2499,10 +2499,12 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
         final boolean targetPreQ = targetSdk < Build.VERSION_CODES.Q;
 
         if (!mForcedStatusBarColor) {
-            mStatusBarColor = a.getColor(R.styleable.Window_statusBarColor, 0xFF000000);
+            //mStatusBarColor = a.getColor(R.styleable.Window_statusBarColor, 0xFF000000);
+            mStatusBarColor = a.getColor(R.styleable.Window_statusBarColor, 0x00000000);
+            mForcedStatusBarColor = true;
         }
 
-        Log.e(TAG,"setStatusBarColor :" + mStatusBarColor, new Throwable());
+        Log.e(TAG,"setStatusBarColor :" + mStatusBarColor /*, new Throwable()*/);
 
         if (!mForcedNavigationBarColor) {
             mNavigationBarColor = a.getColor(R.styleable.Window_navigationBarColor, 0xFF000000);
@@ -3826,13 +3828,13 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
 
     @Override
     public int getStatusBarColor() {
-        Log.e(TAG,"setStatusBarColor :" + mStatusBarColor, new Throwable());
+        Log.e(TAG,"setStatusBarColor :" + mStatusBarColor/*, new Throwable()*/);
         return mStatusBarColor;
     }
 
     @Override
     public void setStatusBarColor(int color) {
-        Log.e(TAG,"setStatusBarColor :" + color, new Throwable());
+        Log.e(TAG,"setStatusBarColor :" + color/*, new Throwable()*/);
         mStatusBarColor = color;
         mForcedStatusBarColor = true;
         if (mDecor != null) {

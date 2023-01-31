@@ -3437,6 +3437,7 @@ public final class PowerManagerService extends SystemService
                 || (powerGroup.getWakeLockSummaryLocked() & WAKE_LOCK_STAY_AWAKE) != 0
                 || (powerGroup.getUserActivitySummaryLocked() & (
                         USER_ACTIVITY_SCREEN_BRIGHT | USER_ACTIVITY_SCREEN_DIM)) != 0
+                || (AppProfileManager.getCurrentProfile().mKeepOn && getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE)
                 || mScreenBrightnessBoostInProgress;
     }
 
@@ -4534,14 +4535,17 @@ public final class PowerManagerService extends SystemService
 
     private void setPowerBoostInternal(int boost, int durationMs) {
         // Maybe filter the event.
+        Slog.d(TAG, "setPowerBoostInternal: boost=" + boost + ", ms=" + durationMs);
         mNativeWrapper.nativeSetPowerBoost(boost, durationMs);
     }
 
     private boolean setPowerModeInternal(int mode, boolean enabled) {
         // Maybe filter the event.
         if (mode == Mode.LAUNCH && enabled && mBatterySaverController.isLaunchBoostDisabled()) {
+            Slog.d(TAG, "setPowerModeInternal: ! mode=" + mode + ", enabled=" + enabled);
             return false;
         }
+        Slog.d(TAG, "setPowerModeInternal: mode=" + mode + ", enabled=" + enabled);
         return mNativeWrapper.nativeSetPowerMode(mode, enabled);
     }
 

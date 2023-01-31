@@ -98,6 +98,8 @@ static void setPowerBoost(Boost boost, int32_t durationMs) {
 
 static bool setPowerMode(Mode mode, bool enabled) {
     android::base::Timer t;
+    ALOGI("nativeSetPowerMode %d",mode);
+
     auto result = gPowerHalController.setMode(mode, enabled);
     if (mode == Mode::INTERACTIVE && t.duration() > 20ms) {
         ALOGD("Excessive delay in setting interactive mode to %s while turning screen %s",

@@ -16,6 +16,9 @@
 
 package com.android.internal.baikalos;
 
+import android.content.Context;
+import android.os.Process;
+
 public class BaikalConstants { 
 
 
@@ -83,5 +86,17 @@ public class BaikalConstants {
 
     public static final int DEBUG_MASK_POWER = 0x100000;
     public static final int DEBUG_MASK_JOBS = 0x200000;
+
+    public static String getPackageByUid(Context context, int uid) {
+        if( uid < Process.FIRST_APPLICATION_UID ) {
+            //if( uid == 1000 ) return "system";           
+            //else 
+            return "android";
+        }
+
+        String[] pkgs = context.getPackageManager().getPackagesForUid(uid);
+        if( pkgs != null && pkgs.length > 0 ) return pkgs[0];
+        return null;
+    }
 
 }

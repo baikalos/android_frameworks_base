@@ -31,6 +31,15 @@ import static android.os.Process.THREAD_GROUP_AUDIO_APP;
 import static android.os.Process.THREAD_GROUP_AUDIO_SYS;
 import static android.os.Process.THREAD_GROUP_RT_APP;
 
+import static android.os.PowerManagerInternal.MODE_LOW_POWER;
+import static android.os.PowerManagerInternal.MODE_SUSTAINED_PERFORMANCE;
+import static android.os.PowerManagerInternal.MODE_FIXED_PERFORMANCE;
+import static android.os.PowerManagerInternal.MODE_VR;
+import static android.os.PowerManagerInternal.MODE_LAUNCH;
+import static android.os.PowerManagerInternal.MODE_EXPENSIVE_RENDERING;
+import static android.os.PowerManagerInternal.MODE_INTERACTIVE;
+import static android.os.PowerManagerInternal.MODE_DEVICE_IDLE;
+import static android.os.PowerManagerInternal.MODE_DISPLAY_INACTIVE;
 
 import android.util.Slog;
 
@@ -42,6 +51,7 @@ import android.os.UserHandle;
 import android.os.IPowerManager;
 import android.os.PowerManager;
 import android.os.SystemProperties;
+import android.os.PowerManagerInternal;
 import android.os.Process;
 import android.os.SystemClock;
 
@@ -66,7 +76,10 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
 
+
 import android.provider.Settings;
+
+import android.util.SparseArray;
 
 import com.android.internal.view.RotationPolicy;
 import android.view.WindowManagerGlobal;
@@ -81,7 +94,10 @@ import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
+import com.android.server.LocalServices;
 
+import java.util.ArrayList;
+import java.util.List;
 
 public class AppProfileManager { 
 
@@ -91,8 +107,6 @@ public class AppProfileManager {
     final AppProfileManagerHandler mHandler;
 
     private static final int MESSAGE_APP_PROFILE_UPDATE = BaikalConstants.MESSAGE_APP_PROFILE + 100;
-
-    private static Object mLock = new Object();
 
     private AppProfileSettings mAppSettings;
     private IPowerManager mPowerManager;
@@ -105,8 +119,8 @@ public class AppProfileManager {
     private String mTopPackageName;
 
     private boolean mIdleProfileActive;
-    private String mActivePerfProfile = "";
-    private String mActiveThermProfile = "";
+    private int mActivePerfProfile = -1;
+    private int mActiveThermProfile = -1;
 
     private String mScreenOffPerfProfile = "screen_off";
     private String mScreenOffThermProfile = "screen_off";
@@ -134,6 +148,10 @@ public class AppProfileManager {
 
     static AppProfileManager mInstance;
 
+    private PowerManagerInternal mPowerManagerInternal;
+
+    //private SparseArray<Integer> _performanceProfiles = new SparseArray<Integer> ();
+
     public static AppProfile getCurrentProfile() {
         //synchronized(mCurrentProfileSync) {
         return mCurrentProfile;
@@ -160,6 +178,7 @@ public class AppProfileManager {
     final class AppProfileManagerHandler extends Handler {
         AppProfileManagerHandler(Looper looper) {
             super(looper);
+    
         }
 
         @Override public void handleMessage(Message msg) {
@@ -171,8 +190,6 @@ public class AppProfileManager {
     private AppProfileManager(Looper looper, Context context) {
         mContext = context;
         mHandler = new AppProfileManagerHandler(looper);
-
-        
     }
 
     public boolean onMessage(Message msg) {
@@ -186,12 +203,13 @@ public class AppProfileManager {
 
     public void initialize() {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"initialize()");                
-        synchronized(mLock) {
+        synchronized(this) {
 
             mInstance = this;
             mAppSettings = AppProfileSettings.getInstance(); 
 
             mPowerManager = IPowerManager.Stub.asInterface(ServiceManager.getService(Context.POWER_SERVICE));
+            mPowerManagerInternal = LocalServices.getService(PowerManagerInternal.class);
 
             IntentFilter topAppFilter = new IntentFilter();
             topAppFilter.addAction(Actions.ACTION_TOP_APP_CHANGED);
@@ -298,22 +316,57 @@ public class AppProfileManager {
                 return;
             }
 
-
             AppProfile profile = mCurrentProfile;
 
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate current profile profile=" + profile);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate current profile=" + profile);
+
+            if( mActivePerfProfile != -1 ) {
+                try {
+                    activatePowerMode(mActivePerfProfile,false);
+                    mActivePerfProfile = -1;
+                } catch(Exception e) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Deactivate perfromance profile failed profile=" + mActivePerfProfile, e);
+                }
+                mActivePerfProfile = -1;
+            }
 
             if( profile == null ) {
                 setActiveFrameRateLocked(0,0);
                 Actions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(0));
                 setRotation(-1);
-                //BaikalSettings.setKeepOn(false);
+                try {
+                    activatePowerMode(MODE_INTERACTIVE, true);
+                    mActivePerfProfile = MODE_INTERACTIVE;
+                } catch(Exception e) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + mActivePerfProfile, e);
+                }
             } else {
                 setActiveFrameRateLocked(profile.mMinFrameRate,profile.mMaxFrameRate);
                 Actions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(profile.mBrightness));
                 setRotation(profile.mRotation-1);
-                //BaikalSettings.setKeepOn(profile.mKeepOn);
+                try {
+                    int perfMode = profile.mPerfProfile == 0 ? MODE_INTERACTIVE : profile.mPerfProfile;
+                    activatePowerMode(perfMode, true);
+                    mActivePerfProfile = perfMode;
+                } catch(Exception e) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + mActivePerfProfile, e);
+                }
+                
             }
+    }
+
+    protected void activatePowerMode(int mode, boolean enable) {
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                try {
+                    mPowerManager.setPowerMode(mode, enable);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        thread.start();
     }
 
     protected void setTopAppLocked(int uid, String packageName) {
@@ -331,16 +384,11 @@ public class AppProfileManager {
             //BaikalSettings.setTopApp(mTopUid, mTopPackageName);
 
             AppProfile profile = mAppSettings.getProfile(/*uid,*/packageName);
-            //synchronized(mCurrentProfileSync) {
             if( profile == null ) {
                 profile = new AppProfile(mTopPackageName);   
             }
+
             mCurrentProfile = profile;
-            //}
-
-            //if( profile != null && profile.mForcedScreenshot ) SystemPropertiesSet("sys.baikal.top_fsc", "1");
-            //else SystemPropertiesSet("sys.baikal.top_fsc", "0");
-
             activateCurrentProfileLocked(true);
         }
     }
@@ -535,9 +583,9 @@ public class AppProfileManager {
         @Override
         public void onCallStateChanged(int state, String incomingNumber) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"PhoneStateListener: onCallStateChanged(" + state + "," + incomingNumber + ")");
-            //synchronized (AppProfileManager.this) {
+            synchronized (AppProfileManager.this) {
                 onCallStateChangedLocked(state,incomingNumber);
-            //}
+            }
 
         // default implementation empty
         }
@@ -550,9 +598,9 @@ public class AppProfileManager {
         @Override
         public void onPreciseCallStateChanged(PreciseCallState callState) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"PhoneStateListener: onPreciseCallStateChanged(" + callState + ")");
-            //synchronized (AppProfileManager.this) {
+            synchronized (AppProfileManager.this) {
                 onPreciseCallStateChangedLocked(callState);
-            //}
+            }
         }
 
     };
@@ -646,9 +694,10 @@ public class AppProfileManager {
 
 
     public boolean isAppBlocked(AppProfile profile, String packageName, int uid) {
+        if( mAppSettings == null ) return false;
         if( profile == null ) {
             if( packageName == null ) {
-                packageName = getPackageByUid(mContext, uid);
+                packageName = BaikalConstants.getPackageByUid(mContext, uid);
                 if( packageName == null ) return true;
             }
             profile = mAppSettings.getProfile(packageName);
@@ -679,11 +728,5 @@ public class AppProfileManager {
 
     public boolean isAwake() {
         return mAwake;
-    }
-
-    public static String getPackageByUid(Context context, int uid) {
-        String[] pkgs = context.getPackageManager().getPackagesForUid(uid);
-        if( pkgs != null && pkgs.length > 0 ) return pkgs[0];
-        return null;
     }
 }
