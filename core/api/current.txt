@@ -8926,6 +8926,62 @@ package android.appwidget {
 
 }
 
+package android.baikalos {
+
+  public class AppProfile {
+    ctor public AppProfile();
+    ctor public AppProfile(@Nullable String);
+    ctor public AppProfile(@Nullable android.baikalos.AppProfile);
+    method public void deserialize(@Nullable String);
+    method @Nullable public static android.baikalos.AppProfile deserializeProfile(@Nullable String);
+    method @Nullable public static android.baikalos.AppProfile get(@Nullable android.baikalos.AppProfile);
+    method public int getBackground();
+    method @Nullable public static android.baikalos.AppProfile getCurrentAppProfile();
+    method @Nullable public static android.baikalos.AppProfile getDefaultProfile();
+    method public boolean isDefault();
+    method @Nullable public String serialize();
+    method public static void setCurrentAppProfile(@Nullable android.baikalos.AppProfile);
+    method public void update(@Nullable android.baikalos.AppProfile);
+    field public boolean isInvalidated;
+    field public boolean mAllowIdleNetwork;
+    field public int mAudioMode;
+    field public boolean mBAFRecv;
+    field public boolean mBAFSend;
+    field public int mBackground;
+    field public boolean mBootDisabled;
+    field public int mBrightness;
+    field public int mCamera;
+    field public boolean mDisableJobs;
+    field public boolean mDisableWakeup;
+    field public int mFileAccess;
+    field public boolean mForcedScreenshot;
+    field public int mFreezerMode;
+    field public boolean mFullScreen;
+    field public boolean mHideDevMode;
+    field public boolean mIgnoreAudioFocus;
+    field public boolean mKeepOn;
+    field public int mMaxFrameRate;
+    field public int mMicrophone;
+    field public int mMinFrameRate;
+    field public boolean mOverrideFonts;
+    field @Nullable public String mPackageName;
+    field @Nullable public String mPerfProfile;
+    field public int mPerformanceLevel;
+    field public boolean mPinned;
+    field public boolean mPreventHwKeyAttestation;
+    field public boolean mReader;
+    field public boolean mRequireGms;
+    field public int mRotation;
+    field public boolean mSonification;
+    field public int mSpoofDevice;
+    field public boolean mStamina;
+    field public boolean mSystemWhitelisted;
+    field @Nullable public String mThermalProfile;
+    field public int mUid;
+  }
+
+}
+
 package android.companion {
 
   public final class AssociationInfo implements android.os.Parcelable {
@@ -19800,6 +19856,7 @@ package android.media {
     method public int getUsage();
     method public int getVolumeControlStream();
     method public boolean isContentSpatialized();
+    method public void setContentType(int);
     method public void writeToParcel(android.os.Parcel, int);
     field public static final int ALLOW_CAPTURE_BY_ALL = 1; // 0x1
     field public static final int ALLOW_CAPTURE_BY_NONE = 3; // 0x3
@@ -23442,6 +23499,7 @@ package android.media {
     ctor public RingtoneManager(android.app.Activity);
     ctor public RingtoneManager(android.content.Context);
     method public static android.net.Uri getActualDefaultRingtoneUri(android.content.Context, int);
+    method @NonNull public static android.net.Uri getActualDefaultRingtoneUriForPhoneAccountHandle(@NonNull android.content.Context, int, @NonNull android.telecom.PhoneAccountHandle);
     method public android.database.Cursor getCursor();
     method public static int getDefaultType(android.net.Uri);
     method public static android.net.Uri getDefaultUri(int);
@@ -23459,6 +23517,7 @@ package android.media {
     method public static boolean isDefault(android.net.Uri);
     method @Nullable public static android.content.res.AssetFileDescriptor openDefaultRingtoneUri(@NonNull android.content.Context, @NonNull android.net.Uri) throws java.io.FileNotFoundException;
     method public static void setActualDefaultRingtoneUri(android.content.Context, int, android.net.Uri);
+    method public static void setActualDefaultRingtoneUriForPhoneAccountHandle(@NonNull android.content.Context, int, @NonNull android.net.Uri, @NonNull android.telecom.PhoneAccountHandle);
     method @Deprecated public void setIncludeDrm(boolean);
     method public void setStopPreviousRingtone(boolean);
     method public void setType(int);
@@ -30804,6 +30863,7 @@ package android.os {
     method public int getIntProperty(int);
     method public long getLongProperty(int);
     method public boolean isCharging();
+    method public void resetStatistics();
     field public static final String ACTION_CHARGING = "android.os.action.CHARGING";
     field public static final String ACTION_DISCHARGING = "android.os.action.DISCHARGING";
     field public static final int BATTERY_HEALTH_COLD = 7; // 0x7
@@ -32584,6 +32644,7 @@ package android.os.storage {
     method @NonNull public java.util.List<android.os.storage.StorageVolume> getStorageVolumes();
     method @NonNull @RequiresPermission(android.Manifest.permission.MANAGE_EXTERNAL_STORAGE) public java.util.List<android.os.storage.StorageVolume> getStorageVolumesIncludingSharedProfiles();
     method @NonNull public java.util.UUID getUuidForPath(@NonNull java.io.File) throws java.io.IOException;
+    method public static boolean inCryptKeeperBounce();
     method public boolean isAllocationSupported(@NonNull java.io.FileDescriptor);
     method public boolean isCacheBehaviorGroup(java.io.File) throws java.io.IOException;
     method public boolean isCacheBehaviorTombstone(java.io.File) throws java.io.IOException;
@@ -35593,6 +35654,10 @@ package android.provider {
     field @Deprecated public static final String ALLOW_MOCK_LOCATION = "mock_location";
     field public static final String ANDROID_ID = "android_id";
     field @Deprecated public static final String BACKGROUND_DATA = "background_data";
+    field public static final String BAIKALOS_TRUST_ALWAYS = "baikalos_trust_always";
+    field public static final String BAIKALOS_TRUST_BTLE_DEV = "baikalos_trust_btle_dev";
+    field public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
+    field public static final String BAIKALOS_TRUST_WIFI_DEV = "baikalos_trust_wifi_dev";
     field @Deprecated public static final String BLUETOOTH_ON = "bluetooth_on";
     field public static final android.net.Uri CONTENT_URI;
     field @Deprecated public static final String DATA_ROAMING = "data_roaming";
@@ -50460,7 +50525,7 @@ package android.view {
     method public static android.animation.Animator createCircularReveal(android.view.View, int, int, float, float);
   }
 
-  public class ViewConfiguration {
+  @MainThread public class ViewConfiguration {
     ctor @Deprecated public ViewConfiguration();
     method public static android.view.ViewConfiguration get(@NonNull @UiContext android.content.Context);
     method @Deprecated @FloatRange(from=1.0) public static float getAmbiguousGestureMultiplier();

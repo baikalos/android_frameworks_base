@@ -892,6 +892,7 @@ package android.content.pm {
     method public boolean isGuest();
     method public boolean isInitialized();
     method public boolean isManagedProfile();
+    method public boolean isParallel();
     method public boolean isPrimary();
     method public boolean isProfile();
     method public boolean isQuietModeEnabled();
@@ -910,6 +911,7 @@ package android.content.pm {
     field @Deprecated public static final int FLAG_GUEST = 4; // 0x4
     field public static final int FLAG_INITIALIZED = 16; // 0x10
     field @Deprecated public static final int FLAG_MANAGED_PROFILE = 32; // 0x20
+    field public static final int FLAG_PARALLEL = -2147483648; // 0x80000000
     field public static final int FLAG_PRIMARY = 1; // 0x1
     field public static final int FLAG_PROFILE = 4096; // 0x1000
     field public static final int FLAG_QUIET_MODE = 128; // 0x80
@@ -2934,7 +2936,7 @@ package android.view {
     method public final void setShowingLayoutBounds(boolean);
   }
 
-  public class ViewConfiguration {
+  @MainThread public class ViewConfiguration {
     method public long getDeviceGlobalActionKeyTimeout();
     method public static int getHoverTooltipHideShortTimeout();
     method public static int getHoverTooltipHideTimeout();

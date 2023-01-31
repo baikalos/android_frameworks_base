@@ -17077,18 +17077,21 @@ public final class Settings {
          * This preference enables Aggressive Idle.
          * @hide
          */
+        @Readable
         public static final String BAIKALOS_AGGRESSIVE_IDLE = "baikalos_aggressive_idle";
 
         /**
          * This preference enables Extreme Idle.
          * @hide
          */
+        @Readable
         public static final String BAIKALOS_EXTREME_IDLE = "baikalos_extreme_idle";
 
         /**
          * This preference enables Aggressive Device Idle.
          * @hide
          */
+        @Readable
         public static final String BAIKALOS_AGGRESSIVE_DEVICE_IDLE = "baikalos_aggressive_device_idle";
 
         /**
@@ -17108,6 +17111,7 @@ public final class Settings {
          * This preference enables Stamina Mode.
          * @hide
          */
+        @Readable
         public static final String BAIKALOS_STAMINA_ENABLED = "baikalos_stamina_enabled";
 
         /**
@@ -17127,6 +17131,7 @@ public final class Settings {
          * This preference set current active routation mode
          * @hide
          */
+        @Readable
         public static final String BAIKALOS_DEFAULT_ROTATION = "baikalos_default_rotation";
 
         /**
@@ -17146,6 +17151,7 @@ public final class Settings {
          * @hide
          */
         @Readable
+        @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_APP_PROFILES = "baikalos_app_profiles";
 
         /**
@@ -17153,7 +17159,25 @@ public final class Settings {
          * @hide
          */
         @Readable
+        @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_APP_PROFILES_BACKUP = "baikalos_app_profiles_backup";
+
+        /**
+         * This preference holds app profiles.
+         * 
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_SBC_BITRATE = "baikalos_sbc_bitrate";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PROXIMITY_DISABLE = "baikalos_proximity_disable";
+
+
 
         /* End of BaikalOS Global Settings */
 

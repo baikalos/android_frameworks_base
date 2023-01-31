@@ -282,6 +282,34 @@ public class A2dpProfile implements LocalBluetoothProfile {
         }
     }
 
+    public int getHighQualitySbcBitrate(BluetoothDevice device) {
+        Log.d(TAG, " execute getHighQualitySbcBitrate()");
+        if (mService == null) {
+            Log.d(TAG,"mService is null.");
+            return 0;
+        }
+        BluetoothDevice bluetoothDevice = (device != null) ? device : getActiveDevice();
+        if (bluetoothDevice == null) {
+            return 0;
+        }
+        int bitrate = mService.getSbcBitrate(bluetoothDevice);
+        return bitrate;
+    }
+
+    public void setHighQualitySbcEnabled(BluetoothDevice device, int bitrate) {
+        Log.d(TAG, " execute setHighQualitySbcEnabled()");
+        if (mService == null) {
+            Log.d(TAG,"mService is null.");
+            return;
+        }
+        BluetoothDevice bluetoothDevice = (device != null) ? device : getActiveDevice();
+        if (bluetoothDevice == null) {
+            return;
+        }
+        mService.setSbcBitrate(bluetoothDevice, bitrate);
+    }
+
+
     /**
      * Gets the label associated with the codec of a Bluetooth device.
      *

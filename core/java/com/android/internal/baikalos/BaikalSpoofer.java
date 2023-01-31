@@ -127,6 +127,29 @@ public class BaikalSpoofer {
         }
     }
 
+    public static void setVersionField(String key, int value) {
+        /*
+         * This would be much prettier if we just removed "final" from the Build fields,
+         * but that requires changing the API.
+         *
+         * While this an awful hack, it's technically safe because the fields are
+         * populated at runtime.
+         */
+        try {
+            // Unlock
+            Field field = Build.VERSION.class.getDeclaredField(key);
+            field.setAccessible(true);
+
+            // Edit
+            field.set(null, value);
+
+            // Lock
+            field.setAccessible(false);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            Log.e(TAG, "Failed to spoof Version." + key, e);
+        }
+    }
+
 
     public static void setBuildField(String key, String value) {
         /*
@@ -187,6 +210,7 @@ public class BaikalSpoofer {
             String stockFp = SystemProperties.get("ro.build.stock_fingerprint", null);
             String stockSecurityPatch = SystemProperties.get("ro.build.stock_sec_patch", null);
 
+            setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.S);
 
             Log.e(TAG, "Spoof Device GMS FINGERPRINT: [" + stockFp + "], " + Application.getProcessName());
             if( stockFp != null && !stockFp.isEmpty() )
@@ -278,6 +302,7 @@ public class BaikalSpoofer {
             setBuildField("MODEL", device.deviceModel);
             setBuildField("DEVICE", device.deviceName);
             setBuildField("PRODUCT", device.deviceName);
+
             if( device.deviceFp != null ) setBuildField("FINGERPRINT", device.deviceFp);
         } catch(Exception e) {
             Log.e(TAG, "Failed to spoof Device :" + packageName, e);

@@ -206,11 +206,12 @@ static bool verifyGroup(JNIEnv* env, int grp)
 
 void android_os_Process_setThreadGroup(JNIEnv* env, jobject clazz, int tid, jint grp)
 {
-    ALOGV("%s tid=%d grp=%" PRId32, __func__, tid, grp);
+    ALOGV("%s tid=%d grp=%d" PRId32, __func__, tid, grp);
     if (!verifyGroup(env, grp)) {
         return;
     }
 
+    //ALOGI("%s tid=%d grp=%d (%s)" PRId32, __func__, tid, grp, get_sched_policy_profile_name((SchedPolicy)grp));
     int res = SetTaskProfiles(tid, {get_sched_policy_profile_name((SchedPolicy)grp)}, true) ? 0 : -1;
 
     if (res != NO_ERROR) {
@@ -220,10 +221,12 @@ void android_os_Process_setThreadGroup(JNIEnv* env, jobject clazz, int tid, jint
 
 void android_os_Process_setThreadGroupAndCpuset(JNIEnv* env, jobject clazz, int tid, jint grp)
 {
-    ALOGV("%s tid=%d grp=%" PRId32, __func__, tid, grp);
+    ALOGV("%s tid=%d grp=%d" PRId32, __func__, tid, grp);
     if (!verifyGroup(env, grp)) {
         return;
     }
+
+    //ALOGI("%s tid=%d grp=%d (%s)" PRId32, __func__, tid, grp, get_cpuset_policy_profile_name((SchedPolicy)grp));
 
     int res = SetTaskProfiles(tid, {get_cpuset_policy_profile_name((SchedPolicy)grp)}, true) ? 0 : -1;
 
@@ -234,7 +237,7 @@ void android_os_Process_setThreadGroupAndCpuset(JNIEnv* env, jobject clazz, int 
 
 void android_os_Process_setProcessGroup(JNIEnv* env, jobject clazz, int pid, jint grp)
 {
-    ALOGV("%s pid=%d grp=%" PRId32, __func__, pid, grp);
+    ALOGV("%s pid=%d grp=%d" PRId32, __func__, pid, grp);
     char proc_path[255];
 
     if (!verifyGroup(env, grp)) {
@@ -275,6 +278,7 @@ void android_os_Process_setProcessGroup(JNIEnv* env, jobject clazz, int pid, jin
         }
     }
 
+    //ALOGI("%s pid=%d grp=%d (%s)" PRId32, __func__, pid, grp, get_cpuset_policy_profile_name((SchedPolicy)grp));
     if (!SetProcessProfilesCached(0, pid, {get_cpuset_policy_profile_name((SchedPolicy)grp)}))
         signalExceptionForGroupError(env, errno ? errno : EPERM, pid);
 }
@@ -1075,7 +1079,7 @@ void android_os_Process_setApplicationObject(JNIEnv* env, jobject clazz,
 void android_os_Process_sendSignal(JNIEnv* env, jobject clazz, jint pid, jint sig)
 {
     if (pid > 0) {
-        ALOGI("Sending signal. PID: %" PRId32 " SIG: %" PRId32, pid, sig);
+        //ALOGI("Sending signal. PID: %" PRId32 " SIG: %" PRId32, pid, sig);
         kill(pid, sig);
     }
 }

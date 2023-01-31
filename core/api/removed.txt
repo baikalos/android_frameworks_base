@@ -514,7 +514,7 @@ package android.view {
     method protected void initializeScrollbars(android.content.res.TypedArray);
   }
 
-  public class ViewConfiguration {
+  @MainThread public class ViewConfiguration {
     method public int getScaledScrollFactor();
   }
 
