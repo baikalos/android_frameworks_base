@@ -66,6 +66,7 @@ import android.annotation.UserIdInt;
 import android.app.ActivityManager;
 import android.app.IActivityManager;
 import android.app.admin.DevicePolicyManagerInternal;
+import android.baikalos.AppProfile;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledAfter;
 import android.content.Context;
@@ -140,8 +141,11 @@ import com.android.server.pm.pkg.component.ComponentMutateUtils;
 import com.android.server.pm.pkg.component.ParsedPermission;
 import com.android.server.pm.pkg.component.ParsedPermissionGroup;
 import com.android.server.pm.pkg.component.ParsedPermissionUtils;
+import com.android.server.pm.pkg.parsing.ParsingPackageImpl;
 import com.android.server.policy.PermissionPolicyInternal;
 import com.android.server.policy.SoftRestrictedPermissionPolicy;
+
+import com.android.internal.baikalos.AppProfileSettings;
 
 import libcore.util.EmptyArray;
 
@@ -3964,6 +3968,49 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
     @Retention(RetentionPolicy.SOURCE)
     private @interface UpdatePermissionFlags {}
 
+    private void updateBaikalPermissions() {
+        mPackageManagerInt.forEachPackage((AndroidPackage apkg) -> {
+            Slog.i(TAG, "Updating baikalos per-app permissions");
+
+                ParsingPackageImpl pkg = (ParsingPackageImpl)apkg;
+                int mode = -1;
+
+                if( AppProfileSettings.getInstance() == null ) {
+                    Slog.w(TAG, "BaikalService not initialized");
+                }
+
+                AppProfile profile = AppProfileSettings.getInstance().getProfileLocked(pkg.getPackageName());
+
+                if( profile != null ) {
+                    Slog.w(TAG, "Profile file access mode for " + pkg.getPackageName() + ": "  + profile.mFileAccess);
+                    mode = profile.mFileAccess;
+                } else {
+                    Slog.w(TAG, "Default file access mode for " + pkg.getPackageName() + " : 0");
+                    return;
+                }
+
+                if( mode >= 3 ) {
+                    if (mode >= 4 && !pkg.getImplicitPermissions().contains("android.permission.MANAGE_EXTERNAL_STORAGE")) {
+                        pkg.addImplicitPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+                        Slog.w(TAG, "Enforce MANAGE_EXTERNAL_STORAGE access mode for " + pkg.getPackageName() + " : 0");
+                    }
+
+                    if (!pkg.getImplicitPermissions().contains("android.permission.WRITE_EXTERNAL_STORAGE")) {
+                        pkg.addImplicitPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+                        Slog.w(TAG, "Enforce WRITE_EXTERNAL_STORAGE access mode for " + pkg.getPackageName() + " : 0");
+                    }
+                }
+
+                if( mode >= 2 ) {
+                    if (!pkg.getImplicitPermissions().contains("android.permission.READ_EXTERNAL_STORAGE")) {
+                        pkg.addImplicitPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+                        Slog.w(TAG, "Enforce READ_EXTERNAL_STORAGE access mode for " + pkg.getPackageName() + " : 0");
+                    }
+                }
+
+        });
+    }
+
     /**
      * Update permissions when packages changed.
      *
@@ -4017,6 +4064,8 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
             Slog.i(TAG, "Permission ownership changed. Updating all permissions.");
             flags |= UPDATE_PERMISSIONS_ALL;
         }
+
+        updateBaikalPermissions();
 
         Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "restorePermissionState");
         // Now update the permissions for all packages.
