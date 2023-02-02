@@ -790,7 +790,8 @@ public final class ActiveServices {
         }
 
 
-        if(bgLaunch && mAm.mAppProfileManager.isAppBlocked(null, r.packageName, r.appInfo.uid) ) {
+        if( !mAm.mAppProfileManager.isTopAppUid(callingUid) &&
+            (bgLaunch && mAm.mAppProfileManager.isAppBlocked(null, r.packageName, r.appInfo.uid)) ) {
             Slog.w(TAG, "App service execution blocked: service "
                     + service + " to " + r.shortInstanceName
                     + " from pid=" + callingPid + " uid=" + callingUid
@@ -802,7 +803,8 @@ public final class ActiveServices {
 
         // If this isn't a direct-to-foreground start, check our ability to kick off an
         // arbitrary service
-        if (forcedStandby || (!r.startRequested && !fgRequired)) {
+        if ( !mAm.mAppProfileManager.isTopAppUid(callingUid) &&
+            (forcedStandby || (!r.startRequested && !fgRequired)) ) {
             // Before going further -- if this app is not allowed to start services in the
             // background, then at this point we aren't going to let it period.
             final int allowed = mAm.getAppStartModeLOSP(r.appInfo.uid, r.packageName,
