@@ -1104,7 +1104,7 @@ class RootWindowContainer extends WindowContainer<DisplayContent>
                 displayHasContent = true;
             }
             if ((privateflags & PRIVATE_FLAG_SUSTAINED_PERFORMANCE_MODE) != 0) {
-                mSustainedPerformanceModeCurrent = true;
+                //mSustainedPerformanceModeCurrent = true;
             }
         }
 
