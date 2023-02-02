@@ -6306,6 +6306,22 @@ public final class Settings {
          */
         public static final String DISPLAY_CUTOUT_MODE = "display_cutout_mode";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_MINFPS = "baikalos_default_minfps";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_MAXFPS = "baikalos_default_maxfps";
+
+
         /* End of BaikalOS System Settings */
 
         /**
@@ -17184,6 +17200,19 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_PROXIMITY_DISABLE = "baikalos_proximity_disable";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_PERFORMANCE = "baikalos_default_performance";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_THERMAL = "baikalos_default_thermal";
 
 
         /* End of BaikalOS Global Settings */

@@ -55,9 +55,11 @@ import android.os.PowerManagerInternal;
 import android.os.Process;
 import android.os.SystemClock;
 
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
+import android.net.Uri;
 
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
@@ -76,6 +78,8 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
 
+
+import android.database.ContentObserver;
 
 import android.provider.Settings;
 
@@ -105,6 +109,10 @@ public class AppProfileManager {
 
     final Context mContext;
     final AppProfileManagerHandler mHandler;
+    final Looper mLooper;
+
+    private AppProfileContentObserver mObserver;
+    private ContentResolver mResolver;
 
     private static final int MESSAGE_APP_PROFILE_UPDATE = BaikalConstants.MESSAGE_APP_PROFILE + 100;
 
@@ -118,15 +126,8 @@ public class AppProfileManager {
     private int mTopUid=-1;
     private String mTopPackageName;
 
-    private boolean mIdleProfileActive;
     private int mActivePerfProfile = -1;
     private int mActiveThermProfile = -1;
-
-    private String mScreenOffPerfProfile = "screen_off";
-    private String mScreenOffThermProfile = "screen_off";
-
-    private String mIdlePerfProfile = "idle";
-    private String mIdleThermProfile = "idle";
 
     private static Object mCurrentProfileSync = new Object();
     private static AppProfile mCurrentProfile = new AppProfile("system");
@@ -137,10 +138,19 @@ public class AppProfileManager {
     private int mDefaultMinFps = 60;
     private int mDefaultMaxFps = 60;
 
-    private boolean mVariableFps = false;
+    private int mDefaultPerformanceProfile;
+    private int mDefaultThermalProfile;
+
+    private boolean mBypassChargingForced;
+    private boolean mStaminaEnabled;
 
     private boolean mPerfAvailable = false;
     private boolean mThermAvailable = false;
+
+    private boolean mAggressiveMode = false;
+    private boolean mExtremeMode = false;
+    private boolean mAggressiveIdleMode = false;
+    private boolean mKillInBackground = false;
 
     private boolean mPhoneCall = false;
 
@@ -186,10 +196,73 @@ public class AppProfileManager {
         }
     }
 
+    final class AppProfileContentObserver extends ContentObserver {
+
+        AppProfileContentObserver(Handler handler) {
+            super(handler);
+
+            try {
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BPCHARGE_FORCE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEFAULT_PERFORMANCE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEFAULT_THERMAL),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_STAMINA_ENABLED),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_AGGRESSIVE_IDLE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_EXTREME_IDLE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_KILL_IN_BACKGROUND),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.BAIKALOS_DEFAULT_MINFPS),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.BAIKALOS_DEFAULT_MAXFPS),
+                    false, this);
+
+            } catch( Exception e ) {
+            }
+        
+            synchronized(this) {
+                updateConstantsLocked();
+            }
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            synchronized(AppProfileManager.this) {
+                updateConstantsLocked();
+            }
+        }
+    }
+
 
     private AppProfileManager(Looper looper, Context context) {
         mContext = context;
-        mHandler = new AppProfileManagerHandler(looper);
+        mLooper = looper;
+        mHandler = new AppProfileManagerHandler(mLooper);
     }
 
     public boolean onMessage(Message msg) {
@@ -234,16 +307,70 @@ public class AppProfileManager {
             mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             mTelephonyManager.listen(mPhoneStateListener, 0xFFFFFFF);
 
-            mVariableFps = false; // SystemProperties.get("sys.baikal.var_fps", "0").equals("1");
-
-            mPerfAvailable = false; // SystemProperties.get("baikal.eng.perf", "0").equals("1");
-            mThermAvailable = false; // SystemProperties.get("baikal.eng.therm", "0").equals("1");
-
-            
-    
+            mResolver = mContext.getContentResolver();
+            mObserver = new AppProfileContentObserver(mHandler);
         }
     }
 
+    protected void updateConstantsLocked() {
+
+        boolean changed = false;
+
+
+        mAggressiveMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) != 0;
+        mExtremeMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
+        mAggressiveIdleMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) != 0;
+        mKillInBackground = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_KILL_IN_BACKGROUND, 0) != 0;
+
+        int defaultPerformanceProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_PERFORMANCE, -1);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Power loading performance profile=" + defaultPerformanceProfile);
+
+        if( mDefaultPerformanceProfile != defaultPerformanceProfile ) {
+            mDefaultPerformanceProfile = defaultPerformanceProfile;
+            changed = true;
+        }
+
+        int defaultThermalProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_THERMAL, -1);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Power loading thermal profile=" + defaultThermalProfile);
+        if( mDefaultThermalProfile != defaultThermalProfile ) {
+            mDefaultThermalProfile = defaultThermalProfile;
+            changed = true;
+        }
+
+        boolean forced = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0) != 0;
+        if( mBypassChargingForced != forced ) {
+            mBypassChargingForced = forced;
+            changed = true;
+        }
+
+        boolean staminaEnabled = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_STAMINA_ENABLED, 0) != 0;
+        if( mStaminaEnabled != staminaEnabled ) {
+            mStaminaEnabled = staminaEnabled;
+            changed = true;
+        }
+
+        int defaultMinFps = Settings.System.getInt(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MINFPS, 0);
+        if( mDefaultMinFps != defaultMinFps ) {
+            mDefaultMinFps = defaultMinFps;
+            changed = true;
+        }
+
+        int defaultMaxFps = Settings.System.getInt(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MAXFPS, 0);
+        if( mDefaultMaxFps != defaultMaxFps ) {
+            mDefaultMaxFps = defaultMaxFps;
+            changed = true;
+        }
+
+        if( changed ) {
+            activateCurrentProfileLocked(false);
+        }
+    }
+
+    protected void updateBypassChargingIfNeededLocked() {
+    }
+
+    protected void updateStaminaIfNeededLocked() {
+    }
 
     protected void setActiveFrameRateLocked(int minFps, int maxFps) {
 
@@ -258,12 +385,18 @@ public class AppProfileManager {
     protected void setDeviceIdleModeLocked(boolean mode) {
         if( mDeviceIdleMode != mode ) {
             mDeviceIdleMode = mode;
-            //Runtime.setIdleMode(mode);
-            //BaikalSettings.setIdleMode(mode);
-            //if( !mScreenMode ) {
-            //    setIdlePerformanceMode(mode);
-            //} 
-            //restoreProfileForCurrentMode(true);
+            if( mDeviceIdleMode ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Restore profile after device idle changed mode=" + mDeviceIdleMode);
+                mHandler.postDelayed( new Runnable() {
+                    @Override
+                    public void run() { 
+                        synchronized(this) {
+                        //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
+                            restoreProfileForCurrentMode(true);
+                        }
+                    }
+                }, 100);
+            }
         }
     }
 
@@ -289,8 +422,10 @@ public class AppProfileManager {
             mHandler.postDelayed( new Runnable() {
                 @Override
                 public void run() { 
-                    //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
-                    restoreProfileForCurrentMode(true);
+                    synchronized(this) {
+                        //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
+                        restoreProfileForCurrentMode(true);
+                    }
                 }
             }, 100);
         }
@@ -304,15 +439,41 @@ public class AppProfileManager {
     }
 
     protected void restoreProfileForCurrentMode(boolean force) {
-        if( mScreenMode ) {
-            activateCurrentProfileLocked(force);
-        } 
+        //if( mScreenMode ) {
+        activateCurrentProfileLocked(force);
+        //} 
+    }
+
+    protected void activateIdleProfileLocked() {
+
+        int thermMode = mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile;
+        activateThermalProfile(thermMode);
+
+        if( mActivePerfProfile != -1 ) {
+            try {
+                activatePowerMode(mActivePerfProfile,false);
+                mActivePerfProfile = -1;
+            } catch(Exception e) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Deactivate current perfromance profile failed profile=" + mActivePerfProfile, e);
+            }
+            mActivePerfProfile = -1;
+        }
+
+        int perfMode = 1;
+        if( mDeviceIdleMode ) {
+            perfMode = 8;
+        }
+        try {
+            activatePowerMode(perfMode, true);
+        } catch(Exception e) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle perfromance profile failed profile=" + perfMode, e);
+        }
     }
 
     protected void activateCurrentProfileLocked(boolean force) {
 
-            if( !mScreenMode ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Can't activate profile screen mode is " + mScreenMode);
+            if( !mScreenMode || mDeviceIdleMode ) {
+                activateIdleProfileLocked();
                 return;
             }
 
@@ -334,39 +495,70 @@ public class AppProfileManager {
                 setActiveFrameRateLocked(0,0);
                 Actions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(0));
                 setRotation(-1);
+                int perfMode = mDefaultPerformanceProfile <= 0 ?  MODE_INTERACTIVE : mDefaultPerformanceProfile;
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", mDefaultPerformanceProfile=" + mDefaultPerformanceProfile);
                 try {
-                    activatePowerMode(MODE_INTERACTIVE, true);
-                    mActivePerfProfile = MODE_INTERACTIVE;
+                    activatePowerMode(perfMode, true);
                 } catch(Exception e) {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + mActivePerfProfile, e);
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + perfMode, e);
                 }
+                //if( mDefaultThermalProfile > 0 )
+                int thermMode = mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile;
+                activateThermalProfile(thermMode);
             } else {
                 setActiveFrameRateLocked(profile.mMinFrameRate,profile.mMaxFrameRate);
                 Actions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(profile.mBrightness));
                 setRotation(profile.mRotation-1);
+                int perfMode = profile.mPerfProfile <= 0 ? (mDefaultPerformanceProfile <= 0 ?  MODE_INTERACTIVE : mDefaultPerformanceProfile) : profile.mPerfProfile;
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", profile.mPerfProfile=" + profile.mPerfProfile);
                 try {
-                    int perfMode = profile.mPerfProfile == 0 ? MODE_INTERACTIVE : profile.mPerfProfile;
                     activatePowerMode(perfMode, true);
-                    mActivePerfProfile = perfMode;
                 } catch(Exception e) {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + mActivePerfProfile, e);
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + perfMode, e);
                 }
-                
+                int thermMode = profile.mThermalProfile <= 0 ? (mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile) : profile.mThermalProfile;
+                //if( profile.mThermalProfile > 0 )
+                activateThermalProfile(thermMode);   
             }
+
+            updateBypassChargingIfNeededLocked();
+            updateStaminaIfNeededLocked();
+
     }
 
     protected void activatePowerMode(int mode, boolean enable) {
-        Thread thread = new Thread() {
-            @Override
-            public void run() {
+        if( mDeviceIdleMode ) {
+            mode = MODE_DEVICE_IDLE;
+        } else if( !mScreenMode ) {
+            mode = MODE_LOW_POWER;
+        }
+        //Thread thread = new Thread() {
+        //    @Override
+        //    public void run() {
                 try {
+
                     mPowerManager.setPowerMode(mode, enable);
+                    if( enable ) {
+                        SystemPropertiesSet("baikal.power.perf",Integer.toString(mode));
+                        mActivePerfProfile = mode;
+                    } else {
+                        SystemPropertiesSet("baikal.power.perf","0");
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            }
-        };
-        thread.start();
+        //    }
+        //};
+        //thread.start();
+    }
+
+    protected void activateThermalProfile(int profile) {
+        if( mDeviceIdleMode ) {
+            profile = mDefaultThermalProfile;
+        } else if( !mScreenMode ) {
+            profile = mDefaultThermalProfile;
+        }
+        SystemPropertiesSet("baikal.power.thermal",Integer.toString(profile));
     }
 
     protected void setTopAppLocked(int uid, String packageName) {
@@ -463,16 +655,14 @@ public class AppProfileManager {
 
     private boolean setHwFrameRateLocked(int minFps, int maxFps, boolean override) {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
-        if( !mVariableFps ) return true;
-        if( mIdleProfileActive && !override ) return false;
+        //if( mIdleProfileActive && !override ) return false;
 
-        //if( minFps < 30 ) retrun setHwFrameRateLockedOld(minFps, override); 
         if( minFps == 0 ) minFps = mDefaultMinFps;
         if( maxFps == 0 ) maxFps = mDefaultMaxFps;
-
+        
         try {
-            Settings.System.putInt(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,minFps);
-            Settings.System.putInt(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,maxFps);
+            if( minFps != 0 ) Settings.System.putInt(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,minFps);
+            if( maxFps != 0 ) Settings.System.putInt(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,maxFps);
         } catch(Exception f) {
             Slog.e(TAG,"setHwFrameRateLocked exception minFps=" + minFps + ", maxFps=" + maxFps, f);
             return false;
@@ -694,6 +884,8 @@ public class AppProfileManager {
 
 
     public boolean isAppBlocked(AppProfile profile, String packageName, int uid) {
+
+        if( !mAggressiveMode ) return false;
         if( mAppSettings == null ) return false;
         if( profile == null ) {
             if( packageName == null ) {
@@ -708,9 +900,11 @@ public class AppProfileManager {
     public boolean isAppBlocked(AppProfile profile) {
         if( profile == null ) return false;
         if( mAwake ) {
-            if( profile.getBackground() > 1 ) {
+            int mode = mExtremeMode ? 0 : 1;
+            if( profile.getBackground() > mode ) {
                 Slog.w(TAG, "Background execution disabled by baikalos:" + profile.mPackageName);
                 return true;
+            
             }
         } else {
             if( profile.getBackground() > 0 ) {
@@ -728,5 +922,17 @@ public class AppProfileManager {
 
     public boolean isAwake() {
         return mAwake;
+    }
+
+    public boolean isKillInBackground() {
+        return mKillInBackground;
+    }
+
+    public boolean isTopAppUid(int uid) {
+        return mTopUid == uid;
+    }
+
+    public boolean isTopApp(String packageName) {
+        return packageName == null ? false : packageName.equals(mTopPackageName);
     }
 }
