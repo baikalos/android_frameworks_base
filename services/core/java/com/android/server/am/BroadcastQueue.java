@@ -1747,7 +1747,7 @@ public final class BroadcastQueue {
             }
         }
 
-        if( !skip && background ) {
+        if( !skip && background && !mService.mAppProfileManager.isTopAppUid(r.callingUid) ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
                 if( appProfile.getBackground() > 1 ) {
                     Slog.w(TAG, "Background execution disabled by baikalos: receiving "
