@@ -134,6 +134,9 @@ public class AppProfile {
     public boolean mSonification;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBypassCharging;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     private static AppProfile mCurrentAppProfile = new AppProfile("current");
@@ -228,6 +231,7 @@ public class AppProfile {
         this.mBAFRecv = profile.mBAFRecv;
         this.mBAFSend = profile.mBAFSend;
         this.mSonification = profile.mSonification;
+        this.mBypassCharging = profile.mBypassCharging;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
     }
 
@@ -267,6 +271,7 @@ public class AppProfile {
             !mBAFRecv &&
             !mBAFSend &&
             !mSonification &&
+            !mBypassCharging &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -306,6 +311,7 @@ public class AppProfile {
         this.mBAFRecv = profile.mBAFRecv;
         this.mBAFSend = profile.mBAFSend;
         this.mSonification = profile.mSonification;
+        this.mBypassCharging = profile.mBypassCharging;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
     }
 
@@ -345,6 +351,7 @@ public class AppProfile {
         if( mBAFRecv ) result +=  "," + "bafr=" + mBAFRecv;
         if( mBAFSend ) result +=  "," + "bafs=" + mBAFSend;
         if( mSonification ) result +=  "," + "sonf=" + mSonification;
+        if( mBypassCharging ) result +=  "," + "bpc=" + mBypassCharging;
         return result;
     }
 
@@ -395,6 +402,7 @@ public class AppProfile {
             mBAFRecv = parser.getBoolean("bafr",false);
             mBAFSend = parser.getBoolean("bafs",false);
             mSonification = parser.getBoolean("sonf",false);
+            mBypassCharging = parser.getBoolean("bpc",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }

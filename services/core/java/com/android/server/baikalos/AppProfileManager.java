@@ -44,6 +44,7 @@ import static android.os.PowerManagerInternal.MODE_DISPLAY_INACTIVE;
 import android.util.Slog;
 
 import android.content.Context;
+import android.os.FileUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -59,6 +60,7 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
+import android.content.res.Resources;
 import android.net.Uri;
 
 import android.telephony.PhoneStateListener;
@@ -111,6 +113,10 @@ public class AppProfileManager {
     final AppProfileManagerHandler mHandler;
     final Looper mLooper;
 
+    private static String mPowerInputSuspendSysfsNode;
+    private static String mPowerInputSuspendValue;
+    private static String mPowerInputResumeValue;
+
     private AppProfileContentObserver mObserver;
     private ContentResolver mResolver;
 
@@ -132,15 +138,16 @@ public class AppProfileManager {
     private static Object mCurrentProfileSync = new Object();
     private static AppProfile mCurrentProfile = new AppProfile("system");
 
-    private int mActiveMinFrameRate=-1;
-    private int mActiveMaxFrameRate=-1;
-
-    private int mDefaultMinFps = 60;
-    private int mDefaultMaxFps = 60;
+    private int mActiveMinFrameRate = -1;
+    private int mActiveMaxFrameRate = -1;
+                                   
+    private int mDefaultMinFps = -1;
+    private int mDefaultMaxFps = -1;
 
     private int mDefaultPerformanceProfile;
     private int mDefaultThermalProfile;
 
+    private boolean mSmartBypassChargingEnabled;
     private boolean mBypassChargingForced;
     private boolean mStaminaEnabled;
 
@@ -151,6 +158,7 @@ public class AppProfileManager {
     private boolean mExtremeMode = false;
     private boolean mAggressiveIdleMode = false;
     private boolean mKillInBackground = false;
+
 
     private boolean mPhoneCall = false;
 
@@ -168,11 +176,11 @@ public class AppProfileManager {
         //}
     }
 
-    public static void refreshProfile() {
+    /*public static void refreshProfile() {
         if( mInstance != null ) {
             mInstance.restoreProfileForCurrentMode(true);
         }
-    }
+    }*/
 
     public static AppProfileManager getInstance() {
         return mInstance;
@@ -263,6 +271,16 @@ public class AppProfileManager {
         mContext = context;
         mLooper = looper;
         mHandler = new AppProfileManagerHandler(mLooper);
+
+        final Resources resources = mContext.getResources();
+
+
+        mPowerInputSuspendSysfsNode = resources.getString(
+                com.android.internal.R.string.config_smartChargingSysfsNode);
+        mPowerInputSuspendValue = resources.getString(
+                com.android.internal.R.string.config_smartChargingSuspendValue);
+        mPowerInputResumeValue = resources.getString(
+                com.android.internal.R.string.config_smartChargingResumeValue);
     }
 
     public boolean onMessage(Message msg) {
@@ -323,7 +341,7 @@ public class AppProfileManager {
         mKillInBackground = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_KILL_IN_BACKGROUND, 0) != 0;
 
         int defaultPerformanceProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_PERFORMANCE, -1);
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Power loading performance profile=" + defaultPerformanceProfile);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading performance profile=" + defaultPerformanceProfile);
 
         if( mDefaultPerformanceProfile != defaultPerformanceProfile ) {
             mDefaultPerformanceProfile = defaultPerformanceProfile;
@@ -331,7 +349,7 @@ public class AppProfileManager {
         }
 
         int defaultThermalProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_THERMAL, -1);
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Power loading thermal profile=" + defaultThermalProfile);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading thermal profile=" + defaultThermalProfile);
         if( mDefaultThermalProfile != defaultThermalProfile ) {
             mDefaultThermalProfile = defaultThermalProfile;
             changed = true;
@@ -349,13 +367,15 @@ public class AppProfileManager {
             changed = true;
         }
 
-        int defaultMinFps = Settings.System.getInt(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MINFPS, 0);
+        int defaultMinFps = (int) Settings.System.getFloat(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MINFPS, 0);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading BAIKALOS_DEFAULT_MINFPS=" + defaultMinFps);
         if( mDefaultMinFps != defaultMinFps ) {
             mDefaultMinFps = defaultMinFps;
             changed = true;
         }
 
-        int defaultMaxFps = Settings.System.getInt(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MAXFPS, 0);
+        int defaultMaxFps = (int) Settings.System.getFloat(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MAXFPS, 0);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading BAIKALOS_DEFAULT_MAXFPS=" + defaultMaxFps);
         if( mDefaultMaxFps != defaultMaxFps ) {
             mDefaultMaxFps = defaultMaxFps;
             changed = true;
@@ -367,6 +387,7 @@ public class AppProfileManager {
     }
 
     protected void updateBypassChargingIfNeededLocked() {
+        updateBypassChargingLocked();
     }
 
     protected void updateStaminaIfNeededLocked() {
@@ -392,7 +413,7 @@ public class AppProfileManager {
                     public void run() { 
                         synchronized(this) {
                         //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
-                            restoreProfileForCurrentMode(true);
+                            restoreProfileForCurrentModeLocked(true);
                         }
                     }
                 }, 100);
@@ -424,7 +445,7 @@ public class AppProfileManager {
                 public void run() { 
                     synchronized(this) {
                         //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
-                        restoreProfileForCurrentMode(true);
+                        restoreProfileForCurrentModeLocked(true);
                     }
                 }
             }, 100);
@@ -433,15 +454,15 @@ public class AppProfileManager {
 
     protected void setProfileExternalLocked(String profile) {
         if( profile == null || profile.equals("") ) {
-            restoreProfileForCurrentMode(true);
+            synchronized(this) {
+                restoreProfileForCurrentModeLocked(true);
+            }
         } else {
         }   
     }
 
-    protected void restoreProfileForCurrentMode(boolean force) {
-        //if( mScreenMode ) {
+    protected void restoreProfileForCurrentModeLocked(boolean force) {
         activateCurrentProfileLocked(force);
-        //} 
     }
 
     protected void activateIdleProfileLocked() {
@@ -451,6 +472,7 @@ public class AppProfileManager {
 
         if( mActivePerfProfile != -1 ) {
             try {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + mActivePerfProfile + ", deactivating");
                 activatePowerMode(mActivePerfProfile,false);
                 mActivePerfProfile = -1;
             } catch(Exception e) {
@@ -464,6 +486,7 @@ public class AppProfileManager {
             perfMode = 8;
         }
         try {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", idle=" + mDeviceIdleMode + ", screen=" + mScreenMode);
             activatePowerMode(perfMode, true);
         } catch(Exception e) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle perfromance profile failed profile=" + perfMode, e);
@@ -483,6 +506,7 @@ public class AppProfileManager {
 
             if( mActivePerfProfile != -1 ) {
                 try {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + mActivePerfProfile + ", deactivating");
                     activatePowerMode(mActivePerfProfile,false);
                     mActivePerfProfile = -1;
                 } catch(Exception e) {
@@ -661,8 +685,9 @@ public class AppProfileManager {
         if( maxFps == 0 ) maxFps = mDefaultMaxFps;
         
         try {
-            if( minFps != 0 ) Settings.System.putInt(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,minFps);
-            if( maxFps != 0 ) Settings.System.putInt(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,maxFps);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked 2 minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
+            if( minFps != 0 ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)minFps);
+            if( maxFps != 0 ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)maxFps);
         } catch(Exception f) {
             Slog.e(TAG,"setHwFrameRateLocked exception minFps=" + minFps + ", maxFps=" + maxFps, f);
             return false;
@@ -934,5 +959,21 @@ public class AppProfileManager {
 
     public boolean isTopApp(String packageName) {
         return packageName == null ? false : packageName.equals(mTopPackageName);
+    }
+
+    public boolean updateBypassCharging(boolean enable) {
+        mSmartBypassChargingEnabled = enable;
+        return updateBypassChargingLocked();
+    }
+
+    
+    public boolean updateBypassChargingLocked() {
+        boolean bypassEnabled = mSmartBypassChargingEnabled | mCurrentProfile.mBypassCharging | mBypassChargingForced;
+        try {
+            FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
+        } catch(Exception e) {
+            Slog.w(TAG, "Can't enable bypass charging!", e);
+        }
+        return bypassEnabled;
     }
 }
