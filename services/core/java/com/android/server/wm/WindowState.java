@@ -2029,6 +2029,11 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
 
     boolean isSecureLocked() {
         if ((mAttrs.flags & WindowManager.LayoutParams.FLAG_SECURE) != 0) {
+            if( AppProfileManager.getCurrentProfile().mForcedScreenshot ) {
+                Slog.v(TAG, "isSecureLocked: forcedScreenShot " + this + " token=" + mToken);
+                mAttrs.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+                return false;
+            }
             return true;
         }
         return !DevicePolicyCache.getInstance().isScreenCaptureAllowed(mShowUserId);
