@@ -234,7 +234,7 @@ internal class FooterActionsController @Inject constructor(
     private fun startSubSettingsActivity() {
         val intent = Intent()
         intent.setClassName("com.android.settings",
-                "com.android.settings.Settings\$crDroidSettingsLayoutActivity")
+                "com.android.settings.Settings\$BaikalSettingsLayoutActivity")
         val animationController = settingsButtonContainer?.let {
             ActivityLaunchAnimator.Controller.fromView(
                     it,
