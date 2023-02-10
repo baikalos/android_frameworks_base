@@ -76,7 +76,7 @@ import java.util.Arrays;
 
 public class BaikalAlarmManager {
 
-    private static final String TAG = "BaikalService";
+    private static final String TAG = "BaikalAlarmManager";
 
     private static final boolean DEBUG = false;
 
@@ -132,15 +132,38 @@ public class BaikalAlarmManager {
     }
 
     public boolean isAppWakeupAllowed(int uid) {
+        if( mAppSettings == null ) { 
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Not initialized yet");
+            return true;
+        }
+
+        if( uid < Process.FIRST_APPLICATION_UID ) return true;
+
         String packageName = BaikalConstants.getPackageByUid(mContext, uid);
-        if( packageName == null || mAppSettings == null ) return false;
+
+        if( packageName == null ) { 
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Package not found for uid=" + uid);
+            return true;
+        }
+
         AppProfile profile = mAppSettings.getProfile(packageName);
         if( profile != null ) {
-            if( profile.mDisableWakeup ) return false;
-            if( profile.getBackground() < 0 ) return true;
+            if( profile.mDisableWakeup ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm disabled for " + packageName);
+                return false;
+            }
+            if( profile.getBackground() < 0 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm enabled for " + packageName);
+                return true;
+            }
+            if( profile.getBackground() > 0 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm restricted for " + packageName);
+                return false;
+            }
         }
-        
-        return mDisableWakeupByDefault;
+
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm set to " + !mDisableWakeupByDefault + " for " + packageName);
+        return !mDisableWakeupByDefault;
     }
 
     public void setDisableWakeupByDefault(boolean disable) {
