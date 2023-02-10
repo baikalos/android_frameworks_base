@@ -210,6 +210,7 @@ public class BaikalSpoofer {
             String stockFp = SystemProperties.get("ro.build.stock_fingerprint", null);
             String stockSecurityPatch = SystemProperties.get("ro.build.stock_sec_patch", null);
 
+            setBuildField("MODEL", Build.MODEL + "\u200b");
             setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.S);
 
             Log.e(TAG, "Spoof Device GMS FINGERPRINT: [" + stockFp + "], " + Application.getProcessName());
@@ -219,6 +220,7 @@ public class BaikalSpoofer {
             Log.e(TAG, "Spoof Device GMS SECURITY_PATCH: [" + stockSecurityPatch + "]");
             if( stockSecurityPatch != null && !stockSecurityPatch.isEmpty() )
                 setVersionField("SECURITY_PATCH", stockSecurityPatch);
+
             return;                    
         } else if( "com.android.vending".equals(packageName) ) {
             sIsFinsky = true;
