@@ -2679,12 +2679,13 @@ public final class PowerManagerService extends SystemService
         if (!mSmartChargingAvailable) return;
         if (mPowerInputSuspended && ((mSmartChargingResumeLevel < mSmartChargingLevel &&
             mBatteryLevel <= mSmartChargingResumeLevel) || !mSmartChargingEnabled)) {
-            try {
-                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputResumeValue);
-                mPowerInputSuspended = false;
-            } catch (IOException e) {
-                Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
-            }
+            //try {
+                //FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputResumeValue);
+                //mPowerInputSuspended = false;
+                mPowerInputSuspended = AppProfileManager.getInstance().updateBypassCharging(false);
+            //} catch (IOException e) {
+            //    Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
+            //}
             return;
         }
 
@@ -2694,16 +2695,17 @@ public final class PowerManagerService extends SystemService
                 try {
                      mBatteryStats.resetStatistics();
                 } catch (RemoteException e) {
-                         Slog.e(TAG, "failed to reset battery statistics");
+                     Slog.e(TAG, "failed to reset battery statistics");
                 }
             }
 
-            try {
-                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputSuspendValue);
-                mPowerInputSuspended = true;
-            } catch (IOException e) {
-                    Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
-            }
+            //try {
+                //FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputSuspendValue);
+                //mPowerInputSuspended = true;
+                mPowerInputSuspended = AppProfileManager.getInstance().updateBypassCharging(true);
+            //} catch (IOException e) {
+            //    Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
+            //}
         }
     }
 
