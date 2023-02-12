@@ -35,6 +35,7 @@ import android.os.Trace;
 import android.os.incremental.V4Signature;
 import android.util.Pair;
 import android.util.jar.StrictJarFile;
+import android.util.Slog;
 
 import com.android.internal.util.ArrayUtils;
 
@@ -61,6 +62,8 @@ import java.util.zip.ZipEntry;
  * @hide for internal use only.
  */
 public class ApkSignatureVerifier {
+
+    private static final String TAG = "ApkSignatureVerifier";
 
     private static final AtomicReference<byte[]> sBuffer = new AtomicReference<>();
 
@@ -144,16 +147,16 @@ public class ApkSignatureVerifier {
         } catch (SignatureNotFoundException e) {
             // not signed with v3, try older if allowed
             if (minSignatureSchemeVersion >= SignatureSchemeVersion.SIGNING_BLOCK_V3) {
-                return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
-                        "No APK Signature Scheme v3 signature in package " + apkPath, e);
+                //return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
+                        Slog.e(TAG, "No APK Signature Scheme v3 signature in package " + apkPath, e);
             }
         }
 
         // redundant, protective version check
         if (minSignatureSchemeVersion > SignatureSchemeVersion.SIGNING_BLOCK_V2) {
             // V2 and before are older than the requested minimum signing version
-            return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
-                    "No signature found in package of version " + minSignatureSchemeVersion
+            //return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
+                    Slog.e(TAG, "No signature found in package of version " + minSignatureSchemeVersion
                             + " or newer for package " + apkPath);
         }
 
@@ -163,16 +166,16 @@ public class ApkSignatureVerifier {
         } catch (SignatureNotFoundException e) {
             // not signed with v2, try older if allowed
             if (minSignatureSchemeVersion >= SignatureSchemeVersion.SIGNING_BLOCK_V2) {
-                return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
-                        "No APK Signature Scheme v2 signature in package " + apkPath, e);
+                //return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
+                        Slog.e(TAG, "No APK Signature Scheme v2 signature in package " + apkPath, e);
             }
         }
 
         // redundant, protective version check
         if (minSignatureSchemeVersion > SignatureSchemeVersion.JAR) {
             // V1 and is older than the requested minimum signing version
-            return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
-                    "No signature found in package of version " + minSignatureSchemeVersion
+            //return input.error(INSTALL_PARSE_FAILED_NO_CERTIFICATES,
+                    Slog.e(TAG, "No signature found in package of version " + minSignatureSchemeVersion
                             + " or newer for package " + apkPath);
         }
 
