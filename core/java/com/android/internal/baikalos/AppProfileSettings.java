@@ -54,7 +54,7 @@ import java.util.Map;
 
 public class AppProfileSettings extends ContentObserver {
 
-    private static final String TAG = "Baikal.AppSettings";
+    private static final String TAG = "BaikalPreferences";
 
     private static AppProfileSettings sInstance;
 
@@ -152,11 +152,12 @@ public class AppProfileSettings extends ContentObserver {
 
     @Override
     public void onChange(boolean selfChange, Uri uri) {
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Preferences changed. Reloading");
         synchronized(this) {
             mBackend.refreshList();
             updateConstantsLocked();
-            //if( mAwaitSystemBoot ) updateProfilesOnBootLocked();
         }
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Preferences changed. Reloading - done");
     }
 
     private AppProfile updateProfileFromSystemSettingsLocked(AppProfile profile) {
@@ -167,7 +168,6 @@ public class AppProfileSettings extends ContentObserver {
         }
         boolean isSystemWhitelisted = mBackend.isSysWhitelisted(profile.mPackageName);
         if( isSystemWhitelisted ) {
-            //if( profile.mBackground >= 0 )  profile.mBackground = -1;
             if( profile.mBackground >= -1 ) profile.mBackground = 0;
             profile.mSystemWhitelisted = true;
             return profile;
@@ -365,18 +365,13 @@ public class AppProfileSettings extends ContentObserver {
 
 
     private void updateProfilesOnBootLocked() {
-/*        for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
-            updateProfileFromSystemSettingsLocked(entry.getValue());
-        }*/
         updateProfilesFromInstalledPackagesLocked();
     }
 
     private void updateConstantsLocked() {
 
         Slog.e(TAG, "Loading AppProfiles");
-        //synchronized(mBackend) {
         mBackend.refreshList();
-        //}
 
         try {
             String appProfiles = Settings.Global.getString(mResolver,
@@ -409,8 +404,6 @@ public class AppProfileSettings extends ContentObserver {
 
                     profile.mUid = uid;
 
-                    //Slog.e(TAG, "updateSystemSettingsLocked from load profiles for " + profile.mPackageName);
-                    //profile = updateSystemSettingsLocked(profile);
                     if( profile == null ) {
                         continue;
                     }
@@ -426,8 +419,6 @@ public class AppProfileSettings extends ContentObserver {
                     }
                 }
             }
-
-            updateSystemFromInstalledPackages();
 
             for(Map.Entry<String, AppProfile> entry : _oldProfiles.entrySet()) {
                 entry.getValue().isInvalidated = true;
@@ -634,9 +625,6 @@ public class AppProfileSettings extends ContentObserver {
     public void save() {
         is_changed = true;
         Slog.e(TAG, "save()");
-        /* synchronized(this) {
-            saveLocked();
-        }*/
     }
 
     public void commit() {
