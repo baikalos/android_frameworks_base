@@ -17215,6 +17215,14 @@ public final class Settings {
         public static final String BAIKALOS_DEFAULT_THERMAL = "baikalos_default_thermal";
 
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_R_SECURE = "baikalos_r_secure";
+
+
         /* End of BaikalOS Global Settings */
 
 
