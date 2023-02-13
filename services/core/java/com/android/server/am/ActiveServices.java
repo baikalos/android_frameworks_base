@@ -2822,6 +2822,7 @@ public final class ActiveServices {
             }
         }
 
+
         if ((flags&Context.BIND_TREAT_LIKE_ACTIVITY) != 0) {
             mAm.enforceCallingPermission(android.Manifest.permission.MANAGE_ACTIVITY_TASKS,
                     "BIND_TREAT_LIKE_ACTIVITY");
@@ -2877,6 +2878,21 @@ public final class ActiveServices {
             return -1;
         }
         ServiceRecord s = res.record;
+
+        //if( !mAm.mAppProfileManager.isToppAppUid(callerApp.info.uid) ) {
+
+        if( callerApp.mState.getCurProcState() < ActivityManager.PROCESS_STATE_TOP ||
+            callerApp.mState.getCurProcState() > ActivityManager.PROCESS_STATE_FOREGROUND_SERVICE) {
+            if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
+                Slog.w(TAG, "Background service start disabled by baikal settings for: " + s);
+                return 0;
+            }
+        } else {
+            if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
+                Slog.w(TAG, "Background service start disabled by baikal but requested form foreground app: " + s);
+                Slog.w(TAG, "Background service start from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
+            }
+        }
 
         // The package could be frozen (meaning it's doing surgery), defer the actual
         // binding until the package is unfrozen.
