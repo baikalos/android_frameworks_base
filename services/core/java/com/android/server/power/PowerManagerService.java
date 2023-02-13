@@ -4025,11 +4025,11 @@ public final class PowerManagerService extends SystemService
             }
             mHalInteractiveModeEnabled = enable;
             Trace.traceBegin(Trace.TRACE_TAG_POWER, "setHalInteractive(" + enable + ")");
-            try {
+            /*try {
                 mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, enable);
             } finally {
                 Trace.traceEnd(Trace.TRACE_TAG_POWER);
-            }
+            }*/
         }
     }
 
