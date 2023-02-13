@@ -80,7 +80,6 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.UserHandle;
 
-
 import android.database.ContentObserver;
 
 import android.provider.Settings;
@@ -168,19 +167,9 @@ public class AppProfileManager {
 
     private PowerManagerInternal mPowerManagerInternal;
 
-    //private SparseArray<Integer> _performanceProfiles = new SparseArray<Integer> ();
-
     public static AppProfile getCurrentProfile() {
-        //synchronized(mCurrentProfileSync) {
         return mCurrentProfile;
-        //}
     }
-
-    /*public static void refreshProfile() {
-        if( mInstance != null ) {
-            mInstance.restoreProfileForCurrentMode(true);
-        }
-    }*/
 
     public static AppProfileManager getInstance() {
         return mInstance;
@@ -266,7 +255,6 @@ public class AppProfileManager {
         }
     }
 
-
     private AppProfileManager(Looper looper, Context context) {
         mContext = context;
         mLooper = looper;
@@ -333,7 +321,6 @@ public class AppProfileManager {
     protected void updateConstantsLocked() {
 
         boolean changed = false;
-
 
         mAggressiveMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) != 0;
         mExtremeMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
@@ -412,7 +399,6 @@ public class AppProfileManager {
                     @Override
                     public void run() { 
                         synchronized(this) {
-                        //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
                             restoreProfileForCurrentModeLocked(true);
                         }
                     }
@@ -541,7 +527,6 @@ public class AppProfileManager {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + perfMode, e);
                 }
                 int thermMode = profile.mThermalProfile <= 0 ? (mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile) : profile.mThermalProfile;
-                //if( profile.mThermalProfile > 0 )
                 activateThermalProfile(thermMode);   
             }
 
@@ -551,29 +536,24 @@ public class AppProfileManager {
     }
 
     protected void activatePowerMode(int mode, boolean enable) {
-        if( mDeviceIdleMode ) {
-            mode = MODE_DEVICE_IDLE;
-        } else if( !mScreenMode ) {
-            mode = MODE_LOW_POWER;
+        if( enable ) {
+            if( mDeviceIdleMode ) {
+                mode = MODE_DEVICE_IDLE;
+            } else if( !mScreenMode ) {
+                mode = MODE_LOW_POWER;
+            }
         }
-        //Thread thread = new Thread() {
-        //    @Override
-        //    public void run() {
-                try {
-
-                    mPowerManager.setPowerMode(mode, enable);
-                    if( enable ) {
-                        SystemPropertiesSet("baikal.power.perf",Integer.toString(mode));
-                        mActivePerfProfile = mode;
-                    } else {
-                        SystemPropertiesSet("baikal.power.perf","0");
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-        //    }
-        //};
-        //thread.start();
+        try {
+            mPowerManager.setPowerMode(mode, enable);
+            if( enable ) {
+                SystemPropertiesSet("baikal.power.perf",Integer.toString(mode));
+                mActivePerfProfile = mode;
+            } else {
+                SystemPropertiesSet("baikal.power.perf","0");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     protected void activateThermalProfile(int profile) {
@@ -595,11 +575,9 @@ public class AppProfileManager {
             mTopUid = uid;
             mTopPackageName = packageName;
 
-            /*if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE )*/ Slog.i(TAG,"topAppChanged uid=" + uid + ", packageName=" + packageName);
+            Slog.i(TAG,"topAppChanged uid=" + uid + ", packageName=" + packageName);
 
-            //BaikalSettings.setTopApp(mTopUid, mTopPackageName);
-
-            AppProfile profile = mAppSettings.getProfile(/*uid,*/packageName);
+            AppProfile profile = mAppSettings.getProfile(packageName);
             if( profile == null ) {
                 profile = new AppProfile(mTopPackageName);   
             }
@@ -679,7 +657,6 @@ public class AppProfileManager {
 
     private boolean setHwFrameRateLocked(int minFps, int maxFps, boolean override) {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
-        //if( mIdleProfileActive && !override ) return false;
 
         if( minFps == 0 ) minFps = mDefaultMinFps;
         if( maxFps == 0 ) maxFps = mDefaultMaxFps;
