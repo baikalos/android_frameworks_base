@@ -1683,10 +1683,14 @@ public final class CameraManager {
         private String[] extractCameraIdListLocked() {
             String[] cameraIds = null;
             boolean exposeAuxCamera = Camera.shouldExposeAuxCamera();
-            int size = exposeAuxCamera ? mDeviceStatus.size() : 2;
+            int size = exposeAuxCamera ? mDeviceStatus.size() : (mDeviceStatus.size() > 2) ? 2 : mDeviceStatus.size();
             int idCount = 0;
+
+            Log.i(TAG, "extractCameraIdListLocked: size=" + size + ", shouldExposeAuxCamera=" + exposeAuxCamera);
+
             for (int i = 0; i < size; i++) {
                 int status = mDeviceStatus.valueAt(i);
+                Log.i(TAG, "extractCameraIdListLocked: camera=" + i + ", id=" + mDeviceStatus.keyAt(i) + ", status=" + status);
                 if (status == ICameraServiceListener.STATUS_NOT_PRESENT
                         || status == ICameraServiceListener.STATUS_ENUMERATING) continue;
                 idCount++;
