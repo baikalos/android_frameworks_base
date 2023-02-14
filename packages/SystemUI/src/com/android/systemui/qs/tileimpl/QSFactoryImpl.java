@@ -211,13 +211,10 @@ public class QSFactoryImpl implements QSFactory {
             Provider<RefreshRateTile> refreshRateTileProvider,
             Provider<ScreenshotTile> screenshotTileProvider,
             Provider<SoundSearchTile> soundSearchTileProvider,
-<<<<<<< HEAD
-            Provider<LocaleTile> localeTileProvider) {
-=======
+            Provider<LocaleTile> localeTileProvider,
             Provider<BypassChargingTile> bypassChargingTileProvider,
             Provider<StaminaModeTile> staminaModeTileProvider
             ) {
->>>>>>> 6ecc25893319 (Baikalify SystemUI. Add BPC and Stamina QS Tiles.)
         mQsHostLazy = qsHostLazy;
         mCustomTileBuilderProvider = customTileBuilderProvider;
 
@@ -273,13 +270,9 @@ public class QSFactoryImpl implements QSFactory {
         mRefreshRateTileProvider = refreshRateTileProvider;
         mScreenshotTileProvider = screenshotTileProvider;
         mSoundSearchTileProvider = soundSearchTileProvider;
-<<<<<<< HEAD
         mLocaleTileProvider = localeTileProvider;
-=======
-
         mBypassChargingTileProvider = bypassChargingTileProvider;
         mStaminaModeTileProvider = staminaModeTileProvider;
->>>>>>> 6ecc25893319 (Baikalify SystemUI. Add BPC and Stamina QS Tiles.)
     }
 
     /** Creates a tile with a type based on {@code tileSpec} */
