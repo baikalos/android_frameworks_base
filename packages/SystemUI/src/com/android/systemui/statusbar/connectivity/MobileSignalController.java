@@ -267,6 +267,7 @@ public class MobileSignalController extends SignalController<MobileState, Mobile
 
     @Override
     void notifyListenersIfNecessary() {
+        queryImsStateInternal();
         super.notifyListenersIfNecessary();
         mNetworkController.updateImsIcon();
     }
@@ -396,19 +397,24 @@ public class MobileSignalController extends SignalController<MobileState, Mobile
         queryImsState();
     }
 
-    private void queryImsState() {
+    private void queryImsStateInternal() {
         TelephonyManager tm = mPhone.createForSubscriptionId(mSubscriptionInfo.getSubscriptionId());
-        mCurrentState.voiceCapable = tm.isVolteAvailable();
         mCurrentState.videoCapable = tm.isVideoTelephonyAvailable();
         mCurrentState.imsRegistered = mPhone.isImsRegistered(mSubscriptionInfo.getSubscriptionId());
         mIsVowifiAvailable = tm.isWifiCallingAvailable();
-        if (DEBUG) {
+        mCurrentState.voiceCapable = tm.isVolteAvailable() | mIsVowifiAvailable;
+        //if (DEBUG) {
             Log.d(mTag, "queryImsState tm=" + tm + " phone=" + mPhone
                     + " voiceCapable=" + mCurrentState.voiceCapable
                     + " videoCapable=" + mCurrentState.videoCapable
                     + " imsRegistered=" + mCurrentState.imsRegistered
-                    + " mIsVowifiAvailable=" + mIsVowifiAvailable);
-        }
+                    + " mIsVowifiAvailable=" + mIsVowifiAvailable
+                    + " dataNetworkType=" + getDataNetworkType());
+        //}
+    }
+
+    private void queryImsState() {
+        queryImsStateInternal();
         notifyListenersIfNecessary();
     }
 
