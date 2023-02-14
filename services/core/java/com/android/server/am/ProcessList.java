@@ -3042,7 +3042,11 @@ public final class ProcessList {
             Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
         }
 
-        Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.mAppProfile);
+        if( r.mAppProfile.mBackground > 0 ) {
+            Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for restricted app " + info.packageName + ", profile=" + r.mAppProfile, new Throwable());
+        } else {
+            Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.mAppProfile);
+        }
 
         addProcessNameLocked(r);
         return r;
@@ -5059,6 +5063,9 @@ public final class ProcessList {
     long killAppIfBgRestrictedAndCachedIdleLocked(ProcessRecord app, long nowElapsed) {
         final UidRecord uidRec = app.getUidRecord();
         final long lastCanKillTime = app.mState.getLastCanKillOnBgRestrictedAndIdleTime();
+        
+        if( app.mAppProfile.mPinned ) return 0;
+
         if (!mService.mConstants.mKillBgRestrictedAndCachedIdle
                 || app.isKilled() || app.getThread() == null || uidRec == null || !uidRec.isIdle()
                 || !app.isCached() || app.mState.shouldNotKillOnBgRestrictedAndIdle()
@@ -5113,10 +5120,10 @@ public final class ProcessList {
     @GuardedBy("mService")
     void noteAppKill(final ProcessRecord app, final @Reason int reason,
             final @SubReason int subReason, final String msg) {
-        if (DEBUG_PROCESSES) {
+        //if (DEBUG_PROCESSES) {
             Slog.i(TAG, "note: " + app + " is being killed, reason: " + reason
                     + ", sub-reason: " + subReason + ", message: " + msg);
-        }
+        //}
         if (app.getPid() > 0 && !app.isolated && app.getDeathRecipient() != null) {
             // We are killing it, put it into the dying process list.
             mDyingProcesses.put(app.processName, app.uid, app);
@@ -5128,10 +5135,10 @@ public final class ProcessList {
     @GuardedBy("mService")
     void noteAppKill(final int pid, final int uid, final @Reason int reason,
             final @SubReason int subReason, final String msg) {
-        if (DEBUG_PROCESSES) {
+        //if (DEBUG_PROCESSES) {
             Slog.i(TAG, "note: " + pid + " is being killed, reason: " + reason
                     + ", sub-reason: " + subReason + ", message: " + msg);
-        }
+        //}
 
         final ProcessRecord app;
         synchronized (mService.mPidsSelfLocked) {
