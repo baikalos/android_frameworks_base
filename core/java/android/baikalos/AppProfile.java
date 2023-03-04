@@ -139,13 +139,18 @@ public class AppProfile {
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
+    private static @Nullable String sPackageName;
+    private static int sUid;
+
     private static AppProfile mCurrentAppProfile = new AppProfile("current");
 
     public static @Nullable AppProfile getCurrentAppProfile() {
         return mCurrentAppProfile;
     }
 
-    public static void setCurrentAppProfile(@Nullable AppProfile profile) {
+    public static void setCurrentAppProfile(@Nullable AppProfile profile, int uid) {
+        sPackageName = profile.mPackageName;
+        sUid = uid;
         mCurrentAppProfile = profile;
     }
 
@@ -428,6 +433,15 @@ public class AppProfile {
 
     public String toString() {
         return this.serialize();
+    }
+
+
+    public static int myUid() {
+        return sUid;
+    }
+
+    public static @Nullable String myPackageName() {
+        return sPackageName;
     }
 
 }
