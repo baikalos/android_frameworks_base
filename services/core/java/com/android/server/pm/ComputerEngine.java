@@ -5582,7 +5582,7 @@ public class ComputerEngine implements Computer {
                     ApplicationInfo ai = PackageInfoUtils.generateApplicationInfo(p, flags,
                             ps.getUserStateOrDefault(userId), userId, ps);
                     if (ai != null) {
-                        finalList.add(ai);
+                        if( !BaikalAppManagerService.shouldHide(userId, ai.packageName) ) finalList.add(ai);
                     }
                 }
             }
