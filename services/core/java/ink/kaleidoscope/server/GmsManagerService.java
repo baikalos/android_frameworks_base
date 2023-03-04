@@ -49,9 +49,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import com.android.server.baikalos.BaikalAppManagerService;
+
 public final class GmsManagerService extends SystemService {
 
-    static final String[] GMS_PACKAGES =
+    /*static final String[] GMS_PACKAGES =
     {
         "com.android.vending",
         "com.google.android.gms",
@@ -74,7 +76,7 @@ public final class GmsManagerService extends SystemService {
         "com.google.android.tts",
         "com.google.android.marvin.talkback",
         "com.google.android.googlequicksearchbox"
-    };
+    };*/
 
     private static final String TAG = "GmsManagerService";
 
@@ -99,7 +101,7 @@ public final class GmsManagerService extends SystemService {
             return false;
 
         return !enabled.booleanValue() &&
-                Arrays.stream(GMS_PACKAGES).anyMatch(packageName::equals);
+                Arrays.stream(BaikalAppManagerService.GMS_PACKAGES).anyMatch(packageName::equals);
     }
 
     public static ParceledListSlice<PackageInfo> recreatePackageList(
@@ -112,7 +114,7 @@ public final class GmsManagerService extends SystemService {
         ArrayList<PackageInfo> newList = new ArrayList<>();
         for (PackageInfo info : oldList) {
             if (info.packageName != null &&
-                    Arrays.stream(GMS_PACKAGES).anyMatch(info.packageName::equals))
+                    Arrays.stream(BaikalAppManagerService.GMS_PACKAGES).anyMatch(info.packageName::equals))
                 continue;
             newList.add(info);
         }
@@ -129,7 +131,7 @@ public final class GmsManagerService extends SystemService {
         ArrayList<ApplicationInfo> newList = new ArrayList<>();
         for (ApplicationInfo info : list) {
             if (info.packageName != null &&
-                    Arrays.stream(GMS_PACKAGES).anyMatch(info.packageName::equals))
+                    Arrays.stream(BaikalAppManagerService.GMS_PACKAGES).anyMatch(info.packageName::equals))
                 continue;
             newList.add(info);
         }
@@ -142,7 +144,7 @@ public final class GmsManagerService extends SystemService {
         sCachedSettings.put(userId, enabled);
 
         try {
-            for (String packageName : GMS_PACKAGES) {
+            for (String packageName : BaikalAppManagerService.GMS_PACKAGES) {
                 try {
                     if (enabled) {
                         mPM.setApplicationEnabledSetting(packageName,
