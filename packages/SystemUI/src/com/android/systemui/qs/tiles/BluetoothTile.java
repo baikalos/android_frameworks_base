@@ -47,6 +47,7 @@ import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
+import com.android.systemui.qs.tiles.dialog.BluetoothDialogFactory;
 import com.android.systemui.statusbar.policy.BluetoothController;
 
 import java.util.List;
@@ -57,7 +58,9 @@ import javax.inject.Inject;
 public class BluetoothTile extends QSTileImpl<BooleanState> {
     private static final Intent BLUETOOTH_SETTINGS = new Intent(Settings.Panel.ACTION_BLUETOOTH);
 
+    private final Handler mHandler;
     private final BluetoothController mController;
+    private final BluetoothDialogFactory mBluetoothDialogFactory;
 
     @Inject
     public BluetoothTile(
@@ -69,17 +72,22 @@ public class BluetoothTile extends QSTileImpl<BooleanState> {
             StatusBarStateController statusBarStateController,
             ActivityStarter activityStarter,
             QSLogger qsLogger,
-            BluetoothController bluetoothController
+            BluetoothController bluetoothController,
+            BluetoothDialogFactory bluetoothDialogFactory
     ) {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
+        mHandler = mainHandler;
         mController = bluetoothController;
+        mBluetoothDialogFactory = bluetoothDialogFactory;
         mController.observe(getLifecycle(), mCallback);
     }
 
     @Override
     public BooleanState newTileState() {
-        return new BooleanState();
+        BooleanState s = new BooleanState();
+        s.forceExpandIcon = true;
+        return s;
     }
 
     @Override
@@ -92,8 +100,13 @@ public class BluetoothTile extends QSTileImpl<BooleanState> {
     }
 
     @Override
+    protected void handleLongClick(@Nullable View view) {
+        mHandler.post(() -> mBluetoothDialogFactory.create(true, view));
+    }
+
+    @Override
     public Intent getLongClickIntent() {
-        return BLUETOOTH_SETTINGS;
+        return null;
     }
 
     @Override
