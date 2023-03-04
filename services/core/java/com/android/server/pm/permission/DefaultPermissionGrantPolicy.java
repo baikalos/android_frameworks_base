@@ -212,6 +212,14 @@ final class DefaultPermissionGrantPolicy {
         STORAGE_PERMISSIONS.add(Manifest.permission.READ_MEDIA_IMAGES);
     }
 
+    private static final Set<String> FILEACCESS_PERMISSIONS_FULL = new ArraySet<>();
+    static {
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.MANAGE_EXTERNAL_STORAGE);
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.ACCESS_MEDIA_LOCATION);
+    }
+
     private static final Set<String> NEARBY_DEVICES_PERMISSIONS = new ArraySet<>();
     static {
         NEARBY_DEVICES_PERMISSIONS.add(Manifest.permission.BLUETOOTH_ADVERTISE);
@@ -393,6 +401,7 @@ final class DefaultPermissionGrantPolicy {
         grantDefaultSystemHandlerPermissions(pm, userId);
         grantSignatureAppsNotificationPermissions(pm, userId);
         grantDefaultPermissionExceptions(pm, userId);
+        grantDefaultSystemHandlerPermissionsBaikal(pm, userId);
 
         // Apply delayed state
         pm.apply();
@@ -555,6 +564,26 @@ final class DefaultPermissionGrantPolicy {
             }
         }
     }
+
+    private void grantDefaultSystemHandlerPermissionsBaikal(PackageManagerWrapper pm, int userId) {
+        Log.i(TAG, "Granting baikalos permissions to default platform handlers for user " + userId);
+
+        // ANX Camera
+        grantPermissionsToSystemPackage(pm, "com.android.camera", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "com.xiaomi.scanner", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "com.miui.extraphoto", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "com.miui.gallery", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "james.dsp", userId, FILEACCESS_PERMISSIONS_FULL, SENSORS_PERMISSIONS);
+    }
+
 
     private void grantDefaultSystemHandlerPermissions(PackageManagerWrapper pm, int userId) {
         Log.i(TAG, "Granting permissions to default platform handlers for user " + userId);
