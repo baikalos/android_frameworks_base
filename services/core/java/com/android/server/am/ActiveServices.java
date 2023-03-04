@@ -2881,15 +2881,15 @@ public final class ActiveServices {
 
         //if( !mAm.mAppProfileManager.isToppAppUid(callerApp.info.uid) ) {
 
-        if( callerApp.mState.getCurProcState() < ActivityManager.PROCESS_STATE_TOP ||
-            callerApp.mState.getCurProcState() > ActivityManager.PROCESS_STATE_FOREGROUND_SERVICE) {
+        if( callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
+            !mAm.mAppProfileManager.isTopAppUid(callerApp.info.uid) ) {
             if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
                 Slog.w(TAG, "Background service start disabled by baikal settings for: " + s);
                 return 0;
             }
         } else {
             if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
-                Slog.w(TAG, "Background service start disabled by baikal but requested form foreground app: " + s);
+                Slog.w(TAG, "Background service start disabled by baikal, but requested form foreground app: " + s);
                 Slog.w(TAG, "Background service start from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
             }
         }
@@ -5432,6 +5432,9 @@ public final class ActiveServices {
 
     final void killServicesLocked(ProcessRecord app, boolean allowRestart) {
         final ProcessServiceRecord psr = app.mServices;
+
+        if( app != null && app.isKilledByAm() ) allowRestart = false;
+
         // Report disconnected services.
         if (false) {
             // XXX we are letting the client link to the service for
