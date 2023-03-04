@@ -93,7 +93,7 @@ public class CPUInfoService extends Service {
     private static boolean mIsolationSupported = true;
 
     double mAccumulator = -10000.0;    
-    double mAlpha = 0.04;
+    double mAlpha = 0.2; //0.04;
 
     private class CPUView extends View {
         private Paint mOnlinePaint;
