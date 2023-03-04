@@ -27,6 +27,7 @@ import android.os.SystemProperties;
 import android.text.FontConfig;
 import android.util.Log;
 
+import android.provider.Settings;
 import android.baikalos.AppProfile;
 
 import java.lang.reflect.Field;
@@ -37,6 +38,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Locale;
 
+import android.graphics.Shader.TileMode;
+
 public class BaikalSpoofer { 
 
     private static final String TAG = "BaikalSpoofer";
@@ -45,8 +48,29 @@ public class BaikalSpoofer {
     private static boolean sIsFinsky = false;
     private static boolean sPreventHwKeyAttestation = false;
     private static boolean sHideDevMode = false;
+
     private static String sPackageName = null;
     private static String sProcessName = null;
+
+    private static int sDefaultBackgroundBlurRadius = -1;
+    private static int sDefaultBlurModeInt = -1;
+
+        //CLAMP   (0),
+        /**
+         * Repeat the shader's image horizontally and vertically.
+         */
+        //REPEAT  (1),
+        /**
+         * Repeat the shader's image horizontally and vertically, alternating
+         * mirror images so that adjacent images always seam.
+         */
+        //MIRROR(2),
+        /**
+         * Render the shader's image pixels only within its original bounds. If the shader
+         * draws outside of its original bounds, transparent black is drawn instead.
+         */
+        //DECAL(3);
+
 
     private static AppProfile spoofedProfile = null;
 
@@ -235,6 +259,14 @@ public class BaikalSpoofer {
         int device_id = -1;
 
         try {
+            sDefaultBackgroundBlurRadius = Settings.System.getInt(context.getContentResolver(),
+                Settings.System.BAIKALOS_BACKGROUND_BLUR_RADIUS, -1);
+
+            sDefaultBlurModeInt = Settings.System.getInt(context.getContentResolver(),
+                Settings.System.BAIKALOS_BACKGROUND_BLUR_TYPE, -1);
+
+            Log.e(TAG, "Loaded settings for :" + packageName + ". BlurRadius=" + sDefaultBackgroundBlurRadius + ", BlurType=" + sDefaultBlurModeInt);
+
             AppProfile profile = AppProfileSettings.loadSingleProfile(packageName, context.getContentResolver());
 
             spoofedProfile = profile;
@@ -243,7 +275,7 @@ public class BaikalSpoofer {
                 Log.e(TAG, "Loaded profile :" + profile.toString());
                 device_id = profile.mSpoofDevice - 1;
 
-                android.baikalos.AppProfile.setCurrentAppProfile(profile);
+                android.baikalos.AppProfile.setCurrentAppProfile(profile, myUid());
                 
                
                 if( profile.mOverrideFonts ) {
@@ -268,7 +300,7 @@ public class BaikalSpoofer {
             } else {
                 AppProfile newProfile = new AppProfile(packageName);
                 //setProcessField("APP_PROFILE", profile);
-                android.baikalos.AppProfile.setCurrentAppProfile(newProfile);
+                android.baikalos.AppProfile.setCurrentAppProfile(newProfile, myUid());
 
             }
 
@@ -351,5 +383,57 @@ public class BaikalSpoofer {
         if(sPreventHwKeyAttestation) {
             throw new UnsupportedOperationException();
         } 
+    }
+
+    public static int getDefaultBackgroundBlurRadius() {
+        return sDefaultBackgroundBlurRadius;
+    }
+
+
+        //CLAMP   (0),
+        /**
+         * Repeat the shader's image horizontally and vertically.
+         */
+        //REPEAT  (1),
+        /**
+         * Repeat the shader's image horizontally and vertically, alternating
+         * mirror images so that adjacent images always seam.
+         */
+        //MIRROR(2),
+        /**
+         * Render the shader's image pixels only within its original bounds. If the shader
+         * draws outside of its original bounds, transparent black is drawn instead.
+         */
+        //DECAL(3);
+
+    public static TileMode getDefaultBlurTileMode(TileMode mode) {
+        switch(sDefaultBlurModeInt) {
+            case 1:
+                Log.e(TAG, "Backgroudn bluer mode : CLAMP");
+                return TileMode.CLAMP;
+            case 2:
+                Log.e(TAG, "Backgroudn bluer mode : REPEAT");
+                return TileMode.REPEAT;
+            case 3:
+                Log.e(TAG, "Backgroudn bluer mode : MIRROR");
+                return TileMode.MIRROR;
+            case 4:
+                Log.e(TAG, "Backgroudn bluer mode : DECAL");
+                return TileMode.DECAL;
+        }
+        Log.e(TAG, "Backgroudn bluer mode : default:" + mode);
+        return mode;
+    }
+
+    public static String overrideCameraId(String cameraId, int scenario) {
+        String id = SystemProperties.get("persist.baikal.cameraid." + cameraId, "");
+        if( scenario == 0 ) return cameraId; /*{
+            if("25".equals(cameraId)) {
+                return "2";
+            }
+        }*/
+        if( id != null &&  !"".equals(id) && !"-1".equals(id) ) return id;
+        //if( "25".equals(cameraId) ) return "2";
+        return cameraId;
     }
 }
