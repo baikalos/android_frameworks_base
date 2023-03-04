@@ -324,7 +324,7 @@ public final class UserTypeFactory {
     private static Bundle getDefaultSecondaryUserRestrictions() {
         final Bundle restrictions = new Bundle();
         restrictions.putBoolean(UserManager.DISALLOW_OUTGOING_CALLS, true);
-        restrictions.putBoolean(UserManager.DISALLOW_SMS, true);
+        //restrictions.putBoolean(UserManager.DISALLOW_SMS, true);
         return restrictions;
     }
 
@@ -339,13 +339,13 @@ public final class UserTypeFactory {
 
     private static Bundle getDefaultManagedProfileRestrictions() {
         final Bundle restrictions = new Bundle();
-        restrictions.putBoolean(UserManager.DISALLOW_WALLPAPER, true);
+        //restrictions.putBoolean(UserManager.DISALLOW_WALLPAPER, true);
         return restrictions;
     }
 
     private static Bundle getDefaultParallelRestrictions() {
         final Bundle restrictions = new Bundle();
-        restrictions.putBoolean(UserManager.DISALLOW_WALLPAPER, true);
+        //restrictions.putBoolean(UserManager.DISALLOW_WALLPAPER, true);
         restrictions.putBoolean(UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES, true);
         return restrictions;
     }
