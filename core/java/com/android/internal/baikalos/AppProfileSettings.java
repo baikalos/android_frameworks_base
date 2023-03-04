@@ -72,6 +72,8 @@ public class AppProfileSettings extends ContentObserver {
     private PackageManager mPackageManager;
     private AppOpsManager mAppOpsManager;
 
+    private boolean mAutorevokeDisabled;
+
     private static AppProfile sSystemProfile;
 
     private static boolean mAwaitSystemBoot;
@@ -136,6 +138,15 @@ public class AppProfileSettings extends ContentObserver {
             mResolver.registerContentObserver(
                 Settings.Global.getUriFor(Settings.Global.BAIKALOS_APP_PROFILES),
                 false, this);
+
+/*            mResolver.registerContentObserver(
+                Settings.Global.getUriFor(Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE),
+                false, this);
+*/
+
+              mAutorevokeDisabled = Settings.Global.getInt(mResolver,
+                    Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
+
 
         } catch( Exception e ) {
         }
@@ -365,7 +376,8 @@ public class AppProfileSettings extends ContentObserver {
 
 
     private void updateProfilesOnBootLocked() {
-        updateProfilesFromInstalledPackagesLocked();
+        //updateProfilesFromInstalledPackagesLocked();
+        updateSystemFromInstalledPackagesLocked();
     }
 
     private void updateConstantsLocked() {
@@ -659,6 +671,10 @@ public class AppProfileSettings extends ContentObserver {
             mAppOpsManager = mContext.getSystemService(AppOpsManager.class);
         }
         return mAppOpsManager;
+    }
+
+    public boolean isAutoRevokeDisabled() {
+        return mAutorevokeDisabled;
     }
 
     public static AppProfileSettings getInstance() {

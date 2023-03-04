@@ -3972,6 +3972,12 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
                     Slog.w(TAG, "BaikalService not initialized");
                 }
 
+                boolean isAutoreovkeDisabled = AppProfileSettings.getInstance().isAutoRevokeDisabled();
+                if( isAutoreovkeDisabled ) {
+                    Slog.i(TAG, "Disable permission autorevoke for " + pkg.getPackageName());
+                    pkg.setAutoRevokePermissions(2);
+                }
+
                 AppProfile profile = AppProfileSettings.getInstance().getProfileLocked(pkg.getPackageName());
 
                 if( profile != null ) {
