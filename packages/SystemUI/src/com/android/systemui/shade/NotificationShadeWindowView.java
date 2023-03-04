@@ -574,13 +574,13 @@ public class NotificationShadeWindowView extends FrameLayout {
 
         @Override
         public int getStatusBarColor() {
-            Log.w(TAG,"getStatusBarColor", new Throwable());
+            //Log.w(TAG,"getStatusBarColor", new Throwable());
             return 0;
         }
 
         @Override
         public void setStatusBarColor(@ColorInt int color) {
-            Log.w(TAG,"setStatusBarColor", new Throwable());
+            //Log.w(TAG,"setStatusBarColor", new Throwable());
         }
 
         @Override
