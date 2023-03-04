@@ -1530,17 +1530,7 @@ public class CameraDeviceImpl extends CameraDevice
             return true;
         }
 
-        String packageList = SystemProperties.get("persist.vendor.camera.privapp.list");
-
-        /**
-         * e.g.
-         * persist.sys.aux.camera_oem_package=com.oneplus.camera
-         */
-        String cameraPackage = SystemProperties.get("persist.sys.aux.camera_oem_package", "");
-
-        if (!cameraPackage.equals("") && packageName.toLowerCase().contains(cameraPackage.toLowerCase())) {
-            return true;
-        }
+        String packageList = SystemProperties.get("persist.vendor.camera.privapp.list","");
 
         if (packageList.length() > 0) {
             TextUtils.StringSplitter splitter = new TextUtils.SimpleStringSplitter(',');
@@ -1596,35 +1586,12 @@ public class CameraDeviceImpl extends CameraDevice
                         inputConfig.getWidth() + "x" + inputConfig.getHeight() + " is not valid");
             }
         } else {
-<<<<<<< HEAD
-            /*
-             * don't check input format and size,
-             * if the package name is in the white list
-             */
-            if (isPrivilegedApp()) {
-                Log.w(TAG, "ignore input format/size check for white listed app");
-                return;
-            }
-
-            boolean skipInputConfigCheck =
-                SystemProperties.getBoolean("persist.camera.skip_input_config_check", true);
-            if (!skipInputConfigCheck) {
-              if (!checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/false) &&
-                      !checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/true)) {
-                  throw new IllegalArgumentException("Input config with format " +
-                          inputFormat + " and size " + inputConfig.getWidth() + "x" +
-                          inputConfig.getHeight() + " not supported by camera id " + mCameraId);
-              }
-=======
-              
             if (!checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/false) &&
                     !checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/true)) {
                 if (isPrivilegedApp()) return;
                 throw new IllegalArgumentException("Input config with format " +
                         inputFormat + " and size " + inputConfig.getWidth() + "x" +
                         inputConfig.getHeight() + " not supported by camera id " + mCameraId);
-
->>>>>>> 1b67c9f8ca1c (Camera: Always allow aux and privilege access to  OEM cameras)
             }
         }
     }
