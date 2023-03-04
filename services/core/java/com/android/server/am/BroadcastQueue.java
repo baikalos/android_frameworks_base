@@ -1740,29 +1740,84 @@ public final class BroadcastQueue {
 
         if( Intent.ACTION_BOOT_COMPLETED.equals(r.intent.getAction()) || 
             Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(r.intent.getAction()) ||
+            Intent.ACTION_MEDIA_MOUNTED.equals(r.intent.getAction()) ||
             Intent.ACTION_PRE_BOOT_COMPLETED.equals(r.intent.getAction()) )  {
-            if( appProfile.mBootDisabled ) {
+            if( appProfile.mBootDisabled || appProfile.getBackground() > 0 ) {
                 Slog.i(TAG,"Autostart disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
                 skip = true;
             }
         }
 
-        if( !skip && background && !mService.mAppProfileManager.isTopAppUid(r.callingUid) ) {
+        boolean callerBackground = false;
+
+        if( r.callerApp == null || r.callerApp.mState == null || 
+            r.callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP /*||
+            r.callerApp.mState.getCurProcState() > ActivityManager.PROCESS_STATE_FOREGROUND_SERVICE*/ ) callerBackground = true;
+
+        if( r.callerApp != null ) {
+            callerBackground |= mService.mAppProfileManager.isTopAppUid(r.callingUid) || 
+                        mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid);
+        }
+
+        if( !skip && callerBackground) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
                 if( appProfile.getBackground() > 1 ) {
-                    Slog.w(TAG, "Background execution disabled by baikalos: receiving "
+                    Slog.w(TAG, "Background execution disabled by baikalos: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
                             + r.intent + " to "
-                            + component.flattenToShortString());
+                            + component.flattenToShortString()
+                            );
                     skip = true;
                 }
             } else {
                 if( appProfile.getBackground() > 0 ) {
-                    Slog.w(TAG, "Background execution limited by baikalos: receiving "
+                    Slog.w(TAG, "Background execution limited by baikalos: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
                             + r.intent + " to "
-                            + component.flattenToShortString());
+                            + component.flattenToShortString()
+                            );
                     skip = true;
                 }
             }
+        }
+
+        if( !skip && appProfile.getBackground() > 0 ) {
+            Slog.w(TAG, "Background execution enabled for restricted app: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
+                            + r.intent + " to "
+                            + component.flattenToShortString()
+                            );
+
         }
         
         if (!skip) {
