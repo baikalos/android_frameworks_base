@@ -149,6 +149,8 @@ public class DozeParameters implements
         tunerService.addTunable(
                 this,
                 Settings.Secure.DOZE_ALWAYS_ON,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON,
                 Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED);
         configurationController.addCallback(this);
         statusBarStateController.addCallback(this);
@@ -428,7 +430,9 @@ public class DozeParameters implements
     public void onTuningChanged(String key, String newValue) {
         mDozeAlwaysOn = mAmbientDisplayConfiguration.alwaysOnEnabled(UserHandle.USER_CURRENT);
 
-        if (key.equals(Settings.Secure.DOZE_ALWAYS_ON)) {
+        if (key.equals(Settings.Secure.DOZE_ALWAYS_ON) ||
+            key.equals(Settings.Secure.DOZE_ALWAYS_ON_CHARGER) ||
+            key.equals(Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON)) {
             updateControlScreenOff();
         }
 
@@ -499,6 +503,10 @@ public class DozeParameters implements
                 Settings.Secure.getUriFor(Settings.Secure.DOZE_PICK_UP_GESTURE);
         private final Uri mAlwaysOnEnabled =
                 Settings.Secure.getUriFor(Settings.Secure.DOZE_ALWAYS_ON);
+        private final Uri mAlwaysOnCharger =
+                Settings.Secure.getUriFor(Settings.Secure.DOZE_ALWAYS_ON_CHARGER);
+        private final Uri mAlwaysOnChargerEnabled =
+                Settings.Secure.getUriFor(Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON);
         private final Context mContext;
 
         SettingsObserver(Context context, Handler handler) {
@@ -512,6 +520,8 @@ public class DozeParameters implements
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mPickupGesture, false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(mAlwaysOnEnabled, false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(mAlwaysOnCharger, false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(mAlwaysOnChargerEnabled, false, this, UserHandle.USER_ALL);
             update(null);
         }
 
@@ -524,7 +534,9 @@ public class DozeParameters implements
             if (uri == null
                     || mQuickPickupGesture.equals(uri)
                     || mPickupGesture.equals(uri)
-                    || mAlwaysOnEnabled.equals(uri)) {
+                    || mAlwaysOnEnabled.equals(uri)
+                    || mAlwaysOnCharger.equals(uri)
+                    || mAlwaysOnChargerEnabled.equals(uri)) {
                 // the quick pickup gesture is dependent on alwaysOn being disabled and
                 // the pickup gesture being enabled
                 updateQuickPickupEnabled();

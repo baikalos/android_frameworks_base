@@ -24,6 +24,9 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.SparseArray;
+import android.util.Slog;
+
+import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.internal.R;
 import com.android.internal.util.ArrayUtils;
@@ -46,6 +49,7 @@ public class AmbientDisplayConfiguration {
     private static final String[] DOZE_SETTINGS = {
             Settings.Secure.DOZE_ENABLED,
             Settings.Secure.DOZE_ALWAYS_ON,
+            Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON,
             Settings.Secure.DOZE_PICK_UP_GESTURE,
             Settings.Secure.DOZE_PULSE_ON_LONG_PRESS,
             Settings.Secure.DOZE_DOUBLE_TAP_GESTURE,
@@ -259,7 +263,11 @@ public class AmbientDisplayConfiguration {
      */
     @TestApi
     public boolean alwaysOnEnabled(int user) {
-        return boolSetting(Settings.Secure.DOZE_ALWAYS_ON, user, mAlwaysOnByDefault ? 1 : 0)
+        if( boolSetting(Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, user, 0)
+                && alwaysOnAvailable() && !accessibilityInversionEnabled(user) ) {
+            return true;
+        }
+        return boolSetting(Settings.Secure.DOZE_ALWAYS_ON, user, /*mAlwaysOnByDefault ? 1 :*/ 0)
                 && alwaysOnAvailable() && !accessibilityInversionEnabled(user);
     }
 

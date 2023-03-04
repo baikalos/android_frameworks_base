@@ -6322,6 +6322,20 @@ public final class Settings {
         public static final String BAIKALOS_DEFAULT_MAXFPS = "baikalos_default_maxfps";
 
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BACKGROUND_BLUR_RADIUS = "background_blur_radius";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BACKGROUND_BLUR_TYPE = "background_blur_type";
+
         /* End of BaikalOS System Settings */
 
         /**
@@ -9750,6 +9764,30 @@ public final class Settings {
         @SystemApi
         @Readable
         public static final String DOZE_ALWAYS_ON = "doze_always_on";
+
+        /**
+         * Indicates whether doze should be always on.
+         * <p>
+         * Type: int (0 for false, 1 for true)
+         *
+         * @hide
+         */
+        @SystemApi
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String DOZE_ALWAYS_ON_CHARGER = "doze_always_on_charger";
+
+        /**
+         * Indicates whether doze should be always on.
+         * <p>
+         * Type: int (0 for false, 1 for true)
+         *
+         * @hide
+         */
+        @SystemApi
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String DOZE_ALWAYS_ON_CHARGER_ON = "doze_always_on_charger_on";
 
         /**
          * Whether the device should pulse on pick up gesture.
@@ -17164,10 +17202,34 @@ public final class Settings {
         public static final String BAIKALOS_HEADSUP_INCALL = "baikalos_headsup_incall";
 
         /**
+         * This preference enabled forced fullscreen UI
+         * @hide
+         */
+        public static final String BAIKALOS_HEADSUP_FORCE_FULLSCREEN = "baikalos_headsup_force_fullscreen";
+
+        /**
          * This preference enabled forced Bypass Charging
          * @hide
          */
         public static final String BAIKALOS_BPCHARGE_FORCE = "baikalos_bpcharge_force";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_BPCHARGE_SCREEN_ON = "baikalos_bpcharge_screen_on";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_LIMITED_CHARGE_SCREEN_ON = "baikalos_limited_charge_screen_on";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_AOD_ON_CHARGER = "baikalos_aod_on_charger";
 
         /**
          * This preference holds app profiles.
@@ -17221,6 +17283,29 @@ public final class Settings {
          */
         @Readable
         public static final String BAIKALOS_R_SECURE = "baikalos_r_secure";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_DISABLE_AUTOREVOKE = "baikalos_disable_autorevoke";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_INTERACTION_DISABLE = "baikalos_boost_interaction_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE = "baikalos_boost_display_update_imminent_disable";
 
 
         /* End of BaikalOS Global Settings */

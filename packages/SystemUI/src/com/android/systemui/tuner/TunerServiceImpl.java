@@ -84,6 +84,7 @@ public class TunerServiceImpl extends TunerService {
             Clock.QS_HEADER_CLOCK_SIZE,
             QSTileHost.TILES_SETTING,
             Settings.Secure.DOZE_ALWAYS_ON,
+            Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON,
             Settings.Secure.MEDIA_CONTROLS_RESUME,
             Settings.Secure.MEDIA_CONTROLS_RECOMMENDATION,
             Settings.System.SCREEN_BRIGHTNESS_MODE,

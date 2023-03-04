@@ -880,7 +880,15 @@ public final class PowerManagerService extends SystemService
             mResolver = resolver;
             mResolver.registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.POWER_MANAGER_CONSTANTS), false, this);
+
+            mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE), false, this);
+
+            mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE), false, this);
+
             updateConstants();
+
         }
 
         @Override
@@ -893,11 +901,23 @@ public final class PowerManagerService extends SystemService
                 try {
                     mParser.setString(Settings.Global.getString(mResolver,
                             Settings.Global.POWER_MANAGER_CONSTANTS));
+
+                    boolean interactionDisabled = Settings.Global.getInt(mResolver,
+                            Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE, 1) != 1;
+
+                    boolean displayDisabled = Settings.Global.getInt(mResolver,
+                            Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE, 1) != 1;
+
+                    setPowerBoostInternal(Boost.INTERACTION, interactionDisabled? -1000 : -1001);
+                    setPowerBoostInternal(Boost.DISPLAY_UPDATE_IMMINENT, displayDisabled? -1000 : -1001);
+                    
+
                 } catch (IllegalArgumentException e) {
                     // Failed to parse the settings string, log this and move on
                     // with defaults.
                     Slog.e(TAG, "Bad alarm manager settings", e);
                 }
+
 
                 NO_CACHED_WAKE_LOCKS = mParser.getBoolean(KEY_NO_CACHED_WAKE_LOCKS,
                         DEFAULT_NO_CACHED_WAKE_LOCKS);
@@ -1414,6 +1434,12 @@ public final class PowerManagerService extends SystemService
                 Settings.Secure.DOZE_ALWAYS_ON),
                 false, mSettingsObserver, UserHandle.USER_ALL);
         resolver.registerContentObserver(Settings.Secure.getUriFor(
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER),
+                false, mSettingsObserver, UserHandle.USER_ALL);
+        resolver.registerContentObserver(Settings.Secure.getUriFor(
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON),
+                false, mSettingsObserver, UserHandle.USER_ALL);
+        resolver.registerContentObserver(Settings.Secure.getUriFor(
                 Settings.Secure.DOUBLE_TAP_TO_WAKE),
                 false, mSettingsObserver, UserHandle.USER_ALL);
         resolver.registerContentObserver(Settings.Global.getUriFor(
@@ -1653,6 +1679,7 @@ public final class PowerManagerService extends SystemService
         updateSettingsLocked();
         updatePowerStateLocked();
         updateSmartChargingStatus();
+        updateAodOnChargerStatus();
     }
 
     private void acquireWakeLockInternal(IBinder lock, int displayId, int flags, String tag,
@@ -2664,48 +2691,71 @@ public final class PowerManagerService extends SystemService
                     } else if (dockedOnWirelessCharger) {
                         mNotifier.onWirelessChargingStarted(mBatteryLevel, mUserId);
                     }
-                }
 
-                Actions.sendChargerModeChanged(mIsPowered);
-        		mIsPoweredInitialized = true;
+                    Actions.sendChargerModeChanged(mIsPowered);
+            		mIsPoweredInitialized = true;
+                }
             }
 
             mBatterySaverStateMachine.setBatteryStatus(mIsPowered, mBatteryLevel, mBatteryLevelLow);
             updateSmartChargingStatus();
+            updateAodOnChargerStatus();
         }
     }
 
+    private void updateAodOnChargerStatus() {
+
+        Slog.i(TAG, "updateAodOnChargerStatus");
+        final ContentResolver resolver = mContext.getContentResolver();
+
+        if (Settings.Secure.getIntForUser(resolver,
+            Settings.Secure.DOZE_ALWAYS_ON_CHARGER, 0, UserHandle.USER_CURRENT) != 0) {
+            if( mIsPowered ) {
+                Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=true");
+                Settings.Secure.putIntForUser(resolver,
+                    Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 1, UserHandle.USER_CURRENT);
+            }
+        }
+
+        if( !mIsPowered ) {
+                Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=false");
+            Settings.Secure.putIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT);
+        }
+    }
+
+
     private void updateSmartChargingStatus() {
         if (!mSmartChargingAvailable) return;
-        if (mPowerInputSuspended && ((mSmartChargingResumeLevel < mSmartChargingLevel &&
-            mBatteryLevel <= mSmartChargingResumeLevel) || !mSmartChargingEnabled)) {
-            //try {
-                //FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputResumeValue);
-                //mPowerInputSuspended = false;
-                mPowerInputSuspended = AppProfileManager.getInstance().updateBypassCharging(false);
-            //} catch (IOException e) {
-            //    Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
-            //}
+
+        if( !mSmartChargingEnabled ) {
+            if( mPowerInputSuspended ) {
+                Slog.i(TAG, "Smart charging mSmartChargingEnabled: " + mSmartChargingEnabled);
+                AppProfileManager.getInstance().updateBypassCharging(false);
+                mPowerInputSuspended = false;
+            }
+            return;
+        } 
+
+        if (mPowerInputSuspended && mBatteryLevel <= mSmartChargingResumeLevel) {
+            Slog.i(TAG, "Smart charging deactivate mSmartChargingEnabled: " + mSmartChargingEnabled);
+            AppProfileManager.getInstance().updateBypassCharging(false);
+            mPowerInputSuspended = false;
             return;
         }
 
-        if (mSmartChargingEnabled && !mPowerInputSuspended && (mBatteryLevel >= mSmartChargingLevel)) {
-            Slog.i(TAG, "Smart charging reset stats: " + mSmartChargingResetStats);
+        if (!mPowerInputSuspended && mBatteryLevel > mSmartChargingLevel) {
+            Slog.i(TAG, "Smart charging activate mSmartChargingEnabled: " + mSmartChargingEnabled);
             if (mSmartChargingResetStats) {
                 try {
+                    Slog.i(TAG, "Smart charging reset stats: " + mSmartChargingResetStats);
                      mBatteryStats.resetStatistics();
                 } catch (RemoteException e) {
                      Slog.e(TAG, "failed to reset battery statistics");
                 }
             }
-
-            //try {
-                //FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputSuspendValue);
-                //mPowerInputSuspended = true;
-                mPowerInputSuspended = AppProfileManager.getInstance().updateBypassCharging(true);
-            //} catch (IOException e) {
-            //    Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
-            //}
+            AppProfileManager.getInstance().updateBypassCharging(true);
+            mPowerInputSuspended = true;
         }
     }
 

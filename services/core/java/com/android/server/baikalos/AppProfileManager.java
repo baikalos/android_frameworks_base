@@ -115,6 +115,7 @@ public class AppProfileManager {
     private static String mPowerInputSuspendSysfsNode;
     private static String mPowerInputSuspendValue;
     private static String mPowerInputResumeValue;
+    private static String mPowerInputLimitValue;
 
     private AppProfileContentObserver mObserver;
     private ContentResolver mResolver;
@@ -124,15 +125,18 @@ public class AppProfileManager {
     private AppProfileSettings mAppSettings;
     private IPowerManager mPowerManager;
 
-    private boolean mOnCharger=false;
+    private boolean mOnCharger = false;
     private boolean mDeviceIdleMode = false;
     private boolean mScreenMode = true;
+
+    private boolean mAodOnCharger = false;
 
     private int mTopUid=-1;
     private String mTopPackageName;
 
     private int mActivePerfProfile = -1;
     private int mActiveThermProfile = -1;
+    private int mRequestedPowerMode = -1;
 
     private static Object mCurrentProfileSync = new Object();
     private static AppProfile mCurrentProfile = new AppProfile("system");
@@ -148,6 +152,9 @@ public class AppProfileManager {
 
     private boolean mSmartBypassChargingEnabled;
     private boolean mBypassChargingForced;
+    private boolean mBypassChargingScreenOn;
+    private boolean mLimitedChargingScreenOn;
+
     private boolean mStaminaEnabled;
 
     private boolean mPerfAvailable = false;
@@ -239,6 +246,18 @@ public class AppProfileManager {
                     Settings.System.getUriFor(Settings.System.BAIKALOS_DEFAULT_MAXFPS),
                     false, this);
 
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BPCHARGE_SCREEN_ON),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_LIMITED_CHARGE_SCREEN_ON),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_AOD_ON_CHARGER),
+                    false, this);
+
             } catch( Exception e ) {
             }
         
@@ -269,6 +288,8 @@ public class AppProfileManager {
                 com.android.internal.R.string.config_smartChargingSuspendValue);
         mPowerInputResumeValue = resources.getString(
                 com.android.internal.R.string.config_smartChargingResumeValue);
+        mPowerInputLimitValue = resources.getString(
+                com.android.internal.R.string.config_smartChargingLimitValue);
     }
 
     public boolean onMessage(Message msg) {
@@ -348,6 +369,18 @@ public class AppProfileManager {
             changed = true;
         }
 
+        boolean bypassChargingScreenOn = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BPCHARGE_SCREEN_ON, 0) != 0;
+        if( mBypassChargingScreenOn != bypassChargingScreenOn ) {
+            mBypassChargingScreenOn = bypassChargingScreenOn;
+            changed = true;
+        }
+
+        boolean limitedChargingScreenOn = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_LIMITED_CHARGE_SCREEN_ON, 0) != 0;
+        if( mLimitedChargingScreenOn != limitedChargingScreenOn ) {
+            mLimitedChargingScreenOn = limitedChargingScreenOn;
+            changed = true;
+        }
+
         boolean staminaEnabled = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_STAMINA_ENABLED, 0) != 0;
         if( mStaminaEnabled != staminaEnabled ) {
             mStaminaEnabled = staminaEnabled;
@@ -366,6 +399,12 @@ public class AppProfileManager {
         if( mDefaultMaxFps != defaultMaxFps ) {
             mDefaultMaxFps = defaultMaxFps;
             changed = true;
+        }
+
+        boolean aodOnCharger = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AOD_ON_CHARGER, 0) != 0;
+        if( mAodOnCharger != aodOnCharger ) {
+            mAodOnCharger = aodOnCharger;
+            BaikalConstants.setAodOnChargerEnabled(isAodOnChargerEnabled());
         }
 
         if( changed ) {
@@ -418,6 +457,18 @@ public class AppProfileManager {
 
         if( mPhoneCall != state ) {
             mPhoneCall = state;
+
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Restore profile after phone mode changed mode=" + mPhoneCall);
+            mHandler.postDelayed( new Runnable() {
+                @Override
+                public void run() { 
+                    synchronized(this) {
+                        //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
+                        restoreProfileForCurrentModeLocked(true);
+                    }
+                }
+            }, 100);
+
         }
     }
 
@@ -425,6 +476,7 @@ public class AppProfileManager {
     protected void setScreenModeLocked(boolean mode) {
         if( mScreenMode != mode ) {
             mScreenMode = mode;
+            BaikalConstants.setAodOnChargerEnabled(isAodOnChargerEnabled());
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Restore profile after screen mode changed mode=" + mScreenMode);
             mHandler.postDelayed( new Runnable() {
                 @Override
@@ -481,7 +533,7 @@ public class AppProfileManager {
 
     protected void activateCurrentProfileLocked(boolean force) {
 
-            if( !mScreenMode || mDeviceIdleMode ) {
+            if( !mPhoneCall && !mScreenMode && mDeviceIdleMode )  {
                 activateIdleProfileLocked();
                 return;
             }
@@ -537,11 +589,14 @@ public class AppProfileManager {
 
     protected void activatePowerMode(int mode, boolean enable) {
         if( enable ) {
-            if( mDeviceIdleMode ) {
+            mRequestedPowerMode = mode;
+            /*if( mPhoneCall ) {
+                //mode = MODE_INTERACTIVE;
+            } else if( mDeviceIdleMode ) {
                 mode = MODE_DEVICE_IDLE;
             } else if( !mScreenMode ) {
                 mode = MODE_LOW_POWER;
-            }
+            }*/
         }
         try {
             mPowerManager.setPowerMode(mode, enable);
@@ -557,11 +612,11 @@ public class AppProfileManager {
     }
 
     protected void activateThermalProfile(int profile) {
-        if( mDeviceIdleMode ) {
+        /*if( mDeviceIdleMode ) {
             profile = mDefaultThermalProfile;
         } else if( !mScreenMode ) {
             profile = mDefaultThermalProfile;
-        }
+        }*/
         SystemPropertiesSet("baikal.power.thermal",Integer.toString(profile));
     }
 
@@ -590,6 +645,7 @@ public class AppProfileManager {
     protected void setChargerModeLocked(boolean mode) {
         if( mOnCharger != mode ) {
             mOnCharger = mode;
+            BaikalConstants.setAodOnChargerEnabled(isAodOnChargerEnabled());
             activateCurrentProfileLocked(true);
         }
     }
@@ -942,15 +998,33 @@ public class AppProfileManager {
         mSmartBypassChargingEnabled = enable;
         return updateBypassChargingLocked();
     }
-
-    
+   
     public boolean updateBypassChargingLocked() {
-        boolean bypassEnabled = mSmartBypassChargingEnabled | mCurrentProfile.mBypassCharging | mBypassChargingForced;
+        if( !BaikalConstants.isKernelCompatible() ) {
+            Slog.w(TAG, "Bypass charging disabled. Unsupported kernel!");
+            return false;
+        }
+
+        boolean bypassEnabled = mSmartBypassChargingEnabled | mCurrentProfile.mBypassCharging | mBypassChargingForced | (mBypassChargingScreenOn && mScreenMode);
+        boolean limitedEnabled = !"none".equals(mPowerInputLimitValue) && mLimitedChargingScreenOn && mScreenMode;
+
         try {
-            FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
+            if( !bypassEnabled && limitedEnabled ) {
+                Slog.w(TAG, "Update Limited charging " + limitedEnabled);
+                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputLimitValue);
+            } else {
+                Slog.w(TAG, "Update Bypass/Limited charging " + bypassEnabled);
+                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
+            }
         } catch(Exception e) {
             Slog.w(TAG, "Can't enable bypass charging!", e);
-        }
+        } 
+
         return bypassEnabled;
+    }
+
+    public boolean isAodOnChargerEnabled() {
+        Slog.w(TAG, "isAodOnChargerEnabled=" + (mAodOnCharger & mOnCharger));
+        return mAodOnCharger & mOnCharger;
     }
 }
