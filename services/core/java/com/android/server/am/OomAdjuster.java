@@ -1091,6 +1091,16 @@ public class OomAdjuster {
                         ApplicationExitInfo.REASON_OTHER,
                         ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
                         true);
+
+                    } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
+                        && mService.mAppProfileManager.isKillInBackground()
+                        && state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 50) ) {
+                        app.killLocked("empty #" + numEmpty,
+                        "baikalos - cached background process",
+                        ApplicationExitInfo.REASON_OTHER,
+                        ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
+                        true);
+
                     } else {
 
                         // Count the number of process types.
