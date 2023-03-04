@@ -131,7 +131,7 @@ public class BaikalAlarmManager {
         }
     }
 
-    public boolean isAppWakeupAllowed(int uid) {
+    public boolean isAppWakeupAllowed(int uid, String tag) {
         if( mAppSettings == null ) { 
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Not initialized yet");
             return true;
@@ -142,27 +142,27 @@ public class BaikalAlarmManager {
         String packageName = BaikalConstants.getPackageByUid(mContext, uid);
 
         if( packageName == null ) { 
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Package not found for uid=" + uid);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". Package not found for uid=" + uid);
             return true;
         }
 
         AppProfile profile = mAppSettings.getProfile(packageName);
         if( profile != null ) {
             if( profile.mDisableWakeup ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm disabled for " + packageName);
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". disabled for " + packageName);
                 return false;
             }
             if( profile.getBackground() < 0 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm enabled for " + packageName);
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". enabled for " + packageName);
                 return true;
             }
             if( profile.getBackground() > 0 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm restricted for " + packageName);
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". restricted for " + packageName);
                 return false;
             }
         }
 
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm set to " + !mDisableWakeupByDefault + " for " + packageName);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". set to " + !mDisableWakeupByDefault + " for " + packageName);
         return !mDisableWakeupByDefault;
     }
 

@@ -2885,10 +2885,10 @@ public class AlarmManagerService extends SystemService {
 
 
             if (alarmClock == null && (exact || allowWhileIdle || (flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0) ) {
-                if(!mBaikalAlarmManager.isAppWakeupAllowed(UserHandle.getAppId(callingUid))) {
+                if(!mBaikalAlarmManager.isAppWakeupAllowed(UserHandle.getAppId(callingUid),listenerTag)) {
                     if( exact ) {
                         exact = false;
-                        windowLength = 600000;
+                        windowLength = 3600000;
                     }
                     if( allowWhileIdle ) {
                         allowWhileIdle = false;
