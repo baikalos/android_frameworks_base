@@ -17,7 +17,6 @@
 package com.android.server.baikalos;
 
 import static android.os.Process.THREAD_PRIORITY_DEFAULT;
-//import static android.provider.Settings.Secure.GMS_ENABLED;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -36,10 +35,13 @@ import android.os.Handler;
 import android.os.IUserManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.provider.Settings;
 
 import com.android.server.ServiceThread;
 import com.android.server.SystemService;
+
+import android.util.Slog;
 
 import java.lang.Boolean;
 import java.lang.IllegalArgumentException;
@@ -90,12 +92,44 @@ public final class BaikalAppManagerService extends SystemService {
 
     public static final String[] AURORA_PACKAGES = 
     {
+        "com.aurora.store",
+        "com.aurora.services"
     };
+
+    public static final String[] DOLBY_PACKAGES = 
+    {
+        "com.dolby.daxservice",
+        "com.motorola.dolby.dolbyui"
+    };
+
+    public static final String[] JDSP_PACKAGES = 
+    {
+        "james.dsp"
+    };
+
+    public static final String[] AFX_PACKAGES = 
+    {
+        "org.lineageos.audiofx"
+    };
+
+
+
+    private BaikalAppManagerEntry[] initAppList() {
+        BaikalAppManagerEntry[] managedApps = new BaikalAppManagerEntry[] {
+            new BaikalAppManagerEntry("gms", "gms_enabled", "persist.baikal.srv.gms", GMS_PACKAGES, false, true),
+            new BaikalAppManagerEntry("hms", "hms_enabled", "persist.baikal.srv.hms", HMS_PACKAGES, false, false),
+            //new BaikalAppManagerEntry("fdroid", "fdroid_enabled", "persist.baikal.srv.fdroid", FDROID_PACKAGES, false, false),
+            //new BaikalAppManagerEntry("aurora", "aurora_enabled", "persist.baikal.srv.aurora", AURORA_PACKAGES, false, false),
+            new BaikalAppManagerEntry("dolby", "dolby_enabled", "persist.baikal.srv.dolby", DOLBY_PACKAGES, false, true),
+            new BaikalAppManagerEntry("jdsp", "jdsp_enabled", "persist.baikal.srv.jdsp", JDSP_PACKAGES, false, false),
+            new BaikalAppManagerEntry("afx", "afx_enabled", "persist.baikal.srv.afx", AFX_PACKAGES, false, false),
+        };
+        return managedApps;
+    }
 
     private static final String TAG = "BaikalAppManagerService";
 
     private static HashMap<Integer, BaikalAppManagerEntry[]> sCachedSettings = new HashMap<>();
-
 
     private final Context mContext;
     private final IPackageManager mPM;
@@ -114,23 +148,12 @@ public final class BaikalAppManagerService extends SystemService {
         BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
         if( entries == null ) return false;
 
-        boolean enabledGms = entries[0].mEnabled;
-        boolean enabledHms = entries[1].mEnabled;
-        boolean enabledFdroid = entries[2].mEnabled;
-        boolean enabledAurora = entries[3].mEnabled;
-
-        if( !enabledGms &&
-                Arrays.stream(GMS_PACKAGES).anyMatch(packageName::equals) ) return true;
-
-        if( !enabledHms &&
-                Arrays.stream(HMS_PACKAGES).anyMatch(packageName::equals) ) return true;
-
-        if( !enabledFdroid &&
-                Arrays.stream(FDROID_PACKAGES).anyMatch(packageName::equals) ) return true;
-
-        if( !enabledAurora &&
-                Arrays.stream(AURORA_PACKAGES).anyMatch(packageName::equals) ) return true;
-        
+        for(BaikalAppManagerEntry entry : entries) {
+            if(Arrays.stream(entry.mPackages).anyMatch(packageName::equals)) {
+                return !entry.mEnabled;
+            }
+        }
+       
         return false;
     }
 
@@ -140,32 +163,25 @@ public final class BaikalAppManagerService extends SystemService {
         BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
         if( entries == null ) return list;
 
-        boolean enabledGms = entries[0].mEnabled;
-        boolean enabledHms = entries[1].mEnabled;
-        boolean enabledFdroid = entries[2].mEnabled;
-        boolean enabledAurora = entries[3].mEnabled;
-
-
         List<PackageInfo> oldList = list.getList();
         ArrayList<PackageInfo> newList = new ArrayList<>();
         for (PackageInfo info : oldList) {
 
-            if (!enabledGms && info.packageName != null &&
-                    Arrays.stream(GMS_PACKAGES).anyMatch(info.packageName::equals))
+            if( info.packageName == null ) {
+                newList.add(info);
                 continue;
+            }
 
-            if (!enabledHms && info.packageName != null &&
-                    Arrays.stream(HMS_PACKAGES).anyMatch(info.packageName::equals))
-                continue;
+            boolean skip = false;
+            for(BaikalAppManagerEntry entry : entries) {
+                if(
+                    Arrays.stream(entry.mPackages).anyMatch(info.packageName::equals)) {
+                    skip = !entry.mEnabled;
+                    break;
+                }
+            }
 
-            if (!enabledFdroid && info.packageName != null &&
-                    Arrays.stream(FDROID_PACKAGES).anyMatch(info.packageName::equals))
-                continue;
-
-            if (!enabledAurora && info.packageName != null &&
-                    Arrays.stream(AURORA_PACKAGES).anyMatch(info.packageName::equals))
-                continue;
-
+            if( skip ) continue;
             newList.add(info);
         }
 
@@ -178,31 +194,19 @@ public final class BaikalAppManagerService extends SystemService {
         BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
         if( entries == null ) return list;
 
-        boolean enabledGms = entries[0].mEnabled;
-        boolean enabledHms = entries[1].mEnabled;
-        boolean enabledFdroid = entries[2].mEnabled;
-        boolean enabledAurora = entries[3].mEnabled;
-
-
         ArrayList<ApplicationInfo> newList = new ArrayList<>();
         for (ApplicationInfo info : list) {
 
-            if (!enabledGms && info.packageName != null &&
-                    Arrays.stream(GMS_PACKAGES).anyMatch(info.packageName::equals))
-                continue;
+            boolean skip = false;
+            for(BaikalAppManagerEntry entry : entries) {
+                if( !entry.mEnabled && info.packageName != null &&
+                    Arrays.stream(entry.mPackages).anyMatch(info.packageName::equals)) {
+                    skip = true;
+                    break;
+                }
+            }
 
-            if (!enabledHms && info.packageName != null &&
-                    Arrays.stream(HMS_PACKAGES).anyMatch(info.packageName::equals))
-                continue;
-
-            if (!enabledFdroid && info.packageName != null &&
-                    Arrays.stream(FDROID_PACKAGES).anyMatch(info.packageName::equals))
-                continue;
-
-            if (!enabledAurora && info.packageName != null &&
-                    Arrays.stream(AURORA_PACKAGES).anyMatch(info.packageName::equals))
-                continue;
-
+            if( skip ) continue;
             newList.add(info);
         }
 
@@ -211,28 +215,20 @@ public final class BaikalAppManagerService extends SystemService {
 
     private void updateStateForUser(int userId) {
 
-        boolean enabledGms = Settings.Secure.getIntForUser(mResolver, Settings.Secure.GMS_ENABLED, 0, userId) == 1;
-        boolean enabledHms = Settings.Secure.getIntForUser(mResolver, Settings.Secure.HMS_ENABLED, 0, userId) == 1;
-        boolean enabledFdroid = Settings.Secure.getIntForUser(mResolver, Settings.Secure.FDROID_ENABLED, 0, userId) == 1;
-        boolean enabledAurora = Settings.Secure.getIntForUser(mResolver, Settings.Secure.AURORA_ENABLED, 0, userId) == 1;
+        BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
+        if( entries == null ) return;
 
-        BaikalAppManagerEntry[] managedApps = new BaikalAppManagerEntry[] {
-            new BaikalAppManagerEntry("gms", Settings.Secure.GMS_ENABLED, GMS_PACKAGES, enabledGms),
-            new BaikalAppManagerEntry("hms", Settings.Secure.HMS_ENABLED, HMS_PACKAGES, enabledHms),
-            new BaikalAppManagerEntry("fdroid", Settings.Secure.FDROID_ENABLED, FDROID_PACKAGES, enabledFdroid),
-            new BaikalAppManagerEntry("aurora", Settings.Secure.AURORA_ENABLED, AURORA_PACKAGES, enabledAurora),
-        };
-
-        sCachedSettings.put(userId, managedApps);
-
-        updatePackagesStateForUser(GMS_PACKAGES, enabledGms, userId);
-        updatePackagesStateForUser(HMS_PACKAGES, enabledHms, userId);
-        updatePackagesStateForUser(FDROID_PACKAGES, enabledFdroid, userId);
-        updatePackagesStateForUser(AURORA_PACKAGES, enabledAurora, userId);
-
+        for(BaikalAppManagerEntry entry : entries) {
+            boolean enabled = Settings.Secure.getIntForUser(mResolver, entry.mSettingsUri, entry.mEnabledByDefault ? 1 : 0, userId) == 1;
+            entry.mEnabled = enabled;
+            Slog.e(TAG, "updateStateForUser: app=" + entry.mName + ", enabled=" + enabled);
+            updatePackagesStateForUser(entry.mPackages, enabled, userId);
+            setSystemPropertyBoolean(entry.mSystemProperty,enabled);
+        }
     }
 
     private void updatePackagesStateForUser(String[] packages, boolean enabled, int userId) {
+        Slog.e(TAG, "updatePackagesStateForUser: packages=" + packages + ", enabled=" + enabled);
         try {
             for (String packageName : packages) {
                 try {
@@ -256,16 +252,21 @@ public final class BaikalAppManagerService extends SystemService {
         if (userId < 0)
             return;
 
+        BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
+        if( entries == null ) { 
+
+            BaikalAppManagerEntry[] managedApps = initAppList();
+
+            sCachedSettings.put(userId, managedApps);
+            entries = managedApps;
+        }
+
         SettingsObserver observer = new SettingsObserver(mHandler, userId);
 
-        mResolver.registerContentObserver(
-                Settings.Secure.getUriFor(Settings.Secure.GMS_ENABLED), false, observer, userId);
-        mResolver.registerContentObserver(
-                Settings.Secure.getUriFor(Settings.Secure.HMS_ENABLED), false, observer, userId);
-        mResolver.registerContentObserver(
-                Settings.Secure.getUriFor(Settings.Secure.FDROID_ENABLED), false, observer, userId);
-        mResolver.registerContentObserver(
-                Settings.Secure.getUriFor(Settings.Secure.AURORA_ENABLED), false, observer, userId);
+        for(BaikalAppManagerEntry entry : entries) {
+            mResolver.registerContentObserver(
+                Settings.Secure.getUriFor(entry.mSettingsUri), false, observer, userId);
+        }
 
         mObservers.put(userId, observer);
 
@@ -347,18 +348,32 @@ public final class BaikalAppManagerService extends SystemService {
         }
     }
 
+    private boolean getSystemPropertyBoolean(String key) {
+        if( SystemProperties.get(key,"0").equals("1") || SystemProperties.get(key,"0").equals("true") ) return true;
+	    return false;
+    }
+
+    private void setSystemPropertyBoolean(String key, boolean value) {
+        String text = value?"1":"0";
+        Slog.e(TAG, "setSystemPropertyBoolean: key=" + key + ", value=" + value);
+        SystemProperties.set(key, text);
+    }
+
     public class BaikalAppManagerEntry {
         public final String mName;
         public final String mSettingsUri;
+        public final String mSystemProperty;
         public final String [] mPackages;
+        public final boolean mEnabledByDefault;
         public boolean mEnabled;
 
-        public BaikalAppManagerEntry(String Name, String SettingsUri, String [] Packages, boolean Enabled) {
+        public BaikalAppManagerEntry(String Name, String SettingsUri, String SystemProperty, String [] Packages, boolean Enabled, boolean EnabledByDefault) {
             mName = Name;
             mPackages = Packages;
             mEnabled = Enabled;
             mSettingsUri = SettingsUri;
+            mSystemProperty = SystemProperty;
+            mEnabledByDefault = EnabledByDefault;
         }
     }
-
 }
