@@ -47,12 +47,14 @@ import java.io.File;
 
 import javax.inject.Inject;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 /** Quick settings tile: FPSInfo overlay **/
 public class FPSInfoTile extends QSTileImpl<BooleanState> {
 
-    private final SettingObserver mSetting;
+    private SettingObserver mSetting;
     private final Icon mIcon = ResourceIcon.get(R.drawable.ic_qs_fps_info);
-    private final boolean isAvailable;
+    private boolean isAvailable = false;
 
     @Inject
     public FPSInfoTile(
@@ -68,9 +70,18 @@ public class FPSInfoTile extends QSTileImpl<BooleanState> {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
 
+        if( !BaikalConstants.isKernelCompatible() ) return;
+
         final String fpsInfoSysNode = mContext.getResources().getString(
                 R.string.config_fpsInfoSysNode);
-        isAvailable = fpsInfoSysNode != null && (new File(fpsInfoSysNode).isFile());
+
+        final String fpsInfoSysNodeBaikal = mContext.getResources().getString(
+                R.string.config_fpsInfoSysNodeBaikal);
+
+        isAvailable = fpsInfoSysNodeBaikal != null && (new File(fpsInfoSysNodeBaikal).isFile());
+        if( !isAvailable ) {
+            isAvailable = fpsInfoSysNode != null && (new File(fpsInfoSysNode).isFile());
+        }
 
         mSetting = new SettingObserver(secureSettings, mHandler, Secure.SHOW_FPS_OVERLAY) {
             @Override

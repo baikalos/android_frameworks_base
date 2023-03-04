@@ -55,4 +55,7 @@
     <!-- FPSInfoService Refresh Rate node file path -->
     <string name="config_rrInfoSysNode" translatable="false"></string>
 
+    <!-- FPSInfoService FPS node file path -->
+    <string name="config_fpsInfoSysNodeBaikal" translatable="false"></string>
+
 </resources>
