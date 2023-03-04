@@ -81,6 +81,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     private Context mContext;
 
     private boolean mInCall = false;
+    private boolean mForceFullScreen = false;
 
     @Inject
     public NotificationInterruptStateProviderImpl(
@@ -131,6 +132,12 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                         mContentResolver,
                         Settings.Global.BAIKALOS_HEADSUP_INCALL,0) != 0;
 
+                mForceFullScreen = Settings.Global.getInt(
+                        mContentResolver,
+                        Settings.Global.BAIKALOS_HEADSUP_FORCE_FULLSCREEN,0) != 0;
+
+                
+
             }
         };
 
@@ -141,6 +148,14 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                     headsUpObserver);
             mContentResolver.registerContentObserver(
                     Settings.Global.getUriFor(SETTING_HEADS_UP_TICKER), true,
+                    headsUpObserver);
+
+            mContentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HEADSUP_INCALL), true,
+                    headsUpObserver);
+
+            mContentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HEADSUP_FORCE_FULLSCREEN), true,
                     headsUpObserver);
         }
         headsUpObserver.onChange(true); // set up
@@ -174,7 +189,6 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             mLogger.logNoBubbleNoMetadata(entry);
             return false;
         }
-
         return true;
     }
 
@@ -198,6 +212,19 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             return false;
         }
 
+        StatusBarNotification sbn = entry.getSbn();
+        String notificationPackageName = sbn.getPackageName();
+
+        if( notificationPackageName != null ) {
+
+            if( mInCall && notificationPackageName.equals(getDefaultDialerPackage(mTm)) ) {
+                if( sbn.getTag() == null ) {
+                    Log.d(TAG, "Force full screen: incoming call notification: " + sbn.getKey());
+                    return true;
+                } 
+            }
+        }
+
         // Never show FSI when suppressed by DND
         if (entry.shouldSuppressFullScreenIntent()) {
             mLogger.logNoFullscreen(entry, "Suppressed by DND");
@@ -211,7 +238,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
         }
 
         // If the notification has suppressive GroupAlertBehavior, block FSI and warn.
-        StatusBarNotification sbn = entry.getSbn();
+        //StatusBarNotification sbn = entry.getSbn();
         if (sbn.isGroup() && sbn.getNotification().suppressAlertingDueToGrouping()) {
             // b/231322873: Detect and report an event when a notification has both an FSI and a
             // suppressive groupAlertBehavior, and now correctly block the FSI from firing.
@@ -219,6 +246,11 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             android.util.EventLog.writeEvent(0x534e4554, "231322873", uid, "groupAlertBehavior");
             mLogger.logNoFullscreenWarning(entry, "GroupAlertBehavior will prevent HUN");
             return false;
+        }
+
+        if( mForceFullScreen ) {
+            Log.d(TAG, "Force full screen: incoming call notification: " + sbn.getKey());
+            return true;
         }
 
         // If the screen is off, then launch the FullScreenIntent
