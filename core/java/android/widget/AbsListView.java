@@ -4831,7 +4831,7 @@ public abstract class AbsListView extends AdapterView<ListAdapter> implements Te
         void start(int initialVelocity) {
             if (Math.abs(initialVelocity) > mDecacheThreshold) {
                 // For long flings, scrolling cache causes stutter, so don't use it
-                clearScrollingCache();
+                // clearScrollingCache();
             }
 
             int initialY = initialVelocity < 0 ? Integer.MAX_VALUE : 0;
