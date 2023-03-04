@@ -18,6 +18,9 @@ package com.android.internal.baikalos;
 
 import android.content.Context;
 import android.os.Process;
+import android.system.Os;
+import android.system.StructUtsname;
+
 
 public class BaikalConstants { 
 
@@ -97,6 +100,29 @@ public class BaikalConstants {
         String[] pkgs = context.getPackageManager().getPackagesForUid(uid);
         if( pkgs != null && pkgs.length > 0 ) return pkgs[0];
         return null;
+    }
+
+    public static boolean mIsKernelCompatible = false;
+    public static boolean isKernelCompatible() {
+        initIsKernalCompatible();
+        return mIsKernelCompatible;
+    }
+
+    private static String kernelVersion = null;
+    private static void initIsKernalCompatible() {
+        if( kernelVersion != null ) return;
+        if( Os.uname() == null ) { kernelVersion = ""; return; }
+        kernelVersion = Os.uname().release;
+        if( kernelVersion.contains("baikalos") ) mIsKernelCompatible = true;
+    } 
+
+    private static boolean sAodOnChargerEnabled = false;
+    public static boolean isAodOnChargerEnabled() {
+        return sAodOnChargerEnabled;
+    }
+
+    public static void setAodOnChargerEnabled(boolean enabled) {
+        sAodOnChargerEnabled = enabled;
     }
 
 }
