@@ -51,10 +51,14 @@ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 
 import javax.inject.Inject;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 public class BypassChargingTile extends QSTileImpl<BooleanState> {
     private boolean mBPCEnabled;
     private boolean mListening;
     private final Icon mIcon = ResourceIcon.get(R.drawable.ic_qs_battery_saver_charging);
+    private boolean isAvailable = false;
+
 
     @Inject
     public BypassChargingTile(
@@ -69,12 +73,16 @@ public class BypassChargingTile extends QSTileImpl<BooleanState> {
     ) {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
+
+        if( !BaikalConstants.isKernelCompatible() ) return;
+        isAvailable = true;
+
         mBPCEnabled = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0) == 1;
     }
 
     @Override
     public boolean isAvailable() {
-        return true;
+        return isAvailable;
     }
 
     @Override

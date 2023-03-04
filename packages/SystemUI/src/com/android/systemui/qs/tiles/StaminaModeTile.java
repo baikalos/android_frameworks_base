@@ -51,10 +51,13 @@ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 
 import javax.inject.Inject;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 public class StaminaModeTile extends QSTileImpl<BooleanState> {
     private boolean mStaminaEnabled;
     private boolean mListening;
     private final Icon mIcon = ResourceIcon.get(R.drawable.ic_qs_stamina);
+    private boolean isAvailable = false;
 
     @Inject
     public StaminaModeTile(
@@ -70,6 +73,9 @@ public class StaminaModeTile extends QSTileImpl<BooleanState> {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
 
+        if( !BaikalConstants.isKernelCompatible() ) return;
+        isAvailable = true;
+
         mStaminaEnabled = Settings.Global.getInt(mContext.getContentResolver(),
                 Settings.Global.BAIKALOS_STAMINA_ENABLED, 0) != 0;
 
@@ -77,7 +83,7 @@ public class StaminaModeTile extends QSTileImpl<BooleanState> {
 
     @Override
     public boolean isAvailable() {
-        return true;
+        return isAvailable;
     }
 
     @Override

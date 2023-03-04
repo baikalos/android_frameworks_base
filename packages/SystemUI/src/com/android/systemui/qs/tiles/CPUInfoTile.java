@@ -45,11 +45,14 @@ import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 
 import javax.inject.Inject;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 /** Quick settings tile: CPUInfo overlay **/
 public class CPUInfoTile extends QSTileImpl<BooleanState> {
 
-    private final SettingObserver mSetting;
+    private SettingObserver mSetting = null;
     private final Icon mIcon = ResourceIcon.get(R.drawable.ic_qs_cpu_info);
+    private boolean isAvailable = false;
 
     @Inject
     public CPUInfoTile(
@@ -64,6 +67,9 @@ public class CPUInfoTile extends QSTileImpl<BooleanState> {
             SecureSettings secureSettings) {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
+
+        if( !BaikalConstants.isKernelCompatible() ) return;
+        isAvailable = true;
 
         mSetting = new SettingObserver(secureSettings, mHandler, Secure.SHOW_CPU_OVERLAY) {
             @Override
@@ -134,4 +140,10 @@ public class CPUInfoTile extends QSTileImpl<BooleanState> {
     public void handleSetListening(boolean listening) {
         // Do nothing
     }
+
+    @Override
+    public boolean isAvailable() {
+        return isAvailable;
+    }
+
 }
