@@ -2363,8 +2363,11 @@ public class DeviceIdleController extends SystemService
                 String pkg = allowPowerExceptIdle.valueAt(i);
                 try {
                     ApplicationInfo ai = pm.getApplicationInfo(pkg,
-                            PackageManager.MATCH_SYSTEM_ONLY);
+                            PackageManager.MATCH_ALL);
                     int appid = UserHandle.getAppId(ai.uid);
+
+                    if( ai.packageName.startsWith("com.android.vending") ) continue;
+
                     mPowerSaveWhitelistAppsExceptIdle.put(ai.packageName, appid);
                     mPowerSaveWhitelistSystemAppIdsExceptIdle.put(appid, true);
                 } catch (PackageManager.NameNotFoundException e) {
@@ -2375,8 +2378,11 @@ public class DeviceIdleController extends SystemService
                 String pkg = allowPower.valueAt(i);
                 try {
                     ApplicationInfo ai = pm.getApplicationInfo(pkg,
-                            PackageManager.MATCH_SYSTEM_ONLY);
+                            PackageManager.MATCH_ALL);
                     int appid = UserHandle.getAppId(ai.uid);
+
+                    if( ai.packageName.startsWith("com.android.vending") ) continue;
+
                     // These apps are on both the whitelist-except-idle as well
                     // as the full whitelist, so they apply in all cases.
                     mPowerSaveWhitelistAppsExceptIdle.put(ai.packageName, appid);
