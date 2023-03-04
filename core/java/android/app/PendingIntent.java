@@ -398,7 +398,7 @@ public final class PendingIntent implements Parcelable {
                     + " using FLAG_IMMUTABLE, only use FLAG_MUTABLE if some functionality"
                     + " depends on the PendingIntent being mutable, e.g. if it needs to"
                     + " be used with inline replies or bubbles.";
-                throw new IllegalArgumentException(msg);
+                //throw new IllegalArgumentException(msg);
         }
     }
 
