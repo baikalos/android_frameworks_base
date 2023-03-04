@@ -141,6 +141,7 @@ import com.android.server.wm.WindowManagerService;
 import com.android.server.wm.WindowProcessController;
 
 import com.android.internal.baikalos.AppProfileSettings;
+import com.android.server.baikalos.BaikalAppManagerService;
 
 import dalvik.system.VMRuntime;
 
@@ -2879,6 +2880,7 @@ public final class ProcessList {
             }
             boolean willRestart = false;
             if (app.isPersistent() && !app.isolated) {
+
                 if (!callerWillRestart) {
                     willRestart = true;
                 } else {
@@ -2888,6 +2890,12 @@ public final class ProcessList {
             app.killLocked(reason, reasonCode, subReason, true);
             mService.handleAppDiedLocked(app, pid, willRestart, allowRestart,
                     false /* fromBinderDied */);
+
+            if( BaikalAppManagerService.shouldHide(app.userId, app.info.packageName) ) {
+                willRestart = false;
+                needRestart = false;
+            }
+
             if (willRestart) {
                 removeLruProcessLocked(app);
                 mService.addAppLocked(app.info, null, false, null /* ABI override */,
