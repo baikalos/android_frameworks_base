@@ -80,9 +80,11 @@
     <!-- OnTheGo Tile -->
     <string name="quick_settings_onthego_label">Режим \"На ходу\"</string>
     <!-- CPUInfo tile -->
-    <string name="quick_settings_cpuinfo_label">Информация о CPU</string>
+    <string name="quick_settings_cpuinfo_label">CPU Инфо</string>
+    <!-- CPUInfo tile -->
+    <string name="quick_settings_cpuinfolite_label">SYS Инфо</string>
     <!-- FPS Info tile -->
-    <string name="quick_settings_fpsinfo_label">Информация о FPS</string>
+    <string name="quick_settings_fpsinfo_label">FPS Инфо</string>
     <!-- FPS view text placeholder -->
     <string name="fps_text_placeholder">FPS: <xliff:g id="fps" примерно="90">%1$d</xliff:g></string>
     <!-- Compass QS Tile -->

@@ -36,6 +36,7 @@ import com.android.systemui.qs.tiles.BatterySaverTile;
 import com.android.systemui.qs.tiles.BluetoothTile;
 import com.android.systemui.qs.tiles.BypassChargingTile;
 import com.android.systemui.qs.tiles.CPUInfoTile;
+import com.android.systemui.qs.tiles.CPUInfoLiteTile;
 import com.android.systemui.qs.tiles.CaffeineTile;
 import com.android.systemui.qs.tiles.CameraToggleTile;
 import com.android.systemui.qs.tiles.CastTile;
@@ -137,6 +138,7 @@ public class QSFactoryImpl implements QSFactory {
     private final Provider<SoundTile> mSoundTileProvider;
     private final Provider<OnTheGoTile> mOnTheGoTileProvider;
     private final Provider<CPUInfoTile> mCPUInfoTileProvider;
+    private final Provider<CPUInfoLiteTile> mCPUInfoLiteTileProvider;
     private final Provider<FPSInfoTile> mFPSInfoTileProvider;
     private final Provider<CompassTile> mCompassTileProvider;
     private final Provider<DataSwitchTile> mDataSwitchTileProvider;
@@ -202,6 +204,7 @@ public class QSFactoryImpl implements QSFactory {
             Provider<SoundTile> soundTileProvider,
             Provider<OnTheGoTile> onTheGoTileProvider,
             Provider<CPUInfoTile> cpuInfoTileProvider,
+            Provider<CPUInfoLiteTile> cpuInfoLiteTileProvider,
             Provider<FPSInfoTile> fpsInfoTileProvider,
             Provider<CompassTile> compassTileProvider,
             Provider<DataSwitchTile> dataSwitchTileProvider,
@@ -261,6 +264,7 @@ public class QSFactoryImpl implements QSFactory {
         mSoundTileProvider = soundTileProvider;
         mOnTheGoTileProvider = onTheGoTileProvider;
         mCPUInfoTileProvider = cpuInfoTileProvider;
+        mCPUInfoLiteTileProvider = cpuInfoLiteTileProvider;
         mFPSInfoTileProvider = fpsInfoTileProvider;
         mCompassTileProvider = compassTileProvider;
         mDataSwitchTileProvider = dataSwitchTileProvider;
@@ -375,6 +379,8 @@ public class QSFactoryImpl implements QSFactory {
                 return mOnTheGoTileProvider.get();
             case "cpuinfo":
                 return mCPUInfoTileProvider.get();
+            case "cpuinfolite":
+                return mCPUInfoLiteTileProvider.get();
             case "fpsinfo":
                 return mFPSInfoTileProvider.get();
             case "compass":

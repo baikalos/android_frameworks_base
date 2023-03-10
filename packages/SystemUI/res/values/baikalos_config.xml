@@ -29,6 +29,13 @@
     <string name="config_cpuTempSensorNumber" translatable="false"></string>
 
     <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuLiteSensorPrefix" translatable="false">/sys/devices/system/cpu/cpu</string>
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuLiteSensorSuffix" translatable="false">/cpufreq/scaling_cur_freq</string>
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuLiteSensorNumber" translatable="false">0,4</string>
+
+    <!-- The CPU temperature sensor path, defaults to empty -->
     <string name="config_cpuTempSensor" translatable="false"></string>
 
     <!-- The CPU temperature divider, if needed -->
