@@ -31,7 +31,7 @@ import java.util.concurrent.Executor
 import javax.inject.Inject
 
 private const val TAG = "BluetoothDialogFactory"
-private val DEBUG = true /*Log.isLoggable(TAG, Log.DEBUG)*/
+private val DEBUG = Log.isLoggable(TAG, Log.DEBUG)
 
 /**
  * Factory to create [BluetoothDialog] objects.
