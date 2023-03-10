@@ -83,7 +83,7 @@ public class StaminaModeTile extends QSTileImpl<BooleanState> {
 
     @Override
     public boolean isAvailable() {
-        return isAvailable;
+        return false; //isAvailable;
     }
 
     @Override
