@@ -165,12 +165,15 @@ public class AppProfileManager {
     private boolean mAggressiveIdleMode = false;
     private boolean mKillInBackground = false;
 
-
     private boolean mPhoneCall = false;
+
+    private int mGmsUid = -1;
 
     TelephonyManager mTelephonyManager;
 
     static AppProfileManager mInstance;
+    static BaikalDebugManager mDebugManager;
+    static BaikalBoostManager mBoostManager;
 
     private PowerManagerInternal mPowerManagerInternal;
 
@@ -336,6 +339,14 @@ public class AppProfileManager {
 
             mResolver = mContext.getContentResolver();
             mObserver = new AppProfileContentObserver(mHandler);
+
+            mGmsUid = BaikalConstants.getUidByPackage(mContext, "com.google.android.gms");
+            mDebugManager = BaikalDebugManager.getInstance(mLooper,mContext); 
+            mDebugManager.initialize();
+
+            mBoostManager = BaikalBoostManager.getInstance(mLooper,mContext); 
+            mBoostManager.initialize();
+
         }
     }
 
@@ -519,9 +530,9 @@ public class AppProfileManager {
             mActivePerfProfile = -1;
         }
 
-        int perfMode = 1;
+        int perfMode = MODE_DEVICE_IDLE;
         if( mDeviceIdleMode ) {
-            perfMode = 8;
+            perfMode = MODE_DEVICE_IDLE;
         }
         try {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", idle=" + mDeviceIdleMode + ", screen=" + mScreenMode);
@@ -533,7 +544,7 @@ public class AppProfileManager {
 
     protected void activateCurrentProfileLocked(boolean force) {
 
-            if( !mPhoneCall && !mScreenMode && mDeviceIdleMode )  {
+            if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode) )  {
                 activateIdleProfileLocked();
                 return;
             }
@@ -940,8 +951,12 @@ public class AppProfileManager {
 
     }
 
+    public AppProfile getAppProfile(String packageName) {
+        AppProfile profile = mAppSettings != null ? mAppSettings.getProfile(packageName) : null;
+        return profile != null ? profile : new AppProfile(packageName);
+    }
 
-    public boolean isAppBlocked(AppProfile profile, String packageName, int uid) {
+    public boolean isBlocked(AppProfile profile, String packageName, int uid) {
 
         if( !mAggressiveMode ) return false;
         if( mAppSettings == null ) return false;
@@ -952,10 +967,10 @@ public class AppProfileManager {
             }
             profile = mAppSettings.getProfile(packageName);
         }
-        return isAppBlocked(profile);
+        return isBlocked(profile);
     }
 
-    public boolean isAppBlocked(AppProfile profile) {
+    public boolean isBlocked(AppProfile profile) {
         if( profile == null ) return false;
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
@@ -1026,5 +1041,26 @@ public class AppProfileManager {
     public boolean isAodOnChargerEnabled() {
         Slog.w(TAG, "isAodOnChargerEnabled=" + (mAodOnCharger & mOnCharger));
         return mAodOnCharger & mOnCharger;
+    }
+
+    public boolean isGmsUid(int uid) {
+        return uid == mGmsUid;
+    }
+
+
+    public static AppProfile getProfile(String packageName) {
+        AppProfile profile = null;
+        if( mInstance != null ) profile =  mInstance.getAppProfile(packageName);
+        return profile != null ? profile : new AppProfile(packageName);
+    }
+
+    public static boolean isAppBlocked(AppProfile profile, String packageName, int uid) {
+        if( mInstance != null ) return mInstance.isBlocked(profile, packageName, uid);
+        return false;
+    }
+
+    public static boolean isAppBlocked(AppProfile profile) {
+        if( mInstance != null ) return mInstance.isBlocked(profile);
+        return false;
     }
 }
