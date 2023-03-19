@@ -64,6 +64,7 @@ import android.widget.VideoView;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import libcore.io.IoBridge;
 import libcore.io.Streams;
@@ -691,6 +692,12 @@ public class MediaPlayer extends PlayerBase
         }
 
         baseRegisterPlayer(sessionId);
+
+        if( BaikalSpoofer.overrideOutAudioDevice() != null ) {
+            Log.i(TAG,"MediaPlayer() Forced Sonification setPreferredDevice");
+            setPreferredDevice(BaikalSpoofer.overrideOutAudioDevice());
+            mForcedDevice = BaikalSpoofer.overrideOutAudioDevice();
+        }
     }
 
     /*
@@ -1455,6 +1462,7 @@ public class MediaPlayer extends PlayerBase
     // Explicit Routing
     //--------------------
     private AudioDeviceInfo mPreferredDevice = null;
+    private AudioDeviceInfo mForcedDevice = null;
 
     /**
      * Specifies an audio device (via an {@link AudioDeviceInfo} object) to route
@@ -1465,7 +1473,13 @@ public class MediaPlayer extends PlayerBase
      * does not correspond to a valid audio device.
      */
     @Override
-    public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
+    public boolean setPreferredDevice(AudioDeviceInfo deviceInfo_) {
+        AudioDeviceInfo deviceInfo = deviceInfo_;
+        if (mForcedDevice != null ) {
+            Log.i(TAG,"MediaPlayer() Forced Sonification - force device:" + mForcedDevice.getId());
+            deviceInfo = mForcedDevice;
+            //return true;
+        }
         if (deviceInfo != null && !deviceInfo.isSink()) {
             return false;
         }

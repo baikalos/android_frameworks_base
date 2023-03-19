@@ -19,6 +19,7 @@ package android.media;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.app.ActivityThread;
+import android.baikalos.AppProfile;
 import android.content.Context;
 import android.os.IBinder;
 import android.os.Parcel;
@@ -31,6 +32,9 @@ import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.app.IAppOpsCallback;
 import com.android.internal.app.IAppOpsService;
+
+import com.android.internal.baikalos.BaikalSpoofer;
+
 
 import java.lang.ref.WeakReference;
 import java.util.Objects;
@@ -97,7 +101,14 @@ public abstract class PlayerBase {
         if (attr == null) {
             throw new IllegalArgumentException("Illegal null AudioAttributes");
         }
-        mAttributes = attr;
+
+        if( BaikalSpoofer.overrideAudioUsage() ) {
+            mAttributes = BaikalSpoofer.overrideAudioAttributes(attr,"PlayerBase()");
+        } else {
+            Log.i(TAG,"PlayerBase() usage=" + attr.getUsage() + ", content=" + attr.getContentType());
+            mAttributes = attr;
+        }
+
         mImplType = implType;
         mState = AudioPlaybackConfiguration.PLAYER_STATE_IDLE;
     };
@@ -136,7 +147,13 @@ public abstract class PlayerBase {
             Log.e(TAG, "Error talking to audio service, audio attributes will not be updated", e);
         }
         synchronized (mLock) {
-            mAttributes = attr;
+
+            if( BaikalSpoofer.overrideAudioUsage() ) {
+                mAttributes = BaikalSpoofer.overrideAudioAttributes(attr,"PlayerBase() baseUpdateAudioAttributes");
+            } else {
+                Log.i(TAG,"PlayerBase::baseUpdateAudioAttributes usage=" + attr.getUsage() + ", content=" + attr.getContentType());
+                mAttributes = attr;
+            }
         }
     }
 
@@ -440,16 +457,22 @@ public abstract class PlayerBase {
 
         public static final int AUDIO_ATTRIBUTES_NONE = 0;
         public static final int AUDIO_ATTRIBUTES_DEFINED = 1;
-        public final AudioAttributes mAttributes;
+        public AudioAttributes mAttributes;
         public final IPlayer mIPlayer;
         public final int mSessionId;
 
         PlayerIdCard(int type, @NonNull AudioAttributes attr, @NonNull IPlayer iplayer,
                      int sessionId) {
             mPlayerType = type;
-            mAttributes = attr;
+            //mAttributes = attr;
             mIPlayer = iplayer;
             mSessionId = sessionId;
+            if( BaikalSpoofer.overrideAudioUsage() ) {
+                mAttributes = BaikalSpoofer.overrideAudioAttributes(attr,"PlayerIdCard()");
+            } else {
+                Log.i(TAG,"PlayerBase() usage=" + attr.getUsage() + ", content=" + attr.getContentType());
+                mAttributes = attr;
+            }
         }
 
         @Override
@@ -488,6 +511,11 @@ public abstract class PlayerBase {
         private PlayerIdCard(Parcel in) {
             mPlayerType = in.readInt();
             mAttributes = AudioAttributes.CREATOR.createFromParcel(in);
+
+            if( BaikalSpoofer.overrideAudioUsage() ) {
+                mAttributes = BaikalSpoofer.overrideAudioAttributes(mAttributes,"PlayerIdCard(Parcel in)");
+            } 
+
             // IPlayer can be null if unmarshalling a Parcel coming from who knows where
             final IBinder b = in.readStrongBinder();
             mIPlayer = (b == null ? null : IPlayer.Stub.asInterface(b));

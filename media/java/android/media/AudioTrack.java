@@ -42,6 +42,7 @@ import android.util.ArrayMap;
 import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -761,19 +762,15 @@ public class AudioTrack extends PlayerBase
         super(attributes, AudioPlaybackConfiguration.PLAYER_TYPE_JAM_AUDIOTRACK);
         // mState already == STATE_UNINITIALIZED
 
-        if( AppProfile.getCurrentAppProfile().mSonification ) {
-            Log.i(TAG,"AudioTrack() Forced Sonification usage=FLAG_BEACON");
-            mAttributes = new AudioAttributes.Builder(mAttributes)
-                .replaceFlags((mAttributes.getAllFlags()
-                        | AudioAttributes.FLAG_BEACON))
-                .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                .build();
-            mConfiguredAudioAttributes = mAttributes;
+        if( BaikalSpoofer.overrideAudioUsage() ) {
+            mAttributes = BaikalSpoofer.overrideAudioAttributes(attributes,"AudioTrack()");
+            //mAttributes = mAttributes;
         } else {
-            Log.i(TAG,"AudioTrack() usage=USAGE_MEDIA");
-            mConfiguredAudioAttributes = attributes; // object copy not needed, immutable.
+            Log.i(TAG,"AudioTrack() usage=" + attributes.getUsage() + ", content=" + attributes.getContentType());
+            mAttributes = attributes;
         }
+
+        mConfiguredAudioAttributes = mAttributes; //new AudioAttributes.Builder(attributes).build(); // object copy not needed, immutable.
 
         if (format == null) {
             throw new IllegalArgumentException("Illegal null AudioFormat");
@@ -865,6 +862,13 @@ public class AudioTrack extends PlayerBase
 
         baseRegisterPlayer(mSessionId);
         native_setPlayerIId(mPlayerIId); // mPlayerIId now ready to send to native AudioTrack.
+
+        if( BaikalSpoofer.overrideOutAudioDevice() != null ) {
+            Log.i(TAG,"AudioTrack() Forced Sonification setPreferredDevice");
+            setPreferredDevice(BaikalSpoofer.overrideOutAudioDevice());
+            mForcedDevice = BaikalSpoofer.overrideOutAudioDevice();
+        }
+
     }
 
     /**
@@ -884,6 +888,14 @@ public class AudioTrack extends PlayerBase
         // "final"s
         mNativeTrackInJavaObj = 0;
         mJniData = 0;
+
+        if( BaikalSpoofer.overrideAudioUsage() ) {
+            mAttributes = BaikalSpoofer.overrideAudioAttributes(mAttributes,"AudioTrack() 2");
+        } else {
+            Log.i(TAG,"AudioTrack() 2 usage=" + mAttributes.getUsage() + ", content=" + mAttributes.getContentType());
+            //mAttributes = attributes;
+        }
+
 
         // remember which looper is associated with the AudioTrack instantiation
         Looper looper;
@@ -1071,19 +1083,16 @@ public class AudioTrack extends PlayerBase
                 throw new IllegalArgumentException("Illegal null AudioAttributes argument");
             }
 
-            if( AppProfile.getCurrentAppProfile().mSonification ) {
-                Log.i(TAG,"AudioTrack() setAudioAttributes Forced Sonification usage=FLAG_BEACON");
-                mAttributes = new AudioAttributes.Builder(attributes)
-                    .replaceFlags((attributes.getAllFlags()
-                        | AudioAttributes.FLAG_BEACON))
-                    .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                    .build();
+
+            if( BaikalSpoofer.overrideAudioUsage() ) {
+                mAttributes = BaikalSpoofer.overrideAudioAttributes(attributes,"AudioTrack() saa");
             } else {
-                Log.i(TAG,"setAudioAttributes()");
-                // keep reference, we only copy the data when building
+                Log.i(TAG,"AudioTrack() saa usage=" + attributes.getUsage() + ", content=" + attributes.getContentType());
                 mAttributes = attributes;
             }
+
+                // keep reference, we only copy the data when building
+            //mAttributes = attributes; // object copy not needed, immutable.
             return this;
         }
         
@@ -1337,23 +1346,14 @@ public class AudioTrack extends PlayerBase
         public @NonNull AudioTrack build() throws UnsupportedOperationException {
 
             if (mAttributes == null) {
+                Log.i(TAG,"AudioTrack() - mAttributes == null");
                 mAttributes = new AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_MEDIA)
-                        .build();
-            }
-
-            if( AppProfile.getCurrentAppProfile().mSonification ) {
-                Log.i(TAG,"AudioTrack() Forced Sonification usage=FLAG_BEACON");
-                mAttributes = new AudioAttributes.Builder(mAttributes)
-                    .replaceFlags((mAttributes.getAllFlags()
-                            | AudioAttributes.FLAG_BEACON))
-                    .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
                     .build();
-            } else {
-                Log.i(TAG,"AudioTrack()");
             }
 
+            Log.i(TAG,"AudioTrack() - 2 :" + mAttributes);
+    
             switch (mPerformanceMode) {
             case PERFORMANCE_MODE_LOW_LATENCY:
                 mAttributes = new AudioAttributes.Builder(mAttributes)
@@ -1575,7 +1575,15 @@ public class AudioTrack extends PlayerBase
      */
     @Deprecated
     public static boolean isDirectPlaybackSupported(@NonNull AudioFormat format,
-            @NonNull AudioAttributes attributes) {
+            @NonNull AudioAttributes attributes_) {
+
+        AudioAttributes attributes = attributes_; 
+
+        if( BaikalSpoofer.overrideAudioUsage() ) {
+            attributes = BaikalSpoofer.overrideAudioAttributes(attributes_,"AudioTrack() isDirectPlaybackSupported");
+        } 
+
+
         if (format == null) {
             throw new IllegalArgumentException("Illegal null AudioFormat argument");
         }
@@ -1758,14 +1766,17 @@ public class AudioTrack extends PlayerBase
     private static boolean shouldEnablePowerSaving(
             @Nullable AudioAttributes attributes, @Nullable AudioFormat format,
             int bufferSizeInBytes, int mode) {
+
+        if( BaikalSpoofer.overrideAudioUsage() ) return false;
+
         // If no attributes, OK
         // otherwise check attributes for USAGE_MEDIA and CONTENT_UNKNOWN, MUSIC, or MOVIE.
         // Only consider flags that are not compatible with FLAG_DEEP_BUFFER. We include
         // FLAG_DEEP_BUFFER because if set the request is explicit and
         // shouldEnablePowerSaving() should return false.
-        final int flags = attributes.getAllFlags()
+        final int flags = attributes != null ? attributes.getAllFlags()
                 & (AudioAttributes.FLAG_DEEP_BUFFER | AudioAttributes.FLAG_LOW_LATENCY
-                    | AudioAttributes.FLAG_HW_AV_SYNC | AudioAttributes.FLAG_BEACON);
+                    | AudioAttributes.FLAG_HW_AV_SYNC | AudioAttributes.FLAG_BEACON) : 0;
 
         if (attributes != null &&
                 (flags != 0  // cannot have any special flags
@@ -3718,6 +3729,7 @@ public class AudioTrack extends PlayerBase
     // Explicit Routing
     //--------------------
     private AudioDeviceInfo mPreferredDevice = null;
+    private AudioDeviceInfo mForcedDevice = null;
 
     /**
      * Specifies an audio device (via an {@link AudioDeviceInfo} object) to route
@@ -3728,17 +3740,27 @@ public class AudioTrack extends PlayerBase
      * does not correspond to a valid audio output device.
      */
     @Override
-    public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
+    public boolean setPreferredDevice(AudioDeviceInfo deviceInfo_) {
         // Do some validation....
+        AudioDeviceInfo deviceInfo = deviceInfo_;
+        if (mForcedDevice != null ) {
+            Log.i(TAG,"AudioTrack() Forced Sonification - force device:" + mForcedDevice.getId());
+            deviceInfo = mForcedDevice;
+            //return true;
+        }
         if (deviceInfo != null && !deviceInfo.isSink()) {
             return false;
         }
         int preferredDeviceId = deviceInfo != null ? deviceInfo.getId() : 0;
+        Log.i(TAG,"AudioTrack() setPreferredDevice:" + preferredDeviceId);
+
         boolean status = native_setOutputDevice(preferredDeviceId);
         if (status == true) {
             synchronized (this) {
                 mPreferredDevice = deviceInfo;
             }
+        } else {
+            Log.i(TAG,"AudioTrack() setPreferredDevice failed");
         }
         return status;
     }

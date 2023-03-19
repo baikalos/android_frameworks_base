@@ -28,6 +28,8 @@ import android.os.ParcelFileDescriptor;
 import android.util.AndroidRuntimeException;
 import android.util.Log;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.io.File;
 import java.io.FileDescriptor;
 import java.util.concurrent.atomic.AtomicReference;
@@ -155,20 +157,14 @@ public class SoundPool extends PlayerBase {
     private SoundPool(int maxStreams, AudioAttributes attributes) {
         super(attributes, AudioPlaybackConfiguration.PLAYER_TYPE_JAM_SOUNDPOOL);
 
-
-        if( AppProfile.getCurrentAppProfile().mSonification ) {
-            Log.i(TAG,"SoundPool() Forced Sonification usage=FLAG_BEACON");
-            mAttributes = new AudioAttributes.Builder(attributes)
-                .replaceFlags((attributes.getAllFlags()
-                        | AudioAttributes.FLAG_BEACON))
-                .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                .build();
+        if( BaikalSpoofer.overrideAudioUsage() ) {
+            mAttributes = BaikalSpoofer.overrideAudioAttributes(attributes,"SoundPool()");
         } else {
-            Log.i(TAG,"SoundPool() usage=USAGE_MEDIA");
+            Log.i(TAG,"SoundPool() usage=" + attributes.getUsage() + ", content=" + attributes.getContentType());
             mAttributes = attributes;
         }
 
+        //mAttributes = attributes;
         // do native setup
         if (native_setup(maxStreams, mAttributes, getCurrentOpPackageName()) != 0) {
             throw new RuntimeException("Native setup failed");
