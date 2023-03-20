@@ -1045,6 +1045,15 @@ public class Activity extends ContextThemeWrapper
             setTaskDescription(mTaskDescription);
         }
 
+        @Override
+        public boolean moveTaskToBack(boolean nonRoot) {
+            return ActivityClient.getInstance().moveActivityTaskToBack(mToken, nonRoot);
+        }
+
+        @Override
+        public void onBackPressed() {
+            Activity.this.onBackPressed();
+        }
     };
 
     private static native String getDlWarning();
@@ -3996,6 +4005,15 @@ public class Activity extends ContextThemeWrapper
         // Let the Action Bar have a chance at handling the shortcut.
         ActionBar actionBar = getActionBar();
         return (actionBar != null && actionBar.onKeyShortcut(keyCode, event));
+    }
+
+    /**
+     * Check whether the activity supports pip.
+     * @see android.R.attr#supportsPictureInPicture
+     * @hide
+     */
+    public boolean supportPictureInPictureMode() {
+        return mActivityInfo != null && mActivityInfo.supportsPictureInPicture();
     }
 
     /**
@@ -6978,7 +6996,7 @@ public class Activity extends ContextThemeWrapper
      *         back) true is returned, else false.
      */
     public boolean moveTaskToBack(boolean nonRoot) {
-        return ActivityClient.getInstance().moveActivityTaskToBack(mToken, nonRoot);
+        return mWindowControllerCallback.moveTaskToBack(nonRoot);
     }
 
     /**

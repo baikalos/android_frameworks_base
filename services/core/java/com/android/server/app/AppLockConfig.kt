@@ -38,7 +38,7 @@ import org.json.JSONObject
 private const val APP_LOCK_DIR_NAME = "app_lock"
 private const val APP_LOCK_CONFIG_FILE = "app_lock_config.json"
 
-private const val CURRENT_VERSION = 2
+private const val CURRENT_VERSION = 3
 
 // Only in version 0
 private const val KEY_PACKAGES = "packages"
@@ -339,6 +339,30 @@ internal class AppLockConfig(dataDir: File) {
                         for (i in (size - 1)..0) {
                             val appData = appLockDataList.getJSONObject(i)
                                 .put(KEY_HIDE_FROM_LAUNCHER, DEFAULT_HIDE_IN_LAUNCHER)
+                            backupList.add(appData)
+                            appLockDataList.remove(i)
+                        }
+                        backupList.forEach {
+                            appLockDataList.put(it)
+                        }
+                        jsonData.put(KEY_APP_LOCK_DATA_LIST, appLockDataList)
+                    }
+                }
+            }
+            2 -> {
+                val appLockDataList = jsonData.optJSONArray(KEY_APP_LOCK_DATA_LIST)
+                if (appLockDataList != null) {
+                    val size = appLockDataList.length()
+                    if (size > 0) {
+                        val backupList = mutableListOf<JSONObject>()
+                        for (i in (size - 1)..0) {
+                            var isProtect = DEFAULT_PROTECT_APP
+                            if (appLockDataList.getJSONObject(i).has(KEY_PROTECT_APP)) {
+                                isProtect = appLockDataList.getJSONObject(i)
+                                    .getBoolean(KEY_PROTECT_APP)
+                            }
+                            val appData = appLockDataList.getJSONObject(i)
+                                .put(KEY_PROTECT_APP, isProtect)
                             backupList.add(appData)
                             appLockDataList.remove(i)
                         }

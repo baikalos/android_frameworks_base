@@ -1096,6 +1096,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     private void startNavigating() {
         if (!mStarted) {
             if (DEBUG) Log.d(TAG, "startNavigating");
+            final Boolean isEmergency = mNIHandler.getInEmergency();
             mTimeToFirstFix = 0;
             mLastFixTime = 0;
             setStarted(true);
@@ -1103,7 +1104,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
 
             boolean agpsEnabled =
                     (Settings.Global.getInt(mContext.getContentResolver(),
-                            Settings.Global.ASSISTED_GPS_ENABLED, 1) != 0);
+                            Settings.Global.ASSISTED_GPS_ENABLED, 1) != 0) || isEmergency;
             mPositionMode = getSuplMode(agpsEnabled);
 
             if (DEBUG) {
@@ -1720,9 +1721,17 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
                 mContext.getSystemService(Context.TELEPHONY_SERVICE);
         int type = AGPS_SETID_TYPE_NONE;
         String setId = null;
+        final Boolean isEmergency = mNIHandler.getInEmergency();
+
+        // Unless we are in an emergency, do not provide sensitive subscriber information
+        // to SUPL servers.
+        if (!isEmergency) {
+            mGnssNative.setAgpsSetId(type, "");
+            return;
+        }
 
         int subId = SubscriptionManager.getDefaultDataSubscriptionId();
-        if (mNIHandler.getInEmergency() && mNetworkConnectivityHandler.getActiveSubId() >= 0) {
+        if (isEmergency && mNetworkConnectivityHandler.getActiveSubId() >= 0) {
             subId = mNetworkConnectivityHandler.getActiveSubId();
         }
         if (SubscriptionManager.isValidSubscriptionId(subId)) {
