@@ -1321,6 +1321,7 @@ public class DeviceIdleController extends SystemService
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_UNRESTRICTED_NET),
                     false, this);
 
+            onChange(true, null);
         }
 
         @Override
@@ -1334,7 +1335,8 @@ public class DeviceIdleController extends SystemService
                     Settings.Global.BAIKALOS_UNRESTRICTED_NET,0) == 1;
 
             if( mAggressiveDeviceIdleMode ) {
-                LIGHT_IDLE_AFTER_INACTIVE_TIMEOUT = 3 * 60 * 1000L;
+                Slog.i(TAG, "Aggressive device idle mode enabled");
+                LIGHT_IDLE_AFTER_INACTIVE_TIMEOUT = 5 * 1000L;
                 INACTIVE_TIMEOUT = 15 * 1000L;
                 MIN_LIGHT_MAINTENANCE_TIME = 15 * 1000L;
                 MIN_DEEP_MAINTENANCE_TIME = 10 * 1000L;
@@ -3597,15 +3599,17 @@ public class DeviceIdleController extends SystemService
                 mLastGpsLocation = null;
                 moveToStateLocked(STATE_SENSING, reason);
 
+                if( mConstants.SENSING_TIMEOUT > 0 ) {
                 // Wait for open constraints and an accelerometer reading before moving on.
-                if (mUseMotionSensor && mAnyMotionDetector.hasSensor()) {
-                    scheduleSensingTimeoutAlarmLocked(mConstants.SENSING_TIMEOUT);
-                    mNotMoving = false;
-                    mAnyMotionDetector.checkForAnyMotion();
-                    break;
-                } else if (mNumBlockingConstraints != 0) {
-                    cancelAlarmLocked();
-                    break;
+                    if (mUseMotionSensor && mAnyMotionDetector.hasSensor()) {
+                        scheduleSensingTimeoutAlarmLocked(mConstants.SENSING_TIMEOUT);
+                        mNotMoving = false;
+                        mAnyMotionDetector.checkForAnyMotion();
+                        break;
+                    } else if (mNumBlockingConstraints != 0) {
+                        cancelAlarmLocked();
+                        break;
+                    }
                 }
 
                 mNotMoving = true;
@@ -3613,29 +3617,33 @@ public class DeviceIdleController extends SystemService
             case STATE_SENSING:
                 cancelSensingTimeoutAlarmLocked();
                 moveToStateLocked(STATE_LOCATING, reason);
-                scheduleAlarmLocked(mConstants.LOCATING_TIMEOUT, false);
-                LocationManager locationManager = mInjector.getLocationManager();
-                if (locationManager != null
-                        && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
-                    locationManager.requestLocationUpdates(mLocationRequest,
-                            mGenericLocationListener, mHandler.getLooper());
-                    mLocating = true;
+                if( mConstants.LOCATING_TIMEOUT > 0 ) {
+                    scheduleAlarmLocked(mConstants.LOCATING_TIMEOUT, false);
+                    LocationManager locationManager = mInjector.getLocationManager();
+                    if (locationManager != null
+                            && locationManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+                        locationManager.requestLocationUpdates(mLocationRequest,
+                                mGenericLocationListener, mHandler.getLooper());
+                        mLocating = true;
+                    } else {
+                        mHasNetworkLocation = false;
+                    }
+                    if (locationManager != null
+                            && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
+                        mHasGps = true;
+                        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5,
+                                mGpsLocationListener, mHandler.getLooper());
+                        mLocating = true;
+                    } else {
+                        mHasGps = false;
+                    }
+                    // If we have a location provider, we're all set, the listeners will move state
+                    // forward.
+                    if (mLocating) {
+                        break;
+                    }
                 } else {
-                    mHasNetworkLocation = false;
-                }
-                if (locationManager != null
-                        && locationManager.getProvider(LocationManager.GPS_PROVIDER) != null) {
-                    mHasGps = true;
-                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 5,
-                            mGpsLocationListener, mHandler.getLooper());
-                    mLocating = true;
-                } else {
-                    mHasGps = false;
-                }
-                // If we have a location provider, we're all set, the listeners will move state
-                // forward.
-                if (mLocating) {
-                    break;
+                    mLocating = false;
                 }
 
                 // Otherwise, we have to move from locating into idle maintenance.
