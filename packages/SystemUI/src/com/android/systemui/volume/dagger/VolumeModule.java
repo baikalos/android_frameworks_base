@@ -69,7 +69,7 @@ public interface VolumeModule {
                 activityStarter,
                 tunerService,
                 interactionJankMonitor);
-        impl.setStreamImportant(AudioManager.STREAM_SYSTEM, false);
+        impl.setStreamImportant(AudioManager.STREAM_SYSTEM, true);
         impl.setAutomute(true);
         impl.setSilentMode(false);
         return impl;
