@@ -20,10 +20,13 @@ import android.content.Context;
 import android.os.Process;
 import android.system.Os;
 import android.system.StructUtsname;
-
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.util.Slog;
 
 public class BaikalConstants { 
 
+    private static final String TAG = "BaikalConstants";
 
     public static final int MESSAGE_MIN = 10000;
 
@@ -40,8 +43,8 @@ public class BaikalConstants {
     public static final int MESSAGE_MAX = MESSAGE_DEV_PROFILE + 1000;
 
 
-    public static boolean BAIKAL_DEBUG = true;
-    public static boolean BAIKAL_DEBUG_RAW = true;
+    public static boolean BAIKAL_DEBUG = false;
+    public static boolean BAIKAL_DEBUG_RAW = false;
     public static boolean BAIKAL_DEBUG_TEMPLATE = BAIKAL_DEBUG | false;
     public static boolean BAIKAL_DEBUG_SENSORS = BAIKAL_DEBUG | false;
     public static boolean BAIKAL_DEBUG_TORCH = BAIKAL_DEBUG | false;
@@ -100,6 +103,21 @@ public class BaikalConstants {
         String[] pkgs = context.getPackageManager().getPackagesForUid(uid);
         if( pkgs != null && pkgs.length > 0 ) return pkgs[0];
         return null;
+    }
+
+    public static int getUidByPackage(Context context, String packageName) {
+	    int uid = -1;
+
+        try {
+            ApplicationInfo ai = context.getPackageManager().getApplicationInfo(packageName,
+                    PackageManager.MATCH_ALL);
+            if( ai != null ) {
+                return ai.uid;
+            }
+        } catch(Exception e) {
+            Slog.i(TAG,"Package " + packageName + " not found on this device");
+        }
+        return uid;
     }
 
     public static boolean mIsKernelCompatible = false;
