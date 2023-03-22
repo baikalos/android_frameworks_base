@@ -6029,13 +6029,13 @@ public class ActivityManagerService extends IActivityManager.Stub
     @GuardedBy(anyOf = {"this", "mProcLock"})
     int appServicesRestrictedInBackgroundLOSP(int uid, String packageName, int packageTargetSdk) {
         // Persistent app?
-        if (mPackageManagerInt.isPackagePersistent(packageName)) {
+        /*if (mPackageManagerInt.isPackagePersistent(packageName)) {
             if (DEBUG_BACKGROUND_CHECK) {
                 Slog.i(TAG, "App " + uid + "/" + packageName
                         + " is persistent; not restricted in background");
             }
             return ActivityManager.APP_START_MODE_NORMAL;
-        }
+        }*/
 
         // Non-persistent but background whitelisted?
         if (uidOnBackgroundAllowlistLOSP(uid)) {
