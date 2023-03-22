@@ -2035,6 +2035,20 @@ public final class PowerManagerService extends SystemService
             wakeLock.mNotifiedLong = true;
             mNotifier.onLongPartialWakeLockStart(wakeLock.mTag, wakeLock.mOwnerUid,
                     wakeLock.mWorkSource, wakeLock.mHistoryTag);
+			if ((wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK) == PowerManager.PARTIAL_WAKE_LOCK ) {
+                int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
+                if( appid < Process.FIRST_APPLICATION_UID && !wakeLock.mTag.startsWith("*job*") ) return;
+	            if( wakeLock.mTag.startsWith("Audio") ) return;
+                if( !AppProfileManager.getInstance().isGmsUid(wakeLock.mOwnerUid) ) {
+                    AppProfile profile = AppProfileManager.getInstance().getProfile(wakeLock.mPackageName);
+                    if( profile.getBackground() < 0 ) return;
+                }
+            	wakeLock.mDisabled = true;
+            	notifyWakeLockReleasedLocked(wakeLock);
+            	Slog.d(TAG, "notifyWakeLockLongStartedLocked: disabled appid " + wakeLock);
+            	mDirty |= DIRTY_WAKE_LOCKS;
+            	updatePowerStateLocked();
+			}
         }
     }
 
@@ -2259,6 +2273,31 @@ public final class PowerManagerService extends SystemService
             return false;
         }
         return powerGroup.dreamLocked(eventTime, uid);
+    }
+
+
+    @GuardedBy("mLock")
+    private boolean dozeFromDozePowerGroupLocked(PowerGroup powerGroup, long eventTime, int reason, int uid) {
+        if (DEBUG_SPEW) {
+            Slog.d(TAG, "dozeFromDozePowerGroupLocked: groupId=" + powerGroup.getGroupId() + ", eventTime="
+                    + eventTime + ", uid=" + uid);
+        }
+
+        if (!mBootCompleted || !mSystemReady) {
+            return false;
+        }
+
+        try {
+            reason = Math.min(PowerManager.GO_TO_SLEEP_REASON_MAX,
+                    Math.max(reason, PowerManager.GO_TO_SLEEP_REASON_MIN));
+
+            powerGroup.setSandmanSummonedLocked(/* isSandmanSummoned= */ true);
+            powerGroup.setWakefulnessLocked(WAKEFULNESS_DOZING, eventTime, uid, reason, /* opUid= */ 0,
+                    /* opPackageName= */ null, /* details= */ null);
+        } finally {
+            Trace.traceEnd(Trace.TRACE_TAG_POWER);
+        }
+        return true;
     }
 
     @GuardedBy("mLock")
@@ -2659,18 +2698,38 @@ public final class PowerManagerService extends SystemService
                 final boolean dockedOnWirelessCharger = mWirelessChargerDetector.update(
                         mIsPowered, mPlugType);
 
-                // Treat plugging and unplugging the devices as a user activity.
-                // Users find it disconcerting when they plug or unplug the device
-                // and it shuts off right away.
-                // Some devices also wake the device when plugged or unplugged because
-                // they don't have a charging LED.
                 final long now = mClock.uptimeMillis();
-                if (shouldWakeUpWhenPluggedOrUnpluggedLocked(wasPowered, oldPlugType,
-                        dockedOnWirelessCharger)) {
-                    wakePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP),
-                            now, PowerManager.WAKE_REASON_PLUGGED_IN,
-                            "android.server.power:PLUGGED:" + mIsPowered, Process.SYSTEM_UID,
-                            mContext.getOpPackageName(), Process.SYSTEM_UID);
+
+                boolean aod_enabled = updateAodOnChargerStatus();
+
+                if( aod_enabled ) {
+                    if( wasPowered != mIsPowered && (mWakefulnessRaw == WAKEFULNESS_ASLEEP || mWakefulnessRaw == WAKEFULNESS_DOZING ) ) {
+                        Slog.i(TAG, "Update Aod On Charger Status");
+
+                        if( mIsPowered ) {
+                            //dreamPowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
+                            //    now, Process.SYSTEM_UID);
+                            dozeFromDozePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
+                                now, PowerManager.WAKE_REASON_PLUGGED_IN, Process.SYSTEM_UID);
+                        } else {
+                            sleepPowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
+                                now, PowerManager.WAKE_REASON_PLUGGED_IN, Process.SYSTEM_UID);
+                        }
+                    }
+                } else {
+
+                    // Treat plugging and unplugging the devices as a user activity.
+                    // Users find it disconcerting when they plug or unplug the device
+                    // and it shuts off right away.
+                    // Some devices also wake the device when plugged or unplugged because
+                    // they don't have a charging LED.
+                    if (shouldWakeUpWhenPluggedOrUnpluggedLocked(wasPowered, oldPlugType,
+                            dockedOnWirelessCharger)) {
+                        wakePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP),
+                                now, PowerManager.WAKE_REASON_PLUGGED_IN,
+                                "android.server.power:PLUGGED:" + mIsPowered, Process.SYSTEM_UID,
+                                mContext.getOpPackageName(), Process.SYSTEM_UID);
+                    }
                 }
 
                 userActivityNoUpdateLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), now,
@@ -2699,29 +2758,32 @@ public final class PowerManagerService extends SystemService
 
             mBatterySaverStateMachine.setBatteryStatus(mIsPowered, mBatteryLevel, mBatteryLevelLow);
             updateSmartChargingStatus();
-            updateAodOnChargerStatus();
         }
     }
 
-    private void updateAodOnChargerStatus() {
+    private boolean updateAodOnChargerStatus() {
 
         Slog.i(TAG, "updateAodOnChargerStatus");
         final ContentResolver resolver = mContext.getContentResolver();
 
-        if (Settings.Secure.getIntForUser(resolver,
-            Settings.Secure.DOZE_ALWAYS_ON_CHARGER, 0, UserHandle.USER_CURRENT) != 0) {
-            if( mIsPowered ) {
-                Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=true");
-                Settings.Secure.putIntForUser(resolver,
-                    Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 1, UserHandle.USER_CURRENT);
-            }
-        }
+        boolean enabled = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER, 0, UserHandle.USER_CURRENT) != 0;
 
-        if( !mIsPowered ) {
-                Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=false");
+        boolean active = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT) != 0;
+
+        if (enabled && mIsPowered && !active ) {
+            Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=" + mIsPowered + " enabled=" + enabled + " active=true");
+            Settings.Secure.putIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 1, UserHandle.USER_CURRENT);
+        } 
+
+        if( active && (!mIsPowered || !enabled) ) {
+                Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=" + mIsPowered + " enabled=" + enabled + " active=false");
             Settings.Secure.putIntForUser(resolver,
                 Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT);
         }
+        return enabled;
     }
 
 
@@ -3604,6 +3666,12 @@ public final class PowerManagerService extends SystemService
                 } else {
                     Slog.i(TAG, "Dreaming...");
                 }
+            } else {
+                if (wakefulness == WAKEFULNESS_DOZING) {
+                    //Slog.i(TAG, "Dozing ...");
+                } else {
+                    //Slog.i(TAG, "Dreaming ...");
+                }
             }
 
             // If preconditions changed, wait for the next iteration to determine
@@ -3652,6 +3720,7 @@ public final class PowerManagerService extends SystemService
                 }
             } else if (wakefulness == WAKEFULNESS_DOZING) {
                 if (isDreaming) {
+                    //Slog.i(TAG, "Continue Dozing ...");
                     return; // continue dozing
                 }
 
@@ -3952,7 +4021,7 @@ public final class PowerManagerService extends SystemService
      */
     @GuardedBy("mLock")
     private void updateSuspendBlockerLocked() {
-        final boolean needWakeLockSuspendBlocker = ((mWakeLockSummary & WAKE_LOCK_CPU) != 0);
+        boolean needWakeLockSuspendBlocker = ((mWakeLockSummary & WAKE_LOCK_CPU) != 0);
         final boolean needDisplaySuspendBlocker = needSuspendBlockerLocked();
         final boolean autoSuspend = !needDisplaySuspendBlocker;
         boolean interactive = false;
@@ -3960,6 +4029,7 @@ public final class PowerManagerService extends SystemService
             interactive = mPowerGroups.valueAt(idx).isBrightOrDimLocked();
         }
 
+        if( needDisplaySuspendBlocker ) needWakeLockSuspendBlocker = false;
         // Disable auto-suspend if needed.
         // FIXME We should consider just leaving auto-suspend enabled forever since
         // we already hold the necessary wakelocks.
