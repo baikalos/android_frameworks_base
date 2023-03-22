@@ -1772,7 +1772,30 @@ public final class BroadcastQueue {
                         mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid);
         }
 
-        if( !skip && callerBackground) {
+        if( !skip && callerBackground ) {
+            if( mService.mAppProfileManager.isStamina() && !appProfile.mStamina ) {
+                if( appProfile.getBackground() >= 0 ) {
+                    Slog.w(TAG, "Background execution disabled by baikalos stamina: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
+                            + r.intent + " to "
+                            + component.flattenToShortString()
+                            );
+                    skip = true;
+                }
+            }
+        }
+
+        if( !skip && callerBackground ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
                 if( appProfile.getBackground() > 1 ) {
                     Slog.w(TAG, "Background execution disabled by baikalos: "

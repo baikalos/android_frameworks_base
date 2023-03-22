@@ -131,7 +131,10 @@ public class AppProfile {
     public boolean mBAFSend;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mSonification;
+    public int mSonification;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mForceOnSpeaker;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mBypassCharging;
@@ -275,7 +278,7 @@ public class AppProfile {
             !mFullScreen &&
             !mBAFRecv &&
             !mBAFSend &&
-            !mSonification &&
+            mSonification == 0 &&
             !mBypassCharging &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
@@ -355,7 +358,7 @@ public class AppProfile {
         if( mFullScreen ) result +=  "," + "fs=" + mFullScreen;
         if( mBAFRecv ) result +=  "," + "bafr=" + mBAFRecv;
         if( mBAFSend ) result +=  "," + "bafs=" + mBAFSend;
-        if( mSonification ) result +=  "," + "sonf=" + mSonification;
+        if( mSonification != 0 ) result +=  "," + "sonf=" + mSonification;
         if( mBypassCharging ) result +=  "," + "bpc=" + mBypassCharging;
         return result;
     }
@@ -406,8 +409,8 @@ public class AppProfile {
             mFullScreen = parser.getBoolean("fs",false);
             mBAFRecv = parser.getBoolean("bafr",false);
             mBAFSend = parser.getBoolean("bafs",false);
-            mSonification = parser.getBoolean("sonf",false);
             mBypassCharging = parser.getBoolean("bpc",false);
+            mSonification = parser.getInt("sonf",0);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }

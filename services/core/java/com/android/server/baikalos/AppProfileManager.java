@@ -443,7 +443,7 @@ public class AppProfileManager {
     protected void setDeviceIdleModeLocked(boolean mode) {
         if( mDeviceIdleMode != mode ) {
             mDeviceIdleMode = mode;
-            if( mDeviceIdleMode ) {
+            //if( mDeviceIdleMode ) {
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Restore profile after device idle changed mode=" + mDeviceIdleMode);
                 mHandler.postDelayed( new Runnable() {
                     @Override
@@ -453,7 +453,7 @@ public class AppProfileManager {
                         }
                     }
                 }, 100);
-            }
+            //}
         }
     }
 
@@ -635,7 +635,7 @@ public class AppProfileManager {
 
         if( packageName != null )  packageName = packageName.split(":")[0];
 
-        //if( Runtime.isGmsUid(uid) && packageName != null && packageName.startsWith("com.google.android.gms.") ) packageName = "com.google.android.gms";
+        if( isGmsUid(uid) && packageName != null && packageName.startsWith("com.google.android.gms.") ) packageName = "com.google.android.gms";
 
         if( uid != mTopUid || packageName != mTopPackageName ) {
             mTopUid = uid;
@@ -960,6 +960,7 @@ public class AppProfileManager {
 
         if( !mAggressiveMode ) return false;
         if( mAppSettings == null ) return false;
+        if( uid < Process.FIRST_APPLICATION_UID ) return false;
         if( profile == null ) {
             if( packageName == null ) {
                 packageName = BaikalConstants.getPackageByUid(mContext, uid);
@@ -972,6 +973,14 @@ public class AppProfileManager {
 
     public boolean isBlocked(AppProfile profile) {
         if( profile == null ) return false;
+        if( profile.mUid < Process.FIRST_APPLICATION_UID ) return false;
+        if( isStamina() && !profile.mStamina ) {
+            if( profile.getBackground() < 0 ) {
+                return false;
+            }
+            Slog.w(TAG, "Background execution disabled by baikalos stamina:" + profile.mPackageName);
+            return true;
+        }
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
             if( profile.getBackground() > mode ) {
@@ -999,6 +1008,22 @@ public class AppProfileManager {
 
     public boolean isKillInBackground() {
         return mKillInBackground;
+    }
+
+    public boolean isExtreme() {
+        return mExtremeMode;
+    }
+
+    public boolean isAggressive() {
+        return mAggressiveMode;
+    }
+
+    public boolean isStamina() {
+        return mStaminaEnabled;
+    }
+
+    public boolean isScreenActive() {
+        return mScreenMode;
     }
 
     public boolean isTopAppUid(int uid) {

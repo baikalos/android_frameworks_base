@@ -139,15 +139,9 @@ public class AppProfileSettings extends ContentObserver {
                 Settings.Global.getUriFor(Settings.Global.BAIKALOS_APP_PROFILES),
                 false, this);
 
-/*            mResolver.registerContentObserver(
+            mResolver.registerContentObserver(
                 Settings.Global.getUriFor(Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE),
                 false, this);
-*/
-
-              mAutorevokeDisabled = Settings.Global.getInt(mResolver,
-                    Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
-
-
         } catch( Exception e ) {
         }
         
@@ -386,6 +380,10 @@ public class AppProfileSettings extends ContentObserver {
         mBackend.refreshList();
 
         try {
+
+            mAutorevokeDisabled = Settings.Global.getInt(mResolver,
+                    Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
+
             String appProfiles = Settings.Global.getString(mResolver,
                     Settings.Global.BAIKALOS_APP_PROFILES);
 
