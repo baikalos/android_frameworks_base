@@ -11797,6 +11797,12 @@ public final class Settings {
         public static final String SHOW_CPU_OVERLAY = "show_cpu_overlay";
 
         /**
+         * Control whether the process CPU info meter should be shown.
+         * @hide
+         */
+        public static final String SHOW_CPU_OVERLAY_LITE = "show_cpu_overlay_lite";
+
+        /**
          * Control whether the process FPS info meter should be shown.
          * @hide
          */
@@ -17134,6 +17140,21 @@ public final class Settings {
 
         /* Start of BaikalOS Global Settings */
 
+
+        /**
+         * This preference enables Debug
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEBUG = "baikalos_debug";
+
+        /**
+         * This preference DebugMask
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEBUG_MASK = "baikalos_debug_mask";
+
         /**
          * This preference enables Aggressive Idle.
          * @hide
@@ -17306,6 +17327,29 @@ public final class Settings {
          */
         @Readable
         public static final String BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE = "baikalos_boost_display_update_imminent_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_SILVER = "baikalos_boost_override_silver";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_GOLD = "baikalos_boost_override_gold";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_PLATINUM = "baikalos_boost_override_platinum";
+
+
 
 
         /* End of BaikalOS Global Settings */
