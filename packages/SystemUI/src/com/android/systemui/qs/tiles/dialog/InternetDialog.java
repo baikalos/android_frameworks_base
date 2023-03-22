@@ -274,9 +274,9 @@ public class InternetDialog extends SystemUIDialog implements
     @Override
     public void onStart() {
         super.onStart();
-        if (DEBUG) {
+        //if (DEBUG) {
             Log.d(TAG, "onStart");
-        }
+        //}
         mInternetDialogController.onStart(this, mCanConfigWifi);
         if (!mCanConfigWifi) {
             hideWifiViews();
@@ -295,9 +295,9 @@ public class InternetDialog extends SystemUIDialog implements
     @Override
     public void onStop() {
         super.onStop();
-        if (DEBUG) {
+        //if (DEBUG) {
             Log.d(TAG, "onStop");
-        }
+        //}
         mHandler.removeCallbacks(mHideProgressBarRunnable);
         mHandler.removeCallbacks(mHideSearchingRunnable);
         mMobileNetworkLayout.setOnClickListener(null);

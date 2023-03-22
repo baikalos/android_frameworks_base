@@ -613,13 +613,13 @@ void ASurfaceTransaction_setFrameRate(ASurfaceTransaction* aSurfaceTransaction,
 
 void ASurfaceTransaction_setFrameRateWithChangeStrategy(ASurfaceTransaction* aSurfaceTransaction,
                                                         ASurfaceControl* aSurfaceControl,
-                                                        float frameRate, int8_t compatibility,
-                                                        int8_t changeFrameRateStrategy) {
+                                                        float frameRate __unused, int8_t compatibility __unused,
+                                                        int8_t changeFrameRateStrategy __unused) {
     CHECK_NOT_NULL(aSurfaceTransaction);
     CHECK_NOT_NULL(aSurfaceControl);
-    Transaction* transaction = ASurfaceTransaction_to_Transaction(aSurfaceTransaction);
-    sp<SurfaceControl> surfaceControl = ASurfaceControl_to_SurfaceControl(aSurfaceControl);
-    transaction->setFrameRate(surfaceControl, frameRate, compatibility, changeFrameRateStrategy);
+    //Transaction* transaction = ASurfaceTransaction_to_Transaction(aSurfaceTransaction);
+    //sp<SurfaceControl> surfaceControl = ASurfaceControl_to_SurfaceControl(aSurfaceControl);
+    //transaction->setFrameRate(surfaceControl, frameRate, compatibility, changeFrameRateStrategy);
 }
 
 void ASurfaceTransaction_setEnableBackPressure(ASurfaceTransaction* aSurfaceTransaction,

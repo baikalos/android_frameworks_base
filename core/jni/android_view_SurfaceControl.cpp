@@ -800,10 +800,10 @@ static void nativeSetFlags(JNIEnv* env, jclass clazz, jlong transactionObj,
 
 static void nativeSetFrameRateSelectionPriority(JNIEnv* env, jclass clazz, jlong transactionObj,
         jlong nativeObject, jint priority) {
-    auto transaction = reinterpret_cast<SurfaceComposerClient::Transaction*>(transactionObj);
+    //auto transaction = reinterpret_cast<SurfaceComposerClient::Transaction*>(transactionObj);
 
-    SurfaceControl* const ctrl = reinterpret_cast<SurfaceControl *>(nativeObject);
-    transaction->setFrameRateSelectionPriority(ctrl, priority);
+    //SurfaceControl* const ctrl = reinterpret_cast<SurfaceControl *>(nativeObject);
+    //transaction->setFrameRateSelectionPriority(ctrl, priority);
 }
 
 static void nativeSetTransparentRegionHint(JNIEnv* env, jclass clazz, jlong transactionObj,

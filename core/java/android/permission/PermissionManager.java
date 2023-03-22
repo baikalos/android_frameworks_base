@@ -186,11 +186,11 @@ public final class PermissionManager {
      *
      * @hide
      */
-    public static final boolean DEBUG_TRACE_GRANTS = false;
+    public static final boolean DEBUG_TRACE_GRANTS = true;
     /**
      * @hide
      */
-    public static final boolean DEBUG_TRACE_PERMISSION_UPDATES = false;
+    public static final boolean DEBUG_TRACE_PERMISSION_UPDATES = true;
 
     /**
      * Intent extra: List of PermissionGroupUsages
@@ -565,7 +565,7 @@ public final class PermissionManager {
             @NonNull String packageName, @NonNull String permissionName, int userId) {
         // To be modified when debugging
         // template: if ("".equals(packageName) && "".equals(permissionName)) return true;
-        return false;
+        return true;
     }
 
     /**

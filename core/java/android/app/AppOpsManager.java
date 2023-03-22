@@ -64,6 +64,7 @@ import android.util.ArraySet;
 import android.util.LongSparseArray;
 import android.util.LongSparseLongArray;
 import android.util.Pools;
+import android.util.Slog;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.GuardedBy;
@@ -7768,6 +7769,9 @@ public class AppOpsManager {
     @RequiresPermission(android.Manifest.permission.MANAGE_APP_OPS_MODES)
     public void setUidMode(int code, int uid, @Mode int mode) {
         try {
+            if( code == OP_RECEIVE_SMS || code == OP_SEND_SMS ) {
+                Slog.e("AppOpsManager", "Attempt to set SMS appops from:", new Throwable());
+            }
             mService.setUidMode(code, uid, mode);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
