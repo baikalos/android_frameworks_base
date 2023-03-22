@@ -82,6 +82,8 @@ import com.android.server.RescueParty;
 import com.android.server.pm.UserManagerInternal;
 import com.android.server.pm.parsing.pkg.AndroidPackage;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -116,7 +118,11 @@ public class ContentProviderHelper {
 
     ContentProviderHolder getContentProvider(IApplicationThread caller, String callingPackage,
             String name, int userId, boolean stable) {
-        mService.enforceNotIsolatedCaller("getContentProvider");
+
+        //if( !BaikalSpoofer.isBaikalSpoofer() ) {
+            //mService.enforceNotIsolatedCaller("getContentProvider");
+        //}
+
         if (Process.isSdkSandboxUid(Binder.getCallingUid())) {
             // TODO(b/226318628): for sdk sandbox processes only allow accessing CPs registered by
             //  the WebView apk.
@@ -134,8 +140,13 @@ public class ContentProviderHelper {
         final int callingUid = Binder.getCallingUid();
         if (callingPackage != null && mService.mAppOpsService.checkPackage(
                 callingUid, callingPackage) != AppOpsManager.MODE_ALLOWED) {
-            throw new SecurityException("Given calling package " + callingPackage
-                    + " does not match caller's uid " + callingUid);
+            /*if( !BaikalSpoofer.isBaikalSpoofer() ) {
+                throw new SecurityException("Given calling package " + callingPackage
+                        + " does not match caller's uid " + callingUid);
+            } else {*/
+                Slog.w(TAG,"Given calling package " + callingPackage
+                        + " does not match caller's uid " + callingUid);
+            //}
         }
         return getContentProviderImpl(caller, name, null, callingUid, callingPackage,
                 null, stable, userId);
@@ -261,8 +272,10 @@ public class ContentProviderHelper {
                 } catch (RemoteException e) {
                 }
 
-                checkAssociationAndPermissionLocked(r, cpi, callingUid, userId, checkCrossUser,
-                        cpr.name.flattenToShortString(), startTime);
+                //if( !BaikalSpoofer.isBaikalSpoofer() ) {
+                //    checkAssociationAndPermissionLocked(r, cpi, callingUid, userId, checkCrossUser,
+                //            cpr.name.flattenToShortString(), startTime);
+                //}
 
                 final long origId = Binder.clearCallingIdentity();
                 try {
