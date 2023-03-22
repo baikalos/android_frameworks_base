@@ -159,17 +159,18 @@ public final class DropBoxManagerService extends SystemService {
     private final IDropBoxManagerService.Stub mStub = new IDropBoxManagerService.Stub() {
         @Override
         public void addData(String tag, byte[] data, int flags) {
-            DropBoxManagerService.this.addData(tag, data, flags);
+            //DropBoxManagerService.this.addData(tag, data, flags);
         }
 
         @Override
         public void addFile(String tag, ParcelFileDescriptor fd, int flags) {
-            DropBoxManagerService.this.addFile(tag, fd, flags);
+            //DropBoxManagerService.this.addFile(tag, fd, flags);
         }
 
         @Override
         public boolean isTagEnabled(String tag) {
-            return DropBoxManagerService.this.isTagEnabled(tag);
+            //return DropBoxManagerService.this.isTagEnabled(tag);
+            return false;
         }
 
         @Override
