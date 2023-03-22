@@ -74,6 +74,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 /**
  * <p>A system service manager for detecting, characterizing, and connecting to
  * {@link CameraDevice CameraDevices}.</p>
@@ -571,8 +573,16 @@ public final class CameraManager {
      * @see android.app.admin.DevicePolicyManager#setCameraDisabled
      */
     @NonNull
-    public CameraCharacteristics getCameraCharacteristics(@NonNull String cameraId)
+    public CameraCharacteristics getCameraCharacteristics(@NonNull String oCameraId)
             throws CameraAccessException {
+
+        Log.i(TAG, "BaikalCamera: getCameraCharacteristics camera Id " + oCameraId);
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,0);
+        if( !oCameraId.equals(cameraId) ) { 
+            Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
+        }
+
         CameraCharacteristics characteristics = null;
         if (CameraManagerGlobal.sCameraServiceDisabled) {
             throw new IllegalArgumentException("No cameras available on device");
@@ -635,7 +645,15 @@ public final class CameraManager {
      */
     @NonNull
     public CameraExtensionCharacteristics getCameraExtensionCharacteristics(
-            @NonNull String cameraId) throws CameraAccessException {
+            @NonNull String oCameraId) throws CameraAccessException {
+
+        Log.i(TAG, "BaikalCamera: getCameraExtensionCharacteristics camera Id " + oCameraId);
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,0);
+        if( !oCameraId.equals(cameraId) ) { 
+            Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
+        }
+
         CameraCharacteristics chars = getCameraCharacteristics(cameraId);
         return new CameraExtensionCharacteristics(mContext, cameraId, chars);
     }
@@ -646,8 +664,24 @@ public final class CameraManager {
                 new HashMap<String, CameraCharacteristics>();
         Set<String> physicalCameraIds = chars.getPhysicalCameraIds();
         for (String physicalCameraId : physicalCameraIds) {
-            CameraCharacteristics physicalChars = getCameraCharacteristics(physicalCameraId);
-            physicalIdsToChars.put(physicalCameraId, physicalChars);
+            //try {
+                Log.i(TAG, "getPhysicalIdToCharsMap " + physicalCameraId);
+                CameraCharacteristics physicalChars = getCameraCharacteristics(physicalCameraId);
+                physicalIdsToChars.put(physicalCameraId, physicalChars);
+                Log.i(TAG, "getPhysicalIdToCharsMap " + physicalCameraId + " -> " + physicalChars);
+            //} catch( Exception e ) {
+                /*physicalCameraId = SystemProperties.get("persist.sys.vendor.camera_override_id", "");
+                try {
+                    CameraCharacteristics physicalChars = getCameraCharacteristics(physicalCameraId);
+                    if( !"".equals(physicalChars) ) {
+                        physicalIdsToChars.put(physicalCameraId, physicalChars);
+                        Log.e(TAG, "getPhysicalIdToCharsMap override " + physicalCameraId + " -> " + physicalChars);
+                    }
+                } catch(Exception e2) {*/
+           //         Log.e(TAG, "getPhysicalIdToCharsMap ignore " + physicalCameraId);
+                    /*continue;
+                }*/
+           // }
         }
         return physicalIdsToChars;
     }
@@ -675,9 +709,19 @@ public final class CameraManager {
      * @see #getCameraIdList
      * @see android.app.admin.DevicePolicyManager#setCameraDisabled
      */
-    private CameraDevice openCameraDeviceUserAsync(String cameraId,
+    private CameraDevice openCameraDeviceUserAsync(String oCameraId,
             CameraDevice.StateCallback callback, Executor executor, final int uid,
             final int oomScoreOffset) throws CameraAccessException {
+
+        Log.i(TAG, "BaikalCamera openCameraDeviceUserAsync:" + oCameraId);
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
+        if( !oCameraId.equals(cameraId) ) { 
+            Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
+        }
+
+        // if( "-1".equals(cameraId) ) return null;
+
         CameraCharacteristics characteristics = getCameraCharacteristics(cameraId);
         CameraDevice device = null;
         Map<String, CameraCharacteristics> physicalIdsToChars =
@@ -829,9 +873,16 @@ public final class CameraManager {
      * @see android.app.admin.DevicePolicyManager#setCameraDisabled
      */
     @RequiresPermission(android.Manifest.permission.CAMERA)
-    public void openCamera(@NonNull String cameraId,
+    public void openCamera(@NonNull String oCameraId,
             @NonNull final CameraDevice.StateCallback callback, @Nullable Handler handler)
             throws CameraAccessException {
+
+        Log.i(TAG, "BaikalCamera: openCamera camera Id " + oCameraId);
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
+        if( !oCameraId.equals(cameraId) ) { 
+            Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
+        }
 
         openCameraForUid(cameraId, callback, CameraDeviceImpl.checkAndWrapHandler(handler),
                 USE_CALLING_UID);
@@ -866,13 +917,21 @@ public final class CameraManager {
      * @see android.app.admin.DevicePolicyManager#setCameraDisabled
      */
     @RequiresPermission(android.Manifest.permission.CAMERA)
-    public void openCamera(@NonNull String cameraId,
+    public void openCamera(@NonNull String oCameraId,
             @NonNull @CallbackExecutor Executor executor,
             @NonNull final CameraDevice.StateCallback callback)
             throws CameraAccessException {
         if (executor == null) {
             throw new IllegalArgumentException("executor was null");
         }
+
+        Log.i(TAG, "BaikalCamera: openCamera 2 camera Id " + oCameraId);
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
+        if( !oCameraId.equals(cameraId) ) { 
+            Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
+        }
+
         openCameraForUid(cameraId, callback, executor, USE_CALLING_UID);
     }
 
@@ -931,7 +990,7 @@ public final class CameraManager {
             android.Manifest.permission.SYSTEM_CAMERA,
             android.Manifest.permission.CAMERA,
     })
-    public void openCamera(@NonNull String cameraId, int oomScoreOffset,
+    public void openCamera(@NonNull String oCameraId, int oomScoreOffset,
             @NonNull @CallbackExecutor Executor executor,
             @NonNull final CameraDevice.StateCallback callback) throws CameraAccessException {
         if (executor == null) {
@@ -941,6 +1000,14 @@ public final class CameraManager {
             throw new IllegalArgumentException(
                     "oomScoreOffset < 0, cannot increase priority of camera client");
         }
+
+        Log.i(TAG, "BaikalCamera: openCamera 3 camera Id " + oCameraId);
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
+        if( !oCameraId.equals(cameraId) ) { 
+            Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
+        }
+
         openCameraForUid(cameraId, callback, executor, USE_CALLING_UID, oomScoreOffset);
     }
 
@@ -961,17 +1028,24 @@ public final class CameraManager {
      *             The minimum oom score that cameraservice must see for this client.
      * @hide
      */
-    public void openCameraForUid(@NonNull String cameraId,
+    public void openCameraForUid(@NonNull String oCameraId,
             @NonNull final CameraDevice.StateCallback callback, @NonNull Executor executor,
             int clientUid, int oomScoreOffset) throws CameraAccessException {
 
-        if (cameraId == null) {
+        if (oCameraId == null) {
             throw new IllegalArgumentException("cameraId was null");
         } else if (callback == null) {
             throw new IllegalArgumentException("callback was null");
         }
         if (CameraManagerGlobal.sCameraServiceDisabled) {
             throw new IllegalArgumentException("No cameras available on device");
+        }
+
+        Log.i(TAG, "BaikalCamera: openCameraForUid camera Id " + oCameraId);
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
+        if( !oCameraId.equals(cameraId) ) { 
+            Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
         }
 
         openCameraDeviceUserAsync(cameraId, callback, executor, clientUid, oomScoreOffset);
@@ -992,9 +1066,17 @@ public final class CameraManager {
      *
      * @hide
      */
-    public void openCameraForUid(@NonNull String cameraId,
+    public void openCameraForUid(@NonNull String oCameraId,
             @NonNull final CameraDevice.StateCallback callback, @NonNull Executor executor,
             int clientUid) throws CameraAccessException {
+
+            Log.i(TAG, "BaikalCamera: openCameraForUid 2 camera Id " + oCameraId);
+
+            String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
+            if( !oCameraId.equals(cameraId) ) { 
+                Log.i(TAG, "BaikalCamera: override camera Id " + oCameraId + " to " + cameraId);
+            }
+
             openCameraForUid(cameraId, callback, executor, clientUid, /*oomScoreOffset*/0);
     }
 
