@@ -761,19 +761,7 @@ public class AudioTrack extends PlayerBase
         super(attributes, AudioPlaybackConfiguration.PLAYER_TYPE_JAM_AUDIOTRACK);
         // mState already == STATE_UNINITIALIZED
 
-        if( AppProfile.getCurrentAppProfile().mSonification ) {
-            Log.i(TAG,"AudioTrack() Forced Sonification usage=FLAG_BEACON");
-            mAttributes = new AudioAttributes.Builder(mAttributes)
-                .replaceFlags((mAttributes.getAllFlags()
-                        | AudioAttributes.FLAG_BEACON))
-                .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                .build();
-            mConfiguredAudioAttributes = mAttributes;
-        } else {
-            Log.i(TAG,"AudioTrack() usage=USAGE_MEDIA");
-            mConfiguredAudioAttributes = attributes; // object copy not needed, immutable.
-        }
+        mConfiguredAudioAttributes = attributes; // object copy not needed, immutable.
 
         if (format == null) {
             throw new IllegalArgumentException("Illegal null AudioFormat");
@@ -1071,19 +1059,7 @@ public class AudioTrack extends PlayerBase
                 throw new IllegalArgumentException("Illegal null AudioAttributes argument");
             }
 
-            if( AppProfile.getCurrentAppProfile().mSonification ) {
-                Log.i(TAG,"AudioTrack() setAudioAttributes Forced Sonification usage=FLAG_BEACON");
-                mAttributes = new AudioAttributes.Builder(attributes)
-                    .replaceFlags((attributes.getAllFlags()
-                        | AudioAttributes.FLAG_BEACON))
-                    .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                    .build();
-            } else {
-                Log.i(TAG,"setAudioAttributes()");
-                // keep reference, we only copy the data when building
-                mAttributes = attributes;
-            }
+            mAttributes = attributes;
             return this;
         }
         
@@ -1340,18 +1316,6 @@ public class AudioTrack extends PlayerBase
                 mAttributes = new AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build();
-            }
-
-            if( AppProfile.getCurrentAppProfile().mSonification ) {
-                Log.i(TAG,"AudioTrack() Forced Sonification usage=FLAG_BEACON");
-                mAttributes = new AudioAttributes.Builder(mAttributes)
-                    .replaceFlags((mAttributes.getAllFlags()
-                            | AudioAttributes.FLAG_BEACON))
-                    .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                    .build();
-            } else {
-                Log.i(TAG,"AudioTrack()");
             }
 
             switch (mPerformanceMode) {

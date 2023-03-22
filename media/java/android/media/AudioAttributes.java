@@ -33,6 +33,8 @@ import android.util.Log;
 import android.util.SparseIntArray;
 import android.util.proto.ProtoOutputStream;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;
@@ -317,9 +319,9 @@ public final class AudioAttributes implements Parcelable {
         SUPPRESSIBLE_USAGES.put(USAGE_VOICE_COMMUNICATION_SIGNALLING,    SUPPRESSIBLE_NEVER);
         SUPPRESSIBLE_USAGES.put(USAGE_ALARM,                             SUPPRESSIBLE_ALARM);
         SUPPRESSIBLE_USAGES.put(USAGE_MEDIA,                             SUPPRESSIBLE_MEDIA);
-        SUPPRESSIBLE_USAGES.put(USAGE_ASSISTANCE_NAVIGATION_GUIDANCE,    SUPPRESSIBLE_MEDIA);
+        SUPPRESSIBLE_USAGES.put(USAGE_ASSISTANCE_NAVIGATION_GUIDANCE,    SUPPRESSIBLE_NOTIFICATION);
         SUPPRESSIBLE_USAGES.put(USAGE_GAME,                              SUPPRESSIBLE_MEDIA);
-        SUPPRESSIBLE_USAGES.put(USAGE_ASSISTANT,                         SUPPRESSIBLE_MEDIA);
+        SUPPRESSIBLE_USAGES.put(USAGE_ASSISTANT,                         SUPPRESSIBLE_NOTIFICATION);
         SUPPRESSIBLE_USAGES.put(USAGE_CALL_ASSISTANT,                    SUPPRESSIBLE_NEVER);
         /** default volume assignment is STREAM_MUSIC, handle unknown usage as media */
         SUPPRESSIBLE_USAGES.put(USAGE_UNKNOWN,                           SUPPRESSIBLE_MEDIA);
@@ -787,7 +789,7 @@ public final class AudioAttributes implements Parcelable {
          */
         @SuppressWarnings("unchecked") // for cloning of mTags
         public Builder(AudioAttributes aa) {
-            mUsage = aa.mUsage;
+            mUsage = BaikalSpoofer.overrideAudioUsage(aa.mUsage);
             mContentType = aa.mContentType;
             mSource = aa.mSource;
             mFlags = aa.getAllFlags();
@@ -798,6 +800,7 @@ public final class AudioAttributes implements Parcelable {
             if ((mFlags & FLAG_CAPTURE_PRIVATE) != 0) {
                 mPrivacySensitive = PRIVACY_SENSITIVE_ENABLED;
             }
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
         }
 
         /**
@@ -836,6 +839,8 @@ public final class AudioAttributes implements Parcelable {
                     break;
             }
 
+            aa.mUsage = BaikalSpoofer.overrideAudioUsage(aa.mUsage);
+
             aa.mSource = mSource;
             aa.mFlags = mFlags;
             if (mMuteHapticChannels) {
@@ -873,6 +878,8 @@ public final class AudioAttributes implements Parcelable {
                     && (mFlags & FLAG_HW_HOTWORD) == FLAG_HW_HOTWORD) {
                 aa.mFlags &= ~FLAG_HW_HOTWORD;
             }
+
+            aa.mFlags = BaikalSpoofer.overrideAudioFlags(aa.mFlags);
             return aa;
         }
 
@@ -917,6 +924,7 @@ public final class AudioAttributes implements Parcelable {
                 default:
                     throw new IllegalArgumentException("Invalid usage " + usage);
             }
+            mUsage = BaikalSpoofer.overrideAudioUsage(usage);
             return this;
         }
 
@@ -999,6 +1007,7 @@ public final class AudioAttributes implements Parcelable {
         public Builder setFlags(int flags) {
             flags &= AudioAttributes.FLAG_ALL_API_SET;
             mFlags |= flags;
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1020,6 +1029,7 @@ public final class AudioAttributes implements Parcelable {
             } else {
                 mFlags &= ~FLAG_HW_HOTWORD;
             }
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1046,6 +1056,7 @@ public final class AudioAttributes implements Parcelable {
          */
         public @NonNull Builder setAllowedCapturePolicy(@CapturePolicy int capturePolicy) {
             mFlags = capturePolicyToFlags(capturePolicy, mFlags);
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1086,6 +1097,7 @@ public final class AudioAttributes implements Parcelable {
          */
         public Builder replaceFlags(int flags) {
             mFlags = flags & AudioAttributes.FLAG_ALL;
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1228,6 +1240,9 @@ public final class AudioAttributes implements Parcelable {
             if (mUsage == USAGE_UNKNOWN) {
                 mUsage = usageForStreamType(streamType);
             }
+
+            mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1319,6 +1334,7 @@ public final class AudioAttributes implements Parcelable {
          */
         public Builder setForCallRedirection() {
             mFlags |= FLAG_CALL_REDIRECTION;
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
     };
@@ -1393,6 +1409,9 @@ public final class AudioAttributes implements Parcelable {
             default:
                 Log.e(TAG, "Illegal value unmarshalling AudioAttributes, can't initialize bundle");
         }
+
+        mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
+        mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
     }
 
     public static final @android.annotation.NonNull Parcelable.Creator<AudioAttributes> CREATOR

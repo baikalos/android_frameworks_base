@@ -155,20 +155,7 @@ public class SoundPool extends PlayerBase {
     private SoundPool(int maxStreams, AudioAttributes attributes) {
         super(attributes, AudioPlaybackConfiguration.PLAYER_TYPE_JAM_SOUNDPOOL);
 
-
-        if( AppProfile.getCurrentAppProfile().mSonification ) {
-            Log.i(TAG,"SoundPool() Forced Sonification usage=FLAG_BEACON");
-            mAttributes = new AudioAttributes.Builder(attributes)
-                .replaceFlags((attributes.getAllFlags()
-                        | AudioAttributes.FLAG_BEACON))
-                .setUsage(AudioAttributes.USAGE_UNKNOWN)
-                .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                .build();
-        } else {
-            Log.i(TAG,"SoundPool() usage=USAGE_MEDIA");
-            mAttributes = attributes;
-        }
-
+        mAttributes = attributes;
         // do native setup
         if (native_setup(maxStreams, mAttributes, getCurrentOpPackageName()) != 0) {
             throw new RuntimeException("Native setup failed");
