@@ -212,6 +212,14 @@ final class DefaultPermissionGrantPolicy {
         STORAGE_PERMISSIONS.add(Manifest.permission.READ_MEDIA_IMAGES);
     }
 
+    private static final Set<String> FILEACCESS_PERMISSIONS_FULL = new ArraySet<>();
+    static {
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.MANAGE_EXTERNAL_STORAGE);
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        FILEACCESS_PERMISSIONS_FULL.add(Manifest.permission.ACCESS_MEDIA_LOCATION);
+    }
+
     private static final Set<String> NEARBY_DEVICES_PERMISSIONS = new ArraySet<>();
     static {
         NEARBY_DEVICES_PERMISSIONS.add(Manifest.permission.BLUETOOTH_ADVERTISE);
@@ -224,6 +232,11 @@ final class DefaultPermissionGrantPolicy {
     private static final Set<String> NOTIFICATION_PERMISSIONS = new ArraySet<>();
     static {
         NOTIFICATION_PERMISSIONS.add(Manifest.permission.POST_NOTIFICATIONS);
+    }
+
+    private static final Set<String> SUSPEND_APP_PERMISSIONS = new ArraySet<>();
+    static {
+        SUSPEND_APP_PERMISSIONS.add(Manifest.permission.SUSPEND_APPS);
     }
 
     private static final int MSG_READ_DEFAULT_PERMISSION_EXCEPTIONS = 1;
@@ -389,6 +402,7 @@ final class DefaultPermissionGrantPolicy {
         grantDefaultSystemHandlerPermissions(pm, userId);
         grantSignatureAppsNotificationPermissions(pm, userId);
         grantDefaultPermissionExceptions(pm, userId);
+        grantDefaultSystemHandlerPermissionsBaikal(pm, userId);
 
         // Apply delayed state
         pm.apply();
@@ -479,6 +493,23 @@ final class DefaultPermissionGrantPolicy {
                     PackageManager.FLAG_PERMISSION_SYSTEM_FIXED,
                     0,
                     UserHandle.of(userId));
+		}
+		
+        // Grant ACCESS_COARSE_LOCATION to all system apps that have ACCESS_FINE_LOCATION
+        for (PackageInfo locPkg : packages) {
+            if (locPkg == null
+                    || !doesPackageSupportRuntimePermissions(locPkg)
+                    || ArrayUtils.isEmpty(locPkg.requestedPermissions)
+                    || !pm.isGranted(Manifest.permission.ACCESS_FINE_LOCATION,
+                            locPkg, UserHandle.of(userId))
+                    || pm.isSysComponentOrPersistentPlatformSignedPrivApp(locPkg)) {
+                continue;
+            }
+                    
+            grantRuntimePermissions(pm, locPkg,
+                    Collections.singleton(Manifest.permission.ACCESS_COARSE_LOCATION),
+                    true, // systemFixed
+                    userId);
         }
 
     }
@@ -538,6 +569,26 @@ final class DefaultPermissionGrantPolicy {
             }
         }
     }
+
+    private void grantDefaultSystemHandlerPermissionsBaikal(PackageManagerWrapper pm, int userId) {
+        Log.i(TAG, "Granting baikalos permissions to default platform handlers for user " + userId);
+
+        // ANX Camera
+        grantPermissionsToSystemPackage(pm, "com.android.camera", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "com.xiaomi.scanner", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "com.miui.extraphoto", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "com.miui.gallery", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, "james.dsp", userId, FILEACCESS_PERMISSIONS_FULL, SENSORS_PERMISSIONS);
+    }
+
 
     private void grantDefaultSystemHandlerPermissions(PackageManagerWrapper pm, int userId) {
         Log.i(TAG, "Granting permissions to default platform handlers for user " + userId);
@@ -920,6 +971,67 @@ final class DefaultPermissionGrantPolicy {
         String commonServiceAction = "android.adservices.AD_SERVICES_COMMON_SERVICE";
         grantPermissionsToSystemPackage(pm, getDefaultSystemHandlerServicePackage(pm,
                         commonServiceAction, userId), userId, NOTIFICATION_PERMISSIONS);
+
+        // Android Setup
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.apps.restore", userId, PHONE_PERMISSIONS,
+                CONTACTS_PERMISSIONS, SMS_PERMISSIONS);
+
+        // Carrier Setup
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.carriersetup", userId, PHONE_PERMISSIONS,
+                SMS_PERMISSIONS);
+
+        // Flipendo
+        grantSystemFixedPermissionsToSystemPackage(pm,
+                getDefaultProviderAuthorityPackage("com.google.android.flipendo", userId),
+                userId, SUSPEND_APP_PERMISSIONS);
+
+        // Mediascanner
+        grantSystemFixedPermissionsToSystemPackage(pm,
+                getDefaultProviderAuthorityPackage("com.android.providers.media.MediaProvider", userId), userId,
+                STORAGE_PERMISSIONS);
+
+        // Device Personalization Services
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.as", userId, CALENDAR_PERMISSIONS,
+                CAMERA_PERMISSIONS, CONTACTS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS,
+                MICROPHONE_PERMISSIONS, PHONE_PERMISSIONS, SMS_PERMISSIONS);
+
+        // Google sound picker
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.soundpicker", userId, STORAGE_PERMISSIONS);
+
+        // Google Wallpapers
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.apps.wallpaper", userId, PHONE_PERMISSIONS,
+                STORAGE_PERMISSIONS);
+
+        // Pixel Launcher
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.apps.nexuslauncher", userId, PHONE_PERMISSIONS,
+                STORAGE_PERMISSIONS);
+
+        // Pixel Live Wallpapers
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.pixel.livewallpaper", userId, ALWAYS_LOCATION_PERMISSIONS);
+
+        // Google Markup
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.markup", userId, STORAGE_PERMISSIONS);
+
+        // Google Photos
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.apps.photos", userId, CONTACTS_PERMISSIONS,
+                PHONE_PERMISSIONS, STORAGE_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+
+        // Google Recorder
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.apps.recorder", userId, MICROPHONE_PERMISSIONS,
+                ALWAYS_LOCATION_PERMISSIONS);
+
+        // SafetyHub
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.apps.safetyhub", userId, SENSORS_PERMISSIONS,
+                CONTACTS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS, MICROPHONE_PERMISSIONS, PHONE_PERMISSIONS);
+
+        // Settings Services
+        grantSystemFixedPermissionsToSystemPackage(pm,"com.google.android.settings.intelligence", userId, PHONE_PERMISSIONS,
+                ALWAYS_LOCATION_PERMISSIONS);
+
+        // Google App
+        grantPermissionsToPackage(pm, "com.google.android.googlequicksearchbox", userId,
+                false /* ignoreSystemPackage */, true /*whitelistRestrictedPermissions*/,
+                PHONE_PERMISSIONS);
     }
 
     private String getDefaultSystemHandlerActivityPackageForCategory(PackageManagerWrapper pm,

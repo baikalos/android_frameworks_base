@@ -86,6 +86,7 @@ import com.android.server.LocalServices;
 import com.android.server.SystemService;
 import com.android.server.companion.virtual.VirtualDeviceManagerInternal;
 
+import com.android.internal.baikalos.BaikalTrust;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -157,6 +158,7 @@ public class TrustManagerService extends SystemService {
     private final UserManager mUserManager;
     private final ActivityManager mActivityManager;
     private VirtualDeviceManagerInternal mVirtualDeviceManager;
+    private final BaikalTrust mBaikalTrust;
 
     @GuardedBy("mUserIsTrusted")
     private final SparseBooleanArray mUserIsTrusted = new SparseBooleanArray();
@@ -231,6 +233,8 @@ public class TrustManagerService extends SystemService {
 
     private boolean mTrustAgentsCanRun = false;
     private int mCurrentUser = UserHandle.USER_SYSTEM;
+    private boolean mBaikalTrusted = false;
+
 
     public TrustManagerService(Context context) {
         super(context);
@@ -241,6 +245,7 @@ public class TrustManagerService extends SystemService {
         mStrongAuthTracker = new StrongAuthTracker(context);
         mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         mSettingsObserver = new SettingsObserver(mHandler);
+	    mBaikalTrust = new BaikalTrust(mHandler,context);
     }
 
     @Override
@@ -1247,6 +1252,22 @@ public class TrustManagerService extends SystemService {
         if (!mStrongAuthTracker.isTrustAllowedForUser(userId)) {
             return false;
         }
+
+	    if( mBaikalTrust != null ) {
+            // BaikalOS Smart Trust hook
+            boolean baikalTrusted = mBaikalTrust.isTrusted();
+	        if( baikalTrusted != mBaikalTrusted ) {
+	            mBaikalTrusted = baikalTrusted;
+	            updateTrustAll();
+	        }
+
+            if( baikalTrusted ) {
+                Log.w(TAG, "aggregateIsTrusted: baikal trusted");
+                return true; 
+            }
+	    }
+
+
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
             if (info.userId == userId) {

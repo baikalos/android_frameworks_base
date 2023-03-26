@@ -140,6 +140,9 @@ import com.android.server.wm.ActivityServiceConnectionsHolder;
 import com.android.server.wm.WindowManagerService;
 import com.android.server.wm.WindowProcessController;
 
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.server.baikalos.BaikalAppManagerService;
+
 import dalvik.system.VMRuntime;
 
 import java.io.DataInputStream;
@@ -278,16 +281,16 @@ public final class ProcessList {
     static final int PAGE_SIZE = 4 * 1024;
 
     // Activity manager's version of Process.THREAD_GROUP_BACKGROUND
-    static final int SCHED_GROUP_BACKGROUND = 0;
+    public static final int SCHED_GROUP_BACKGROUND = 0;
       // Activity manager's version of Process.THREAD_GROUP_RESTRICTED
-    static final int SCHED_GROUP_RESTRICTED = 1;
+    public static final int SCHED_GROUP_RESTRICTED = 1;
     // Activity manager's version of Process.THREAD_GROUP_DEFAULT
-    static final int SCHED_GROUP_DEFAULT = 2;
+    public static final int SCHED_GROUP_DEFAULT = 2;
     // Activity manager's version of Process.THREAD_GROUP_TOP_APP
     public static final int SCHED_GROUP_TOP_APP = 3;
     // Activity manager's version of Process.THREAD_GROUP_TOP_APP
     // Disambiguate between actual top app and processes bound to the top app
-    static final int SCHED_GROUP_TOP_APP_BOUND = 4;
+    public static final int SCHED_GROUP_TOP_APP_BOUND = 4;
 
     // The minimum number of cached apps we want to be able to keep around,
     // without empty apps being able to push them out of memory.
@@ -1394,7 +1397,7 @@ public final class ProcessList {
      *
      * {@hide}
      */
-    public static void setOomAdj(int pid, int uid, int amt) {
+    public static void setOomAdj(int pid, int uid, int amt, boolean pinned) {
         // This indicates that the process is not started yet and so no need to proceed further.
         if (pid <= 0) {
             return;
@@ -1407,7 +1410,8 @@ public final class ProcessList {
         buf.putInt(LMK_PROCPRIO);
         buf.putInt(pid);
         buf.putInt(uid);
-        buf.putInt(amt);
+        if( pinned && amt > -100 ) buf.putInt(-100);
+        else buf.putInt(amt);
         writeLmkd(buf, null);
         long now = SystemClock.elapsedRealtime();
         if ((now-start) > 250) {
@@ -2862,6 +2866,7 @@ public final class ProcessList {
             }
             boolean willRestart = false;
             if (app.isPersistent() && !app.isolated) {
+
                 if (!callerWillRestart) {
                     willRestart = true;
                 } else {
@@ -2871,6 +2876,12 @@ public final class ProcessList {
             app.killLocked(reason, reasonCode, subReason, true);
             mService.handleAppDiedLocked(app, pid, willRestart, allowRestart,
                     false /* fromBinderDied */);
+
+            if( BaikalAppManagerService.shouldHide(app.userId, app.info.packageName) ) {
+                willRestart = false;
+                needRestart = false;
+            }
+
             if (willRestart) {
                 removeLruProcessLocked(app);
                 mService.addAppLocked(app.info, null, false, null /* ABI override */,
@@ -3019,6 +3030,18 @@ public final class ProcessList {
             // is required by the system server to prevent it being killed.
             state.setMaxAdj(ProcessList.PERSISTENT_SERVICE_ADJ);
         }
+
+        if( r.mAppProfile.mPinned ) {
+            state.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
+            Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
+        }
+
+        if( r.mAppProfile.mBackground > 0 ) {
+            Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for restricted app " + info.packageName + ", profile=" + r.mAppProfile, new Throwable());
+        } else {
+            Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.mAppProfile);
+        }
+
         addProcessNameLocked(r);
         return r;
     }
@@ -4324,6 +4347,8 @@ public final class ProcessList {
                 foreground = 'A';
             } else if (psr.hasForegroundServices()) {
                 foreground = 'S';
+            } else if (r.mAppProfile.mPinned) {
+                foreground = 'P';
             } else {
                 foreground = ' ';
             }
@@ -5032,6 +5057,9 @@ public final class ProcessList {
     long killAppIfBgRestrictedAndCachedIdleLocked(ProcessRecord app, long nowElapsed) {
         final UidRecord uidRec = app.getUidRecord();
         final long lastCanKillTime = app.mState.getLastCanKillOnBgRestrictedAndIdleTime();
+        
+        if( app.mAppProfile.mPinned ) return 0;
+
         if (!mService.mConstants.mKillBgRestrictedAndCachedIdle
                 || app.isKilled() || app.getThread() == null || uidRec == null || !uidRec.isIdle()
                 || !app.isCached() || app.mState.shouldNotKillOnBgRestrictedAndIdle()
@@ -5086,10 +5114,10 @@ public final class ProcessList {
     @GuardedBy("mService")
     void noteAppKill(final ProcessRecord app, final @Reason int reason,
             final @SubReason int subReason, final String msg) {
-        if (DEBUG_PROCESSES) {
+        //if (DEBUG_PROCESSES) {
             Slog.i(TAG, "note: " + app + " is being killed, reason: " + reason
                     + ", sub-reason: " + subReason + ", message: " + msg);
-        }
+        //}
         if (app.getPid() > 0 && !app.isolated && app.getDeathRecipient() != null) {
             // We are killing it, put it into the dying process list.
             mDyingProcesses.put(app.processName, app.uid, app);
@@ -5101,10 +5129,10 @@ public final class ProcessList {
     @GuardedBy("mService")
     void noteAppKill(final int pid, final int uid, final @Reason int reason,
             final @SubReason int subReason, final String msg) {
-        if (DEBUG_PROCESSES) {
+        //if (DEBUG_PROCESSES) {
             Slog.i(TAG, "note: " + pid + " is being killed, reason: " + reason
                     + ", sub-reason: " + subReason + ", message: " + msg);
-        }
+        //}
 
         final ProcessRecord app;
         synchronized (mService.mPidsSelfLocked) {
@@ -5157,6 +5185,25 @@ public final class ProcessList {
             }
         }
         return new Pair<>(numForegroundServices, procs);
+    }
+
+
+
+    /**
+     * Update AppProfile changed signal
+     * 
+     */
+    @GuardedBy("mService")
+    void handleUpdateAppProfileChanged() {
+        AppProfileSettings appSettings = AppProfileSettings.getInstance();
+        if( appSettings != null ) { 
+            for (int i = 0, size = mLruProcesses.size(); i < size; i++) {
+                ProcessRecord pr = mLruProcesses.get(i);
+                pr.mAppProfile = appSettings.getProfile(pr.info.packageName);
+            }
+        } else {
+            Slog.w(TAG, "ProcessList: AppProfileSettings not ready");
+        }
     }
 
     private final class ImperceptibleKillRunner extends IUidObserver.Stub {

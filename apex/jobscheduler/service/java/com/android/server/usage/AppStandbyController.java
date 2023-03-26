@@ -126,6 +126,9 @@ import com.android.server.LocalServices;
 import com.android.server.pm.parsing.pkg.AndroidPackage;
 import com.android.server.usage.AppIdleHistory.AppUsageHistory;
 
+import android.baikalos.AppProfile;
+import com.android.server.baikalos.AppProfileManager;
+
 import libcore.util.EmptyArray;
 
 import java.io.File;
@@ -1413,6 +1416,18 @@ public class AppStandbyController
             return STANDBY_BUCKET_EXEMPTED;
         }
         if (mSystemServicesReady) {
+
+            AppProfile profile = AppProfileManager.getProfile(packageName);
+
+            if( AppProfileManager.getInstance().isStamina() && !profile.mStamina && profile.getBackground() >= 0 ) {
+                return STANDBY_BUCKET_NEVER;
+            }
+            if( profile.getBackground() > 0 ) {
+                return STANDBY_BUCKET_NEVER;
+            }
+            if( profile.getBackground() < 0 ) {
+                return STANDBY_BUCKET_EXEMPTED;
+            }
             // We allow all whitelisted apps, including those that don't want to be whitelisted
             // for idle mode, because app idle (aka app standby) is really not as big an issue
             // for controlling who participates vs. doze mode.
@@ -1786,7 +1801,7 @@ public class AppStandbyController
                     // shouldn't be surprising.
                     // Exclude REASON_SUB_FORCED_USER_FLAG_INTERACTION since the RESTRICTED bucket
                     // isn't directly visible in that flow.
-                    if (Build.IS_DEBUGGABLE
+                    if (Build.IS_ENG
                             && (reason & REASON_SUB_MASK)
                             != REASON_SUB_FORCED_USER_FLAG_INTERACTION) {
                         Toast.makeText(mContext,

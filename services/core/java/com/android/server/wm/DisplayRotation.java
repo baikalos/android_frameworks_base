@@ -199,6 +199,8 @@ public class DisplayRotation {
     @Surface.Rotation
     private int mUserRotation = Surface.ROTATION_0;
 
+    private int mBaikalUserRotation = -1;
+
     private static final int CAMERA_ROTATION_DISABLED = 0;
     private static final int CAMERA_ROTATION_ENABLED = 1;
     private int mCameraRotationMode = CAMERA_ROTATION_DISABLED;
@@ -890,6 +892,13 @@ public class DisplayRotation {
             return mUserRotationMode == WindowManagerPolicy.USER_ROTATION_LOCKED;
         }
 
+        int baikalUserRotation = Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_DEFAULT_ROTATION, -1);
+
+        if( baikalUserRotation > -1 ) {
+            return baikalUserRotation != 0;
+        }
+
         return Settings.System.getIntForUser(mContext.getContentResolver(),
                 Settings.System.ACCELEROMETER_ROTATION, 0, UserHandle.USER_CURRENT) == 0;
     }
@@ -1499,6 +1508,16 @@ public class DisplayRotation {
                 shouldUpdateRotation = true;
             }
 
+            final int baikalUserRotation = Settings.Global.getInt(resolver,
+                        Settings.Global.BAIKALOS_DEFAULT_ROTATION,0);
+            boolean baikalRotationChanged = false;
+            if( baikalUserRotation != mBaikalUserRotation ) {
+                mBaikalUserRotation = baikalUserRotation;
+                shouldUpdateOrientationListener = true;
+                shouldUpdateRotation = true;
+                baikalRotationChanged = true;
+            }
+
             final int userRotationAngles = Settings.System.getIntForUser(resolver,
                     Settings.System.ACCELEROMETER_ROTATION_ANGLES, -1, UserHandle.USER_CURRENT);
             if (mUserRotationAngles != userRotationAngles) {
@@ -1506,15 +1525,35 @@ public class DisplayRotation {
                 shouldUpdateRotation = true;
             }
 
-            final int userRotationMode = Settings.System.getIntForUser(resolver,
-                    Settings.System.ACCELEROMETER_ROTATION, 0, UserHandle.USER_CURRENT) != 0
-                            ? WindowManagerPolicy.USER_ROTATION_FREE
-                            : WindowManagerPolicy.USER_ROTATION_LOCKED;
-            if (mUserRotationMode != userRotationMode) {
-                mUserRotationMode = userRotationMode;
-                shouldUpdateOrientationListener = true;
-                shouldUpdateRotation = true;
+            if( mBaikalUserRotation == -1 )  {
+                final int userRotationMode = Settings.System.getIntForUser(resolver,
+                        Settings.System.ACCELEROMETER_ROTATION, 0, UserHandle.USER_CURRENT) != 0
+                                ? WindowManagerPolicy.USER_ROTATION_FREE
+                                : WindowManagerPolicy.USER_ROTATION_LOCKED;
+                if (mUserRotationMode != userRotationMode) {
+                    mUserRotationMode = userRotationMode;
+                    shouldUpdateOrientationListener = true;
+                    shouldUpdateRotation = true;
+                }
+            } else if( mBaikalUserRotation == 0 ) {
+                if (mUserRotationMode != WindowManagerPolicy.USER_ROTATION_FREE) {
+                    mUserRotationMode = WindowManagerPolicy.USER_ROTATION_FREE;
+                    shouldUpdateOrientationListener = true;
+                    shouldUpdateRotation = true;
+                }
+            } else {
+                if (mUserRotationMode != WindowManagerPolicy.USER_ROTATION_LOCKED) {
+                    mUserRotationMode = WindowManagerPolicy.USER_ROTATION_LOCKED;
+                    shouldUpdateOrientationListener = true;
+                    shouldUpdateRotation = true;
+                }
+                if (mUserRotation != mBaikalUserRotation-1) {
+                    mUserRotation = mBaikalUserRotation-1;
+                    shouldUpdateOrientationListener = true;
+                    shouldUpdateRotation = true;
+                }
             }
+
 
             if (shouldUpdateOrientationListener) {
                 updateOrientationListenerLw(); // Enable or disable the orientation listener.

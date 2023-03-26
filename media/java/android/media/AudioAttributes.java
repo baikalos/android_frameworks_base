@@ -33,6 +33,8 @@ import android.util.Log;
 import android.util.SparseIntArray;
 import android.util.proto.ProtoOutputStream;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;

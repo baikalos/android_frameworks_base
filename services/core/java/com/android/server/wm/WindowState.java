@@ -262,6 +262,8 @@ import com.android.server.policy.WindowManagerPolicy;
 import com.android.server.wm.LocalAnimationAdapter.AnimationSpec;
 import com.android.server.wm.SurfaceAnimator.AnimationType;
 
+import com.android.server.baikalos.AppProfileManager;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import java.io.PrintWriter;
@@ -1212,6 +1214,11 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
             mAttrs.flags |= FLAG_SHOW_WHEN_LOCKED;
         }
 
+        if( AppProfileManager.getCurrentProfile().mForcedScreenshot ) {
+            Slog.v(TAG, "forcedScreenShot " + this + " token=" + mToken);
+            mAttrs.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+        }
+
         mWinAnimator = new WindowStateAnimator(this);
         mWinAnimator.mAlpha = a.alpha;
 
@@ -2025,6 +2032,11 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
 
     boolean isSecureLocked() {
         if ((mAttrs.flags & WindowManager.LayoutParams.FLAG_SECURE) != 0) {
+            if( AppProfileManager.getCurrentProfile().mForcedScreenshot ) {
+                Slog.v(TAG, "isSecureLocked: forcedScreenShot " + this + " token=" + mToken);
+                mAttrs.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+                return false;
+            }
             return true;
         }
         return !DevicePolicyCache.getInstance().isScreenCaptureAllowed(mShowUserId);

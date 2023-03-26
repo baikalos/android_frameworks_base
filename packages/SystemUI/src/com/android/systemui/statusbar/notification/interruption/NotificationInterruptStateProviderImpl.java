@@ -23,6 +23,7 @@ import static com.android.systemui.statusbar.notification.interruption.Notificat
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.database.ContentObserver;
 import android.hardware.display.AmbientDisplayConfiguration;
 import android.os.Handler;
@@ -77,6 +78,8 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
     @VisibleForTesting
     protected boolean mUseHeadsUp = false;
+
+    private boolean mInCall = false;
 
     public enum NotificationInterruptEvent implements UiEventLogger.UiEventEnum {
         @UiEvent(doc = "FSI suppressed for suppressive GroupAlertBehavior")
@@ -143,6 +146,9 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                         mHeadsUpManager.releaseAllImmediately();
                     }
                 }
+                mInCall = Settings.Global.getInt(
+                        mContentResolver,
+                        Settings.Global.BAIKALOS_HEADSUP_INCALL,0) != 0;
             }
         };
 
@@ -154,6 +160,11 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             mContentResolver.registerContentObserver(
                     Settings.Global.getUriFor(SETTING_HEADS_UP_TICKER), true,
                     headsUpObserver);
+
+            mContentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HEADSUP_INCALL), true,
+                    headsUpObserver);
+
         }
         headsUpObserver.onChange(true); // set up
     }

@@ -20,6 +20,8 @@ import static android.app.ActivityManager.PROCESS_CAPABILITY_NONE;
 import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
 import static android.app.ActivityManager.PROCESS_STATE_NONEXISTENT;
 
+import static android.os.Process.THREAD_GROUP_DEFAULT;
+
 import static com.android.server.am.ActivityManagerDebugConfig.DEBUG_OOM_ADJ;
 import static com.android.server.am.ProcessProfileRecord.HOSTING_COMPONENT_TYPE_ACTIVITY;
 import static com.android.server.am.ProcessProfileRecord.HOSTING_COMPONENT_TYPE_BROADCAST_RECEIVER;
@@ -103,6 +105,12 @@ final class ProcessStateRecord {
      */
     @CompositeRWLock({"mService", "mProcLock"})
     private int mCurSchedGroup = ProcessList.SCHED_GROUP_BACKGROUND;
+
+    /**
+     * Currently desired process scheduling class.
+     */
+    @CompositeRWLock({"mService", "mProcLock"})
+    private int mCurProcSchedGroup = THREAD_GROUP_DEFAULT;
 
     /**
      * Last set to background scheduling class.
@@ -564,6 +572,17 @@ final class ProcessStateRecord {
     @GuardedBy(anyOf = {"mService", "mProcLock"})
     int getCurrentSchedulingGroup() {
         return mCurSchedGroup;
+    }
+
+    @GuardedBy({"mService", "mProcLock"})
+    void setCurrentProcSchedGroup(int curProcSchedGroup) {
+        mCurProcSchedGroup = curProcSchedGroup;
+        //mApp.getWindowProcessController().setCurrentSchedulingGroup(curSchedGroup);
+    }
+
+    @GuardedBy(anyOf = {"mService", "mProcLock"})
+    int getCurrentProcSchedGroup() {
+        return mCurProcSchedGroup;
     }
 
     @GuardedBy({"mService", "mProcLock"})

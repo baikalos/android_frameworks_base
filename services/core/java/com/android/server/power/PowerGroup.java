@@ -40,6 +40,9 @@ import android.os.Trace;
 import android.util.Slog;
 import android.view.Display;
 
+import android.baikalos.AppProfile;
+import com.android.server.baikalos.AppProfileManager;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.LatencyTracker;
 
@@ -452,6 +455,7 @@ public class PowerGroup {
 
         if ((wakeLockSummary & WAKE_LOCK_SCREEN_BRIGHT) != 0
                 || !bootCompleted
+                || (AppProfileManager.getCurrentProfile().mKeepOn && getWakefulnessLocked() == WAKEFULNESS_AWAKE)
                 || (getUserActivitySummaryLocked() & USER_ACTIVITY_SCREEN_BRIGHT) != 0
                 || screenBrightnessBoostInProgress) {
             return DisplayPowerRequest.POLICY_BRIGHT;
@@ -464,16 +468,37 @@ public class PowerGroup {
         return mDisplayPowerRequest.policy;
     }
 
-    boolean updateLocked(float screenBrightnessOverride, boolean useProximitySensor,
-            boolean boostScreenBrightness, int dozeScreenState, float dozeScreenBrightness,
-            boolean overrideDrawWakeLock, PowerSaveState powerSaverState, boolean quiescent,
-            boolean dozeAfterScreenOff, boolean vrModeEnabled, boolean bootCompleted,
-            boolean screenBrightnessBoostInProgress, boolean waitForNegativeProximity) {
+    boolean updateLocked(float screenBrightnessOverride, boolean autoBrightness,
+            boolean useProximitySensor, boolean boostScreenBrightness, int dozeScreenState,
+            float dozeScreenBrightness, boolean overrideDrawWakeLock,
+            PowerSaveState powerSaverState, boolean quiescent, boolean dozeAfterScreenOff,
+            boolean vrModeEnabled, boolean bootCompleted, boolean screenBrightnessBoostInProgress,
+            boolean waitForNegativeProximity, int brightnessOverrideFromBaikalService) {
         mDisplayPowerRequest.policy = getDesiredScreenPolicyLocked(quiescent, dozeAfterScreenOff,
                 vrModeEnabled, bootCompleted, screenBrightnessBoostInProgress);
         mDisplayPowerRequest.screenBrightnessOverride = screenBrightnessOverride;
+        //mDisplayPowerRequest.useAutoBrightness = autoBrightness;
         mDisplayPowerRequest.useProximitySensor = useProximitySensor;
         mDisplayPowerRequest.boostScreenBrightness = boostScreenBrightness;
+
+            if( brightnessOverrideFromBaikalService == -2 ) {
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = 0.5f;
+                mDisplayPowerRequest.lowPowerMode = true;
+            }
+
+            if( brightnessOverrideFromBaikalService == -3 ) {
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = 0.25f;
+                mDisplayPowerRequest.lowPowerMode = true;
+            }
+
+            if( brightnessOverrideFromBaikalService == -6 ) {
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = 1.6f;
+                mDisplayPowerRequest.lowPowerMode = true;
+            } else {
+                mDisplayPowerRequest.lowPowerMode = powerSaverState.batterySaverEnabled;
+                mDisplayPowerRequest.screenLowPowerBrightnessFactor = powerSaverState.brightnessFactor;
+            }
+
 
         if (mDisplayPowerRequest.policy == DisplayPowerRequest.POLICY_DOZE) {
             mDisplayPowerRequest.dozeScreenState = dozeScreenState;
@@ -490,8 +515,8 @@ public class PowerGroup {
             mDisplayPowerRequest.dozeScreenState = Display.STATE_UNKNOWN;
             mDisplayPowerRequest.dozeScreenBrightness = PowerManager.BRIGHTNESS_INVALID_FLOAT;
         }
-        mDisplayPowerRequest.lowPowerMode = powerSaverState.batterySaverEnabled;
-        mDisplayPowerRequest.screenLowPowerBrightnessFactor = powerSaverState.brightnessFactor;
+
+
         boolean ready = mDisplayManagerInternal.requestPowerState(mGroupId, mDisplayPowerRequest,
                 waitForNegativeProximity);
         mNotifier.onScreenPolicyUpdate(mGroupId, mDisplayPowerRequest.policy);

@@ -24,6 +24,9 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.SparseArray;
+import android.util.Slog;
+
+import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.internal.R;
 import com.android.internal.util.ArrayUtils;
@@ -40,12 +43,14 @@ public class AmbientDisplayConfiguration {
     private static final String TAG = "AmbientDisplayConfig";
     private final Context mContext;
     private final boolean mAlwaysOnByDefault;
-    private final boolean mPickupGestureEnabledByDefault;
+    private final boolean mDozeEnabledByDefault;
+    private final boolean mPickupGestureEnabledByDefault;    
 
     /** Copied from android.provider.Settings.Secure since these keys are hidden. */
     private static final String[] DOZE_SETTINGS = {
             Settings.Secure.DOZE_ENABLED,
             Settings.Secure.DOZE_ALWAYS_ON,
+            Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON,
             Settings.Secure.DOZE_PICK_UP_GESTURE,
             Settings.Secure.DOZE_PULSE_ON_LONG_PRESS,
             Settings.Secure.DOZE_DOUBLE_TAP_GESTURE,
@@ -66,6 +71,7 @@ public class AmbientDisplayConfiguration {
     public AmbientDisplayConfiguration(Context context) {
         mContext = context;
         mAlwaysOnByDefault = mContext.getResources().getBoolean(R.bool.config_dozeAlwaysOnEnabled);
+        mDozeEnabledByDefault = mContext.getResources().getBoolean(R.bool.config_doze_enabled_by_default);
         mPickupGestureEnabledByDefault =
                 mContext.getResources().getBoolean(R.bool.config_dozePickupGestureEnabled);
     }
@@ -86,7 +92,7 @@ public class AmbientDisplayConfiguration {
 
     /** @hide */
     public boolean pulseOnNotificationEnabled(int user) {
-        return boolSettingDefaultOn(Settings.Secure.DOZE_ENABLED, user)
+        return boolSetting(Settings.Secure.DOZE_ENABLED, user, mDozeEnabledByDefault ? 1 : 0)
                 && pulseOnNotificationAvailable();
     }
 
@@ -223,7 +229,11 @@ public class AmbientDisplayConfiguration {
      */
     @TestApi
     public boolean alwaysOnEnabled(int user) {
-        return boolSetting(Settings.Secure.DOZE_ALWAYS_ON, user, mAlwaysOnByDefault ? 1 : 0)
+        if( boolSetting(Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, user, 0)
+                && alwaysOnAvailable() && !accessibilityInversionEnabled(user) ) {
+            return true;
+        }
+        return boolSetting(Settings.Secure.DOZE_ALWAYS_ON, user, /*mAlwaysOnByDefault ? 1 :*/ 0)
                 && alwaysOnAvailable() && !accessibilityInversionEnabled(user);
     }
 

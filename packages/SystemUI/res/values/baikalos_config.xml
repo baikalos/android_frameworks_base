@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+** Copyright 2009, The Android Open Source Project
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**     http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+*/
+-->
+
+<!-- These resources are around just to allow their values to be customized
+     for different hardware and product builds. -->
+<resources>
+
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuTempSensorPrefix" translatable="false"></string>
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuTempSensorSuffix" translatable="false"></string>
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuTempSensorNumber" translatable="false"></string>
+
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuLiteSensorPrefix" translatable="false">/sys/devices/system/cpu/cpu</string>
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuLiteSensorSuffix" translatable="false">/cpufreq/scaling_cur_freq</string>
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuLiteSensorNumber" translatable="false">0,4</string>
+
+    <!-- The CPU temperature sensor path, defaults to empty -->
+    <string name="config_cpuTempSensor" translatable="false"></string>
+
+    <!-- The CPU temperature divider, if needed -->
+    <integer name="config_cpuTempDivider" translatable="false">1</integer>
+
+    <!-- The SYS temperature divider, if needed -->
+    <integer name="config_sysTempDivider" translatable="false">1</integer>
+
+    <!-- The BAT temperature divider, if needed -->
+    <integer name="config_batTempDivider" translatable="false">10</integer>
+
+    <!-- The SYS temperature sensor path, defaults to empty -->
+    <string name="config_sysTempSensor" translatable="false"></string>
+
+    <!-- The BAT temperature sensor path, defaults to empty -->
+    <string name="config_batTempSensor" translatable="false">/sys/class/power_supply/battery/temp</string>
+
+    <!-- The GPU frequency sensor path, defaults to empty -->
+    <string name="config_gpuFreqSensor" translatable="false">/sys/devices/soc/b00000.qcom,kgsl-3d0/kgsl/kgsl-3d0/clock_mhz</string>
+
+    <!-- Asus stitch editor component name -->
+    <string name="config_stitchEditor">com.asus.stitchimage/com.asus.stitchimage.editor.ScreenshotEditorActivity</string>
+
+    <!-- FPSInfoService Refresh Rate node file path -->
+    <string name="config_rrInfoSysNode" translatable="false"></string>
+
+    <!-- FPSInfoService FPS node file path -->
+    <string name="config_fpsInfoSysNodeBaikal" translatable="false"></string>
+
+</resources>

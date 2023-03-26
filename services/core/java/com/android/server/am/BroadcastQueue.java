@@ -17,6 +17,8 @@
 package com.android.server.am;
 
 import static android.app.ActivityManager.RESTRICTION_LEVEL_RESTRICTED_BUCKET;
+import static android.os.PowerExemptionManager.TEMPORARY_ALLOW_LIST_TYPE_NONE;
+import static android.os.PowerExemptionManager.REASON_SYSTEM_ALLOW_LISTED;
 import static android.os.Process.ZYGOTE_POLICY_FLAG_EMPTY;
 import static android.os.Process.ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;
 import static android.text.TextUtils.formatSimple;
@@ -51,6 +53,7 @@ import android.app.IApplicationThread;
 import android.app.PendingIntent;
 import android.app.usage.UsageEvents.Event;
 import android.app.usage.UsageStatsManagerInternal;
+import android.baikalos.AppProfile;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.IIntentReceiver;
@@ -70,6 +73,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.PowerExemptionManager.ReasonCode;
 import android.os.PowerExemptionManager.TempAllowListType;
+import android.os.PowerManagerInternal;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.SystemClock;
@@ -88,6 +92,9 @@ import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.LocalServices;
 import com.android.server.pm.UserManagerInternal;
+
+import com.android.server.BaikalSystemService;
+import com.android.internal.baikalos.AppProfileSettings;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -1082,13 +1089,24 @@ public final class BroadcastQueue {
 
     void maybeScheduleTempAllowlistLocked(int uid, BroadcastRecord r,
             @Nullable BroadcastOptions brOptions) {
-        if (brOptions == null || brOptions.getTemporaryAppAllowlistDuration() <= 0) {
+
+        long baikalDuration = BaikalSystemService.getTemporaryAppWhitelistDuration(uid, r.intent.getPackage(), r.intent.getAction()); 
+
+        if (baikalDuration <= 0 && (brOptions == null || brOptions.getTemporaryAppAllowlistDuration() <= 0)) {
             return;
         }
-        long duration = brOptions.getTemporaryAppAllowlistDuration();
-        final @TempAllowListType int type = brOptions.getTemporaryAppAllowlistType();
-        final @ReasonCode int reasonCode = brOptions.getTemporaryAppAllowlistReasonCode();
-        final String reason = brOptions.getTemporaryAppAllowlistReason();
+        long brDuration = brOptions == null ? 0 : brOptions.getTemporaryAppAllowlistDuration();
+        long duration = baikalDuration >= brDuration ? baikalDuration : brDuration;
+
+        @TempAllowListType int type = TEMPORARY_ALLOW_LIST_TYPE_NONE;
+        @ReasonCode int reasonCode = REASON_SYSTEM_ALLOW_LISTED;
+        String reason = "baikal push";
+
+        if( brOptions != null ) {
+            type = brOptions.getTemporaryAppAllowlistType();
+            reasonCode = brOptions.getTemporaryAppAllowlistReasonCode();
+            brOptions.getTemporaryAppAllowlistReason();
+        } 
 
         if (duration > Integer.MAX_VALUE) {
             duration = Integer.MAX_VALUE;
@@ -1160,6 +1178,12 @@ public final class BroadcastQueue {
         return r.intent.toString()
                 + " from " + r.callerPackage + " (pid=" + r.callingPid
                 + ", uid=" + r.callingUid + ") to " + component.flattenToShortString();
+    }
+
+    private boolean isBootCompletedIntent(Intent intent) {
+        return Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction()) ||
+                Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(intent.getAction()) ||
+                Intent.ACTION_MEDIA_MOUNTED.equals(intent.getAction());
     }
 
     final void processNextBroadcastLocked(boolean fromMsg, boolean skipOomAdj) {
@@ -1704,6 +1728,121 @@ public final class BroadcastQueue {
         ProcessRecord app = mService.getProcessRecordLocked(targetProcess,
                 info.activityInfo.applicationInfo.uid);
 
+        boolean background = mQueueName.equals("background") || mQueueName.equals("offload_bg");
+
+        AppProfile appProfile = null;
+       
+        if( app != null ) appProfile = app.mAppProfile;
+        else appProfile = AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+
+        if( appProfile == null ) appProfile = new AppProfile(info.activityInfo.packageName);
+
+
+        if( Intent.ACTION_BOOT_COMPLETED.equals(r.intent.getAction()) || 
+            Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(r.intent.getAction()) ||
+            Intent.ACTION_MEDIA_MOUNTED.equals(r.intent.getAction()) ||
+            Intent.ACTION_PRE_BOOT_COMPLETED.equals(r.intent.getAction()) )  {
+            if( appProfile.mBootDisabled || appProfile.getBackground() > 0 ) {
+                Slog.i(TAG,"Autostart disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
+                skip = true;
+            }
+        }
+
+        boolean callerBackground = false;
+
+        if( r.callerApp == null || r.callerApp.mState == null || 
+            r.callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP /*||
+            r.callerApp.mState.getCurProcState() > ActivityManager.PROCESS_STATE_FOREGROUND_SERVICE*/ ) callerBackground = true;
+
+        if( r.callerApp != null ) {
+            callerBackground |= mService.mAppProfileManager.isTopAppUid(r.callingUid) || 
+                        mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid);
+        }
+
+        if( !skip && callerBackground ) {
+            if( mService.mAppProfileManager.isStamina() && !appProfile.mStamina ) {
+                if( appProfile.getBackground() >= 0 ) {
+                    Slog.w(TAG, "Background execution disabled by baikalos stamina: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
+                            + r.intent + " to "
+                            + component.flattenToShortString()
+                            );
+                    skip = true;
+                }
+            }
+        }
+
+        if( !skip && callerBackground ) {
+            if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
+                if( appProfile.getBackground() > 1 ) {
+                    Slog.w(TAG, "Background execution disabled by baikalos: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
+                            + r.intent + " to "
+                            + component.flattenToShortString()
+                            );
+                    skip = true;
+                }
+            } else {
+                if( appProfile.getBackground() > 0 ) {
+                    Slog.w(TAG, "Background execution limited by baikalos: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
+                            + r.intent + " to "
+                            + component.flattenToShortString()
+                            );
+                    skip = true;
+                }
+            }
+        }
+
+        if( !skip && appProfile.getBackground() > 0 ) {
+            Slog.w(TAG, "Background execution enabled for restricted app: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
+                            + r.intent + " to "
+                            + component.flattenToShortString()
+                            );
+
+        }
+        
         if (!skip) {
             final int allowed = mService.getAppStartModeLOSP(
                     info.activityInfo.applicationInfo.uid, info.activityInfo.packageName,
@@ -1855,8 +1994,12 @@ public final class BroadcastQueue {
                     + info.activityInfo + ", callingUid = " + r.callingUid + ", uid = "
                     + receiverUid);
         }
-        final boolean isActivityCapable =
-                (brOptions != null && brOptions.getTemporaryAppAllowlistDuration() > 0);
+
+        long baikalDuration = BaikalSystemService.getTemporaryAppWhitelistDuration(receiverUid, r.intent.getPackage(), r.intent.getAction()); 
+
+        boolean isActivityCapable =
+                (baikalDuration > 0 || (brOptions != null && brOptions.getTemporaryAppAllowlistDuration() > 0));
+
         maybeScheduleTempAllowlistLocked(receiverUid, r, brOptions);
 
         // Report that a component is used for explicit broadcasts.
@@ -1886,11 +2029,8 @@ public final class BroadcastQueue {
                 processCurBroadcastLocked(r, app);
                 return;
             } catch (RemoteException e) {
-                final String msg = "Failed to schedule " + r.intent + " to " + info
-                        + " via " + app + ": " + e;
-                Slog.w(TAG, msg);
-                app.killLocked("Can't deliver broadcast", ApplicationExitInfo.REASON_OTHER,
-                        ApplicationExitInfo.SUBREASON_UNDELIVERED_BROADCAST, true);
+                Slog.w(TAG, "Exception when sending broadcast to "
+                      + r.curComponent, e);
             } catch (RuntimeException e) {
                 Slog.wtf(TAG, "Failed sending broadcast to "
                         + r.curComponent + " with " + r.intent, e);

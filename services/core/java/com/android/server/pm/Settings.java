@@ -1155,7 +1155,7 @@ public final class Settings implements Watchable, Snappable {
                     throws PackageManagerException {
         final String pkgName = pkgSetting.getPackageName();
         if (sharedUser != null) {
-            if (!Objects.equals(existingSharedUserSetting, sharedUser)) {
+            /*if (!Objects.equals(existingSharedUserSetting, sharedUser)) {
                 PackageManagerService.reportSettingsProblem(Log.WARN,
                         "Package " + pkgName + " shared user changed from "
                                 + (existingSharedUserSetting != null
@@ -1163,7 +1163,7 @@ public final class Settings implements Watchable, Snappable {
                                 + " to " + sharedUser.name);
                 throw new PackageManagerException(INSTALL_FAILED_UID_CHANGED,
                         "Updating application package " + pkgName + " failed");
-            }
+            }*/
             pkgSetting.setSharedUserAppId(sharedUser.mAppId);
         } else {
             // migrating off shared user

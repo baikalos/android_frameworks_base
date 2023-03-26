@@ -341,6 +341,7 @@
 
     <!-- OmniJaws -->
     <uses-permission android:name="org.omnirom.omnijaws.READ_WEATHER" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- To broadcast status of the GameSpaceManager -->
     <uses-permission android:name="android.permission.MANAGE_GAME_MODE" />
@@ -436,6 +437,21 @@
                 <action android:name="com.android.systemui.action.RESTART" />
 
                 <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <service android:name="com.android.systemui.CPUInfoService"
+                android:exported="true" />
+
+        <service android:name="com.android.systemui.CPUInfoServiceLite"
+                android:exported="true" />
+
+        <service android:name="com.android.systemui.FPSInfoService"
+                android:exported="true" />
+
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 

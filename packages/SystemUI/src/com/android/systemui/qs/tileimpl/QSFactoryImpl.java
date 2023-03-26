@@ -34,6 +34,9 @@ import com.android.systemui.qs.tiles.AmbientDisplayTile;
 import com.android.systemui.qs.tiles.AODTile;
 import com.android.systemui.qs.tiles.BatterySaverTile;
 import com.android.systemui.qs.tiles.BluetoothTile;
+import com.android.systemui.qs.tiles.BypassChargingTile;
+import com.android.systemui.qs.tiles.CPUInfoTile;
+import com.android.systemui.qs.tiles.CPUInfoLiteTile;
 import com.android.systemui.qs.tiles.CaffeineTile;
 import com.android.systemui.qs.tiles.CameraToggleTile;
 import com.android.systemui.qs.tiles.CastTile;
@@ -45,6 +48,7 @@ import com.android.systemui.qs.tiles.DeviceControlsTile;
 import com.android.systemui.qs.tiles.DndTile;
 import com.android.systemui.qs.tiles.DreamTile;
 import com.android.systemui.qs.tiles.FlashlightTile;
+import com.android.systemui.qs.tiles.FPSInfoTile;
 import com.android.systemui.qs.tiles.HeadsUpTile;
 import com.android.systemui.qs.tiles.HotspotTile;
 import com.android.systemui.qs.tiles.InternetTile;
@@ -62,6 +66,7 @@ import com.android.systemui.qs.tiles.ReduceBrightColorsTile;
 import com.android.systemui.qs.tiles.RotationLockTile;
 import com.android.systemui.qs.tiles.ScreenRecordTile;
 import com.android.systemui.qs.tiles.SoundTile;
+import com.android.systemui.qs.tiles.StaminaModeTile;
 import com.android.systemui.qs.tiles.SyncTile;
 import com.android.systemui.qs.tiles.UiModeNightTile;
 import com.android.systemui.qs.tiles.UsbTetherTile;
@@ -121,6 +126,13 @@ public class QSFactoryImpl implements QSFactory {
     private final Provider<UsbTetherTile> mUsbTetherTileProvider;
     private final Provider<VpnTile> mVpnTileProvider;
     private final Provider<SoundTile> mSoundTileProvider;
+    private final Provider<CPUInfoTile> mCPUInfoTileProvider;
+    private final Provider<CPUInfoLiteTile> mCPUInfoLiteTileProvider;
+    private final Provider<FPSInfoTile> mFPSInfoTileProvider;
+    private final Provider<CompassTile> mCompassTileProvider;
+    /* BaikalOS Tiles */
+    private final Provider<BypassChargingTile> mBypassChargingTileProvider;
+    private final Provider<StaminaModeTile> mStaminaModeTileProvider;
 
     private final Lazy<QSHost> mQsHostLazy;
     private final Provider<CustomTile.Builder> mCustomTileBuilderProvider;
@@ -169,7 +181,14 @@ public class QSFactoryImpl implements QSFactory {
             Provider<SyncTile> syncTileProvider,
             Provider<UsbTetherTile> usbTetherTileProvider,
             Provider<VpnTile> vpnTileProvider,
-            Provider<SoundTile> soundTileProvider) {
+            Provider<SoundTile> soundTileProvider,
+            Provider<CPUInfoTile> cpuInfoTileProvider,
+            Provider<CPUInfoLiteTile> cpuInfoLiteTileProvider,
+            Provider<FPSInfoTile> fpsInfoTileProvider,
+            Provider<CompassTile> compassTileProvider,
+            Provider<BypassChargingTile> bypassChargingTileProvider,
+            Provider<StaminaModeTile> staminaModeTileProvider
+            ) {
         mQsHostLazy = qsHostLazy;
         mCustomTileBuilderProvider = customTileBuilderProvider;
 
@@ -214,6 +233,11 @@ public class QSFactoryImpl implements QSFactory {
         mUsbTetherTileProvider = usbTetherTileProvider;
         mVpnTileProvider = vpnTileProvider;
         mSoundTileProvider = soundTileProvider;
+        mCPUInfoTileProvider = cpuInfoTileProvider;
+        mCPUInfoLiteTileProvider = cpuInfoLiteTileProvider;
+        mFPSInfoTileProvider = fpsInfoTileProvider;
+        mBypassChargingTileProvider = bypassChargingTileProvider;
+        mStaminaModeTileProvider = staminaModeTileProvider;
     }
 
     /** Creates a tile with a type based on {@code tileSpec} */
@@ -312,6 +336,16 @@ public class QSFactoryImpl implements QSFactory {
                 return mVpnTileProvider.get();
             case "sound":
                 return mSoundTileProvider.get();
+            case "cpuinfo":
+                return mCPUInfoTileProvider.get();
+            case "cpuinfolite":
+                return mCPUInfoLiteTileProvider.get();
+            case "fpsinfo":
+                return mFPSInfoTileProvider.get();
+            case "bpcharge":
+                return mBypassChargingTileProvider.get();
+            case "stamina":
+                return mStaminaModeTileProvider.get();
         }
 
         // Custom tiles

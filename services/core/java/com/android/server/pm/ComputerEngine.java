@@ -152,6 +152,8 @@ import com.android.server.utils.WatchedSparseBooleanArray;
 import com.android.server.utils.WatchedSparseIntArray;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
+import com.android.server.baikalos.BaikalAppManagerService;
+
 import libcore.util.EmptyArray;
 
 import java.io.BufferedOutputStream;
@@ -948,6 +950,8 @@ public class ComputerEngine implements Computer {
 
     public final ApplicationInfo getApplicationInfo(String packageName,
             @PackageManager.ApplicationInfoFlagsBits long flags, int userId) {
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
+            return null;
         return getApplicationInfoInternal(packageName, flags, Binder.getCallingUid(), userId);
     }
 
@@ -961,6 +965,8 @@ public class ComputerEngine implements Computer {
             @PackageManager.ApplicationInfoFlagsBits long flags,
             int filterCallingUid, int userId) {
         if (!mUserManager.exists(userId)) return null;
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
+            return null;
         flags = updateFlagsForApplication(flags, userId);
 
         if (!isRecentsAccessingChildProfiles(Binder.getCallingUid(), userId)) {
@@ -1614,7 +1620,7 @@ public class ComputerEngine implements Computer {
             if (p.getMetaData() != null &&
                     p.getTargetSdkVersion() > Build.VERSION_CODES.LOLLIPOP_MR1) {
                 String sig = p.getMetaData().getString("fake-signature");
-                if (sig != null &&
+                if (sig != null && pi != null &&
                         permissions.contains("android.permission.FAKE_PACKAGE_SIGNATURE")) {
                     pi.signatures = new Signature[] {new Signature(sig)};
                 }
@@ -1705,6 +1711,8 @@ public class ComputerEngine implements Computer {
 
     public final PackageInfo getPackageInfo(String packageName,
             @PackageManager.PackageInfoFlagsBits long flags, int userId) {
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
+            return null;
         return getPackageInfoInternal(packageName, PackageManager.VERSION_CODE_HIGHEST,
                 flags, Binder.getCallingUid(), userId);
     }
@@ -1718,6 +1726,8 @@ public class ComputerEngine implements Computer {
     public final PackageInfo getPackageInfoInternal(String packageName, long versionCode,
             long flags, int filterCallingUid, int userId) {
         if (!mUserManager.exists(userId)) return null;
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
+            return null;
         flags = updateFlagsForPackage(flags, userId);
         enforceCrossUserPermission(Binder.getCallingUid(), userId,
                 false /* requireFullPermission */, false /* checkShell */, "get package info");
@@ -1814,7 +1824,10 @@ public class ComputerEngine implements Computer {
         enforceCrossUserPermission(callingUid, userId, false /* requireFullPermission */,
                 false /* checkShell */, "get installed packages");
 
-        return getInstalledPackagesBody(flags, userId, callingUid);
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) != 0 ) return getInstalledPackagesBody(flags, userId, callingUid);
+
+        return BaikalAppManagerService.recreatePackageList(
+                        userId, getInstalledPackagesBody(flags, userId, callingUid));
     }
 
     protected ParceledListSlice<PackageInfo> getInstalledPackagesBody(long flags, int userId,
@@ -4772,7 +4785,9 @@ public class ComputerEngine implements Computer {
             }
         }
 
-        return list;
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) != 0 ) return list;
+
+        return BaikalAppManagerService.recreateApplicationList(userId, list);
     }
 
     @Nullable
@@ -5567,7 +5582,7 @@ public class ComputerEngine implements Computer {
                     ApplicationInfo ai = PackageInfoUtils.generateApplicationInfo(p, flags,
                             ps.getUserStateOrDefault(userId), userId, ps);
                     if (ai != null) {
-                        finalList.add(ai);
+                        if( !BaikalAppManagerService.shouldHide(userId, ai.packageName) ) finalList.add(ai);
                     }
                 }
             }
@@ -5754,7 +5769,8 @@ public class ComputerEngine implements Computer {
             return PackageInfoUtils.generateProcessInfo(sus.processes, 0);
         } else if (settingBase instanceof PackageSetting) {
             final PackageSetting ps = (PackageSetting) settingBase;
-            return PackageInfoUtils.generateProcessInfo(ps.getPkg().getProcesses(), 0);
+            final AndroidPackage pkg = ps.getPkg();
+            return pkg == null ? null : PackageInfoUtils.generateProcessInfo(pkg.getProcesses(), 0);
         }
         return null;
     }
