@@ -34,6 +34,8 @@ import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Slog;
 import android.view.View;
+import android.system.Os;
+import android.system.StructUtsname;
 
 import dalvik.system.VMRuntime;
 
@@ -1251,6 +1253,12 @@ public class Build {
         // Don't care on eng builds.  Incremental build may trigger false negative.
         if (IS_ENG) return true;
 
+        if( Os.uname() == null || Os.uname().release == null || !Os.uname().release.contains("baikalos") ) { 
+            Slog.e(TAG, "Mismatched kernel version: build requires baikalos compatible kernel");
+            return false;
+        }
+
+
         if (IS_TREBLE_ENABLED) {
             // If we can run this code, the device should already pass AVB.
             // So, we don't need to check AVB here.
@@ -1422,8 +1430,8 @@ public class Build {
      * @hide
      */
     @UnsupportedAppUsage
-    public static final boolean IS_DEBUGGABLE =
-            SystemProperties.getInt("ro.debuggable", 0) == 1;
+    public static final boolean IS_DEBUGGABLE = false;
+            //SystemProperties.getInt("ro.debuggable", 0) == 1;
 
     /**
      * Returns true if the device is running a debuggable build such as "userdebug" or "eng".
@@ -1436,7 +1444,7 @@ public class Build {
     @TestApi
     @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
     public static boolean isDebuggable() {
-        return IS_DEBUGGABLE;
+        return false; //IS_DEBUGGABLE;
     }
 
     /** {@hide} */
@@ -1444,7 +1452,7 @@ public class Build {
     /** {@hide} */
     public static final boolean IS_USERDEBUG = "userdebug".equals(TYPE);
     /** {@hide} */
-    public static final boolean IS_USER = "user".equals(TYPE);
+    public static final boolean IS_USER = true; //"user".equals(TYPE);
 
     /**
      * Whether this build is running on ARC, the Android Runtime for Chrome

@@ -143,6 +143,12 @@ import dalvik.annotation.optimization.NeverCompile;
 
 import lineageos.providers.LineageSettings;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+import com.android.server.baikalos.AppProfileManager;
+
+
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -346,6 +352,8 @@ public final class PowerManagerService extends SystemService
 
     private final Object mLock = LockGuard.installNewLock(LockGuard.INDEX_POWER);
 
+    private int mBrightnessOverrideFromBaikalService = -1;
+
     // A bitfield that indicates what parts of the power state have
     // changed and need to be recalculated.
     private int mDirty;
@@ -437,6 +445,7 @@ public final class PowerManagerService extends SystemService
 
     // True if the device is plugged into a power source.
     private boolean mIsPowered;
+    private boolean mIsPoweredInitialized = false;
 
     // The current plug type, such as BatteryManager.BATTERY_PLUGGED_WIRELESS.
     private int mPlugType;
@@ -615,6 +624,10 @@ public final class PowerManagerService extends SystemService
     // Value we store for tracking face down behavior.
     private boolean mIsFaceDown = false;
     private long mLastFlipTime = 0L;
+
+    // The screen brightness mode.
+    // One of the Settings.System.SCREEN_BRIGHTNESS_MODE_* constants.
+    private int mScreenBrightnessModeSetting;
 
     // The button brightness setting override from the window manager
     // to allow the current foreground activity to override the button brightness.
@@ -845,14 +858,14 @@ public final class PowerManagerService extends SystemService
     }
 
     // Smart charging
-    private boolean mSmartChargingAvailable;
-    private boolean mSmartChargingEnabled;
-    private boolean mSmartChargingResetStats;
+    private boolean mBypassChargingAvailable;
+    private boolean mBypassChargingEnabled;
+    private boolean mBypassChargingResetStats;
     private boolean mPowerInputSuspended = false;
-    private int mSmartChargingLevel;
-    private int mSmartChargingResumeLevel;
-    private int mSmartChargingLevelDefaultConfig;
-    private int mSmartChargingResumeLevelDefaultConfig;
+    private int mBypassChargingLevel;
+    private int mBypassChargingResumeLevel;
+    private int mBypassChargingLevelDefaultConfig;
+    private int mBypassChargingResumeLevelDefaultConfig;
     private static String mPowerInputSuspendSysfsNode;
     private static String mPowerInputSuspendValue;
     private static String mPowerInputResumeValue;
@@ -882,7 +895,15 @@ public final class PowerManagerService extends SystemService
             mResolver = resolver;
             mResolver.registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.POWER_MANAGER_CONSTANTS), false, this);
+
+            mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE), false, this);
+
+            mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE), false, this);
+
             updateConstants();
+
         }
 
         @Override
@@ -895,11 +916,23 @@ public final class PowerManagerService extends SystemService
                 try {
                     mParser.setString(Settings.Global.getString(mResolver,
                             Settings.Global.POWER_MANAGER_CONSTANTS));
+
+                    boolean interactionDisabled = Settings.Global.getInt(mResolver,
+                            Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE, 1) != 1;
+
+                    boolean displayDisabled = Settings.Global.getInt(mResolver,
+                            Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE, 1) != 1;
+
+                    setPowerBoostInternal(Boost.INTERACTION, interactionDisabled? -1000 : -1001);
+                    setPowerBoostInternal(Boost.DISPLAY_UPDATE_IMMINENT, displayDisabled? -1000 : -1001);
+                    
+
                 } catch (IllegalArgumentException e) {
                     // Failed to parse the settings string, log this and move on
                     // with defaults.
                     Slog.e(TAG, "Bad alarm manager settings", e);
                 }
+
 
                 NO_CACHED_WAKE_LOCKS = mParser.getBoolean(KEY_NO_CACHED_WAKE_LOCKS,
                         DEFAULT_NO_CACHED_WAKE_LOCKS);
@@ -1424,22 +1457,28 @@ public final class PowerManagerService extends SystemService
                 Settings.Secure.DOZE_ALWAYS_ON),
                 false, mSettingsObserver, UserHandle.USER_ALL);
         resolver.registerContentObserver(Settings.Secure.getUriFor(
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER),
+                false, mSettingsObserver, UserHandle.USER_ALL);
+        resolver.registerContentObserver(Settings.Secure.getUriFor(
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON),
+                false, mSettingsObserver, UserHandle.USER_ALL);
+        resolver.registerContentObserver(Settings.Secure.getUriFor(
                 Settings.Secure.DOUBLE_TAP_TO_WAKE),
                 false, mSettingsObserver, UserHandle.USER_ALL);
         resolver.registerContentObserver(Settings.Global.getUriFor(
                 Settings.Global.DEVICE_DEMO_MODE),
                 false, mSettingsObserver, UserHandle.USER_SYSTEM);
         resolver.registerContentObserver(Settings.System.getUriFor(
-                Settings.System.SMART_CHARGING),
+                Settings.System.BAIKALOS_SMART_CHARGING),
                 false, mSettingsObserver, UserHandle.USER_ALL);
         resolver.registerContentObserver(Settings.System.getUriFor(
-                Settings.System.SMART_CHARGING_LEVEL),
+                Settings.System.BAIKALOS_SMART_CHARGING_LEVEL),
                 false, mSettingsObserver, UserHandle.USER_ALL);
         resolver.registerContentObserver(Settings.System.getUriFor(
-                Settings.System.SMART_CHARGING_RESUME_LEVEL),
+                Settings.System.BAIKALOS_SMART_CHARGING_RESUME_LEVEL),
                 false, mSettingsObserver, UserHandle.USER_ALL);
         resolver.registerContentObserver(Settings.System.getUriFor(
-                Settings.System.SMART_CHARGING_RESET_STATS),
+                Settings.System.BAIKALOS_SMART_CHARGING_RESET_STATS),
                 false, mSettingsObserver, UserHandle.USER_ALL);
 
         // Register for Lineage settings changes.
@@ -1492,6 +1531,10 @@ public final class PowerManagerService extends SystemService
         filter = new IntentFilter();
         filter.addAction(Intent.ACTION_DOCK_EVENT);
         mContext.registerReceiver(new DockReceiver(), filter, null, mHandler);
+
+        filter = new IntentFilter();
+        filter.addAction(com.android.internal.baikalos.Actions.ACTION_BRIGHTNESS_OVERRIDE);
+        mContext.registerReceiver(new BrightnessOverrideReceiver(), filter, null, mHandler);
     }
 
     @VisibleForTesting
@@ -1553,18 +1596,18 @@ public final class PowerManagerService extends SystemService
                     .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ProximityWakeLock");
         }
         // Smart charging
-        mSmartChargingAvailable = resources.getBoolean(
-                com.android.internal.R.bool.config_smartChargingAvailable);
-        mSmartChargingLevelDefaultConfig = resources.getInteger(
-                com.android.internal.R.integer.config_smartChargingBatteryLevel);
-        mSmartChargingResumeLevelDefaultConfig = resources.getInteger(
-                com.android.internal.R.integer.config_smartChargingBatteryResumeLevel);
+        mBypassChargingAvailable = resources.getBoolean(
+                com.android.internal.R.bool.config_bypassChargingAvailable);
+        mBypassChargingLevelDefaultConfig = resources.getInteger(
+                com.android.internal.R.integer.config_bypassChargingBatteryLevel);
+        mBypassChargingResumeLevelDefaultConfig = resources.getInteger(
+                com.android.internal.R.integer.config_bypassChargingBatteryResumeLevel);
         mPowerInputSuspendSysfsNode = resources.getString(
-                com.android.internal.R.string.config_smartChargingSysfsNode);
+                com.android.internal.R.string.config_bypassChargingSysfsNode);
         mPowerInputSuspendValue = resources.getString(
-                com.android.internal.R.string.config_smartChargingSuspendValue);
+                com.android.internal.R.string.config_bypassChargingSuspendValue);
         mPowerInputResumeValue = resources.getString(
-                com.android.internal.R.string.config_smartChargingResumeValue);
+                com.android.internal.R.string.config_bypassChargingResumeValue);
     }
 
     @GuardedBy("mLock")
@@ -1602,16 +1645,16 @@ public final class PowerManagerService extends SystemService
         mAlwaysOnEnabled = mAmbientDisplayConfiguration.alwaysOnEnabledSetting(UserHandle.USER_CURRENT)
             || (mAmbientDisplayConfiguration.alwaysOnChargingEnabledSetting(
                     UserHandle.USER_CURRENT) && mIsPowered);
-        mSmartChargingEnabled = Settings.System.getIntForUser(resolver,
-                Settings.System.SMART_CHARGING, 0, UserHandle.USER_CURRENT) == 1;
-        mSmartChargingLevel = Settings.System.getIntForUser(resolver,
-                Settings.System.SMART_CHARGING_LEVEL,
-                mSmartChargingLevelDefaultConfig, UserHandle.USER_CURRENT);
-        mSmartChargingResumeLevel = Settings.System.getIntForUser(resolver,
-                Settings.System.SMART_CHARGING_RESUME_LEVEL,
-                mSmartChargingResumeLevelDefaultConfig, UserHandle.USER_CURRENT);
-        mSmartChargingResetStats = Settings.System.getIntForUser(resolver,
-                Settings.System.SMART_CHARGING_RESET_STATS, 0, UserHandle.USER_CURRENT) == 1;
+        mBypassChargingEnabled = Settings.System.getIntForUser(resolver,
+                Settings.System.BAIKALOS_SMART_CHARGING, 0, UserHandle.USER_CURRENT) == 1;
+        mBypassChargingLevel = Settings.System.getIntForUser(resolver,
+                Settings.System.BAIKALOS_SMART_CHARGING_LEVEL,
+                mBypassChargingLevelDefaultConfig, UserHandle.USER_CURRENT);
+        mBypassChargingResumeLevel = Settings.System.getIntForUser(resolver,
+                Settings.System.BAIKALOS_SMART_CHARGING_RESUME_LEVEL,
+                mBypassChargingResumeLevelDefaultConfig, UserHandle.USER_CURRENT);
+        mBypassChargingResetStats = Settings.System.getIntForUser(resolver,
+                Settings.System.BAIKALOS_SMART_CHARGING_RESET_STATS, 0, UserHandle.USER_CURRENT) == 1;
 
         if (mSupportsDoubleTapWakeConfig) {
             boolean doubleTapWakeEnabled = Settings.Secure.getIntForUser(resolver,
@@ -1628,6 +1671,10 @@ public final class PowerManagerService extends SystemService
                 mSystemProperties.get(SYSTEM_PROPERTY_RETAIL_DEMO_ENABLED, null))) {
             mSystemProperties.set(SYSTEM_PROPERTY_RETAIL_DEMO_ENABLED, retailDemoValue);
         }
+
+        mScreenBrightnessModeSetting = Settings.System.getIntForUser(resolver,
+                Settings.System.SCREEN_BRIGHTNESS_MODE,
+                Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL, UserHandle.USER_CURRENT);
 
         mProximityWakeEnabled = LineageSettings.System.getInt(resolver,
                 LineageSettings.System.PROXIMITY_ON_WAKE,
@@ -1658,7 +1705,8 @@ public final class PowerManagerService extends SystemService
     void handleSettingsChangedLocked() {
         updateSettingsLocked();
         updatePowerStateLocked();
-        updateSmartChargingStatus();
+        updateBypassChargingStatus();
+        updateAodOnChargerStatus();
     }
 
     private void acquireWakeLockInternal(IBinder lock, int displayId, int flags, String tag,
@@ -2014,6 +2062,20 @@ public final class PowerManagerService extends SystemService
             wakeLock.mNotifiedLong = true;
             mNotifier.onLongPartialWakeLockStart(wakeLock.mTag, wakeLock.mOwnerUid,
                     wakeLock.mWorkSource, wakeLock.mHistoryTag);
+			if ((wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK) == PowerManager.PARTIAL_WAKE_LOCK ) {
+                int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
+                if( appid < Process.FIRST_APPLICATION_UID && !wakeLock.mTag.startsWith("*job*") ) return;
+	            if( wakeLock.mTag.startsWith("Audio") ) return;
+                if( !AppProfileManager.getInstance().isGmsUid(wakeLock.mOwnerUid) ) {
+                    AppProfile profile = AppProfileManager.getInstance().getProfile(wakeLock.mPackageName);
+                    if( profile.getBackground() < 0 ) return;
+                }
+            	wakeLock.mDisabled = true;
+            	notifyWakeLockReleasedLocked(wakeLock);
+            	Slog.d(TAG, "notifyWakeLockLongStartedLocked: disabled appid " + wakeLock);
+            	mDirty |= DIRTY_WAKE_LOCKS;
+            	updatePowerStateLocked();
+			}
         }
     }
 
@@ -2248,7 +2310,32 @@ public final class PowerManagerService extends SystemService
         if (!mBootCompleted || !mSystemReady) {
             return false;
         }
-        return powerGroup.dreamLocked(eventTime, uid, allowWake);
+        return powerGroup.dreamLocked(eventTime, uid, true);
+    }
+
+
+    @GuardedBy("mLock")
+    private boolean dozeFromDozePowerGroupLocked(PowerGroup powerGroup, long eventTime, int reason, int uid) {
+        if (DEBUG_SPEW) {
+            Slog.d(TAG, "dozeFromDozePowerGroupLocked: groupId=" + powerGroup.getGroupId() + ", eventTime="
+                    + eventTime + ", uid=" + uid);
+        }
+
+        if (!mBootCompleted || !mSystemReady) {
+            return false;
+        }
+
+        try {
+            reason = Math.min(PowerManager.GO_TO_SLEEP_REASON_MAX,
+                    Math.max(reason, PowerManager.GO_TO_SLEEP_REASON_MIN));
+
+            powerGroup.setSandmanSummonedLocked(/* isSandmanSummoned= */ true);
+            powerGroup.setWakefulnessLocked(WAKEFULNESS_DOZING, eventTime, uid, reason, /* opUid= */ 0,
+                    /* opPackageName= */ null, /* details= */ null);
+        } finally {
+            Trace.traceEnd(Trace.TRACE_TAG_POWER);
+        }
+        return true;
     }
 
     @GuardedBy("mLock")
@@ -2628,6 +2715,7 @@ public final class PowerManagerService extends SystemService
     private boolean isProfileBeingKeptAwakeLocked(ProfilePowerState profile, long now) {
         return (profile.mLastUserActivityTime + profile.mScreenOffTimeout > now)
                 || (profile.mWakeLockSummary & WAKE_LOCK_STAY_AWAKE) != 0
+                || (AppProfileManager.getCurrentProfile().mKeepOn && getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE)
                 || (mProximityPositive &&
                     (profile.mWakeLockSummary & WAKE_LOCK_PROXIMITY_SCREEN_OFF) != 0);
     }
@@ -2638,7 +2726,7 @@ public final class PowerManagerService extends SystemService
      */
     @GuardedBy("mLock")
     private void updateIsPoweredLocked(int dirty) {
-        if ((dirty & DIRTY_BATTERY_STATE) != 0) {
+        if ((dirty & DIRTY_BATTERY_STATE) != 0 || !mIsPoweredInitialized) {
             final boolean wasPowered = mIsPowered;
             final int oldPlugType = mPlugType;
             mIsPowered = mBatteryManagerInternal.isPowered(BatteryManager.BATTERY_PLUGGED_ANY);
@@ -2664,7 +2752,7 @@ public final class PowerManagerService extends SystemService
                 mDreamsBatteryLevelDrain += (oldBatteryLevel - mBatteryLevel);
             }
 
-            if (wasPowered != mIsPowered || oldPlugType != mPlugType) {
+            if (!mIsPoweredInitialized || wasPowered != mIsPowered || oldPlugType != mPlugType) {
                 mDirty |= DIRTY_IS_POWERED;
 
                 // Update wireless dock detection state.
@@ -2677,13 +2765,38 @@ public final class PowerManagerService extends SystemService
                 // Some devices also wake the device when plugged or unplugged because
                 // they don't have a charging LED.
                 final long now = mClock.uptimeMillis();
-                if (shouldWakeUpWhenPluggedOrUnpluggedLocked(wasPowered, oldPlugType,
-                        dockedOnWirelessCharger)) {
-                    wakePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP),
-                            now, PowerManager.WAKE_REASON_PLUGGED_IN,
-                            "android.server.power:PLUGGED:" + mIsPowered, Process.SYSTEM_UID,
-                            mContext.getOpPackageName(), Process.SYSTEM_UID);
-                }
+
+                boolean aod_enabled = updateAodOnChargerStatus();
+
+                /*if( aod_enabled ) {
+                    if( wasPowered != mIsPowered && (mWakefulnessRaw == WAKEFULNESS_ASLEEP || mWakefulnessRaw == WAKEFULNESS_DOZING ) ) {
+                        Slog.i(TAG, "Update Aod On Charger Status");
+
+                        if( mIsPowered ) {
+                            //dreamPowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
+                            //    now, Process.SYSTEM_UID);
+                            dozeFromDozePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
+                                now, PowerManager.WAKE_REASON_PLUGGED_IN, Process.SYSTEM_UID);
+                        } else {
+                            sleepPowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
+                                now, PowerManager.WAKE_REASON_PLUGGED_IN, Process.SYSTEM_UID);
+                        }
+                    }
+                } else {*/
+
+                    // Treat plugging and unplugging the devices as a user activity.
+                    // Users find it disconcerting when they plug or unplug the device
+                    // and it shuts off right away.
+                    // Some devices also wake the device when plugged or unplugged because
+                    // they don't have a charging LED.
+                    if (shouldWakeUpWhenPluggedOrUnpluggedLocked(wasPowered, oldPlugType,
+                            dockedOnWirelessCharger)) {
+                        wakePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP),
+                                now, PowerManager.WAKE_REASON_PLUGGED_IN,
+                                "android.server.power:PLUGGED:" + mIsPowered, Process.SYSTEM_UID,
+                                mContext.getOpPackageName(), Process.SYSTEM_UID);
+                    }
+                //}
 
                 userActivityNoUpdateLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), now,
                         PowerManager.USER_ACTIVITY_EVENT_OTHER, 0, Process.SYSTEM_UID);
@@ -2703,43 +2816,74 @@ public final class PowerManagerService extends SystemService
                     } else if (dockedOnWirelessCharger) {
                         mNotifier.onWirelessChargingStarted(mBatteryLevel, mUserId);
                     }
+
+                    Actions.sendChargerModeChanged(mIsPowered);
+            		mIsPoweredInitialized = true;
                 }
             }
 
             mBatterySaverStateMachine.setBatteryStatus(mIsPowered, mBatteryLevel, mBatteryLevelLow);
-            updateSmartChargingStatus();
+            updateBypassChargingStatus();
         }
     }
 
-    private void updateSmartChargingStatus() {
-        if (!mSmartChargingAvailable) return;
-        if (mPowerInputSuspended && ((mSmartChargingResumeLevel < mSmartChargingLevel &&
-            mBatteryLevel <= mSmartChargingResumeLevel) || !mSmartChargingEnabled)) {
-            try {
-                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputResumeValue);
+    private boolean updateAodOnChargerStatus() {
+
+        Slog.i(TAG, "updateAodOnChargerStatus");
+        final ContentResolver resolver = mContext.getContentResolver();
+
+        boolean enabled = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER, 0, UserHandle.USER_CURRENT) != 0;
+
+        boolean active = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT) != 0;
+
+        if (enabled && mIsPowered && !active ) {
+            Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=" + mIsPowered + " enabled=" + enabled + " active=true");
+            Settings.Secure.putIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 1, UserHandle.USER_CURRENT);
+        } 
+
+        if( active && (!mIsPowered || !enabled) ) {
+                Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=" + mIsPowered + " enabled=" + enabled + " active=false");
+            Settings.Secure.putIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT);
+        }
+        return enabled;
+    }
+
+
+    private void updateBypassChargingStatus() {
+        if (!mBypassChargingAvailable) return;
+
+        if( !mBypassChargingEnabled ) {
+            if( mPowerInputSuspended ) {
+                Slog.i(TAG, "Bypass charging mBypassChargingEnabled: " + mBypassChargingEnabled);
+                AppProfileManager.getInstance().updateBypassCharging(false);
                 mPowerInputSuspended = false;
-            } catch (IOException e) {
-                Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
             }
+            return;
+        } 
+
+        if (mPowerInputSuspended && mBatteryLevel <= mBypassChargingResumeLevel) {
+            Slog.i(TAG, "Bypass charging deactivate mBypassChargingEnabled: " + mBypassChargingEnabled);
+            AppProfileManager.getInstance().updateBypassCharging(false);
+            mPowerInputSuspended = false;
             return;
         }
 
-        if (mSmartChargingEnabled && !mPowerInputSuspended && (mBatteryLevel >= mSmartChargingLevel)) {
-            Slog.i(TAG, "Smart charging reset stats: " + mSmartChargingResetStats);
-            if (mSmartChargingResetStats) {
+        if (!mPowerInputSuspended && mBatteryLevel > mBypassChargingLevel) {
+            Slog.i(TAG, "Bypass charging activate mBypassChargingEnabled: " + mBypassChargingEnabled);
+            if (mBypassChargingResetStats) {
                 try {
-                     mBatteryStats.resetStatistics();
-                } catch (RemoteException e) {
-                         Slog.e(TAG, "failed to reset battery statistics");
+                    Slog.i(TAG, "Bypass charging reset stats: " + mBypassChargingResetStats);
+                    mBatteryStats.resetStatistics();
+                } catch (Exception e) {
+                     Slog.e(TAG, "failed to reset battery statistics", e);
                 }
             }
-
-            try {
-                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputSuspendValue);
-                mPowerInputSuspended = true;
-            } catch (IOException e) {
-                    Slog.e(TAG, "failed to write to " + mPowerInputSuspendSysfsNode);
-            }
+            AppProfileManager.getInstance().updateBypassCharging(true);
+            mPowerInputSuspended = true;
         }
     }
 
@@ -3482,6 +3626,7 @@ public final class PowerManagerService extends SystemService
                 || (powerGroup.getWakeLockSummaryLocked() & WAKE_LOCK_STAY_AWAKE) != 0
                 || (powerGroup.getUserActivitySummaryLocked() & (
                         USER_ACTIVITY_SCREEN_BRIGHT | USER_ACTIVITY_SCREEN_DIM)) != 0
+                || (AppProfileManager.getCurrentProfile().mKeepOn && getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE)
                 || mScreenBrightnessBoostInProgress;
     }
 
@@ -3749,25 +3894,50 @@ public final class PowerManagerService extends SystemService
                 final PowerGroup powerGroup = mPowerGroups.valueAt(idx);
                 final int groupId = powerGroup.getGroupId();
 
-                // Determine appropriate screen brightness.
+                // Determine appropriate screen brightness and auto-brightness adjustments.
+                final boolean autoBrightness;
                 final float screenBrightnessOverride;
                 if (!mBootCompleted) {
                     // Keep the brightness steady during boot. This requires the
                     // bootloader brightness and the default brightness to be identical.
+                    autoBrightness = false;
                     screenBrightnessOverride = mScreenBrightnessDefault;
+                } else if (mBrightnessOverrideFromBaikalService == -2 || mBrightnessOverrideFromBaikalService == -3  ) {
+                    //if(DEBUG_SPEW) Slog.d(TAG, "updateDisplayPowerStateLocked: Brightness override auto lowPowerMode=" + mDisplayPowerRequest.lowPowerMode);
+                    //mDisplayPowerRequest.lowPowerMode = true;
+                    autoBrightness = (mScreenBrightnessModeSetting ==
+                        Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC);
+                    screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
+                } else if ( mBrightnessOverrideFromBaikalService > 0 && 
+                        isValidBrightness((float)mBrightnessOverrideFromBaikalService/(float)PowerManager.BRIGHTNESS_ON) ) {
+                    autoBrightness = false;
+                    screenBrightnessOverride =  (float)mBrightnessOverrideFromBaikalService/(float)PowerManager.BRIGHTNESS_ON;
+                    if(DEBUG_SPEW) Slog.d(TAG, "updateDisplayPowerStateLocked: Brightness override fixed screenBrightnessOverride=" + 
+                                mBrightnessOverrideFromBaikalService + ", screenBrightnessOverride=" + screenBrightnessOverride);
                 } else if (isValidBrightness(mScreenBrightnessOverrideFromWindowManager)) {
+                    autoBrightness = false;
                     screenBrightnessOverride = mScreenBrightnessOverrideFromWindowManager;
+                } else if (mBrightnessOverrideFromBaikalService == -4) {
+                    autoBrightness = true;
+                    screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
+                } else if (mBrightnessOverrideFromBaikalService == -5) {
+                    autoBrightness = false;
+                    screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
                 } else {
+                    autoBrightness = (mScreenBrightnessModeSetting
+                            == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC);
                     screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
                 }
-                boolean ready = powerGroup.updateLocked(screenBrightnessOverride,
+
+                boolean ready = powerGroup.updateLocked(screenBrightnessOverride, autoBrightness,
                         shouldUseProximitySensorLocked(), shouldBoostScreenBrightness(),
                         mDozeScreenStateOverrideFromDreamManager,
                         mDozeScreenBrightnessOverrideFromDreamManagerFloat,
                         mDrawWakeLockOverrideFromSidekick,
                         mBatterySaverPolicy.getBatterySaverPolicy(ServiceType.SCREEN_BRIGHTNESS),
                         sQuiescent, mDozeAfterScreenOff, mIsVrModeEnabled, mBootCompleted,
-                        mScreenBrightnessBoostInProgress, mRequestWaitForNegativeProximity);
+                        mScreenBrightnessBoostInProgress, mRequestWaitForNegativeProximity,
+                        mBrightnessOverrideFromBaikalService);
                 int wakefulness = powerGroup.getWakefulnessLocked();
                 if (DEBUG_SPEW) {
                     Slog.d(TAG, "updateDisplayPowerStateLocked: displayReady=" + ready
@@ -3781,6 +3951,7 @@ public final class PowerManagerService extends SystemService
                             powerGroup.getUserActivitySummaryLocked())
                             + ", mBootCompleted=" + mBootCompleted
                             + ", screenBrightnessOverride=" + screenBrightnessOverride
+                            + ", useAutoBrightness=" + autoBrightness
                             + ", mScreenBrightnessBoostInProgress="
                             + mScreenBrightnessBoostInProgress
                             + ", mIsVrModeEnabled= " + mIsVrModeEnabled
@@ -3899,6 +4070,7 @@ public final class PowerManagerService extends SystemService
             // The order of operations matters here.
             synchronized (mLock) {
                 setPowerModeInternal(MODE_DISPLAY_INACTIVE, allInactive);
+                setBaikalScreenState(allOff);
                 if (allOff) {
                     if (!mDecoupleHalInteractiveModeFromDisplayConfig) {
                         setHalInteractiveModeLocked(false);
@@ -3943,7 +4115,7 @@ public final class PowerManagerService extends SystemService
      */
     @GuardedBy("mLock")
     private void updateSuspendBlockerLocked() {
-        final boolean needWakeLockSuspendBlocker = ((mWakeLockSummary & WAKE_LOCK_CPU) != 0);
+        boolean needWakeLockSuspendBlocker = ((mWakeLockSummary & WAKE_LOCK_CPU) != 0);
         final boolean needDisplaySuspendBlocker = needSuspendBlockerLocked();
         final boolean autoSuspend = !needDisplaySuspendBlocker;
         boolean interactive = false;
@@ -3951,6 +4123,7 @@ public final class PowerManagerService extends SystemService
             interactive = mPowerGroups.valueAt(idx).isBrightOrDimLocked();
         }
 
+        if( needDisplaySuspendBlocker ) needWakeLockSuspendBlocker = false;
         // Disable auto-suspend if needed.
         // FIXME We should consider just leaving auto-suspend enabled forever since
         // we already hold the necessary wakelocks.
@@ -4066,11 +4239,11 @@ public final class PowerManagerService extends SystemService
             }
             mHalInteractiveModeEnabled = enable;
             Trace.traceBegin(Trace.TRACE_TAG_POWER, "setHalInteractive(" + enable + ")");
-            try {
+            /*try {
                 mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, enable);
             } finally {
                 Trace.traceEnd(Trace.TRACE_TAG_POWER);
-            }
+            }*/
         }
     }
 
@@ -4587,6 +4760,16 @@ public final class PowerManagerService extends SystemService
             return false;
         }
         return mNativeWrapper.nativeSetPowerMode(mode, enabled);
+    }
+
+    boolean mBaikalScreenMode = true;
+    private void setBaikalScreenState(boolean state) {
+        boolean mode = !state;
+        Slog.d(TAG, "setBaikalScreenState: mode=" + mode);
+        if( mBaikalScreenMode != mode ) {   
+            mBaikalScreenMode = mode;
+            Actions.sendScreenModeChanged(mode);
+        }
     }
 
     @VisibleForTesting
@@ -5363,6 +5546,21 @@ public final class PowerManagerService extends SystemService
                     mDockState = dockState;
                     mDirty |= DIRTY_DOCK_STATE;
                     updatePowerStateLocked();
+                }
+            }
+        }
+    }
+
+    private final class BrightnessOverrideReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (mLock) {
+                String action = intent.getAction();
+                int brightness = (int)intent.getExtra(com.android.internal.baikalos.Actions.EXTRA_INT_BRIGHTNESS);
+                if (mBrightnessOverrideFromBaikalService != brightness) {
+                    if(DEBUG) Slog.i(TAG,"BrightnessOverride brightness=" + brightness);
+                    mBrightnessOverrideFromBaikalService = brightness;
+                    updatePowerGroupsLocked(DIRTY_SCREEN_BRIGHTNESS_BOOST);  
                 }
             }
         }

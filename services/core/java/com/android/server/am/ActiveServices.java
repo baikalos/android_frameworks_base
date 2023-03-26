@@ -789,9 +789,22 @@ public final class ActiveServices {
             }
         }
 
+
+        if( !mAm.mAppProfileManager.isTopAppUid(callingUid) &&
+            (bgLaunch && mAm.mAppProfileManager.isAppBlocked(null, r.packageName, r.appInfo.uid)) ) {
+            Slog.w(TAG, "App service execution blocked: service "
+                    + service + " to " + r.shortInstanceName
+                    + " from pid=" + callingPid + " uid=" + callingUid
+                    + " pkg=" + callingPackage + " startFg?=" + fgRequired);
+
+            r.stopIfKilled = true;
+            return null;
+        }
+
         // If this isn't a direct-to-foreground start, check our ability to kick off an
         // arbitrary service
-        if (forcedStandby || (!r.startRequested && !fgRequired)) {
+        if ( !mAm.mAppProfileManager.isTopAppUid(callingUid) &&
+            (forcedStandby || (!r.startRequested && !fgRequired)) ) {
             // Before going further -- if this app is not allowed to start services in the
             // background, then at this point we aren't going to let it period.
             final int allowed = mAm.getAppStartModeLOSP(r.appInfo.uid, r.packageName,
@@ -2809,6 +2822,7 @@ public final class ActiveServices {
             }
         }
 
+
         if ((flags&Context.BIND_TREAT_LIKE_ACTIVITY) != 0) {
             mAm.enforceCallingPermission(android.Manifest.permission.MANAGE_ACTIVITY_TASKS,
                     "BIND_TREAT_LIKE_ACTIVITY");
@@ -2864,6 +2878,21 @@ public final class ActiveServices {
             return -1;
         }
         ServiceRecord s = res.record;
+
+        //if( !mAm.mAppProfileManager.isToppAppUid(callerApp.info.uid) ) {
+
+        if( callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
+            !mAm.mAppProfileManager.isTopAppUid(callerApp.info.uid) ) {
+            if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
+                Slog.w(TAG, "Background service start disabled by baikal settings for: " + s);
+                return 0;
+            }
+        } else {
+            if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
+                Slog.w(TAG, "Background service start disabled by baikal, but requested form foreground app: " + s);
+                Slog.w(TAG, "Background service start from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
+            }
+        }
 
         // The package could be frozen (meaning it's doing surgery), defer the actual
         // binding until the package is unfrozen.
@@ -5403,6 +5432,9 @@ public final class ActiveServices {
 
     final void killServicesLocked(ProcessRecord app, boolean allowRestart) {
         final ProcessServiceRecord psr = app.mServices;
+
+        if( app != null && app.isKilledByAm() ) allowRestart = false;
+
         // Report disconnected services.
         if (false) {
             // XXX we are letting the client link to the service for

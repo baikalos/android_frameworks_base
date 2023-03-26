@@ -1046,6 +1046,9 @@ public class OomAdjuster {
         ArrayList<ProcessRecord> lruList = mProcessList.getLruProcessesLOSP();
         final int numLru = lruList.size();
 
+        final long oldTimeExtreme = now - 5 * 60 * 1000;
+        final long oldTimeStamina = now - 1 * 60 * 1000;
+
         final boolean doKillExcessiveProcesses = shouldKillExcessiveProcesses(now);
         if (!doKillExcessiveProcesses) {
             if (mNextNoKillDebugMessageTime < now) {
@@ -1079,65 +1082,116 @@ public class OomAdjuster {
                 }
 
                 final ProcessServiceRecord psr = app.mServices;
-                // Count the number of process types.
-                switch (state.getCurProcState()) {
-                    case PROCESS_STATE_CACHED_ACTIVITY:
-                    case ActivityManager.PROCESS_STATE_CACHED_ACTIVITY_CLIENT:
-                        mNumCachedHiddenProcs++;
-                        numCached++;
-                        final int connectionGroup = psr.getConnectionGroup();
-                        if (connectionGroup != 0) {
-                            if (lastCachedGroupUid == app.info.uid
-                                    && lastCachedGroup == connectionGroup) {
-                                // If this process is the next in the same group, we don't
-                                // want it to count against our limit of the number of cached
-                                // processes, so bump up the group count to account for it.
-                                numCachedExtraGroup++;
-                            } else {
-                                lastCachedGroupUid = app.info.uid;
-                                lastCachedGroup = connectionGroup;
-                            }
-                        } else {
-                            lastCachedGroupUid = lastCachedGroup = 0;
+
+                if( !app.mAppProfile.mPinned ) {
+                    if( mService.mAppProfileManager.isStamina() 
+                        && !app.mAppProfile.mStamina
+                        && state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND
+                        && mService.mAppProfileManager.isKillInBackground()
+                        && app.mAppProfile.getBackground() >= 0
+                        && app.getLastActivityTime() < oldTimeStamina )  {
+                        app.killLocked("empty #" + numEmpty,
+                        "baikalos - limited background process",
+                        ApplicationExitInfo.REASON_OTHER,
+                        ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                        true);
+                    } else if( state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND
+                        && mService.mAppProfileManager.isKillInBackground()
+                        && app.mAppProfile.getBackground() > 0
+                        && app.getLastActivityTime() < oldTimeExtreme )  {
+                        app.killLocked("empty #" + numEmpty,
+                        "baikalos - limited background process",
+                        ApplicationExitInfo.REASON_OTHER,
+                        ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                        true);
+                    } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+                        && mService.mAppProfileManager.isKillInBackground()
+                        && app.mAppProfile.getBackground() >= 0
+                        && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 50))
+                            || app.getLastActivityTime() < oldTimeExtreme ) )  {
+                        app.killLocked("empty #" + numEmpty,
+                        "baikalos - expired background process",
+                        ApplicationExitInfo.REASON_OTHER,
+                        ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                        true);
+
+                    } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
+                        && mService.mAppProfileManager.isKillInBackground()
+                        && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 30))
+                            || app.getLastActivityTime() < oldTimeExtreme ) ) {
+                        app.killLocked("empty #" + numEmpty,
+                        "baikalos - cached background process",
+                        ApplicationExitInfo.REASON_OTHER,
+                        ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                        true);
+                    } else if( mService.mAppProfileManager.isExtreme() && !mService.mAppProfileManager.isScreenActive()
+                        && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY 
+                        && mService.mAppProfileManager.isKillInBackground()
+                        && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 20))
+                             ) ) {
+                        app.killLocked("empty #" + numEmpty,
+                        "baikalos - extreme cached background process",
+                        ApplicationExitInfo.REASON_OTHER,
+                        ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                        true);
+                    } else {
+                        // Count the number of process types.
+                        switch (state.getCurProcState()) {
+                            case PROCESS_STATE_CACHED_ACTIVITY:
+                            case ActivityManager.PROCESS_STATE_CACHED_ACTIVITY_CLIENT:
+                                mNumCachedHiddenProcs++;
+                                numCached++;
+                                final int connectionGroup = psr.getConnectionGroup();
+                                if (connectionGroup != 0) {
+                                    if (lastCachedGroupUid == app.info.uid
+                                            && lastCachedGroup == connectionGroup) {
+                                        // If this process is the next in the same group, we don't
+                                        // want it to count against our limit of the number of cached
+                                        // processes, so bump up the group count to account for it.
+                                        numCachedExtraGroup++;
+                                    } else {
+                                        lastCachedGroupUid = app.info.uid;
+                                        lastCachedGroup = connectionGroup;
+                                    }
+                                } else {
+                                    lastCachedGroupUid = lastCachedGroup = 0;
+                                }
+                                if ((numCached - numCachedExtraGroup) > cachedProcessLimit) {
+                                    app.killLocked("cached #" + numCached,
+                                            "too many cached",
+                                            ApplicationExitInfo.REASON_OTHER,
+                                            ApplicationExitInfo.SUBREASON_TOO_MANY_CACHED,
+                                            true);
+                                }
+                                break;
+                            case PROCESS_STATE_CACHED_EMPTY:
+                                if (numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
+                                        && app.getLastActivityTime() < oldTime) {
+                                    app.killLocked("empty for " + ((now
+                                            - app.getLastActivityTime()) / 1000) + "s",
+                                            "empty for too long",
+                                            ApplicationExitInfo.REASON_OTHER,
+                                            ApplicationExitInfo.SUBREASON_TRIM_EMPTY,
+                                            true);
+                                } else {
+                                    numEmpty++;
+                                    if (numEmpty > emptyProcessLimit) {
+                                        app.killLocked("empty #" + numEmpty,
+                                                "too many empty",
+                                                ApplicationExitInfo.REASON_OTHER,
+                                                ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
+                                                true);
+                                    }
+                                }
+                                break;
+                            default:
+                                mNumNonCachedProcs++;
+                                break;
                         }
-                        if ((numCached - numCachedExtraGroup) > cachedProcessLimit) {
-                            app.killLocked("cached #" + numCached,
-                                    "too many cached",
-                                    ApplicationExitInfo.REASON_OTHER,
-                                    ApplicationExitInfo.SUBREASON_TOO_MANY_CACHED,
-                                    true);
-                        } else if (proactiveKillsEnabled) {
-                            lruCachedApp = app;
-                        }
-                        break;
-                    case PROCESS_STATE_CACHED_EMPTY:
-                        if (numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
-                                && app.getLastActivityTime() < oldTime) {
-                            app.killLocked("empty for " + ((now
-                                    - app.getLastActivityTime()) / 1000) + "s",
-                                    "empty for too long",
-                                    ApplicationExitInfo.REASON_OTHER,
-                                    ApplicationExitInfo.SUBREASON_TRIM_EMPTY,
-                                    true);
-                        } else {
-                            numEmpty++;
-                            if (numEmpty > emptyProcessLimit) {
-                                app.killLocked("empty #" + numEmpty,
-                                        "too many empty",
-                                        ApplicationExitInfo.REASON_OTHER,
-                                        ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
-                                        true);
-                            } else if (proactiveKillsEnabled) {
-                                lruCachedApp = app;
-                            }
-                        }
-                        break;
-                    default:
-                        mNumNonCachedProcs++;
-                        break;
+                    }
                 }
 
-                if (app.isolated && psr.numberOfRunningServices() <= 0
+                if ( !app.mAppProfile.mPinned && app.isolated && psr.numberOfRunningServices() <= 0
                         && app.getIsolatedEntryPoint() == null) {
                     // If this is an isolated process, there are no services
                     // running in it, and it's not a special process with a
@@ -1166,10 +1220,12 @@ public class OomAdjuster {
                 && lruCachedApp != null                         // If no cached app, let LMKD decide
                 // If swap is non-decreasing, give reclaim a chance to catch up
                 && freeSwapPercent < mLastFreeSwapPercent) {
-            lruCachedApp.killLocked("swap low and too many cached",
+            if( !lruCachedApp.mAppProfile.mPinned ) {
+            	lruCachedApp.killLocked("swap low and too many cached",
                     ApplicationExitInfo.REASON_OTHER,
                     ApplicationExitInfo.SUBREASON_TOO_MANY_CACHED,
                     true);
+            }
         }
 
         mLastFreeSwapPercent = freeSwapPercent;
@@ -1516,6 +1572,8 @@ public class OomAdjuster {
             final UidRecord uidRec = app.getUidRecord();
             app.mOptRecord.setShouldNotFreeze(uidRec != null && uidRec.isCurAllowListed());
         }
+
+        if( app.mAppProfile.mPinned ) app.mOptRecord.setShouldNotFreeze(true);
 
         final int appUid = app.info.uid;
         final int logUid = mService.mCurOomAdjUid;
@@ -2622,7 +2680,7 @@ public class OomAdjuster {
         }
 
         if (state.getCurAdj() != state.getSetAdj()) {
-            ProcessList.setOomAdj(app.getPid(), app.uid, state.getCurAdj());
+            ProcessList.setOomAdj(app.getPid(), app.uid, state.getCurAdj(), app.mAppProfile.mPinned);
             if (DEBUG_SWITCH || DEBUG_OOM_ADJ || mService.mCurOomAdjUid == app.info.uid) {
                 String msg = "Set " + app.getPid() + " " + app.processName + " adj "
                         + state.getCurAdj() + ": " + state.getAdjType();
@@ -2636,7 +2694,27 @@ public class OomAdjuster {
         }
 
         final int curSchedGroup = state.getCurrentSchedulingGroup();
-        if (state.getSetSchedGroup() != curSchedGroup) {
+
+        int processGroup;
+        switch (curSchedGroup) {
+            case ProcessList.SCHED_GROUP_BACKGROUND:
+                processGroup = THREAD_GROUP_BACKGROUND;
+                break;
+            case ProcessList.SCHED_GROUP_TOP_APP:
+            case ProcessList.SCHED_GROUP_TOP_APP_BOUND:
+                processGroup = THREAD_GROUP_TOP_APP;
+                break;
+            case ProcessList.SCHED_GROUP_RESTRICTED:
+                processGroup = THREAD_GROUP_RESTRICTED;
+                break;
+            default:
+                processGroup = THREAD_GROUP_DEFAULT;
+                break;
+        }
+
+        processGroup = mService.mAppProfileManager.updateProcSchedGroup(app.mAppProfile, processGroup, curSchedGroup);
+        
+        if (state.getSetSchedGroup() != curSchedGroup || processGroup != state.getCurrentProcSchedGroup() ) {
             int oldSchedGroup = state.getSetSchedGroup();
             state.setSetSchedGroup(curSchedGroup);
             if (DEBUG_SWITCH || DEBUG_OOM_ADJ || mService.mCurOomAdjUid == app.uid) {
@@ -2644,28 +2722,15 @@ public class OomAdjuster {
                         + " to " + curSchedGroup + ": " + state.getAdjType();
                 reportOomAdjMessageLocked(TAG_OOM_ADJ, msg);
             }
-            if (app.getWaitingToKill() != null && app.mReceivers.numberOfCurReceivers() == 0
+            if (!app.mAppProfile.mPinned &&
+                app.getWaitingToKill() != null && app.mReceivers.numberOfCurReceivers() == 0
                     && state.getSetSchedGroup() == ProcessList.SCHED_GROUP_BACKGROUND) {
                 app.killLocked(app.getWaitingToKill(), ApplicationExitInfo.REASON_USER_REQUESTED,
                         ApplicationExitInfo.SUBREASON_REMOVE_TASK, true);
                 success = false;
             } else {
-                int processGroup;
-                switch (curSchedGroup) {
-                    case ProcessList.SCHED_GROUP_BACKGROUND:
-                        processGroup = THREAD_GROUP_BACKGROUND;
-                        break;
-                    case ProcessList.SCHED_GROUP_TOP_APP:
-                    case ProcessList.SCHED_GROUP_TOP_APP_BOUND:
-                        processGroup = THREAD_GROUP_TOP_APP;
-                        break;
-                    case ProcessList.SCHED_GROUP_RESTRICTED:
-                        processGroup = THREAD_GROUP_RESTRICTED;
-                        break;
-                    default:
-                        processGroup = THREAD_GROUP_DEFAULT;
-                        break;
-                }
+                
+                state.setCurrentProcSchedGroup(processGroup);
                 mProcessGroupHandler.sendMessage(mProcessGroupHandler.obtainMessage(
                         0 /* unused */, app.getPid(), processGroup, app.processName));
                 try {
