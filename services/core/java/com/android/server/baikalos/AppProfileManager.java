@@ -956,6 +956,38 @@ public class AppProfileManager {
         return profile != null ? profile : new AppProfile(packageName);
     }
 
+    public boolean isAppRestricted(int uid, String packageName) {
+        if( !mAggressiveMode ) return false;
+        if( mAppSettings == null ) return false;
+        if( uid < Process.FIRST_APPLICATION_UID ) return false;
+        if( packageName == null ) {
+            packageName = BaikalConstants.getPackageByUid(mContext, uid);
+            if( packageName == null ) return false;
+        }
+        AppProfile profile = mAppSettings.getProfile(packageName);
+        if( profile == null ) return false;
+        if( isStamina() && !profile.mStamina ) {
+            if( profile.getBackground() >= 0 ) {
+                Slog.w(TAG, "Background execution restricted by baikalos stamina:" + profile.mPackageName);
+                return true;
+            }
+        }
+        if( mAwake ) {
+            int mode = mExtremeMode ? 0 : 1;
+            if( profile.getBackground() > mode ) {
+                Slog.w(TAG, "Background execution restricted by baikalos:" + profile.mPackageName);
+                return true;
+            
+            }
+        } else {
+            if( profile.getBackground() > 0 ) {
+                Slog.w(TAG, "Background execution restricted by baikalos: " + profile.mPackageName);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean isBlocked(AppProfile profile, String packageName, int uid) {
 
         if( !mAggressiveMode ) return false;
@@ -975,11 +1007,10 @@ public class AppProfileManager {
         if( profile == null ) return false;
         if( profile.mUid < Process.FIRST_APPLICATION_UID ) return false;
         if( isStamina() && !profile.mStamina ) {
-            if( profile.getBackground() < 0 ) {
-                return false;
+            if( profile.getBackground() >= 0 ) {
+                Slog.w(TAG, "Background execution disabled by baikalos stamina:" + profile.mPackageName);
+                return true;
             }
-            Slog.w(TAG, "Background execution disabled by baikalos stamina:" + profile.mPackageName);
-            return true;
         }
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;

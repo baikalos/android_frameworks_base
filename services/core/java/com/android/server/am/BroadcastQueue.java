@@ -1766,9 +1766,9 @@ public final class BroadcastQueue {
                         mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid);
         }
 
-        if( !skip && callerBackground ) {
+        /*if( !skip && callerBackground ) {
             if( mService.mAppProfileManager.isStamina() && !appProfile.mStamina ) {
-                if( appProfile.getBackground() >= 0 ) {
+                if( appProfile.getBackground() > 0 ) {
                     Slog.w(TAG, "Background execution disabled by baikalos stamina: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
@@ -1787,7 +1787,7 @@ public final class BroadcastQueue {
                     skip = true;
                 }
             }
-        }
+        }*/
 
         if( !skip && callerBackground ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {

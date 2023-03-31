@@ -6665,9 +6665,11 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     @VisibleForTesting
     public boolean isBackgroundRestrictedNoCheck(final int uid, final String packageName) {
-        final int mode = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
-                uid, packageName);
-        return mode != AppOpsManager.MODE_ALLOWED;
+        //final int mode = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
+        //        uid, packageName);
+        //return mode != AppOpsManager.MODE_ALLOWED;
+
+        return mAppProfileManager.isAppRestricted(uid,packageName);
     }
 
     @Override
@@ -18626,9 +18628,14 @@ public class ActivityManagerService extends IActivityManager.Stub
         return mActivityTaskManager.shouldForceCutoutFullscreen(packageName);
     }
 
-    boolean shouldSkipBootCompletedBroadcastForPackage(ApplicationInfo info) {
+    public boolean shouldSkipBootCompletedBroadcastForPackage(ApplicationInfo info) {
+        /*
         return getAppOpsManager().checkOpNoThrow(
                 AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
                 info.uid, info.packageName) != AppOpsManager.MODE_ALLOWED;
+        */
+        //return mAppStateTracker.isAppRestricted(uid,packageName);
+        return false;
+
     }
 }
