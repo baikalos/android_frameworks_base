@@ -500,7 +500,10 @@ public class BaikalSpoofer {
 
     public static String overrideCameraId(String cameraId, int scenario) {
         String id = SystemProperties.get("persist.baikal.cameraid." + cameraId, "");
-        if( scenario == 0 ) return cameraId; /*{
+
+        Log.e(TAG, "overrideCameraId: " + cameraId + " -> " + id);
+        if( scenario == 0 ) return cameraId; 
+        /*{
             if("25".equals(cameraId)) {
                 return "2";
             }
