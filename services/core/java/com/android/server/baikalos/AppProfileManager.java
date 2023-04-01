@@ -968,20 +968,29 @@ public class AppProfileManager {
         if( profile == null ) return false;
         if( isStamina() && !profile.mStamina ) {
             if( profile.getBackground() >= 0 ) {
-                Slog.w(TAG, "Background execution restricted by baikalos stamina:" + profile.mPackageName);
+                Slog.w(TAG, "Background execution restricted by baikalos stamina ("
+                    + profile.getBackground() + "," 
+                    + profile.mStamina + ") : " 
+                    + profile.mPackageName);
                 return true;
             }
         }
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
             if( profile.getBackground() > mode ) {
-                Slog.w(TAG, "Background execution restricted by baikalos:" + profile.mPackageName);
+                Slog.w(TAG, "Background execution restricted by baikalos (" 
+                    + profile.getBackground() + "," 
+                    + profile.mStamina + ") : " 
+                    + profile.mPackageName);
                 return true;
             
             }
         } else {
             if( profile.getBackground() > 0 ) {
-                Slog.w(TAG, "Background execution restricted by baikalos: " + profile.mPackageName);
+                Slog.w(TAG, "Background execution restricted by baikalos ("
+                    + profile.getBackground() + "," 
+                    + profile.mStamina + ") : " 
+                    + profile.mPackageName);
                 return true;
             }
         }
@@ -1008,20 +1017,29 @@ public class AppProfileManager {
         if( profile.mUid < Process.FIRST_APPLICATION_UID ) return false;
         if( isStamina() && !profile.mStamina ) {
             if( profile.getBackground() >= 0 ) {
-                Slog.w(TAG, "Background execution disabled by baikalos stamina:" + profile.mPackageName);
+                Slog.w(TAG, "Background execution disabled by baikalos stamina (" + 
+                    + profile.getBackground() + "," 
+                    + profile.mStamina + ") : " 
+                    + profile.mPackageName);
                 return true;
             }
         }
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
             if( profile.getBackground() > mode ) {
-                Slog.w(TAG, "Background execution disabled by baikalos:" + profile.mPackageName);
+                Slog.w(TAG, "Background execution disabled by baikalos ("
+                    + profile.getBackground() + "," 
+                    + profile.mStamina + ") : " 
+                    + profile.mPackageName);
                 return true;
             
             }
         } else {
             if( profile.getBackground() > 0 ) {
-                Slog.w(TAG, "Background execution limited by baikalos: " + profile.mPackageName);
+                Slog.w(TAG, "Background execution limited by baikalos ("
+                    + profile.getBackground() + "," 
+                    + profile.mStamina + ") : " 
+                    + profile.mPackageName);
                 return true;
             }
         }

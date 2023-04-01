@@ -519,7 +519,7 @@ public class PowerGroup {
 
 
         boolean ready = mDisplayManagerInternal.requestPowerState(mGroupId, mDisplayPowerRequest,
-                waitForNegativeProximity);
+                waitForNegativeProximity, autoBrightness);
         mNotifier.onScreenPolicyUpdate(mGroupId, mDisplayPowerRequest.policy);
         return ready;
     }

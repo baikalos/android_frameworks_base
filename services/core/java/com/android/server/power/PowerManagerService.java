@@ -2768,7 +2768,7 @@ public final class PowerManagerService extends SystemService
 
                 boolean aod_enabled = updateAodOnChargerStatus();
 
-                /*if( aod_enabled ) {
+                if( aod_enabled ) {
                     if( wasPowered != mIsPowered && (mWakefulnessRaw == WAKEFULNESS_ASLEEP || mWakefulnessRaw == WAKEFULNESS_DOZING ) ) {
                         Slog.i(TAG, "Update Aod On Charger Status");
 
@@ -2782,7 +2782,7 @@ public final class PowerManagerService extends SystemService
                                 now, PowerManager.WAKE_REASON_PLUGGED_IN, Process.SYSTEM_UID);
                         }
                     }
-                } else {*/
+                } else {
 
                     // Treat plugging and unplugging the devices as a user activity.
                     // Users find it disconcerting when they plug or unplug the device
@@ -2796,7 +2796,7 @@ public final class PowerManagerService extends SystemService
                                 "android.server.power:PLUGGED:" + mIsPowered, Process.SYSTEM_UID,
                                 mContext.getOpPackageName(), Process.SYSTEM_UID);
                     }
-                //}
+                }
 
                 userActivityNoUpdateLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), now,
                         PowerManager.USER_ACTIVITY_EVENT_OTHER, 0, Process.SYSTEM_UID);
@@ -2833,7 +2833,9 @@ public final class PowerManagerService extends SystemService
         final ContentResolver resolver = mContext.getContentResolver();
 
         boolean enabled = Settings.Secure.getIntForUser(resolver,
-                Settings.Secure.DOZE_ALWAYS_ON_CHARGER, 0, UserHandle.USER_CURRENT) != 0;
+                Settings.Secure.DOZE_ON_CHARGE, 0, UserHandle.USER_CURRENT) != 0;
+
+        /*
 
         boolean active = Settings.Secure.getIntForUser(resolver,
                 Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT) != 0;
@@ -2848,7 +2850,7 @@ public final class PowerManagerService extends SystemService
                 Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=" + mIsPowered + " enabled=" + enabled + " active=false");
             Settings.Secure.putIntForUser(resolver,
                 Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT);
-        }
+        }*/
         return enabled;
     }
 
@@ -3714,7 +3716,7 @@ public final class PowerManagerService extends SystemService
         if (mDreamManager != null) {
             // Restart the dream whenever the sandman is summoned.
             if (startDreaming) {
-                mDreamManager.stopDream(/* immediate= */ false,
+                mDreamManager.stopDream(/* immediate= */ /*false*/ true,
                         "power manager request before starting dream" /*reason*/);
                 mDreamManager.startDream(wakefulness == WAKEFULNESS_DOZING,
                         "power manager request" /*reason*/);

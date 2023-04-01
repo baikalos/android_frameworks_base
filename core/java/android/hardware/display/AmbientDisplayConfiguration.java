@@ -284,7 +284,7 @@ public class AmbientDisplayConfiguration {
     public boolean alwaysOnEnabledSetting(int user) {
         final boolean alwaysOnEnabled = Settings.Secure.getIntForUser(
                 mContext.getContentResolver(), Settings.Secure.DOZE_ALWAYS_ON,
-                mAlwaysOnByDefault ? 1 : 0, user) == 1;
+                /*mAlwaysOnByDefault ? 1 :*/ 0, user) == 1;
         return alwaysOnEnabled && alwaysOnAvailable() && !accessibilityInversionEnabled(user);
     }
 
@@ -297,7 +297,9 @@ public class AmbientDisplayConfiguration {
         if (alwaysOnChargingEnabledSetting(user)) {
             final Intent intent = mContext.registerReceiver(null, sIntentFilter);
             if (intent != null) {
-                return intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
+                boolean plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0;
+                Slog.i("AodConfig", "Aod on charger plugged=" + plugged);
+                return plugged;
             }
         }
         return false;
