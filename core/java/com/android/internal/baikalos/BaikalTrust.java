@@ -237,6 +237,14 @@ public class BaikalTrust extends ContentObserver {
         updateTrustedDevices();
     }
 
+    public static boolean isTrustable() {
+        if( !mTrustEnabled ) {
+            Slog.d(TAG, "isTrustable: disabled");
+            return false;
+        }        
+        return true;
+    }
+
     public static boolean isTrusted() {
         if( !mTrustEnabled ) {
             Slog.i(TAG, "isTrusted: disabled");

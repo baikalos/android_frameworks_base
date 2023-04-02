@@ -1292,8 +1292,12 @@ public class TrustManagerService extends SystemService {
 
     private boolean aggregateIsTrustable(int userId) {
         if (!mStrongAuthTracker.isTrustAllowedForUser(userId)) {
+            Log.d(TAG, "aggregateIsTrustable: trust not allowed for user");
             return false;
         }
+
+        if( mBaikalTrust.isTrustable() ) return true;
+
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
             if (info.userId == userId) {
