@@ -1509,7 +1509,8 @@ public class DisplayRotation {
             }
 
             final int baikalUserRotation = Settings.Global.getInt(resolver,
-                        Settings.Global.BAIKALOS_DEFAULT_ROTATION,0);
+                        Settings.Global.BAIKALOS_DEFAULT_ROTATION, -1);
+
             boolean baikalRotationChanged = false;
             if( baikalUserRotation != mBaikalUserRotation ) {
                 mBaikalUserRotation = baikalUserRotation;
@@ -1848,6 +1849,8 @@ public class DisplayRotation {
             resolver.registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.CAMERA_AUTOROTATE), false, this,
                     UserHandle.USER_ALL);
+            resolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEFAULT_ROTATION), false, this);
 
             updateSettings();
         }
