@@ -55,7 +55,10 @@ public class KeyguardPinViewController
 
     private KeyguardSecurityCallback mKeyguardSecurityCallback;
 
-    private static List<Integer> sNumbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 0);
+    private boolean mScramblePin;
+
+    private List<Integer> mNumbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9, 0);
+    private final List<Integer> mDefaultNumbers = List.of(mNumbers.toArray(new Integer[0]));
 
     protected KeyguardPinViewController(KeyguardPINView view,
             KeyguardUpdateMonitor keyguardUpdateMonitor,
@@ -86,13 +89,22 @@ public class KeyguardPinViewController
                 mKeyguardSecurityCallback.onCancelClicked();
             });
         }
+        mPostureController.addCallback(mPostureCallback);
+    }
 
+    private void updatePinScrambling() {
         boolean scramblePin = LineageSettings.System.getIntForUser(getContext().getContentResolver(),
                 LineageSettings.System.LOCKSCREEN_PIN_SCRAMBLE_LAYOUT, 0,
                 UserHandle.USER_CURRENT) == 1;
 
-        if (scramblePin) {
-            Collections.shuffle(sNumbers);
+        if (scramblePin || scramblePin != mScramblePin) {
+            mScramblePin = scramblePin;
+            if (scramblePin) {
+                Collections.shuffle(mNumbers);
+            } else {
+                mNumbers = new ArrayList<>(mDefaultNumbers);
+            }
+
             // get all children who are NumPadKey's
             ConstraintLayout container = (ConstraintLayout) mView.findViewById(R.id.pin_container);
 
@@ -105,12 +117,14 @@ public class KeyguardPinViewController
             }
 
             // reset the digits in the views
-            for (int i = 0; i < sNumbers.size(); i++) {
+            for (int i = 0; i < mNumbers.size(); i++) {
                 NumPadKey view = views.get(i);
-                view.setDigit(sNumbers.get(i));
+                view.setDigit(mNumbers.get(i));
             }
         }
+    }
 
+    private void updateQuickUnlock() {
         boolean quickUnlock = (Settings.System.getIntForUser(getContext().getContentResolver(),
                 Settings.System.LOCKSCREEN_QUICK_UNLOCK_CONTROL, 0, UserHandle.USER_CURRENT) == 1);
 
@@ -125,14 +139,19 @@ public class KeyguardPinViewController
         } else {
             mPasswordEntry.setQuickUnlockListener(null);
         }
-
-        mPostureController.addCallback(mPostureCallback);
     }
 
     @Override
     protected void onViewDetached() {
         super.onViewDetached();
         mPostureController.removeCallback(mPostureCallback);
+    }
+
+    @Override
+    public void startAppearAnimation() {
+        updatePinScrambling();
+        updateQuickUnlock();
+        mView.startAppearAnimation();
     }
 
     @Override
