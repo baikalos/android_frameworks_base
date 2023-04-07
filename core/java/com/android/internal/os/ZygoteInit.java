@@ -86,7 +86,7 @@ public class ZygoteInit {
 
     private static final String TAG = "Zygote";
 
-    private static final boolean LOGGING_DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean LOGGING_DEBUG = false;
 
     private static final String PROPERTY_DISABLE_GRAPHICS_DRIVER_PRELOADING =
             "ro.zygote.disable_gl_preload";
@@ -623,7 +623,8 @@ public class ZygoteInit {
         } catch (ErrnoException ex) {
             throw new RuntimeException("Failed to capget()", ex);
         }
-        capabilities &= ((long) data[0].effective) | (((long) data[1].effective) << 32);
+        capabilities &= Integer.toUnsignedLong(data[0].effective) |
+                (Integer.toUnsignedLong(data[1].effective) << 32);
 
         /* Hardcoded command line to start the system server */
         String[] args = {

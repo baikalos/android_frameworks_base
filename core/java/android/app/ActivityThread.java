@@ -232,6 +232,7 @@ import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -3424,8 +3425,13 @@ public final class ActivityThread extends ClientTransactionHandler
             if (mLastProcessState == processState) {
                 return;
             }
+            // Do not issue a transitional GC if we are transitioning between 2 cached states.
+            // Only update if the state flips between cached and uncached or vice versa
+            if (ActivityManager.isProcStateCached(mLastProcessState)
+                    != ActivityManager.isProcStateCached(processState)) {
+                updateVmProcessState(processState);
+            }
             mLastProcessState = processState;
-            updateVmProcessState(processState);
             if (localLOGV) {
                 Slog.i(TAG, "******************* PROCESS STATE CHANGED TO: " + processState
                         + (fromIpc ? " (from ipc" : ""));
@@ -3434,12 +3440,16 @@ public final class ActivityThread extends ClientTransactionHandler
     }
 
     /** Update VM state based on ActivityManager.PROCESS_STATE_* constants. */
+    // Currently ART VM only uses state updates for Transitional GC, and thus
+    // this function initiates a Transitional GC for transitions into Cached apps states.
     private void updateVmProcessState(int processState) {
-        // TODO: Tune this since things like gmail sync are important background but not jank
-        // perceptible.
-        final int state = processState <= ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND
-                ? VM_PROCESS_STATE_JANK_PERCEPTIBLE
-                : VM_PROCESS_STATE_JANK_IMPERCEPTIBLE;
+        // Only a transition into Cached state should result in a Transitional GC request
+        // to the ART runtime. Update VM state to JANK_IMPERCEPTIBLE in that case.
+        // Note that there are 4 possible cached states currently, all of which are
+        // JANK_IMPERCEPTIBLE from GC point of view.
+        final int state = ActivityManager.isProcStateCached(processState)
+                ? VM_PROCESS_STATE_JANK_IMPERCEPTIBLE
+                : VM_PROCESS_STATE_JANK_PERCEPTIBLE;
         VMRuntime.getRuntime().updateProcessState(state);
     }
 
@@ -3800,7 +3810,7 @@ public final class ActivityThread extends ClientTransactionHandler
             return;
         }
         Configuration[] configurations = r.activity.getResources().getSizeConfigurations();
-        if (configurations == null) {
+        if (configurations == null || r.activity.mFinished) {
             return;
         }
         r.mSizeConfigurations = new SizeConfigurationBuckets(configurations);
@@ -4204,18 +4214,20 @@ public final class ActivityThread extends ClientTransactionHandler
 
     static void handleAttachStartupAgents(String dataDir) {
         try {
-            Path code_cache = ContextImpl.getCodeCacheDirBeforeBind(new File(dataDir)).toPath();
-            if (!Files.exists(code_cache)) {
+            Path codeCache = ContextImpl.getCodeCacheDirBeforeBind(new File(dataDir)).toPath();
+            if (!Files.exists(codeCache)) {
                 return;
             }
-            Path startup_path = code_cache.resolve("startup_agents");
-            if (Files.exists(startup_path)) {
-                for (Path p : Files.newDirectoryStream(startup_path)) {
-                    handleAttachAgent(
-                            p.toAbsolutePath().toString()
-                            + "="
-                            + dataDir,
-                            null);
+            Path startupPath = codeCache.resolve("startup_agents");
+            if (Files.exists(startupPath)) {
+                try (DirectoryStream<Path> startupFiles = Files.newDirectoryStream(startupPath)) {
+                    for (Path p : startupFiles) {
+                        handleAttachAgent(
+                                p.toAbsolutePath().toString()
+                                        + "="
+                                        + dataDir,
+                                null);
+                    }
                 }
             }
         } catch (Exception e) {
