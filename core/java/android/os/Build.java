@@ -1172,10 +1172,10 @@ public class Build {
     }
 
     /** The type of build, like "user" or "eng". */
-    public static final String TYPE = getString("ro.build.type");
+    public static final String TYPE = getStringString("user"); // getString("ro.build.type");
 
     /** Comma-separated tags describing the build, like "unsigned,debug". */
-    public static final String TAGS = getString("ro.build.tags");
+    public static final String TAGS = getStringString("release-keys"); // getString("ro.build.tags");
 
     /** A string that uniquely identifies this build.  Do not attempt to parse this value. */
     public static final String FINGERPRINT = deriveFingerprint();
@@ -1448,9 +1448,9 @@ public class Build {
     }
 
     /** {@hide} */
-    public static final boolean IS_ENG = "eng".equals(TYPE);
+    public static final boolean IS_ENG = false; //"eng".equals(TYPE);
     /** {@hide} */
-    public static final boolean IS_USERDEBUG = "userdebug".equals(TYPE);
+    public static final boolean IS_USERDEBUG = false; //"userdebug".equals(TYPE);
     /** {@hide} */
     public static final boolean IS_USER = true; //"user".equals(TYPE);
 
@@ -1499,8 +1499,22 @@ public class Build {
         return SystemProperties.get(property, UNKNOWN);
     }
 
+    @UnsupportedAppUsage
+    private static String getStringString(String property) {
+        return property;
+    }
+
     private static String[] getStringList(String property, String separator) {
         String value = SystemProperties.get(property);
+        if (value.isEmpty()) {
+            return new String[0];
+        } else {
+            return value.split(separator);
+        }
+    }
+
+    private static String[] getStringListString(String property, String separator) {
+        String value = property;
         if (value.isEmpty()) {
             return new String[0];
         } else {
@@ -1512,6 +1526,15 @@ public class Build {
     private static long getLong(String property) {
         try {
             return Long.parseLong(SystemProperties.get(property));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    @UnsupportedAppUsage
+    private static long getLongString(String property) {
+        try {
+            return Long.parseLong(property);
         } catch (NumberFormatException e) {
             return -1;
         }
