@@ -304,7 +304,6 @@ public class AmbientDisplayConfiguration {
                 boolean isPlugged = plugged == BatteryManager.BATTERY_PLUGGED_AC || 
                             plugged == BatteryManager.BATTERY_PLUGGED_USB ||
                             plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
-                Slog.i("AodConfig", "Aod on charger plugged=" + (isPlugged && isCharging));
                 return isPlugged && isCharging;
             }
         }
