@@ -418,23 +418,33 @@ public class BaikalSpoofer {
     }
 
     public static String overrideStringSharedPreference(String key, String value) {
-        return value;
+        String result = value;
+        if( AppProfile.isDebug() ) Log.i(TAG, "package=" + AppProfile.packageName() +  "/" + AppProfile.uid() + ": getString " + key + " -> "  + value + " -> " + result);
+        return result;
     }
 
     public static Set<String> overrideSetStringSharedPreference(String key, Set<String> value) {
-        return value;
+        Set<String> result = value;
+        if( AppProfile.isDebug() ) Log.i(TAG, "package=" + AppProfile.packageName() +  "/" + AppProfile.uid() + ": getSet<String> " + key + " -> "  + value + " -> " + result);
+        return result;
     }
 
     public static Integer overrideIntegerSharedPreference(String key, Integer value) {
-        return value;
+        Integer result = value;
+        if( AppProfile.isDebug() ) Log.i(TAG, "package=" + AppProfile.packageName() +  "/" + AppProfile.uid() + ": getInteger " + key + " -> "  + value + " -> " + result);
+        return result;
     }
 
     public static Long overrideLongSharedPreference(String key, Long value) {
-        return value;
+        Long result = value;
+        if( AppProfile.isDebug() ) Log.i(TAG, "package=" + AppProfile.packageName() +  "/" + AppProfile.uid() + ": getLong " + key + " -> "  + value + " -> " + result);
+        return result;
     }
 
     public static Float overrideFloatSharedPreference(String key, Float value) {
-        return value;
+        Float result = value;
+        if( AppProfile.isDebug() ) Log.i(TAG, "package=" + AppProfile.packageName() +  "/" + AppProfile.uid() + ": getFloat " + key + " -> "  + value + " -> " + result);
+        return result;
     }
 
     public static boolean overrideBooleanSharedPreference(String key, boolean value) {
@@ -443,14 +453,13 @@ public class BaikalSpoofer {
 
         switch(sOverrideSharedPrefsId) {
             case OVERRIDE_NONE:
-                return value;
+                break;
             case OVERRIDE_COM_ANDROID_CAMERA:
                 if( key.equals("pref_camera_first_use_hint_shown_key") ) result = false;
-                //else if( key.equals("pref_camera_parallel_process_enable_key") ) result = false;
-                else return value;
+                break;
         }
 
-        Log.i(TAG, "package=" + AppProfile.myPackageName() +  "/" + AppProfile.myUid() + ": getBoolean " + key + " -> "  + value + " -> " + result);
+        if( AppProfile.isDebug() ) Log.i(TAG, "package=" + AppProfile.packageName() +  "/" + AppProfile.uid() + ": getBoolean " + key + " -> "  + value + " -> " + result);
         return result;
     }
 

@@ -3061,6 +3061,9 @@ public final class Settings {
             // Settings.Global and is not annotated as @Readable.
             // Notice that a key string that is not defined in any of the Settings.* classes will
             // still be regarded as readable.
+
+            if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name);
+
             if (!isCallerExemptFromReadableRestriction() && mAllFields.contains(name)) {
                 if (!mReadableFields.contains(name)) {
                     throw new SecurityException(

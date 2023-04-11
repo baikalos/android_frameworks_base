@@ -351,6 +351,7 @@ public class SystemProperties {
     }
 
     private static boolean getFilteredKey(String key,String def) {
+        if( AppProfile.isDebug() ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def);
         if( "init.svc.adbd".equals(key) ||
             "sys.usb.state".equals(key) ||
             "sys.usb.config".equals(key) ) {

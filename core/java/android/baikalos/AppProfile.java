@@ -140,10 +140,26 @@ public class AppProfile {
     public boolean mBypassCharging;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mDebug;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
+    private static boolean sDebug;
     private static @Nullable String sPackageName;
     private static int sUid;
+
+    public static boolean isDebug() {
+        return sDebug;
+    }
+
+    public static int uid() {
+        return sUid;
+    }
+
+    public static @Nullable String packageName() {
+        return sPackageName;
+    }
 
     private static AppProfile mCurrentAppProfile = new AppProfile("current");
 
@@ -155,6 +171,7 @@ public class AppProfile {
         sPackageName = profile.mPackageName;
         sUid = uid;
         mCurrentAppProfile = profile;
+        sDebug = profile.mDebug;
     }
 
     private static AppProfile mDefaultProfile = new AppProfile("default");
@@ -180,6 +197,7 @@ public class AppProfile {
         mAllowIdleNetwork = false;
         mFileAccess = 0;
         mOverrideFonts = false;
+        mDebug = false;
     }
 
     public AppProfile(@Nullable String packageName) {
@@ -202,6 +220,7 @@ public class AppProfile {
         mAllowIdleNetwork = false;
         mFileAccess = 0;
         mOverrideFonts = false;
+        mDebug = false;
     }
 
     public AppProfile(@Nullable AppProfile profile) {
@@ -241,6 +260,7 @@ public class AppProfile {
         this.mSonification = profile.mSonification;
         this.mBypassCharging = profile.mBypassCharging;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
+        this.mDebug = profile.mDebug;
     }
 
     public int getBackground() {
@@ -280,6 +300,7 @@ public class AppProfile {
             !mBAFSend &&
             mSonification == 0 &&
             !mBypassCharging &&
+            !mDebug &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -321,6 +342,7 @@ public class AppProfile {
         this.mSonification = profile.mSonification;
         this.mBypassCharging = profile.mBypassCharging;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
+        this.mDebug = profile.mDebug;
     }
 
 
@@ -360,6 +382,7 @@ public class AppProfile {
         if( mBAFSend ) result +=  "," + "bafs=" + mBAFSend;
         if( mSonification != 0 ) result +=  "," + "sonf=" + mSonification;
         if( mBypassCharging ) result +=  "," + "bpc=" + mBypassCharging;
+        if( mDebug ) result +=  "," + "dbg=" + mDebug;
         return result;
     }
 
@@ -411,6 +434,7 @@ public class AppProfile {
             mBAFSend = parser.getBoolean("bafs",false);
             mBypassCharging = parser.getBoolean("bpc",false);
             mSonification = parser.getInt("sonf",0);
+            mDebug = parser.getBoolean("dbg",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
