@@ -2610,6 +2610,8 @@ public final class PowerManagerService extends SystemService
             }
             mWakefulnessChanging = false;
             mNotifier.onWakefulnessChangeFinished();
+            Actions.sendWakefulnessChanged(getGlobalWakefulnessLocked());
+
         }
     }
 
@@ -2769,7 +2771,9 @@ public final class PowerManagerService extends SystemService
                 boolean aod_enabled = updateAodOnChargerStatus();
 
                 if( aod_enabled ) {
-                    if( wasPowered != mIsPowered && (mWakefulnessRaw == WAKEFULNESS_ASLEEP || mWakefulnessRaw == WAKEFULNESS_DOZING ) ) {
+                    if( wasPowered != mIsPowered && 
+                        (getGlobalWakefulnessLocked() == WAKEFULNESS_ASLEEP || 
+                         getGlobalWakefulnessLocked() == WAKEFULNESS_DOZING ) ) {
                         Slog.i(TAG, "Update Aod On Charger Status");
 
                         if( mIsPowered ) {
@@ -2835,28 +2839,25 @@ public final class PowerManagerService extends SystemService
         boolean enabled = Settings.Secure.getIntForUser(resolver,
                 Settings.Secure.DOZE_ON_CHARGE, 0, UserHandle.USER_CURRENT) != 0;
 
-        /*
-
-        boolean active = Settings.Secure.getIntForUser(resolver,
-                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT) != 0;
-
-        if (enabled && mIsPowered && !active ) {
-            Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=" + mIsPowered + " enabled=" + enabled + " active=true");
-            Settings.Secure.putIntForUser(resolver,
-                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 1, UserHandle.USER_CURRENT);
-        } 
-
-        if( active && (!mIsPowered || !enabled) ) {
-                Slog.i(TAG, "updateAodOnChargerStatus mIsPowered=" + mIsPowered + " enabled=" + enabled + " active=false");
-            Settings.Secure.putIntForUser(resolver,
-                Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, UserHandle.USER_CURRENT);
-        }*/
         return enabled;
     }
 
 
     private void updateBypassChargingStatus() {
-        if (!mBypassChargingAvailable) return;
+
+        if (DEBUG) {
+            Slog.i(TAG, "Bypass charging mBypassChargingAvailable=" + mBypassChargingAvailable +
+                    ", mBypassChargingEnabled=" + mBypassChargingEnabled +
+                    ", mPowerInputSuspended=" + mPowerInputSuspended +
+                    ", mBatteryLevel=" + mBatteryLevel +
+                    ", mBypassChargingResumeLevel=" + mBypassChargingResumeLevel +
+                    ", mBypassChargingLevel=" + mBypassChargingLevel +
+                    ", mBypassChargingResetStats=" + mBypassChargingResetStats);
+        }
+
+        if (!mBypassChargingAvailable) {
+            return;
+        }
 
         if( !mBypassChargingEnabled ) {
             if( mPowerInputSuspended ) {
