@@ -148,7 +148,6 @@ import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
 import com.android.server.baikalos.AppProfileManager;
 
-
 import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -869,6 +868,7 @@ public final class PowerManagerService extends SystemService
     private int mBypassChargingResumeLevel;
     private int mBypassChargingLevelDefaultConfig;
     private int mBypassChargingResumeLevelDefaultConfig;
+
     private static String mPowerInputSuspendSysfsNode;
     private static String mPowerInputSuspendValue;
     private static String mPowerInputResumeValue;
