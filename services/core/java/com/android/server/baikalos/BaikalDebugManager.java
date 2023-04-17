@@ -230,7 +230,7 @@ public class BaikalDebugManager {
 
         mDebugMask = debugMask;
         //if( (debugMask&BaikalConstants.DEBUG_MASK_ALL) != 0 ) debugMask =0xFFFFFF; 
-        if( (debugMask&BaikalConstants.DEBUG_MASK_TEMPLATE) !=0 ) BaikalConstants.BAIKAL_DEBUG_TEMPLATE = true;
+        //if( (debugMask&BaikalConstants.DEBUG_MASK_TEMPLATE) !=0 ) BaikalConstants.BAIKAL_DEBUG_TEMPLATE = true;
         if( (debugMask&BaikalConstants.DEBUG_MASK_SENSORS) !=0 ) BaikalConstants.BAIKAL_DEBUG_SENSORS = true;
         if( (debugMask&BaikalConstants.DEBUG_MASK_TORCH) !=0 ) BaikalConstants.BAIKAL_DEBUG_TORCH = true;
         if( (debugMask&BaikalConstants.DEBUG_MASK_TELEPHONY) !=0 ) BaikalConstants.BAIKAL_DEBUG_TELEPHONY = true;

@@ -50,6 +50,7 @@ import android.util.ArraySet;
 import java.util.List;
 import java.util.Locale;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 public class AppProfileSettings extends ContentObserver {
@@ -66,6 +67,7 @@ public class AppProfileSettings extends ContentObserver {
     private HashMap<String, AppProfile> _profilesByPackageName = new HashMap<String,AppProfile> ();
 
     private static HashMap<String, AppProfile> _staticProfilesByPackageName = null; 
+    private static HashSet<Integer> _mAppsForDebug = new HashSet<Integer>();
 
     private PowerWhitelistBackend mBackend;
 
@@ -401,6 +403,8 @@ public class AppProfileSettings extends ContentObserver {
 
             HashMap<String,AppProfile> _oldProfiles = _profilesByPackageName;
 
+            _mAppsForDebug = new HashSet<Integer>();
+
             _profilesByPackageName = new HashMap<String,AppProfile> ();
             _profilesByPackageName.put(sSystemProfile.mPackageName,sSystemProfile);
 
@@ -412,10 +416,14 @@ public class AppProfileSettings extends ContentObserver {
                     int uid = getAppUidLocked(profile.mPackageName);
                     if( uid == -1 ) continue;
 
-                    profile.mUid = uid;
-
                     if( profile == null ) {
                         continue;
+                    }
+
+                    profile.mUid = uid;
+ 
+                    if( !_mAppsForDebug.contains(uid)  ) {
+                        _mAppsForDebug.add(uid);
                     }
 
                     if( _oldProfiles.containsKey(profile.mPackageName) ) {
@@ -514,7 +522,7 @@ public class AppProfileSettings extends ContentObserver {
     }
     
     private void setBackgroundMode(int op, int uid, String packageName, int mode) {
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set AppOp " + op + " for packageName=" + packageName + ", uid=" + uid + " to " + mode);
+        BaikalConstants.Logi(BaikalConstants.BAIKAL_DEBUG_APP_PROFILE, uid, TAG, "Set AppOp " + op + " for packageName=" + packageName + ", uid=" + uid + " to " + mode);
         if( uid != -1 ) {
             getAppOpsManager().setMode(op, uid, packageName, mode);
         }
@@ -684,5 +692,9 @@ public class AppProfileSettings extends ContentObserver {
             sInstance = new AppProfileSettings(handler,context);
         }
         return sInstance;
+    }
+    
+    public static boolean isDebugUid(int uid) {
+        return _mAppsForDebug.contains(uid);
     }
 }
