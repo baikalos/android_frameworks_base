@@ -770,6 +770,7 @@ public class UserRestrictionsUtils {
 
             case android.provider.Settings.Secure.DOZE_ENABLED:
             case android.provider.Settings.Secure.DOZE_ALWAYS_ON:
+            case android.provider.Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON:
             case android.provider.Settings.Secure.DOZE_PICK_UP_GESTURE:
             case android.provider.Settings.Secure.DOZE_PULSE_ON_LONG_PRESS:
             case android.provider.Settings.Secure.DOZE_DOUBLE_TAP_GESTURE:

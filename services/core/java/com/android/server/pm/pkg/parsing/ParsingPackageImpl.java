@@ -1069,6 +1069,18 @@ public class ParsingPackageImpl implements ParsingPackage, ParsingPackageHidden,
         return appInfo;
     }
 
+    public ParsingPackageImpl removeUsesPermission(ParsedUsesPermission permission) {
+        this.usesPermissions = CollectionUtils.remove(this.usesPermissions, permission);
+
+        // Continue populating legacy data structures to avoid performance
+        // issues until all that code can be migrated
+        this.requestedPermissions = CollectionUtils.remove(this.requestedPermissions,
+                permission.getName());
+
+        return this;
+    }
+
+
     public ApplicationInfo toAppInfoWithoutStateWithoutFlags() {
         ApplicationInfo appInfo = new ApplicationInfo();
 

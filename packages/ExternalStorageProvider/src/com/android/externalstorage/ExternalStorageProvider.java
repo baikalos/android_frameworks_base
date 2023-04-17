@@ -321,6 +321,9 @@ public class ExternalStorageProvider extends FileSystemProvider {
     @Override
     protected boolean shouldBlockFromTree(@NonNull String docId) {
         try {
+
+            if( Settings.Global.getInt(getContext().getContentResolver(),Settings.Global.BAIKALOS_R_SECURE,0) == 1 ) return false;
+
             final File dir = getFileForDocId(docId, false /* visible */);
 
             // the file is null or it is not a directory

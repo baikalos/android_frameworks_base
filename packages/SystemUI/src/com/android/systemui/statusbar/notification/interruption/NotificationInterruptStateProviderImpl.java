@@ -85,6 +85,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     private boolean mReTicker = false;
     private TelecomManager mTm;
     private Context mContext;
+    private boolean mInCall = false;
 
     public enum NotificationInterruptEvent implements UiEventLogger.UiEventEnum {
         @UiEvent(doc = "FSI suppressed for suppressive GroupAlertBehavior")
@@ -154,6 +155,9 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                         mHeadsUpManager.releaseAllImmediately();
                     }
                 }
+                mInCall = Settings.Global.getInt(
+                        mContentResolver,
+                        Settings.Global.BAIKALOS_HEADSUP_INCALL,0) != 0;
             }
         };
 
@@ -165,6 +169,11 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             mContentResolver.registerContentObserver(
                     Settings.Global.getUriFor(SETTING_HEADS_UP_TICKER), true,
                     headsUpObserver);
+
+            mContentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HEADSUP_INCALL), true,
+                    headsUpObserver);
+
         }
         headsUpObserver.onChange(true); // set up
     }

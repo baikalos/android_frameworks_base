@@ -114,6 +114,10 @@ public class DefaultDialerManager {
         return getDefaultDialerApplication(context, context.getUserId());
     }
 
+    public static String getDefaultCallScreeningApplication(Context context) {
+        return getDefaultCallScreeningApplication(context, context.getUserId());
+    }
+
     /**
      * Returns the installed dialer application for the specified user that will be used to receive
      * incoming calls, and is allowed to make emergency calls.
@@ -132,6 +136,16 @@ public class DefaultDialerManager {
         try {
             return CollectionUtils.firstOrNull(context.getSystemService(RoleManager.class)
                     .getRoleHoldersAsUser(RoleManager.ROLE_DIALER, UserHandle.of(user)));
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
+    public static String getDefaultCallScreeningApplication(Context context, int user) {
+        long identity = Binder.clearCallingIdentity();
+        try {
+            return CollectionUtils.firstOrNull(context.getSystemService(RoleManager.class)
+                    .getRoleHoldersAsUser(RoleManager.ROLE_CALL_SCREENING, UserHandle.of(user)));
         } finally {
             Binder.restoreCallingIdentity(identity);
         }
