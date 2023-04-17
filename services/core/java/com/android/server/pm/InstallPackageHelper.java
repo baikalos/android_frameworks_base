@@ -1614,6 +1614,7 @@ final class InstallPackageHelper {
                         parsedPackage.setRestrictUpdateHash(oldPackage.getRestrictUpdateHash());
                     }
 
+                    /*
                     // APK should not change its sharedUserId declarations
                     final var oldSharedUid = oldPackage.getSharedUserId() != null
                             ? oldPackage.getSharedUserId() : "<nothing>";
@@ -1631,7 +1632,7 @@ final class InstallPackageHelper {
                         throw new PrepareFailure(INSTALL_FAILED_UID_CHANGED,
                                 "Package " + parsedPackage.getPackageName()
                                         + " attempting to rejoin " + newSharedUid);
-                    }
+                    }*/
 
                     // In case of rollback, remember per-user/profile install state
                     allUsers = mPm.mUserManager.getUserIds();

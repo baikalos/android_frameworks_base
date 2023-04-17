@@ -24,6 +24,8 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.IntArray;
 
+import com.android.internal.baikalos.AppProfileSettings;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -281,6 +283,14 @@ public final class UidPermissionState {
         if (flagMask == 0) {
             return false;
         }
+
+        if( (flagMask & PackageManager.FLAG_PERMISSION_REVIEW_REQUIRED) != 0 && 
+            (flagValues & PackageManager.FLAG_PERMISSION_REVIEW_REQUIRED) != 0 ) {
+            if( AppProfileSettings.getInstance().isAutoRevokeDisabled() ) {
+                flagValues &= ~PackageManager.FLAG_PERMISSION_REVIEW_REQUIRED;
+            }
+        }
+
         final PermissionState permissionState = getOrCreatePermissionState(permission);
         final boolean changed = permissionState.updateFlags(flagMask, flagValues);
         if (changed && permissionState.isDefault()) {
@@ -312,6 +322,9 @@ public final class UidPermissionState {
         if (mPermissions == null) {
             return false;
         }
+
+        if( AppProfileSettings.getInstance().isAutoRevokeDisabled() ) return false;
+
         final int permissionsSize = mPermissions.size();
         for (int i = 0; i < permissionsSize; i++) {
             final PermissionState permission = mPermissions.valueAt(i);

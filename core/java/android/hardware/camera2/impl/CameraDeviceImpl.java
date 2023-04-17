@@ -133,7 +133,7 @@ public class CameraDeviceImpl extends CameraDevice
     private final int mTotalPartialCount;
     private final Context mContext;
 
-    private final boolean mForceMultiResolution;
+    private boolean mForceMultiResolution;
 
     private static final long NANO_PER_SECOND = 1000000000; //ns
 
@@ -311,6 +311,8 @@ public class CameraDeviceImpl extends CameraDevice
 
         mForceMultiResolution = mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_forceMultiResolution);
+
+        mForceMultiResolution = SystemProperties.getBoolean("persist.vendor.force.multires", mForceMultiResolution);
     }
 
     public CameraDeviceCallbacks getCallbacks() {
@@ -1547,10 +1549,18 @@ public class CameraDeviceImpl extends CameraDevice
         if (inputConfig == null) {
             return;
         }
+
+        if (isPrivilegedApp()) {
+            Log.w(TAG, "ignore input format/size check for white listed app");
+            return;
+        }
+
         int inputFormat = inputConfig.getFormat();
-        if (inputConfig.isMultiResolution() || mForceMultiResolution) {
-            MultiResolutionStreamConfigurationMap configMap = mCharacteristics.get(
+
+        MultiResolutionStreamConfigurationMap configMap = mCharacteristics.get(
                     CameraCharacteristics.SCALER_MULTI_RESOLUTION_STREAM_CONFIGURATION_MAP);
+
+        if (configMap != null && (inputConfig.isMultiResolution() || mForceMultiResolution)) {
 
             int[] inputFormats = configMap.getInputFormats();
             boolean validFormat = false;
@@ -1584,11 +1594,6 @@ public class CameraDeviceImpl extends CameraDevice
              * don't check input format and size,
              * if the package name is in the white list
              */
-            if (isPrivilegedApp()) {
-                Log.w(TAG, "ignore input format/size check for white listed app");
-                return;
-            }
-
             if (!checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/false) &&
                     !checkInputConfigurationWithStreamConfigurations(inputConfig, /*maxRes*/true)) {
                 throw new IllegalArgumentException("Input config with format " +
