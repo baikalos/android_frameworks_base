@@ -87,7 +87,7 @@ public abstract class DisplayManagerInternal {
      * cannot be found then {@code true} will be returned.
      */
     public abstract boolean requestPowerState(int groupId, DisplayPowerRequest request,
-            boolean waitForNegativeProximity);
+            boolean waitForNegativeProximity, boolean useAutoBrightness);
 
     /**
      * Returns {@code true} if the proximity sensor screen-off function is available.

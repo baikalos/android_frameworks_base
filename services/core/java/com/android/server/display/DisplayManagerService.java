@@ -3655,7 +3655,7 @@ public final class DisplayManagerService extends SystemService {
 
         @Override
         public boolean requestPowerState(int groupId, DisplayPowerRequest request,
-                boolean waitForNegativeProximity) {
+                boolean waitForNegativeProximity, boolean useAutoBrightness) {
             synchronized (mSyncRoot) {
                 final DisplayGroup displayGroup = mLogicalDisplayMapper.getDisplayGroupLocked(
                         groupId);
@@ -3674,7 +3674,7 @@ public final class DisplayManagerService extends SystemService {
                         final DisplayPowerController displayPowerController =
                                 mDisplayPowerControllers.get(id);
                         ready &= displayPowerController.requestPowerState(request,
-                                waitForNegativeProximity);
+                                waitForNegativeProximity, useAutoBrightness);
                     }
                 }
 

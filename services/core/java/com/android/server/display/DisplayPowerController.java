@@ -781,16 +781,19 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
      * then try the request again later until the state converges.
      */
     public boolean requestPowerState(DisplayPowerRequest request,
-            boolean waitForNegativeProximity) {
+            boolean waitForNegativeProximity, boolean useAutoBrightness) {
         if (DEBUG) {
-            Slog.d(TAG, "requestPowerState: "
-                    + request + ", waitForNegativeProximity=" + waitForNegativeProximity);
+            Slog.d(TAG, "requestPowerState: " + request + 
+                ", waitForNegativeProximity=" + waitForNegativeProximity +
+                ", useAutoBrightness=" + useAutoBrightness);
         }
 
         synchronized (mLock) {
             if (mStopped) {
                 return true;
             }
+
+            mUseAutoBrightness = useAutoBrightness;
 
             boolean changed = false;
 

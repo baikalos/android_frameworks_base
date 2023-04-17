@@ -290,6 +290,7 @@ public class Camera {
         String packageName = ActivityThread.currentOpPackageName();
     	if (packageName == null)
     	    return true;
+
         List<String> packageList = new ArrayList<>(Arrays.asList(
                 SystemProperties.get("vendor.camera.aux.packagelist", ",").split(",")));
         List<String> packageExcludelist = new ArrayList<>(Arrays.asList(
@@ -345,11 +346,10 @@ public class Camera {
      *    low-level failure).
      */
     public static void getCameraInfo(int cameraId, CameraInfo cameraInfo) {
-        if (cameraId >= getNumberOfCameras()) {
+        /*if (cameraId >= getNumberOfCameras()) {
             throw new RuntimeException("Unknown camera ID");
-        }
-        boolean overrideToPortrait = CameraManager.shouldOverrideToPortrait(
-                ActivityThread.currentApplication().getApplicationContext());
+        }*/
+        boolean overrideToPortrait = shouldOverrideToPortrait();
 
         _getCameraInfo(cameraId, overrideToPortrait, cameraInfo);
         IBinder b = ServiceManager.getService(Context.AUDIO_SERVICE);
@@ -583,9 +583,9 @@ public class Camera {
 
     /** used by Camera#open, Camera#open(int) */
     Camera(int cameraId) {
-        if (cameraId >= getNumberOfCameras()) {
+        /*if (cameraId >= getNumberOfCameras()) {
             throw new RuntimeException("Unknown camera ID");
-        }
+        }*/
         int err = cameraInit(cameraId);
         if (checkInitErrors(err)) {
             if (err == -EACCES) {

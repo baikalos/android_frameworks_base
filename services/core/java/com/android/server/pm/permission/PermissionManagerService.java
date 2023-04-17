@@ -449,6 +449,7 @@ public class PermissionManagerService extends IPermissionManager.Stub {
         List<String> result = new ArrayList<>();
         mPackageManagerInt.forEachInstalledPackage(pkg -> {
             if (pkg.getAutoRevokePermissions() == autoRevokePolicy) {
+                Slog.d(LOG_TAG, "getPackagesWithAutoRevokePolicy: " + pkg.getPackageName() + " " + autoRevokePolicy);
                 result.add(pkg.getPackageName());
             }
         }, userId);
