@@ -229,7 +229,7 @@ public class CPUInfoService extends Service {
         private String getCPUInfoString(int i) {
             String freq=mCurrFreq[i];
             String gov=mCurrGov[i];
-            return "c" + i + ": " + String.format("%8s", toMHz(freq,gov));
+            return "c" + i + "  " + String.format("%8s", toMHz(freq,gov));
         }
 
         private String getCpuTemp(String cpuTemp) {
@@ -277,19 +277,19 @@ public class CPUInfoService extends Service {
 
             mNumberOfRows = 0;
             if( mCpuTemp != null && !mCpuTemp.equals("-")) {
-                canvas.drawText("CPU " + getCpuTemp(mCpuTemp) + "°C",
+                canvas.drawText("cpu " + getCpuTemp(mCpuTemp) + "°C",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
             }
             if(mSysTemp != null && !mSysTemp.equals("-")) {
-                canvas.drawText("SYS " + getSysTemp(mSysTemp) + "°C",
+                canvas.drawText("sys " + getSysTemp(mSysTemp) + "°C",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
             }
             if(mBatTemp != null && !mBatTemp.equals("-")) {
-                canvas.drawText("BAT " + getBatTemp(mBatTemp) + "°C",
+                canvas.drawText("bat " + getBatTemp(mBatTemp) + "°C",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
@@ -297,12 +297,12 @@ public class CPUInfoService extends Service {
 
             if(mPowerProfile != null && !mPowerProfile.equals("-")) {
                 if( readOneProperty("sys.baikal.boost_act", "0").equals("1") ) {
-                    canvas.drawText("PWR " + mPowerProfile,
+                    canvas.drawText("pwr " + mPowerProfile,
                             RIGHT-mPaddingRight-mMaxWidth, y-1, mBoostPaint);
                     y += mFH;
                     mNumberOfRows++;
                 } else {
-                    canvas.drawText("PWR " + mPowerProfile,
+                    canvas.drawText("pwr " + mPowerProfile,
                             RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                     y += mFH;
                     mNumberOfRows++;
@@ -310,29 +310,29 @@ public class CPUInfoService extends Service {
             }
 
             if(mThermalProfile != null && !mThermalProfile.equals("-")) {
-                canvas.drawText("TRM " + mThermalProfile,
+                canvas.drawText("trm " + mThermalProfile,
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
             }
 
             
-            if(mGpuFreq != null && !mGpuFreq.equals("-")) {
-                canvas.drawText("GPU:" + mGpuFreq + " MHz",
-                        RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
-                y += mFH;
-                mNumberOfRows++;
-            }
-
             if(mBatCur !=null && !mBatCur.equals("-")) {
-                canvas.drawText("cur:" + mBatCur + " mA",
+                canvas.drawText("cur " + mBatCur + " mA",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
             }
 
             if(mBatAvg !=null && !mBatCur.equals("-")) {
-                canvas.drawText("avg:" + mBatAvg + " mA",
+                canvas.drawText("avg " + mBatAvg + " mA",
+                        RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
+                y += mFH;
+                mNumberOfRows++;
+            }
+
+            if(mGpuFreq != null && !mGpuFreq.equals("-")) {
+                canvas.drawText("gpu  " + mGpuFreq + " MHz",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;

@@ -237,7 +237,7 @@ public class CPUInfoServiceLite extends Service {
         private String getCPUInfoString(int i) {
             String freq=mCurrFreq[i];
             String gov=mCurrGov[i];
-            return "c" + CPU_NUMBERS[i] + ": " + String.format("%8s", toMHz(freq,gov));
+            return "c" + CPU_NUMBERS[i] + "  " + String.format("%8s", toMHz(freq,gov));
         }
 
         /*
@@ -294,7 +294,7 @@ public class CPUInfoServiceLite extends Service {
                 mNumberOfRows++;
             } */
             if(mSysTemp != null && !mSysTemp.equals("-")) {
-                canvas.drawText("SYS " + getSysTemp(mSysTemp) + "°C",
+                canvas.drawText("sys " + getSysTemp(mSysTemp) + "°C",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
@@ -326,17 +326,9 @@ public class CPUInfoServiceLite extends Service {
                 y += mFH;
                 mNumberOfRows++;
             }*/
-
-            
-            if(mGpuFreq != null && !mGpuFreq.equals("-")) {
-                canvas.drawText("GPU:" + mGpuFreq + " MHz",
-                        RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
-                y += mFH;
-                mNumberOfRows++;
-            }
-
+          
             if(mBatCur !=null && !mBatCur.equals("-")) {
-                canvas.drawText("cur:" + mBatCur + " mA",
+                canvas.drawText("cur " + mBatCur + " mA",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
@@ -349,6 +341,14 @@ public class CPUInfoServiceLite extends Service {
                 mNumberOfRows++;
             }
             */
+
+            if(mGpuFreq != null && !mGpuFreq.equals("-")) {
+                canvas.drawText("gpu  " + mGpuFreq + " MHz",
+                        RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
+                y += mFH;
+                mNumberOfRows++;
+            }
+
             if( mCurrFreq != null ) {
                 for(int i=0; i<mCurrFreq.length; i++) {
                     String s=getCPUInfoString(i);
