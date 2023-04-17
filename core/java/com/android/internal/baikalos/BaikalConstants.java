@@ -93,6 +93,56 @@ public class BaikalConstants {
     public static final int DEBUG_MASK_POWER = 0x100000;
     public static final int DEBUG_MASK_JOBS = 0x200000;
 
+    public static void Logv(boolean type, int uid,String tag, String msg) {
+        if( type ) { Slog.v(tag,msg); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.v(tag,msg); return; }
+    }
+
+    public static void Logv(boolean type, int uid, String tag, String msg, Throwable tr) {
+        if( type ) { Slog.v(tag,msg,tr); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.v(tag,msg,tr); return; }
+    }
+
+    public static void Logd(boolean type, int uid,String tag, String msg) {
+        if( type ) { Slog.d(tag,msg); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.d(tag,msg); return; }
+    }
+
+    public static void Logd(boolean type, int uid, String tag, String msg, Throwable tr) {
+        if( type ) { Slog.d(tag,msg,tr); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.d(tag,msg,tr); return; }
+    }
+
+    public static void Logi(boolean type, int uid,String tag, String msg) {
+        if( type ) { Slog.i(tag,msg); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.i(tag,msg); return; }
+    }
+
+    public static void Logi(boolean type, int uid, String tag, String msg, Throwable tr) {
+        if( type ) { Slog.i(tag,msg,tr); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.i(tag,msg,tr); return; }
+    }
+
+    public static void Logw(boolean type, int uid,String tag, String msg) {
+        if( type ) { Slog.w(tag,msg); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.w(tag,msg); return; }
+    }
+
+    public static void Logw(boolean type, int uid, String tag, String msg, Throwable tr) {
+        if( type ) { Slog.w(tag,msg,tr); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.w(tag,msg,tr); return; }
+    }
+
+    public static void Loge(boolean type, int uid,String tag, String msg) {
+        if( type ) { Slog.e(tag,msg); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.e(tag,msg); return; }
+    }
+
+    public static void Loge(boolean type, int uid, String tag, String msg, Throwable tr) {
+        if( type ) { Slog.e(tag,msg,tr); return; }
+        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.e(tag,msg,tr); return; }
+    }
+
     public static String getPackageByUid(Context context, int uid) {
         if( uid < Process.FIRST_APPLICATION_UID ) {
             //if( uid == 1000 ) return "system";           
