@@ -905,6 +905,9 @@ public final class PowerManagerService extends SystemService
             mResolver.registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE), false, this);
 
+            mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_RENDERING_DISABLE), false, this);
+
             updateConstants();
 
         }
@@ -917,6 +920,7 @@ public final class PowerManagerService extends SystemService
         private void updateConstants() {
             synchronized (mLock) {
                 try {
+
                     mParser.setString(Settings.Global.getString(mResolver,
                             Settings.Global.POWER_MANAGER_CONSTANTS));
 
@@ -926,8 +930,12 @@ public final class PowerManagerService extends SystemService
                     boolean displayDisabled = Settings.Global.getInt(mResolver,
                             Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE, 1) != 1;
 
+                    boolean renderingDisabled = Settings.Global.getInt(mResolver,
+                            Settings.Global.BAIKALOS_BOOST_RENDERING_DISABLE, 1) != 1;
+
                     setPowerBoostInternal(Boost.INTERACTION, interactionDisabled? -1000 : -1001);
                     setPowerBoostInternal(Boost.DISPLAY_UPDATE_IMMINENT, displayDisabled? -1000 : -1001);
+                    setPowerBoostInternal(Boost.INTERACTION, renderingDisabled? -1002 : -1003);
                     
 
                 } catch (IllegalArgumentException e) {

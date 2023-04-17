@@ -17294,6 +17294,13 @@ public final class Settings {
          * @hide
          */
         @Readable
+        public static final String BAIKALOS_BOOST_RENDERING_DISABLE = "baikalos_boost_rendering_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
         public static final String BAIKALOS_BOOST_OVERRIDE_SILVER = "baikalos_boost_override_silver";
 
         /**

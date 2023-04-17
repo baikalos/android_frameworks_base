@@ -41,6 +41,11 @@ import static android.os.PowerManagerInternal.MODE_INTERACTIVE;
 import static android.os.PowerManagerInternal.MODE_DEVICE_IDLE;
 import static android.os.PowerManagerInternal.MODE_DISPLAY_INACTIVE;
 
+import static android.os.PowerManagerInternal.WAKEFULNESS_ASLEEP;
+import static android.os.PowerManagerInternal.WAKEFULNESS_AWAKE;
+import static android.os.PowerManagerInternal.WAKEFULNESS_DREAMING;
+import static android.os.PowerManagerInternal.WAKEFULNESS_DOZING;
+
 import android.util.Slog;
 
 import android.content.Context;
@@ -128,6 +133,7 @@ public class AppProfileManager {
     private boolean mOnCharger = false;
     private boolean mDeviceIdleMode = false;
     private boolean mScreenMode = true;
+    private int mWakefulness = WAKEFULNESS_AWAKE;
 
     private boolean mAodOnCharger = false;
 
@@ -334,6 +340,10 @@ public class AppProfileManager {
             profileFilter.addAction(Actions.ACTION_SET_PROFILE);
             mContext.registerReceiver(mProfileReceiver, profileFilter);
 
+            IntentFilter wakefulnessFilter = new IntentFilter();
+            wakefulnessFilter.addAction(Actions.ACTION_WAKEFULNESS_CHANGED);
+            mContext.registerReceiver(mWakefulnessReceiver, wakefulnessFilter);
+
             mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             mTelephonyManager.listen(mPhoneStateListener, 0xFFFFFFF);
 
@@ -501,6 +511,24 @@ public class AppProfileManager {
         }
     }
 
+    protected void setWakefulnessLocked(int wakefulness) {
+        if( mWakefulness != wakefulness ) {
+            mWakefulness = wakefulness;
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Restore profile after wakefulness changed mode=" + mWakefulness);
+            mHandler.postDelayed( new Runnable() {
+                @Override
+                public void run() { 
+                    synchronized(this) {
+                        //SystemProperties.set("baikal.screen_mode", mScreenMode ? "1" : "0");
+                        restoreProfileForCurrentModeLocked(true);
+                    }
+                }
+            }, 100);
+        }
+    }
+
+
+
     protected void setProfileExternalLocked(String profile) {
         if( profile == null || profile.equals("") ) {
             synchronized(this) {
@@ -544,7 +572,14 @@ public class AppProfileManager {
 
     protected void activateCurrentProfileLocked(boolean force) {
 
-            if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode) )  {
+            //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
+
+            if( !mPhoneCall && !mScreenMode )  {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
+                                                                          "mPhoneCall=" + mPhoneCall +
+                                                                          ", mScreenMode=" + mScreenMode +
+                                                                          ", mDeviceIdleMode=" + mDeviceIdleMode +
+                                                                          ", mWakefulness=" + mWakefulness);
                 activateIdleProfileLocked();
                 return;
             }
@@ -722,6 +757,18 @@ public class AppProfileManager {
         }
     };
 
+    private final BroadcastReceiver mWakefulnessReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            synchronized (AppProfileManager.this) {
+                String action = intent.getAction();
+                int wakefulness = (int)intent.getExtra(Actions.EXTRA_INT_WAKEFULNESS);
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"wakefulness mode=" + wakefulness);
+                setWakefulnessLocked(wakefulness);
+            }
+        }
+    };
+
     private boolean setHwFrameRateLocked(int minFps, int maxFps, boolean override) {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
 
@@ -748,7 +795,7 @@ public class AppProfileManager {
             SystemProperties.set(key,value);
         }
         catch( Exception e ) {
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.e(TAG, "SystemPropertiesSet: unable to set property "+key+" to "+value);
+            Slog.e(TAG, "SystemPropertiesSet: unable to set property "+key+" to "+value);
         }
     }
 
@@ -1113,7 +1160,6 @@ public class AppProfileManager {
     }
 
     public boolean isAodOnChargerEnabled() {
-        Slog.w(TAG, "isAodOnChargerEnabled=" + (mAodOnCharger & mOnCharger));
         return mAodOnCharger & mOnCharger;
     }
 

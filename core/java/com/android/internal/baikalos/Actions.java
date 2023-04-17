@@ -34,6 +34,7 @@ public class Actions {
     public static final String ACTION_CHARGER_MODE_CHANGED = "com.android.internal.baikalos.Actions.ACTION_CHARGER_MODE_CHANGED";
     public static final String ACTION_SCREEN_MODE_CHANGED = "com.android.internal.baikalos.Actions.ACTION_SCREEN_MODE_CHANGED";
     public static final String ACTION_STAMINA_CHANGED = "com.android.internal.baikalos.Actions.ACTION_STAMINA_CHANGED";
+    public static final String ACTION_WAKEFULNESS_CHANGED = "com.android.internal.baikalos.Actions.ACTION_WAKEFULNESS_CHANGED";
 
     public static final String ACTION_TOP_APP_CHANGED = "com.android.internal.baikalos.Actions.ACTION_TOP_APP_CHANGED";
     public static final String ACTION_BRIGHTNESS_OVERRIDE = "com.android.internal.baikalos.Actions.ACTION_BRIGHTNESS_OVERRIDE";
@@ -45,6 +46,7 @@ public class Actions {
     public static final String EXTRA_BOOL_MODE = "com.android.internal.baikalos.Actions.EXTRA_BOOL_MODE";
     public static final String EXTRA_INT_MODE = "com.android.internal.baikalos.Actions.EXTRA_INT_MODE";
     public static final String EXTRA_INT_BRIGHTNESS = "com.android.internal.baikalos.Actions.EXTRA_INT_BRIGHTNESS";
+    public static final String EXTRA_INT_WAKEFULNESS = "com.android.internal.baikalos.Actions.EXTRA_INT_WAKEFULNESS";
     public static final String EXTRA_UID = "com.android.internal.baikalos.Actions.EXTRA_UID";
     public static final String EXTRA_PACKAGENAME = "com.android.internal.baikalos.Actions.EXTRA_PACKAGENAME";
 
@@ -136,6 +138,13 @@ public class Actions {
         Intent intent = new Intent(ACTION_SET_PROFILE);
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
     	intent.putExtra("profile",profileName);
+    	enqueueIntent(intent);
+    }
+
+    public static void sendWakefulnessChanged(int wakefulness) {
+        Intent intent = new Intent(ACTION_WAKEFULNESS_CHANGED);
+        intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
+    	intent.putExtra(EXTRA_INT_WAKEFULNESS,wakefulness);
     	enqueueIntent(intent);
     }
 
