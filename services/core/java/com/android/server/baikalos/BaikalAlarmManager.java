@@ -139,7 +139,12 @@ public class BaikalAlarmManager {
 
         if( uid < Process.FIRST_APPLICATION_UID ) return true;
 
-        String packageName = BaikalConstants.getPackageByUid(mContext, uid);
+        String packageName = null;
+        try {
+            packageName = BaikalConstants.getPackageByUid(mContext, uid);
+        } catch(Exception e) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". getPackageByUid exception uid=" + uid);
+        }
 
         if( packageName == null ) { 
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". Package not found for uid=" + uid);
