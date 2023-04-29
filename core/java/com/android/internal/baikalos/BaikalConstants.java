@@ -170,18 +170,18 @@ public class BaikalConstants {
         return uid;
     }
 
-    public static boolean mIsKernelCompatible = false;
+    public static int mIsKernelCompatible = -1;
     public static boolean isKernelCompatible() {
         initIsKernalCompatible();
-        return mIsKernelCompatible;
+        return mIsKernelCompatible == 1;
     }
 
-    private static String kernelVersion = null;
+    private static String kernelVersion = "";
     private static void initIsKernalCompatible() {
-        if( kernelVersion != null ) return;
-        if( Os.uname() == null ) { kernelVersion = ""; return; }
+        if( Os.uname() == null ) { kernelVersion = ""; mIsKernelCompatible = 0; return; }
         kernelVersion = Os.uname().release;
-        if( kernelVersion.contains("baikalos") ) mIsKernelCompatible = true;
+        if( kernelVersion != null && kernelVersion.contains("baikalos") ) mIsKernelCompatible = 1;
+	mIsKernelCompatible = 0;
     } 
 
     private static boolean sAodOnChargerEnabled = false;
