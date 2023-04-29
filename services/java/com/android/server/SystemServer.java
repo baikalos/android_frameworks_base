@@ -625,7 +625,7 @@ public final class SystemServer implements Dumpable {
                             maxFd);
 
                     dumpHprof();
-                    fdtrackAbort();
+                    //fdtrackAbort();
                 } else {
                     // Limit this to once per hour.
                     long now = SystemClock.elapsedRealtime();
