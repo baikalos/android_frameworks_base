@@ -548,7 +548,7 @@ public class DisplayPolicy {
                     public void onFling(int duration) {
                         if (mService.mPowerManagerInternal != null) {
                             mService.mPowerManagerInternal.setPowerBoost(
-                                    Boost.INTERACTION, duration + 160);
+                                    Boost.INTERACTION, duration);
                         }
                     }
 
@@ -556,7 +556,7 @@ public class DisplayPolicy {
                     public void onVerticalFling(int duration) {
                         if (mService.mPowerManagerInternal != null) {
                             mService.mPowerManagerInternal.setPowerBoost(
-                                    Boost.INTERACTION, duration + 320);
+                                    Boost.INTERACTION, duration + 160);
                         }
                     }
 
@@ -572,8 +572,8 @@ public class DisplayPolicy {
                     public void onScroll(boolean started) {
                     	if (started) {
                             if (mService.mPowerManagerInternal != null) {
-                                mService.mPowerManagerInternal.setPowerBoost(
-                                        Boost.INTERACTION, 160);
+                                //mService.mPowerManagerInternal.setPowerBoost(
+                                //        Boost.INTERACTION, 160);
                             }
                         }
                     }
