@@ -2885,7 +2885,7 @@ public class AlarmManagerService extends SystemService {
 
 
             if (alarmClock == null && (exact || allowWhileIdle || (flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0) ) {
-                if(!mBaikalAlarmManager.isAppWakeupAllowed(UserHandle.getAppId(callingUid),listenerTag)) {
+                if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, listenerTag)) {
                     if( exact ) {
                         exact = false;
                         windowLength = 3600000;
