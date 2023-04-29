@@ -131,7 +131,7 @@ public class BaikalAlarmManager {
         }
     }
 
-    public boolean isAppWakeupAllowed(int uid, String tag) {
+    public boolean isAppWakeupAllowed(String packageName, int uid, String tag) {
         if( mAppSettings == null ) { 
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Not initialized yet");
             return true;
@@ -139,11 +139,12 @@ public class BaikalAlarmManager {
 
         if( uid < Process.FIRST_APPLICATION_UID ) return true;
 
-        String packageName = null;
-        try {
-            packageName = BaikalConstants.getPackageByUid(mContext, uid);
-        } catch(Exception e) {
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". getPackageByUid exception uid=" + uid);
+        if( packageName == null ) {
+            try {
+                packageName = BaikalConstants.getPackageByUid(mContext, uid);
+            } catch(Exception e) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". getPackageByUid exception uid=" + uid);
+            }
         }
 
         if( packageName == null ) { 
