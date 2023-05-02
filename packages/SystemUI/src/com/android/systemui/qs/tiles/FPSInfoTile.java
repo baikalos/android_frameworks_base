@@ -83,6 +83,8 @@ public class FPSInfoTile extends QSTileImpl<BooleanState> {
             isAvailable = fpsInfoSysNode != null && (new File(fpsInfoSysNode).isFile());
         }
 
+        if( !isAvailable ) return;
+
         mSetting = new SettingObserver(secureSettings, mHandler, Secure.SHOW_FPS_OVERLAY, getHost().getUserId()) {
             @Override
             protected void handleValueChanged(int value, boolean observedChange) {
