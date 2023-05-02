@@ -68,7 +68,7 @@
 
     <!-- The default tiles to display in QuickSettings -->
     <string name="quick_settings_tiles_default" translatable="false">
-        internet,bt,flashlight,dnd,alarm,airplane,nfc,rotation,battery,controls,wallet,cast,screenrecord,bpcharge,stamina,cpuinfo,cpuinfolite,fpsinfo
+        internet,bt,flashlight,dnd,alarm,airplane,nfc,rotation,battery,controls,wallet,cast,screenrecord,cpuinfo,fpsinfo,bpcharge,stamina,cpuinfolite
     </string>
 
     <!-- The class path of the Safety Quick Settings Tile -->
