@@ -2043,6 +2043,9 @@ public final class PowerManagerService extends SystemService
                     wakeLock.mOwnerUid, wakeLock.mOwnerPid, wakeLock.mWorkSource,
                     wakeLock.mHistoryTag, wakeLock.mCallback);
             restartNofifyLongTimerLocked(wakeLock);
+            if( wakeLock.mTag.startsWith("Audio") ) {
+                AppProfileManager.setAudioMode(true);
+            }
         }
     }
 
@@ -2122,6 +2125,8 @@ public final class PowerManagerService extends SystemService
                     wakeLock.mPackageName, wakeLock.mOwnerUid, wakeLock.mOwnerPid,
                     wakeLock.mWorkSource, wakeLock.mHistoryTag, wakeLock.mCallback);
             notifyWakeLockLongFinishedLocked(wakeLock);
+
+            if( wakeLock.mTag.startsWith("Audio") ) checkIsAudioPlayingLocked();
         }
     }
 
@@ -4560,6 +4565,21 @@ public final class PowerManagerService extends SystemService
         }
     }
 
+
+    @GuardedBy("mLock")
+    private void checkIsAudioPlayingLocked() {
+        boolean isPlaying = false;
+        final int numWakeLocks = mWakeLocks.size();
+        for (int i = 0; i < numWakeLocks; i++) {
+            final WakeLock wakeLock = mWakeLocks.get(i);
+            if( wakeLock.mTag.startsWith("Audio") ) {
+                isPlaying = true;
+                break;
+            }
+        }
+        AppProfileManager.setAudioMode(isPlaying);
+    }    
+
     @GuardedBy("mLock")
     private void updateWakeLockDisabledStatesLocked() {
         boolean changed = false;
@@ -6276,10 +6296,15 @@ public final class PowerManagerService extends SystemService
             mContext.enforceCallingOrSelfPermission(
                     android.Manifest.permission.DEVICE_POWER, null);
 
+
             final int uid = Binder.getCallingUid();
             final Runnable r = () -> {
                 final long ident = Binder.clearCallingIdentity();
                 try {
+
+	            Slog.i(TAG, "wakeUp reason=" + reason + ", details=" + details + ", opPackageName=" + opPackageName);
+        	    AppProfileManager.getInstance().wakeUp();
+
                     synchronized (mLock) {
                         if (!mBootCompleted && sQuiescent) {
                             mDirty |= DIRTY_QUIESCENT;
