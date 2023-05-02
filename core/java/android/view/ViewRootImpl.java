@@ -4115,7 +4115,7 @@ public final class ViewRootImpl implements ViewParent,
                         final View view = validLayoutRequesters.get(i);
                         Log.w("View", "requestLayout() improperly called by " + view +
                                 " during layout: running second layout pass");
-                        view.requestLayout();
+                        //view.requestLayout();
                     }
                     measureHierarchy(host, lp, mView.getContext().getResources(),
                             desiredWindowWidth, desiredWindowHeight, false /* forRootSizeOnly */);
