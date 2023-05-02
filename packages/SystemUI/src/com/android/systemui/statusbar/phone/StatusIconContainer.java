@@ -351,7 +351,7 @@ public class StatusIconContainer extends AlphaOptimizedLinearLayout {
         mUnderflowStart = 0;
         int visible = 0;
         int firstUnderflowIndex = -1;
-        /*for (int i = totalVisible - 1; i >= 0; i--) {
+        for (int i = totalVisible - 1; i >= 0; i--) {
             StatusIconState state = mLayoutStates.get(i);
             // Allow room for underflow if we found we need it in onMeasure
             if (mNeedsUnderflow && (state.getXTranslation() < (contentStart + mUnderflowWidth))
@@ -379,7 +379,7 @@ public class StatusIconContainer extends AlphaOptimizedLinearLayout {
                     state.visibleState = STATE_HIDDEN;
                 }
             }
-        }*/
+        }
 
         // Stole this from NotificationIconContainer. Not optimal but keeps the layout logic clean
         if (isLayoutRtl()) {
