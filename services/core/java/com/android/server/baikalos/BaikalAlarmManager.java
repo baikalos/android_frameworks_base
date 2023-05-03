@@ -124,7 +124,7 @@ public class BaikalAlarmManager {
     }
 
     public void initialize() {
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"initialize()");                
+        if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"initialize()");                
         synchronized(mLock) {
             mInstance = this;
             mAppSettings = AppProfileSettings.getInstance(); 
@@ -133,9 +133,14 @@ public class BaikalAlarmManager {
 
     public boolean isAppWakeupAllowed(String packageName, int uid, String tag) {
         if( mAppSettings == null ) { 
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Not initialized yet");
+            if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Not initialized yet");
             return true;
         }
+
+	if( tag != null && tag.startsWith("*job") ) {
+            if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". delayed for " + packageName);
+            return false;
+	}
 
         if( uid < Process.FIRST_APPLICATION_UID ) return true;
 
@@ -143,32 +148,32 @@ public class BaikalAlarmManager {
             try {
                 packageName = BaikalConstants.getPackageByUid(mContext, uid);
             } catch(Exception e) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". getPackageByUid exception uid=" + uid);
+                if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". getPackageByUid exception uid=" + uid);
             }
         }
 
         if( packageName == null ) { 
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". Package not found for uid=" + uid);
-            return true;
+            if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". Package not found for uid=" + uid);
+            return false;
         }
 
         AppProfile profile = mAppSettings.getProfile(packageName);
         if( profile != null ) {
             if( profile.mDisableWakeup ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". disabled for " + packageName);
+                if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". disabled for " + packageName);
                 return false;
             }
             if( profile.getBackground() < 0 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". enabled for " + packageName);
+                if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". enabled for " + packageName);
                 return true;
             }
             if( profile.getBackground() > 0 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". restricted for " + packageName);
+                if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". restricted for " + packageName);
                 return false;
             }
         }
 
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Wakeup alarm:" + tag + ". set to " + !mDisableWakeupByDefault + " for " + packageName);
+        if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". set to " + !mDisableWakeupByDefault + " for " + packageName);
         return !mDisableWakeupByDefault;
     }
 
