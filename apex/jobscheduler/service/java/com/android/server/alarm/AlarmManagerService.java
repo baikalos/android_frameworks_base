@@ -2234,7 +2234,7 @@ public class AlarmManagerService extends SystemService {
             int callingUid, String callingPackage, Bundle idleOptions, int exactAllowReason) {
         if ((operation == null && directReceiver == null)
                 || (operation != null && directReceiver != null)) {
-            Slog.w(TAG, "Alarms must either supply a PendingIntent or an AlarmReceiver");
+            Slog.w(TAG, "Alarms must either supply a PendingIntent or an AlarmReceiver", new Throwable());
             // NB: previous releases failed silently here, so we are continuing to do the same
             // rather than throw an IllegalArgumentException.
             return;
@@ -2884,7 +2884,10 @@ public class AlarmManagerService extends SystemService {
             boolean exact = (windowLength == 0);
 
 
-            if (alarmClock == null && (exact || allowWhileIdle || (flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0) ) {
+            if (alarmClock == null && (exact || allowWhileIdle || 
+		(flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
+		|| type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP )  
+		) {
                 if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, listenerTag)) {
                     if( exact ) {
                         exact = false;
@@ -2893,6 +2896,10 @@ public class AlarmManagerService extends SystemService {
                     if( allowWhileIdle ) {
                         allowWhileIdle = false;
                     }
+
+		    if( type == ELAPSED_REALTIME_WAKEUP ) type = ELAPSED_REALTIME;
+		    if( type == RTC_WAKEUP ) type = RTC;
+
                     flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED | FLAG_ALLOW_WHILE_IDLE_COMPAT);
                     flags &= ~(FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE);
                 }
