@@ -1588,7 +1588,6 @@ public class OomAdjuster {
             app.mOptRecord.setShouldNotFreeze(uidRec != null && uidRec.isCurAllowListed());
         }
 
-        if( app.mAppProfile.mPinned ) app.mOptRecord.setShouldNotFreeze(true);
 
         final int appUid = app.info.uid;
         final int logUid = mService.mCurOomAdjUid;
@@ -1597,6 +1596,57 @@ public class OomAdjuster {
         int prevProcState = state.getCurProcState();
         int prevCapability = state.getCurCapability();
         final ProcessServiceRecord psr = app.mServices;
+
+        if( app.mAppProfile.mPinned ) {
+            app.mOptRecord.setShouldNotFreeze(true);
+
+            // Pinned app, so it is not worth doing work for it.
+            if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
+                reportOomAdjMessageLocked(TAG_OOM_ADJ, "Making fixed: " + app);
+            }
+
+            state.setAdjType("pinned");
+            state.setAdjSeq(mAdjSeq);
+            state.setCurRawAdj(state.getMaxAdj());
+            state.setHasForegroundActivities(false);
+            state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
+            state.setCurCapability(PROCESS_CAPABILITY_ALL);
+            state.setCurProcState(ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
+            // System processes can do UI, and when they do we want to have
+            // them trim their memory after the user leaves the UI.  To
+            // facilitate this, here we need to determine whether or not it
+            // is currently showing UI.
+            state.setSystemNoUi(true);
+            if (app == topApp) {
+                state.setSystemNoUi(false);
+                state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_TOP_APP);
+                state.setAdjType("pers-top-activity");
+            } else if (state.hasTopUi()) {
+                // sched group/proc state adjustment is below
+                state.setSystemNoUi(false);
+                state.setAdjType("pers-top-ui");
+            } else if (state.getCachedHasVisibleActivities()) {
+                state.setSystemNoUi(false);
+            }
+            if (!state.isSystemNoUi()) {
+                if (mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE
+                        || state.isRunningRemoteAnimation()) {
+                    // screen on or animating, promote UI
+                    state.setCurProcState(ActivityManager.PROCESS_STATE_PERSISTENT_UI);
+                    state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_TOP_APP);
+                } else {
+                    // screen off, restrict UI scheduling
+                    state.setCurProcState(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
+                    //state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_RESTRICTED);
+                    state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
+                }
+            }
+            state.setCurRawProcState(state.getCurProcState());
+            state.setCurAdj(state.getMaxAdj());
+            state.setCompletedAdjSeq(state.getAdjSeq());
+            // if curAdj is less than prevAppAdj, then this process was promoted
+            return state.getCurAdj() < prevAppAdj || state.getCurProcState() < prevProcState;
+        }
 
         if (state.getMaxAdj() <= ProcessList.FOREGROUND_APP_ADJ) {
             // The max adjustment doesn't allow this app to be anything
@@ -1636,7 +1686,8 @@ public class OomAdjuster {
                 } else {
                     // screen off, restrict UI scheduling
                     state.setCurProcState(PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
-                    state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_RESTRICTED);
+                    //state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_RESTRICTED);
+                    state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
                 }
             }
             state.setCurRawProcState(state.getCurProcState());
