@@ -761,7 +761,7 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
      */
     public boolean requestPowerState(DisplayPowerRequest request,
             boolean waitForNegativeProximity, boolean useAutoBrightness) {
-        if (DEBUG) {
+        if (/*DEBUG*/ true) {
             Slog.d(TAG, "requestPowerState: " + request + 
                 ", waitForNegativeProximity=" + waitForNegativeProximity +
                 ", useAutoBrightness=" + useAutoBrightness);
@@ -772,9 +772,13 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
                 return true;
             }
 
-            mUseAutoBrightness = useAutoBrightness;
-
             boolean changed = false;
+
+            if( mUseAutoBrightness != useAutoBrightness ) {
+                mUseAutoBrightness = useAutoBrightness;
+                changed = true;
+            }
+
 
             if (waitForNegativeProximity
                     && !mPendingWaitForNegativeProximityLocked) {
