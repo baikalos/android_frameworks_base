@@ -88,12 +88,12 @@ void AnimatorManager::pushStaging() {
 
     if (mCancelAllAnimators) {
         for (auto& animator : mAnimators) {
-	    if( animator && mAnimationHandle ) animator->forceEndNow(mAnimationHandle->context());
+            if( animator && mAnimationHandle ) animator->forceEndNow(mAnimationHandle->context());
         }
         mCancelAllAnimators = false;
     } else {
         for (auto& animator : mAnimators) {
-	    if( animator && mAnimationHandle ) animator->pushStaging(mAnimationHandle->context());
+            if( animator && mAnimationHandle ) animator->pushStaging(mAnimationHandle->context());
         }
     }
 }
