@@ -119,7 +119,7 @@
     <dimen name="bouncer_user_switcher_item_line_height">20sp</dimen>
     <dimen name="bouncer_user_switcher_item_icon_size">28dp</dimen>
     <dimen name="bouncer_user_switcher_item_icon_padding">12dp</dimen>
-    <dimen name="bouncer_user_switcher_width">160dp</dimen>
+    <dimen name="bouncer_user_switcher_width">248dp</dimen>
     <dimen name="bouncer_user_switcher_popup_header_height">12dp</dimen>
     <dimen name="bouncer_user_switcher_popup_divider_height">4dp</dimen>
     <dimen name="bouncer_user_switcher_popup_items_divider_height">2dp</dimen>
