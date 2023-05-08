@@ -44,6 +44,7 @@
 
 namespace android {
 
+namespace {
 struct NativeFamilyBuilder {
     NativeFamilyBuilder(uint32_t langId, int variant)
         : langId(langId), variant(static_cast<minikin::FamilyVariant>(variant)) {}
@@ -52,6 +53,7 @@ struct NativeFamilyBuilder {
     std::vector<std::shared_ptr<minikin::Font>> fonts;
     std::vector<minikin::FontVariation> axes;
 };
+}  // namespace
 
 static inline NativeFamilyBuilder* toNativeBuilder(jlong ptr) {
     return reinterpret_cast<NativeFamilyBuilder*>(ptr);
@@ -125,8 +127,13 @@ static bool addSkTypeface(NativeFamilyBuilder* builder, sk_sp<SkData>&& data, in
     args.setVariationDesignPosition({skVariation.data(), static_cast<int>(skVariation.size())});
 
     sk_sp<SkFontMgr> fm(SkFontMgr::RefDefault());
+    if (fontData == NULL || fontData == nullptr) {
+        ALOGE("addFont failed to create font, invalid font data");
+        builder->axes.clear();
+        return false;
+    } 
     sk_sp<SkTypeface> face(fm->makeFromStream(std::move(fontData), args));
-    if (face == NULL) {
+    if (face == NULL || face == nullptr) {
         ALOGE("addFont failed to create font, invalid request");
         builder->axes.clear();
         return false;
