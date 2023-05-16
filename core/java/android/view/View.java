@@ -16226,13 +16226,17 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
         if (hovered) {
             if ((mPrivateFlags & PFLAG_HOVERED) == 0) {
                 mPrivateFlags |= PFLAG_HOVERED;
-                refreshDrawableState();
+                if (!isFocused()) {
+                    refreshDrawableState();
+                }
                 onHoverChanged(true);
             }
         } else {
             if ((mPrivateFlags & PFLAG_HOVERED) != 0) {
                 mPrivateFlags &= ~PFLAG_HOVERED;
-                refreshDrawableState();
+                if (!isFocused()) {
+                    refreshDrawableState();
+                }
                 onHoverChanged(false);
             }
         }
@@ -26880,7 +26884,8 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
      * @param flags Additional flags as per {@link HapticFeedbackConstants}.
      */
     public boolean performHapticFeedback(int feedbackConstant, int flags) {
-        if (mAttachInfo == null) {
+        final AttachInfo attachInfo = mAttachInfo;
+        if (attachInfo == null) {
             return false;
         }
         //noinspection SimplifiableIfStatement
@@ -26888,7 +26893,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
                 && !isHapticFeedbackEnabled()) {
             return false;
         }
-        return mAttachInfo.mRootCallbacks.performHapticFeedback(feedbackConstant,
+        return attachInfo.mRootCallbacks.performHapticFeedback(feedbackConstant,
                 (flags & HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING) != 0);
     }
 
