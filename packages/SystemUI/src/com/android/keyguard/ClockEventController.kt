@@ -86,7 +86,6 @@ open class ClockEventController @Inject constructor(
 
                 value.initialize(resources, dozeAmount, 0f)
                 updateRegionSamplers(value)
-                updateFontSizes()
             }
         }
 
@@ -169,6 +168,7 @@ open class ClockEventController @Inject constructor(
     private val configListener = object : ConfigurationController.ConfigurationListener {
         override fun onThemeChanged() {
             clock?.events?.onColorPaletteChanged(resources)
+            updateFontSizes()
             updateColors()
         }
 
