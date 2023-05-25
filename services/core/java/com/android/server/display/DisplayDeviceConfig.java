@@ -59,6 +59,8 @@ import com.android.server.display.config.ThermalThrottling;
 import com.android.server.display.config.ThresholdPoint;
 import com.android.server.display.config.XmlParser;
 
+import com.android.server.baikalos.AppProfileManager;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.BufferedInputStream;
@@ -388,7 +390,7 @@ import javax.xml.datatype.DatatypeConfigurationException;
  */
 public class DisplayDeviceConfig {
     private static final String TAG = "DisplayDeviceConfig";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     public static final float HIGH_BRIGHTNESS_MODE_UNSUPPORTED = Float.NaN;
 
@@ -2059,12 +2061,45 @@ public class DisplayDeviceConfig {
 
     private void loadBrightnessMapFromConfigXml() {
         // Use the config.xml mapping
+        int brightnessCurve = 0;
         final Resources res = mContext.getResources();
         final float[] sysNits = BrightnessMappingStrategy.getFloatArray(res.obtainTypedArray(
                 com.android.internal.R.array.config_screenBrightnessNits));
-        final int[] sysBrightness = res.getIntArray(
+        int[] sysBrightness = res.getIntArray(
                 com.android.internal.R.array.config_screenBrightnessBacklight);
         final float[] sysBrightnessFloat = new float[sysBrightness.length];
+
+        AppProfileManager appProfileManager = AppProfileManager.getInstance();
+        if( appProfileManager != null ) {
+            brightnessCurve = appProfileManager.getBrightnessCurve();
+        } 
+
+        switch(brightnessCurve) {
+            case 1:
+                sysBrightness = res.getIntArray(com.android.internal.R.array.config_screenBrightnessBacklight1);
+                break;
+            case 2:
+                sysBrightness = res.getIntArray(com.android.internal.R.array.config_screenBrightnessBacklight2);
+                break;
+            case 3:
+                sysBrightness = res.getIntArray(com.android.internal.R.array.config_screenBrightnessBacklight3);
+                break;
+            case 4:
+                sysBrightness = res.getIntArray(com.android.internal.R.array.config_screenBrightnessBacklight4);
+                break;
+            case 5:
+                sysBrightness = res.getIntArray(com.android.internal.R.array.config_screenBrightnessBacklight5);
+                break;
+
+        }
+
+        /* Sanity check */
+        if( sysBrightness.length == 0 ) {
+            Slog.i(TAG, "Invalid brightness curve specified: " + brightnessCurve);
+            sysBrightness = res.getIntArray(com.android.internal.R.array.config_screenBrightnessBacklight);
+        } else {
+            Slog.i(TAG, "Using brightness curve: " + brightnessCurve);
+        }
 
         for (int i = 0; i < sysBrightness.length; i++) {
             sysBrightnessFloat[i] = BrightnessSynchronizer.brightnessIntToFloat(

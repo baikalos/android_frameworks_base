@@ -826,6 +826,11 @@ public final class DisplayManagerService extends SystemService {
             mContext.getContentResolver().registerContentObserver(
                     Settings.Secure.getUriFor(
                         Settings.Secure.MINIMAL_POST_PROCESSING_ALLOWED), false, this);
+
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.Global.getUriFor(
+                        Settings.Global.BAIKALOS_BRIGHTNESS_CURVE), false, this);
+
         }
 
         @Override
@@ -844,6 +849,15 @@ public final class DisplayManagerService extends SystemService {
     private void updateSettingsLocked() {
         mMinimalPostProcessingAllowed = Settings.Secure.getIntForUser(mContext.getContentResolver(),
                 Settings.Secure.MINIMAL_POST_PROCESSING_ALLOWED, 1, UserHandle.USER_CURRENT) != 0;
+
+        if( mLogicalDisplayMapper != null ) {
+             mLogicalDisplayMapper.forEachLocked(
+                        display -> {
+                            Slog.i(TAG, "updateSettingsLocked()");
+                            handleLogicalDisplaySettingsChangedLocked(display);
+                        });
+        }
+
     }
 
     private void updateUserDisabledHdrTypesFromSettingsLocked() {
@@ -1571,6 +1585,27 @@ public final class DisplayManagerService extends SystemService {
         scheduleTraversalLocked(false);
     }
 
+    private void handleLogicalDisplaySettingsChangedLocked(@NonNull LogicalDisplay display) {
+        updateViewportPowerStateLocked(display);
+
+        final int displayId = display.getDisplayIdLocked();
+        if (displayId == Display.DEFAULT_DISPLAY) {
+            recordTopInsetLocked(display);
+        }
+        // We don't bother invalidating the display info caches here because any changes to the
+        // display info will trigger a cache invalidation inside of LogicalDisplay before we hit
+        // this point.
+        sendDisplayEventLocked(display, DisplayManagerGlobal.EVENT_DISPLAY_CHANGED);
+        scheduleTraversalLocked(false);
+        mPersistentDataStore.saveIfNeeded();
+
+        DisplayPowerController dpc = mDisplayPowerControllers.get(displayId);
+        if (dpc != null) {
+            Slog.i(TAG, "onDisplaySettingsChanged()");
+            dpc.onDisplaySettingsChanged();
+        }
+    }
+
     private void handleLogicalDisplayChangedLocked(@NonNull LogicalDisplay display) {
         updateViewportPowerStateLocked(display);
 
@@ -1597,6 +1632,7 @@ public final class DisplayManagerService extends SystemService {
             final String uniqueId = device.getUniqueId();
             HighBrightnessModeMetadata hbmMetadata = mHighBrightnessModeMetadataMap.get(uniqueId);
             dpc.onDisplayChanged(hbmMetadata);
+            Slog.i(TAG, "onDisplayChanged()");
         }
     }
 
