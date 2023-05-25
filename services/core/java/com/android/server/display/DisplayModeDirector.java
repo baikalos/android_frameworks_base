@@ -88,7 +88,7 @@ import java.util.concurrent.Callable;
  */
 public class DisplayModeDirector {
     private static final String TAG = "DisplayModeDirector";
-    private boolean mLoggingEnabled;
+    private boolean mLoggingEnabled = false;
 
     private static final int MSG_REFRESH_RATE_RANGE_CHANGED = 1;
     private static final int MSG_LOW_BRIGHTNESS_THRESHOLDS_CHANGED = 2;
@@ -390,7 +390,7 @@ public class DisplayModeDirector {
                     Math.min(appRequestSummary.minRefreshRate, primarySummary.minRefreshRate);
             appRequestSummary.maxRefreshRate =
                     Math.max(appRequestSummary.maxRefreshRate, primarySummary.maxRefreshRate);
-            if (mLoggingEnabled) {
+            if (/*mLoggingEnabled*/ true) {
                 Slog.i(TAG,
                         String.format("App request range: [%.0f %.0f]",
                                 appRequestSummary.minRefreshRate,
@@ -457,7 +457,9 @@ public class DisplayModeDirector {
                     new RefreshRateRange(
                             primarySummary.minRefreshRate, primarySummary.maxRefreshRate),
                     new RefreshRateRange(
-                            appRequestSummary.minRefreshRate, appRequestSummary.maxRefreshRate));
+                            primarySummary.minRefreshRate, primarySummary.maxRefreshRate)
+                    /*new RefreshRateRange(
+                            appRequestSummary.minRefreshRate, appRequestSummary.maxRefreshRate)*/);
         }
     }
 
@@ -664,6 +666,21 @@ public class DisplayModeDirector {
                     + ", priority=" + Vote.priorityToString(priority)
                     + ", vote=" + vote + ")");
         }
+
+        if( priority == Vote.PRIORITY_FLICKER_REFRESH_RATE || 
+            priority == Vote.PRIORITY_APP_REQUEST_REFRESH_RATE_RANGE || 
+            priority == Vote.PRIORITY_APP_REQUEST_BASE_MODE_REFRESH_RATE || 
+            priority == Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH ) {
+            Slog.i(TAG, "updateVoteLocked(displayId=" + displayId
+                    + ", priority=" + Vote.priorityToString(priority)
+                    + ", vote=" + vote + ") - ignored by baikalos");
+            return;
+        } else {
+            Slog.i(TAG, "updateVoteLocked(displayId=" + displayId
+                    + ", priority=" + Vote.priorityToString(priority)
+                    + ", vote=" + vote + ")");
+        }
+
         if (priority < Vote.MIN_PRIORITY || priority > Vote.MAX_PRIORITY) {
             Slog.w(TAG, "Received a vote with an invalid priority, ignoring:"
                     + " priority=" + Vote.priorityToString(priority)
