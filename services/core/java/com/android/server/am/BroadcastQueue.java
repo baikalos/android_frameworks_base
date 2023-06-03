@@ -931,7 +931,7 @@ public final class BroadcastQueue {
 
         // Ensure that broadcasts are only sent to other apps if they are explicitly marked as
         // exported, or are System level broadcasts
-        if (!skip && !filter.exported && mService.checkComponentPermission(null, r.callingPid,
+        /*if (!skip && !filter.exported && mService.checkComponentPermission(null, r.callingPid,
                 r.callingUid, filter.receiverList.uid, filter.exported)
                 != PackageManager.PERMISSION_GRANTED) {
             Slog.w(TAG, "Exported Denial: sending "
@@ -943,6 +943,34 @@ public final class BroadcastQueue {
                     + " (uid " + filter.receiverList.uid + ")"
                     + " not specifying RECEIVER_EXPORTED");
             skip = true;
+        }*/
+
+        if (!skip && filter.receiverList.app != null && filter.receiverList.app.processName.endsWith(":Metrica") ) {
+            if( "background".equals(mQueueName) && 
+                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid) ) { 
+                Slog.w(TAG, "Metrica App Denial: receiving "
+                    + r.intent.toString()
+                    + " to " + filter.receiverList.app
+                    + " (pid=" + filter.receiverList.pid
+                    + ", uid=" + filter.receiverList.uid + ")"
+                    + " due to to receiver " + filter.receiverList.app
+                    + " (uid " + r.callingUid + ")");
+                skip = true;
+            }
+        }
+
+        if (!skip && filter.receiverList.app != null && filter.receiverList.app.mAppProfile.getBackground() > 0 ) {
+            if( "background".equals(mQueueName) &&
+                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid) ) { 
+                Slog.w(TAG, "Restricted App Denial: receiving "
+                    + r.intent.toString()
+                    + " to " + filter.receiverList.app
+                    + " (pid=" + filter.receiverList.pid
+                    + ", uid=" + filter.receiverList.uid + ")"
+                    + " due to to receiver " + filter.receiverList.app
+                    + " (uid " + r.callingUid + ")");
+                skip = true;
+            }
         }
 
         if (skip) {
