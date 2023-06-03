@@ -2882,14 +2882,16 @@ public final class ActiveServices {
         //if( !mAm.mAppProfileManager.isToppAppUid(callerApp.info.uid) ) {
 
         if( callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
-            !mAm.mAppProfileManager.isTopAppUid(callerApp.info.uid) ) {
+            !mAm.mAppProfileManager.isTopAppUid(callerApp.info.uid) &&
+            !mAm.mAppProfileManager.isTopAppUid(s.definingUid) ) {
             if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
-                Slog.w(TAG, "Background service start disabled by baikal settings for: " + s);
+                Slog.w(TAG, "Background service start disabled by baikal settings from:" + callerApp + " for: " + s);
+                Slog.w(TAG, "Background service start attempt from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
                 return 0;
             }
         } else {
             if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
-                Slog.w(TAG, "Background service start disabled by baikal, but requested form foreground app: " + s);
+                Slog.w(TAG, "Background service start disabled by baikal settings, but requested from foreground app: " + s);
                 Slog.w(TAG, "Background service start from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
             }
         }
