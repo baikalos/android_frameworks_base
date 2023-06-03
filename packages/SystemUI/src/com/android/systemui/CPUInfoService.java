@@ -67,6 +67,8 @@ public class CPUInfoService extends Service {
     private int CPU_TEMP_DIVIDER = 1;
     private int SYS_TEMP_DIVIDER = 1;
     private int BAT_TEMP_DIVIDER = 1;
+    private int BRIGHTNESS_DIVIDER = 1;
+
 
     private String CPU_TEMP_SENSOR = "";
 
@@ -80,6 +82,8 @@ public class CPUInfoService extends Service {
     private String SYS_TEMP_SENSOR = "";
     private String BAT_TEMP_SENSOR = "";
 
+    private String BRIGHTNESS_SENSOR = "";
+
     private String GPU_FREQ_SENSOR = "";
 
     private DreamService mDreamService;
@@ -92,6 +96,7 @@ public class CPUInfoService extends Service {
     private boolean mBoostActive = false;
 
     private static boolean mIsolationSupported = true;
+    private static boolean mCpuLoadSupported = true;
 
     double mAccumulator = -10000.0;    
     double mAlpha = 0.2; //0.04;
@@ -119,6 +124,7 @@ public class CPUInfoService extends Service {
         private String mGpuFreq;
         private String mBatCur;
         private String mBatAvg;
+        private String mBrightness;
 
         private boolean mDataAvail;
 
@@ -132,7 +138,7 @@ public class CPUInfoService extends Service {
                     try {
                         //Log.d(TAG, "msgData " + msgData);
                         String[] parts=msgData.split(";");
-                        if( parts.length < 9 ) return;
+                        if( parts.length < 10 ) return;
                         mCpuTemp=parts[0];
                         mSysTemp=parts[1];
                         mBatTemp=parts[2];
@@ -141,9 +147,9 @@ public class CPUInfoService extends Service {
                         mGpuFreq=parts[5];
                         mBatCur=parts[6];
                         mBatAvg=parts[7];
+                        mBrightness=parts[8];
 
-
-                        String[] cpuParts=parts[8].split("\\|");
+                        String[] cpuParts=parts[9].split("\\|");
                         for(int i=0; i<cpuParts.length; i++){
                             String cpuInfo=cpuParts[i];
                             String cpuInfoParts[]=cpuInfo.split(":");
@@ -259,6 +265,15 @@ public class CPUInfoService extends Service {
             }
         }
 
+        private String getBrightness(String brightness) {
+            if (!"-".equals(brightness) && BRIGHTNESS_DIVIDER > 1) {
+                return String.format("%s",
+                        ((Integer.parseInt(brightness) + 1) * 100)/BRIGHTNESS_DIVIDER);
+            } else {
+                return brightness;
+            }
+        }
+
         @Override
         public void onDraw(Canvas canvas) {
             super.onDraw(canvas);
@@ -326,6 +341,13 @@ public class CPUInfoService extends Service {
 
             if(mBatAvg !=null && !mBatCur.equals("-")) {
                 canvas.drawText("avg " + mBatAvg + " mA",
+                        RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
+                y += mFH;
+                mNumberOfRows++;
+            }
+
+            if(mBrightness !=null && !mBrightness.equals("-")) {
+                canvas.drawText("brt " + getBrightness(mBrightness) + " %",
                         RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
@@ -490,19 +512,26 @@ public class CPUInfoService extends Service {
                     sb.append(";");
 
                     
-                    
-                    
+
+                    String sBrightness = CPUInfoService.readOneLine(BRIGHTNESS_SENSOR);
+                    sb.append(sBrightness == null ? "-" : sBrightness);
+                    sb.append(";");
 
                     for(int i=0; i<mNumCpus; i++){
                         final String freqFile=CPU_ROOT+i+CPU_CUR_TAIL;
                         String currFreq = CPUInfoService.readOneLine(freqFile);
                         final String govFile=CPU_ROOT+i+CPU_GOV_TAIL;
-                        String currGov = CPUInfoService.readOneLine(govFile);
+                        String currGov = "-";
+                        if( mCpuLoadSupported ) currGov = CPUInfoService.readOneLine(govFile);
+                        if( mCpuLoadSupported && currGov == null && i == 0 ) {
+                            mCpuLoadSupported = false;
+                            currGov = "-";
+                        }
 
                         final String isoFile=CPU_ROOT+i+CPU_ISO_TAIL;
                         String currIso = "-";
                         if( mIsolationSupported ) currIso = CPUInfoService.readOneLine(isoFile);
-                        if( currIso == null && i == 0 ) {
+                        if( mIsolationSupported && currIso == null && i == 0 ) {
                             mIsolationSupported = false;
                         }
 
@@ -520,7 +549,6 @@ public class CPUInfoService extends Service {
                             currGov="offline";
                         }
 
-                        if( currGov == null ) currGov = "-";
                         sb.append(currFreq+":"+currGov+"|");
                     }
                     sb.deleteCharAt(sb.length()-1);
@@ -542,6 +570,7 @@ public class CPUInfoService extends Service {
         CPU_TEMP_DIVIDER = getResources().getInteger(R.integer.config_cpuTempDivider);
         SYS_TEMP_DIVIDER = getResources().getInteger(R.integer.config_sysTempDivider);
         BAT_TEMP_DIVIDER = getResources().getInteger(R.integer.config_batTempDivider);
+        BRIGHTNESS_DIVIDER = getResources().getInteger(R.integer.config_brightnessDivider);
 
         CPU_TEMP_SENSOR = getResources().getString(R.string.config_cpuTempSensor);
         CPU_TEMP_SENSOR_PREFIX = getResources().getString(R.string.config_cpuTempSensorPrefix);
@@ -553,6 +582,8 @@ public class CPUInfoService extends Service {
         SYS_TEMP_SENSOR = getResources().getString(R.string.config_sysTempSensor);
         BAT_TEMP_SENSOR = getResources().getString(R.string.config_batTempSensor);
 
+        BRIGHTNESS_SENSOR = getResources().getString(R.string.config_brightnessSensor);
+
         GPU_FREQ_SENSOR = getResources().getString(R.string.config_gpuFreqSensor);
 
         Log.e(TAG, "CPU_TEMP_SENSOR_PREFIX " + CPU_TEMP_SENSOR_PREFIX);
@@ -562,6 +593,8 @@ public class CPUInfoService extends Service {
         Log.e(TAG, "CPU_TEMP_SENSOR " + CPU_TEMP_SENSOR);
         Log.e(TAG, "BAT_TEMP_SENSOR " + BAT_TEMP_SENSOR);
         Log.e(TAG, "SYS_TEMP_SENSOR " + SYS_TEMP_SENSOR);
+        Log.e(TAG, "BRIGHTNESS_SENSOR " + BRIGHTNESS_SENSOR);
+        Log.e(TAG, "BRIGHTNESS_DIVIDER " + BRIGHTNESS_DIVIDER);
 
         Log.e(TAG, "GPU_FREQ_SENSOR " + GPU_FREQ_SENSOR);
 
@@ -641,6 +674,7 @@ public class CPUInfoService extends Service {
     private static String readOneLine(String fname) {
         BufferedReader br;
         String line = null;
+        if( null == fname || "".equals(fname) ) return null;
         try {
             br = new BufferedReader(new FileReader(fname), 512);
             try {
@@ -649,7 +683,7 @@ public class CPUInfoService extends Service {
                 br.close();
             }
         } catch (Exception e) {
-            //Log.e(TAG, "Can't read: " + fname, e);
+            Log.e(TAG, "Can't read: " + fname, e);
             return null;
         }
         return line;

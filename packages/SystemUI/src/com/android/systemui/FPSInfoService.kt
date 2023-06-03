@@ -148,6 +148,7 @@ class FPSInfoService @Inject constructor(
         .windowInsets.getInsets(WindowInsets.Type.statusBars()).top
 
     private fun startReading() {
+        if (fpsInfoNode == null) return
         if (fpsReadJob != null) return
         if (fpsInfoView.parent == null) windowManager.addView(fpsInfoView, layoutParams)
         fpsReadJob = coroutineScope.launch {
@@ -168,32 +169,15 @@ class FPSInfoService @Inject constructor(
         if (fpsInfoView.parent != null) windowManager.removeViewImmediate(fpsInfoView)
     }
 
-    /*private fun measureFps(): Int {
-        fpsInfoNode.seek(0L)
-        val measuredFps: String
-        try {
-            measuredFps = fpsInfoNode.readLine()
-        } catch (e: IOException) {
-            Log.e(TAG, "IOException while reading from FPS node, ${e.message}")
-            return -1
-        }
-        try {
-            val fps: Float = measuredFps.trim().let {
-                if (it.contains(": ")) it.split("\\s+".toRegex())[1] else it
-            }.toFloat()
-            return fps.roundToInt()
-        } catch (e: NumberFormatException) {
-            Log.e(TAG, "NumberFormatException occurred while parsing FPS info, ${e.message}")
-        }
-        return -1
-    }*/
-
     private fun measureFpsOs(): String {
-        fpsInfoNode.seek(0L)
         val measuredFps: String
+        val measuredFpsNullable: String?
         try {
-            measuredFps = fpsInfoNode.readLine()
-        } catch (e: IOException) {
+            fpsInfoNode?.seek(0L)
+            measuredFpsNullable = fpsInfoNode?.readLine()
+            if( measuredFpsNullable == null ) return ""
+            measuredFps = measuredFpsNullable.toString()
+        } catch (e: Throwable) {
             Log.e(TAG, "IOException while reading from FPS node, ${e.message}")
             return ""
         }
@@ -209,12 +193,12 @@ class FPSInfoService @Inject constructor(
     }
 
     private fun measureFpsBaikal(): String {
-        fpsInfoNode.seek(0L)
-        val measuredFps: String
+        val measuredFps: String?
         try {
-            measuredFps = fpsInfoNode.readLine()
-            return measuredFps;
-        } catch (e: IOException) {
+            fpsInfoNode?.seek(0L)
+            measuredFps = fpsInfoNode?.readLine()
+            return if( measuredFps == null ) "" else measuredFps;
+        } catch (e: Throwable) {
             Log.e(TAG, "IOException while reading from FPS node, ${e.message}")
             return ""
         }
