@@ -65,6 +65,9 @@ public class AppProfile {
     public boolean mDisableJobs;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mDisableFreezer;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean mStamina;
 
     @SuppressLint({"MutableBareField","InternalField"})
@@ -250,6 +253,7 @@ public class AppProfile {
         this.mThermalProfile = profile.mThermalProfile;
         this.mDisableWakeup = profile.mDisableWakeup;
         this.mDisableJobs = profile.mDisableJobs;
+        this.mDisableFreezer = profile.mDisableFreezer;
         this.mAllowIdleNetwork = profile.mAllowIdleNetwork;
         this.mFileAccess = profile.mFileAccess;
         this.mForcedScreenshot = profile.mForcedScreenshot;
@@ -291,6 +295,7 @@ public class AppProfile {
             mFreezerMode == 0 &&
             !mDisableWakeup &&
             !mDisableJobs &&
+            !mDisableFreezer &&
             !mAllowIdleNetwork &&
             mFileAccess == 0 &&
             !mForcedScreenshot &&
@@ -332,6 +337,7 @@ public class AppProfile {
         this.mThermalProfile = profile.mThermalProfile;
         this.mDisableWakeup = profile.mDisableWakeup;
         this.mDisableJobs = profile.mDisableJobs;
+        this.mDisableFreezer = profile.mDisableFreezer;
         this.mAllowIdleNetwork = profile.mAllowIdleNetwork;
         this.mFileAccess = profile.mFileAccess;
         this.mForcedScreenshot = profile.mForcedScreenshot;
@@ -383,6 +389,7 @@ public class AppProfile {
         if( mSonification != 0 ) result +=  "," + "sonf=" + mSonification;
         if( mBypassCharging ) result +=  "," + "bpc=" + mBypassCharging;
         if( mDebug ) result +=  "," + "dbg=" + mDebug;
+        if( mDisableFreezer ) result +=  "," + "fr=" + mDisableFreezer;
         return result;
     }
 
@@ -435,6 +442,7 @@ public class AppProfile {
             mBypassCharging = parser.getBoolean("bpc",false);
             mSonification = parser.getInt("sonf",0);
             mDebug = parser.getBoolean("dbg",false);
+            mDisableFreezer = parser.getBoolean("fr",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
