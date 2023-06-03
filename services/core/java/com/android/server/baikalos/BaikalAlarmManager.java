@@ -86,6 +86,7 @@ public class BaikalAlarmManager {
     private boolean mDisableWakeupByDefault = false;
     private Context mContext;
     private AppProfileSettings mAppSettings;
+    private AppProfileManager mAppProfileManager;
 
     static BaikalAlarmManager mInstance;
 
@@ -128,6 +129,7 @@ public class BaikalAlarmManager {
         synchronized(mLock) {
             mInstance = this;
             mAppSettings = AppProfileSettings.getInstance(); 
+            mAppProfileManager = AppProfileManager.getInstance();
         }
     }
 
@@ -137,10 +139,18 @@ public class BaikalAlarmManager {
             return true;
         }
 
-	if( tag != null && tag.startsWith("*job") ) {
+        if( mAppProfileManager == null || !mAppProfileManager.isAggressive() ) {
+            if( BaikalConstants.BAIKAL_DEBUG_ALARM ) { 
+                Slog.i(TAG,"Baikal PowerSave disabled.");
+                Slog.i(TAG,"Wakeup alarm:" + tag + ". set to TRUE for " + packageName);
+            }
+            return true;
+        }
+
+    	if( tag != null && tag.startsWith("*job") ) {
             if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". delayed for " + packageName);
             return false;
-	}
+	    }
 
         if( uid < Process.FIRST_APPLICATION_UID ) return true;
 
