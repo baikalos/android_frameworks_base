@@ -525,6 +525,10 @@ public class NotificationShelf extends ActivatableNotificationView implements
             sourceType = LegacySourceType.OnScroll;
         }
 
+        final float smallCornerRadius =
+                getResources().getDimension(R.dimen.notification_corner_radius_small)
+                /  getResources().getDimension(R.dimen.notification_corner_radius);
+
         final float topValue;
         if (!mUseRoundnessSourceTypes && anv.isFirstInSection()) {
             topValue = 1f;
@@ -535,7 +539,8 @@ public class NotificationShelf extends ActivatableNotificationView implements
         } else {
             // Fast scroll skips frames and leaves corners with unfinished rounding.
             // Reset top and bottom corners outside of animation bounds.
-            topValue = 0f;
+            //topValue = 0f;
+            topValue = smallCornerRadius;
         }
         anv.requestTopRoundness(topValue, sourceType, /* animate = */ false);
 
@@ -549,7 +554,8 @@ public class NotificationShelf extends ActivatableNotificationView implements
         } else {
             // Fast scroll skips frames and leaves corners with unfinished rounding.
             // Reset top and bottom corners outside of animation bounds.
-            bottomValue = 0f;
+            //bottomValue = 0f;
+            bottomValue = smallCornerRadius;
         }
         anv.requestBottomRoundness(bottomValue, sourceType, /* animate = */ false);
     }
