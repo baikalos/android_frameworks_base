@@ -47,6 +47,9 @@
     <!-- The BAT temperature divider, if needed -->
     <integer name="config_batTempDivider" translatable="false">10</integer>
 
+    <!-- The Brightness temperature divider, if needed -->
+    <integer name="config_brightnessDivider" translatable="false">255</integer>
+
     <!-- The SYS temperature sensor path, defaults to empty -->
     <string name="config_sysTempSensor" translatable="false"></string>
 
@@ -54,7 +57,7 @@
     <string name="config_batTempSensor" translatable="false">/sys/class/power_supply/battery/temp</string>
 
     <!-- The GPU frequency sensor path, defaults to empty -->
-    <string name="config_gpuFreqSensor" translatable="false">/sys/devices/soc/b00000.qcom,kgsl-3d0/kgsl/kgsl-3d0/clock_mhz</string>
+    <string name="config_gpuFreqSensor" translatable="false"></string>
 
     <!-- Asus stitch editor component name -->
     <string name="config_stitchEditor">com.asus.stitchimage/com.asus.stitchimage.editor.ScreenshotEditorActivity</string>
@@ -64,5 +67,9 @@
 
     <!-- FPSInfoService FPS node file path -->
     <string name="config_fpsInfoSysNodeBaikal" translatable="false"></string>
+
+    <!-- The Brightness temperature sensor path, defaults to empty -->
+    <string name="config_brightnessSensor" translatable="false"></string>
+
 
 </resources>
