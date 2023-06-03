@@ -392,6 +392,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         if (mGnssVisibilityControl != null) {
             mGnssVisibilityControl.onConfigurationUpdated(mGnssConfiguration);
         }
+        toggleXtraDaemon();
     }
 
     public GnssLocationProvider(Context context, Injector injector, GnssNative gnssNative,
@@ -505,6 +506,16 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
                     }
                 }, UserHandle.USER_ALL);
 
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Global.getUriFor(Settings.Global.ASSISTED_GPS_ENABLED),
+                false,
+                new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        toggleXtraDaemon();
+                    }
+                }, UserHandle.USER_ALL);
+
         mHandler.post(this::handleInitialize);
         mHandler.post(mGnssSatelliteBlocklistHelper::updateSatelliteBlocklist);
     }
@@ -574,7 +585,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     private void onNetworkAvailable() {
         mNtpTimeHelper.onNetworkAvailable();
         // Download only if supported, (prevents an unnecessary on-boot download)
-        if (mSupportsPsds) {
+        if (mSupportsPsds && isAssistedGpsEnabled()) {
             synchronized (mLock) {
                 for (int psdsType : mPendingDownloadPsdsTypes) {
                     postWithWakeLockHeld(() -> handleDownloadPsdsData(psdsType));
@@ -667,6 +678,11 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         if (!mSupportsPsds) {
             // native code reports psds not supported, don't try
             Log.d(TAG, "handleDownloadPsdsData() called when PSDS not supported");
+            return;
+        }
+        if (!isAssistedGpsEnabled()) {
+            // PSDS download disabled by system setting, don't try
+            Log.d(TAG, "handleDownloadPsdsData() called when PSDS disabled by system setting");
             return;
         }
         if (!mNetworkConnectivityHandler.isDataNetworkConnected()) {
@@ -1055,7 +1071,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         } else if ("force_time_injection".equals(command)) {
             requestUtcTime();
         } else if ("force_psds_injection".equals(command)) {
-            if (mSupportsPsds) {
+            if (mSupportsPsds && isAssistedGpsEnabled()) {
                 postWithWakeLockHeld(() -> handleDownloadPsdsData(
                         GnssPsdsDownloader.LONG_TERM_PSDS_SERVER_INDEX));
             }
@@ -1096,16 +1112,10 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     private void startNavigating() {
         if (!mStarted) {
             if (DEBUG) Log.d(TAG, "startNavigating");
-            final Boolean isEmergency = mNIHandler.getInEmergency();
             mTimeToFirstFix = 0;
             mLastFixTime = 0;
             setStarted(true);
-            mPositionMode = GNSS_POSITION_MODE_STANDALONE;
-
-            boolean agpsEnabled =
-                    (Settings.Global.getInt(mContext.getContentResolver(),
-                            Settings.Global.ASSISTED_GPS_ENABLED, 1) != 0) || isEmergency;
-            mPositionMode = getSuplMode(agpsEnabled);
+            mPositionMode = getSuplMode(isAssistedGpsEnabled());
 
             if (DEBUG) {
                 String mode;
@@ -1606,6 +1616,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
                     "PsdsServerConfigured=" + mGnssConfiguration.isLongTermPsdsServerConfigured());
             pw.println("native internal state: ");
             pw.println("  " + mGnssNative.getInternalState());
+            pw.println("isAssistedGpsEnabled=" + isAssistedGpsEnabled());
         }
     }
 
@@ -1786,5 +1797,20 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         mGnssVisibilityControl.reportNfwNotification(proxyAppPackageName, protocolStack,
                 otherProtocolStackName, requestor, requestorId, responseType, inEmergencyMode,
                 isCachedLocation);
+    }
+
+    private boolean isAssistedGpsEnabled() {
+        if (mNIHandler.getInEmergency()) {
+            Log.i(TAG, "Forcing Assisted GPS due to emergency");
+            return true;
+        }
+        return Settings.Global.getInt(mContext.getContentResolver(),
+                        Settings.Global.ASSISTED_GPS_ENABLED, 1) != 0;
+    }
+
+    private void toggleXtraDaemon() {
+        Log.i(TAG, "Toggling xtra-daemon via property");
+        SystemProperties.set("persist.sys.xtra-daemon.enabled",
+                Boolean.toString(isAssistedGpsEnabled()));
     }
 }
