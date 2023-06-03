@@ -35,6 +35,7 @@ import com.android.systemui.qs.tiles.AODTile;
 import com.android.systemui.qs.tiles.BatterySaverTile;
 import com.android.systemui.qs.tiles.BluetoothTile;
 import com.android.systemui.qs.tiles.BypassChargingTile;
+import com.android.systemui.qs.tiles.BoostTile;
 import com.android.systemui.qs.tiles.CPUInfoTile;
 import com.android.systemui.qs.tiles.CPUInfoLiteTile;
 import com.android.systemui.qs.tiles.CaffeineTile;
@@ -151,6 +152,7 @@ public class QSFactoryImpl implements QSFactory {
     private final Provider<CPUInfoLiteTile> mCPUInfoLiteTileProvider;
     private final Provider<FPSInfoTile> mFPSInfoTileProvider;
     private final Provider<BypassChargingTile> mBypassChargingTileProvider;
+    private final Provider<BoostTile> mBoostTileProvider;
     private final Provider<StaminaModeTile> mStaminaModeTileProvider;
 
     private final Lazy<QSHost> mQsHostLazy;
@@ -215,6 +217,7 @@ public class QSFactoryImpl implements QSFactory {
             Provider<CPUInfoLiteTile> cpuInfoLiteTileProvider,
             Provider<FPSInfoTile> fpsInfoTileProvider,
             Provider<BypassChargingTile> bypassChargingTileProvider,
+            Provider<BoostTile> boostTileProvider,
             Provider<StaminaModeTile> staminaModeTileProvider
             ) {
         mQsHostLazy = qsHostLazy;
@@ -275,6 +278,7 @@ public class QSFactoryImpl implements QSFactory {
         mCPUInfoLiteTileProvider = cpuInfoLiteTileProvider;
         mFPSInfoTileProvider = fpsInfoTileProvider;
         mBypassChargingTileProvider = bypassChargingTileProvider;
+        mBoostTileProvider = boostTileProvider;
         mStaminaModeTileProvider = staminaModeTileProvider;
     }
 
@@ -404,6 +408,8 @@ public class QSFactoryImpl implements QSFactory {
                 return mBypassChargingTileProvider.get();
             case "stamina":
                 return mStaminaModeTileProvider.get();
+            case "boost":
+                return mBoostTileProvider.get();
         }
 
         // Custom tiles
