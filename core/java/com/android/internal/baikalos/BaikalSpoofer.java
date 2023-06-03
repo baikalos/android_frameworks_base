@@ -94,36 +94,43 @@ public class BaikalSpoofer {
     private static AppProfile spoofedProfile = null;
 
     public static SpoofDeviceInfo[] Devices = new SpoofDeviceInfo[] {
-        new SpoofDeviceInfo("karna","M2007J20CI","Xiaomi","Poco X3 India", "xiaomi", "POCO/karna_eea/karna:11/RKQ1.200826.002/V12.0.6.4.RJGEUXM:user/release-keys"),
-        new SpoofDeviceInfo("surya","M2007J20CG","Xiaomi","Poco X3 NFC Global", "xiaomi", "POCO/surya_eea/surya:11/RKQ1.200826.002/V12.0.6.4.RJGEUXM:user/release-keys"),
-        new SpoofDeviceInfo("blueline","Pixel 3","Google","Pixel 3", "google" , "google/blueline/blueline:11/RQ3A.211001.001/7641976:user/release-keys" ),
-        new SpoofDeviceInfo("crosshatch","Pixel 3 XL","Google","Pixel 3 XL", "google", "google/crosshatch/crosshatch:11/RQ3A.211001.001/7641976:user/release-keys"),
-        new SpoofDeviceInfo("flame","Pixel 4","Google","Pixel 4", "google", "google/flame/flame:11/RQ3A.211001.001/7641976:user/release-keys" ),
-        new SpoofDeviceInfo("coral","Pixel 4 XL","Google","Pixel 4 XL", "google", "google/coral/coral:11/RQ3A.211001.001/7641976:user/release-keys" ),
-        new SpoofDeviceInfo("sunfish","Pixel 4a","Google","Pixel 4a", "google", "google/sunfish/sunfish:11/RQ3A.211001.001/7641976:user/release-keys" ),
-        new SpoofDeviceInfo("redfin","Pixel 5","Google","Pixel 5", "google", "google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys" ),
-        new SpoofDeviceInfo("mdarcy","SHIELD Android TV","NVIDIA","Nvidia Shield TV 2019 Pro", "NVIDIA", "NVIDIA/mdarcy/mdarcy:9/PPR1.180610.011/4079208_2740.7538:user/release-keys" ),
-        new SpoofDeviceInfo("OnePlus8T","KB2005","OnePlus","OnePlus 8T", "OnePlus", "OnePlus/OnePlus8T/OnePlus8T:11/RP1A.201005.001/2110091917:user/release-keys" ),
-        new SpoofDeviceInfo("OnePlus8Pro","IN2023","OnePlus","OnePlus 8 Pro", "OnePlus", "OnePlus/OnePlus8Pro/OnePlus8Pro:11/RP1A.201005.001/2110091917:user/release-keys"  ),
-        new SpoofDeviceInfo("WW_I005D", "ASUS_I005_1","asus", "Asus ROG Phone 5", "asus", "asus/WW_I005D/ASUS_I005_1:11/RKQ1.201022.002/18.0840.2103.26-0:user/release-keys" ),
-        new SpoofDeviceInfo("XQ-AU52", "XQ-AU52","Sony", "Sony Xperia 10 II Dual", "Sony", "Sony/XQ-AU52_EEA/XQ-AU52:10/59.0.A.6.24/059000A006002402956232951:user/release-keys" ),
-        new SpoofDeviceInfo("XQ-AS72", "XQ-AS72","Sony", "Sony Xperia 2 5G (Asia)", "Sony" , null),
-        new SpoofDeviceInfo("z3s", "SM-G988B","Samsung", "Samsung S21", "samsung", "samsung/z3sxxx/z3s:10/QP1A.190711.020/G988BXXU1ATCT:user/release-keys"),
-        new SpoofDeviceInfo("cmi", "Mi 10 Pro","Xiaomi", "Xiaomi Mi 10 Pro", "xiaomi", "Xiaomi/cmi/cmi:11/RKQ1.200710.002/V12.1.2.0.RJACNXM:user/release-keys"),
-        new SpoofDeviceInfo("raven","Pixel 6 Pro","Google","Pixel 6 Pro", "google", "google/raven/raven:12/SD1A.210817.036/7805805:user/release-keys" ),
-        new SpoofDeviceInfo("dipper", "MI 8","Xiaomi", "Xiaomi MI 8", "xiaomi", "Xiaomi/dipper/dipper:10/QKQ1.190828.002/V11.0.3.0.QEAMIXM:user/release-keys"),
-        new SpoofDeviceInfo("vayu", "M2102J20SG","Xiaomi", "Poco X3 Pro", "xiaomi", "POCO/vayu_global/vayu:11/RKQ1.200826.002/V12.0.4.0.RJUMIXM:user/release-keys"),
-        new SpoofDeviceInfo("agate", "21081111RG","Xiaomi", "Xiaomi Mi 11T", "xiaomi", null),
-        new SpoofDeviceInfo("vayu", "R11 Plus","Oppo", "Oppo R11 Plus", "oppo", null),
-        new SpoofDeviceInfo("marlin","Pixel XL","Google","Pixel XL", "google" , "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys" ),
-        new SpoofDeviceInfo("star", "M2102K1G","Xiaomi", "Xiaomi Mi 11", "xiaomi", null),
+        new SpoofDeviceInfo("karna","M2007J20CI","Xiaomi","Poco X3 India", "xiaomi", "POCO/karna_eea/karna:11/RKQ1.200826.002/V12.0.6.4.RJGEUXM:user/release-keys"), // 1
+        new SpoofDeviceInfo("surya","M2007J20CG","Xiaomi","Poco X3 NFC Global", "xiaomi", "POCO/surya_eea/surya:11/RKQ1.200826.002/V12.0.6.4.RJGEUXM:user/release-keys"), // 2
+        new SpoofDeviceInfo("blueline","Pixel 3","Google","Pixel 3", "google" , "google/blueline/blueline:11/RQ3A.211001.001/7641976:user/release-keys" ), // 3
+        new SpoofDeviceInfo("crosshatch","Pixel 3 XL","Google","Pixel 3 XL", "google", "google/crosshatch/crosshatch:11/RQ3A.211001.001/7641976:user/release-keys"), // 4
+        new SpoofDeviceInfo("flame","Pixel 4","Google","Pixel 4", "google", "google/flame/flame:11/RQ3A.211001.001/7641976:user/release-keys" ), // 5
+        new SpoofDeviceInfo("coral","Pixel 4 XL","Google","Pixel 4 XL", "google", "google/coral/coral:11/RQ3A.211001.001/7641976:user/release-keys" ), // 6
+        new SpoofDeviceInfo("sunfish","Pixel 4a","Google","Pixel 4a", "google", "google/sunfish/sunfish:11/RQ3A.211001.001/7641976:user/release-keys" ), // 7
+        new SpoofDeviceInfo("redfin","Pixel 5","Google","Pixel 5", "google", "google/redfin/redfin:12/SP1A.211105.003/7757856:user/release-keys" ), // 8
+        new SpoofDeviceInfo("mdarcy","SHIELD Android TV","NVIDIA","Nvidia Shield TV 2019 Pro", "NVIDIA", "NVIDIA/mdarcy/mdarcy:9/PPR1.180610.011/4079208_2740.7538:user/release-keys" ), // 9
+        new SpoofDeviceInfo("OnePlus8T","KB2005","OnePlus","OnePlus 8T", "OnePlus", "OnePlus/OnePlus8T/OnePlus8T:11/RP1A.201005.001/2110091917:user/release-keys" ), // 10
+        new SpoofDeviceInfo("OnePlus8Pro","IN2023","OnePlus","OnePlus 8 Pro", "OnePlus", "OnePlus/OnePlus8Pro/OnePlus8Pro:11/RP1A.201005.001/2110091917:user/release-keys"  ), // 11
+        new SpoofDeviceInfo("WW_I005D", "ASUS_I005_1","asus", "Asus ROG Phone 5", "asus", "asus/WW_I005D/ASUS_I005_1:11/RKQ1.201022.002/18.0840.2103.26-0:user/release-keys" ), // 12
+        new SpoofDeviceInfo("XQ-AU52", "XQ-AU52","Sony", "Sony Xperia 10 II Dual", "Sony", "Sony/XQ-AU52_EEA/XQ-AU52:10/59.0.A.6.24/059000A006002402956232951:user/release-keys" ), // 13
+        new SpoofDeviceInfo("XQ-AS72", "XQ-AS72","Sony", "Sony Xperia 2 5G (Asia)", "Sony" , null), // 14
+        new SpoofDeviceInfo("z3s", "SM-G988B","Samsung", "Samsung S21", "samsung", "samsung/z3sxxx/z3s:10/QP1A.190711.020/G988BXXU1ATCT:user/release-keys"), // 15
+        new SpoofDeviceInfo("cmi", "Mi 10 Pro","Xiaomi", "Xiaomi Mi 10 Pro", "xiaomi", "Xiaomi/cmi/cmi:11/RKQ1.200710.002/V12.1.2.0.RJACNXM:user/release-keys"), // 16
+        new SpoofDeviceInfo("raven","Pixel 6 Pro","Google","Pixel 6 Pro", "google", "google/raven/raven:12/SD1A.210817.036/7805805:user/release-keys" ), // 17
+        new SpoofDeviceInfo("dipper", "MI 8","Xiaomi", "Xiaomi MI 8", "xiaomi", "Xiaomi/dipper/dipper:10/QKQ1.190828.002/V11.0.3.0.QEAMIXM:user/release-keys"), // 18
+        new SpoofDeviceInfo("vayu", "M2102J20SG","Xiaomi", "Poco X3 Pro", "xiaomi", "POCO/vayu_global/vayu:11/RKQ1.200826.002/V12.0.4.0.RJUMIXM:user/release-keys"), // 19
+        new SpoofDeviceInfo("agate", "21081111RG","Xiaomi", "Xiaomi Mi 11T", "xiaomi", null), // 20
+        new SpoofDeviceInfo("vayu", "R11 Plus","Oppo", "Oppo R11 Plus", "oppo", null), // 21
+        new SpoofDeviceInfo("marlin","Pixel XL","Google","Pixel XL", "google" , "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys" ), // 22
+        new SpoofDeviceInfo("star", "M2102K1G","Xiaomi", "Xiaomi Mi 11", "xiaomi", null), // 23 
+        new SpoofDeviceInfo("cheetah", "Pixel 7 Pro","Google", "Pixel 7 Pro", "google", "google/cheetah/cheetah:13/TQ2A.230505.002/9891397:user/release-keys"), // 24
+        new SpoofDeviceInfo("", "SO-52A","Sony", "Sony Xperia 5", "Sony" , null), // 25
+        new SpoofDeviceInfo("", "ASUS_Z01QD","asus", "Asus ROG 1", "asus" , null), // 26
+        new SpoofDeviceInfo("obiwan", "ASUS_I003D","asus", "Asus ROG 3", "asus" , null), // 27
+        new SpoofDeviceInfo("OnePlus9R","LE2101","OnePlus","OnePlus 9R", "OnePlus", null), // 28
+        new SpoofDeviceInfo("munch","22021211RG","Xiaomi","POCO F4", "POCO", "POCO/munch_global/munch:13/RKQ1.211001.001/V14.0.1.0.TLMMIXM:user/release-keys"), // 29
+        
 
     };
 
     public static void maybeSpoofProperties(Application app, Context context) {
         sBaikalSpooferActive++;
-        maybeSpoofBuild(app.getPackageName(), app.getProcessName(), context);
         maybeSpoofDevice(app.getPackageName(), context);
+        maybeSpoofBuild(app.getPackageName(), app.getProcessName(), context);
     }
 
     public static int maybeSpoofFeature(String packageName, String name, int version) {
@@ -180,6 +187,9 @@ public class BaikalSpoofer {
          * populated at runtime.
          */
         try {
+
+            Log.i(TAG, "Build.VERSION." + key + "=" + value);
+
             // Unlock
             Field field = Build.VERSION.class.getDeclaredField(key);
             field.setAccessible(true);
@@ -204,6 +214,9 @@ public class BaikalSpoofer {
          * populated at runtime.
          */
         try {
+
+            Log.i(TAG, "Build." + key + "=" + value);
+
             // Unlock
             Field field = Build.class.getDeclaredField(key);
             field.setAccessible(true);
@@ -227,6 +240,9 @@ public class BaikalSpoofer {
          * populated at runtime.
          */
         try {
+
+            Log.i(TAG, "Process." + key + "=" + value);
+
             // Unlock
             Field field = Process.class.getDeclaredField(key);
             field.setAccessible(true);
@@ -245,12 +261,22 @@ public class BaikalSpoofer {
 
         sProcessName = processName;
         sPackageName = packageName;
+
+        boolean needsWASpoof = List.of("pixelmigrate", "restore", "snapchat").stream().anyMatch(packageName::contains);
+
+        if (packageName.contains("com.google.android.gms")) {
+            if( processName != null ) {
+                sIsGmsUnstable = List.of(".persistent", ".unstable").stream().anyMatch(processName.toLowerCase()::contains);
+            }
+        }
+
         
-        if( "com.google.android.gms.unstable".equals(processName) &&
-            "com.google.android.gms".equals(packageName) ) {
+        if( /*"com.google.android.gms.unstable".equals(processName) &&
+            "com.google.android.gms".equals(packageName)*/ sIsGmsUnstable || needsWASpoof ) {
 
-            sIsGmsUnstable = true;
+            //sIsGmsUnstable = true;
 
+            /*
             String stockFp = SystemProperties.get("ro.build.stock_fingerprint", null);
             String stockSecurityPatch = SystemProperties.get("ro.build.stock_sec_patch", null);
 
@@ -264,8 +290,22 @@ public class BaikalSpoofer {
             Log.e(TAG, "Spoof Device GMS SECURITY_PATCH: [" + stockSecurityPatch + "]");
             if( stockSecurityPatch != null && !stockSecurityPatch.isEmpty() )
                 setVersionField("SECURITY_PATCH", stockSecurityPatch);
+            */
 
-            return;                    
+            Log.e(TAG, "Spoof Device for GMS SN check: " + Application.getProcessName());
+
+            setBuildField("BRAND", "google");
+            setBuildField("PRODUCT", "marlin");
+            setBuildField("MODEL", "Pixel XL");
+        	setBuildField("MANUFACTURER", "Google");
+            setBuildField("DEVICE", "marlin");
+            setBuildField("FINGERPRINT", "google/marlin/marlin:7.1.2/NJH47F/4146041:user/release-keys");
+            setBuildField("ID", "NJH47F");
+            setBuildField("TYPE", "user");
+            setBuildField("TAGS", "release-keys");
+            setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.N_MR1);
+            setVersionField("SECURITY_PATCH", "2017-08-05");
+
         } else if( "com.android.vending".equals(packageName) ) {
             sIsFinsky = true;
         }
@@ -331,6 +371,10 @@ public class BaikalSpoofer {
                 sHideDevMode = true;
                 Log.e(TAG, "Overriding developer mode for :" + packageName + " to " + profile.mHideDevMode);
             } 
+
+            setBuildField("TYPE", "user");
+            setBuildField("TAGS", "release-keys");
+
         } catch(Exception fl) {
             Log.e(TAG, "Failed to load profile for :" + packageName + ", sBaikalSpooferActive=" + sBaikalSpooferActive, fl);
         }
@@ -343,6 +387,7 @@ public class BaikalSpoofer {
 
             if( device_id >=  BaikalSpoofer.Devices.length ) {
                 Log.e(TAG, "Spoof Device : invalid device id: " + device_id);
+                sBaikalSpooferActive--;
                 return;
             }
 
@@ -358,13 +403,13 @@ public class BaikalSpoofer {
             Log.e(TAG, "Spoof Device PRODUCT: " + device.deviceName);
             Log.e(TAG, "Spoof Device FINGERPRINT: " + device.deviceFp);
 
-            setBuildField("BRAND", device.deviceBrand);
-            setBuildField("MANUFACTURER", device.deviceManufacturer);
-            setBuildField("MODEL", device.deviceModel);
-            setBuildField("DEVICE", device.deviceName);
-            setBuildField("PRODUCT", device.deviceName);
+            if( device.deviceBrand != null &&  !"".equals(device.deviceBrand) ) setBuildField("BRAND", device.deviceBrand);
+            if( device.deviceManufacturer != null &&  !"".equals(device.deviceManufacturer) ) setBuildField("MANUFACTURER", device.deviceManufacturer);
+            if( device.deviceModel != null &&  !"".equals(device.deviceModel) ) setBuildField("MODEL", device.deviceModel);
+            if( device.deviceName != null &&  !"".equals(device.deviceName) ) setBuildField("DEVICE", device.deviceName);
+            if( device.deviceName != null &&  !"".equals(device.deviceName) ) setBuildField("PRODUCT", device.deviceName);
+            if( device.deviceFp != null && !"".equals(device.deviceFp) ) setBuildField("FINGERPRINT", device.deviceFp);
 
-            if( device.deviceFp != null ) setBuildField("FINGERPRINT", device.deviceFp);
         } catch(Exception e) {
             Log.e(TAG, "Failed to spoof Device :" + packageName, e);
         }
@@ -393,12 +438,12 @@ public class BaikalSpoofer {
 
     private static boolean isCallerSafetyNet() {
         return Arrays.stream(Thread.currentThread().getStackTrace())
-                .anyMatch(elem -> elem.getClassName().contains("DroidGuard"));
+                .anyMatch(elem -> elem.getClassName().toLowerCase().contains("droidguard"));
     }
 
     public static void onEngineGetCertificateChain() {
         // Check stack for SafetyNet
-        if (isCurrentProcessGmsUnstable() && isCallerSafetyNet()) {
+        if (isCallerSafetyNet()) {
             throw new UnsupportedOperationException();
         }
 
