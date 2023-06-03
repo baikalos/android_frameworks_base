@@ -178,6 +178,9 @@ public class AppProfileManager {
     private boolean mExtremeMode = false;
     private boolean mAggressiveIdleMode = false;
     private boolean mKillInBackground = false;
+    private boolean mAllowDowngrade = false;
+
+    private int mBrightnessCurve = 0;
 
     private boolean mPhoneCall = false;
     private boolean mAudioPlaying = false;
@@ -274,6 +277,14 @@ public class AppProfileManager {
 
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_AOD_ON_CHARGER),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BRIGHTNESS_CURVE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_ALLOW_DOWNGRADE),
                     false, this);
 
             } catch( Exception e ) {
@@ -438,6 +449,10 @@ public class AppProfileManager {
             BaikalConstants.setAodOnChargerEnabled(isAodOnChargerEnabled());
         }
 
+        mBrightnessCurve = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BRIGHTNESS_CURVE, 0);
+
+        mAllowDowngrade = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_ALLOW_DOWNGRADE, 0) != 0;
+
         if( changed ) {
             activateCurrentProfileLocked(false,false);
         }
@@ -572,7 +587,7 @@ public class AppProfileManager {
 
         //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
 
-        if( !mPhoneCall && !mScreenMode && !isAudioPlaying() && !wakeup)  {
+        if( !mPhoneCall && !mScreenMode && /*!isAudioPlaying() &&*/ !wakeup)  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mScreenMode=" + mScreenMode +
@@ -621,12 +636,14 @@ public class AppProfileManager {
     }
 
     public void wakeUp() {
+        activateCurrentProfileLocked(true,true);
+        /*
         try {
             mPowerManager.setPowerBoost(BOOST_INTERACTION,4000);
+            //mPowerManager.setPowerMode(MODE_LAUNCH,true);
         } catch (Exception e) {
             e.printStackTrace();
-        }
-        activateCurrentProfileLocked(true,true);
+        }*/
     }
 
     protected void activatePowerMode(int mode, boolean enable) {
@@ -635,7 +652,8 @@ public class AppProfileManager {
             if( mActivePerfProfile != -1 ) {
                 try {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + mActivePerfProfile + ", deactivating");
-                    activatePowerMode(mActivePerfProfile,false);
+                    //activatePowerMode(mActivePerfProfile,false);
+                    mPowerManager.setPowerMode(mActivePerfProfile, false);
                     mActivePerfProfile = -1;
                 } catch(Exception e) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Deactivate perfromance profile failed profile=" + mActivePerfProfile, e);
@@ -776,8 +794,20 @@ public class AppProfileManager {
         
         try {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked 2 minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
-            if( minFps != 0 ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)minFps);
-            if( maxFps != 0 ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)maxFps);
+
+            float oldmin = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE);
+            float oldmax = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE);
+
+            if( minFps > maxFps ) minFps = maxFps;
+
+            if( minFps != 0 ) {
+                if( minFps > oldmax ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)minFps);
+                if( minFps != oldmin ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)minFps);
+            }
+            if( maxFps != 0 ) {
+                if( maxFps < oldmin ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)maxFps);
+                if( maxFps != oldmax ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)maxFps);
+            }
         } catch(Exception f) {
             Slog.e(TAG,"setHwFrameRateLocked exception minFps=" + minFps + ", maxFps=" + maxFps, f);
             return false;
@@ -998,9 +1028,28 @@ public class AppProfileManager {
     }
 
     public void onAudioModeChanged(boolean playing) {
+
+        final int AUDIO_LAUNCH = 3;
+        final int AUDIO_STREAMING_LOW_LATENCY = 10;
+
+        if( playing ) {
+            try {
+                mPowerManager.setPowerBoost(AUDIO_LAUNCH,3000);
+            } catch(Exception e) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate audio boost failed", e);
+            }
+        }
+
         if( mAudioPlaying != playing ) {
             mAudioPlaying = playing;
-            activateCurrentProfileLocked(false,false);
+            //activateCurrentProfileLocked(false,false);
+
+            try {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode audio=" + mAudioPlaying);
+                mPowerManager.setPowerMode(AUDIO_STREAMING_LOW_LATENCY, mAudioPlaying);
+            } catch(Exception e) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate audio profile failed", e);
+            }
         }
     }
 
@@ -1008,13 +1057,13 @@ public class AppProfileManager {
         return mAudioPlaying;
     }
 
+
     public AppProfile getAppProfile(String packageName) {
         AppProfile profile = mAppSettings != null ? mAppSettings.getProfile(packageName) : null;
         return profile != null ? profile : new AppProfile(packageName);
     }
 
     public boolean isAppRestricted(int uid, String packageName) {
-        if( !mAggressiveMode ) return false;
         if( mAppSettings == null ) return false;
         if( uid < Process.FIRST_APPLICATION_UID ) return false;
         if( packageName == null ) {
@@ -1032,6 +1081,7 @@ public class AppProfileManager {
                 return true;
             }
         }
+        if( !mAggressiveMode ) return false;
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
             if( profile.getBackground() > mode ) {
@@ -1055,14 +1105,15 @@ public class AppProfileManager {
     }
 
     public boolean isBlocked(AppProfile profile, String packageName, int uid) {
-
-        if( !mAggressiveMode ) return false;
         if( mAppSettings == null ) return false;
         if( uid < Process.FIRST_APPLICATION_UID ) return false;
         if( profile == null ) {
             if( packageName == null ) {
                 packageName = BaikalConstants.getPackageByUid(mContext, uid);
-                if( packageName == null ) return true;
+                if( packageName == null ) {
+                    if( !mAggressiveMode ) return false;
+                    return true;
+                }
             }
             profile = mAppSettings.getProfile(packageName);
         }
@@ -1081,6 +1132,7 @@ public class AppProfileManager {
                 return true;
             }
         }
+        if( !mAggressiveMode ) return false;
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
             if( profile.getBackground() > mode ) {
@@ -1114,6 +1166,15 @@ public class AppProfileManager {
 
     public boolean isKillInBackground() {
         return mKillInBackground;
+    }
+
+    public int getBrightnessCurve() {
+        try {
+            mBrightnessCurve = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BRIGHTNESS_CURVE, 0);
+        } catch(Exception e) {
+            return 0;
+        }
+        return mBrightnessCurve;
     }
 
     public boolean isExtreme() {
@@ -1158,9 +1219,12 @@ public class AppProfileManager {
             if( !bypassEnabled && limitedEnabled ) {
                 Slog.w(TAG, "Update Limited charging " + limitedEnabled);
                 FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputLimitValue);
+                Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,2);
             } else {
                 Slog.w(TAG, "Update Bypass/Limited charging " + bypassEnabled);
                 FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
+                SystemPropertiesSet("baikal.charging.mode", bypassEnabled ? "1" : "0");
+                Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,bypassEnabled ? 1 : 0);
             }
         } catch(Exception e) {
             Slog.w(TAG, "Can't enable bypass charging!", e);
@@ -1196,6 +1260,11 @@ public class AppProfileManager {
 
     public static void setAudioMode(boolean playing) {
         if( mInstance != null ) mInstance.onAudioModeChanged(playing);
+    }
+
+    public static boolean isAllowDowngrade() {
+        if( mInstance != null ) return mInstance.mAllowDowngrade;
+        return false;
     }
 
 }

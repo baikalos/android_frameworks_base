@@ -17349,6 +17349,27 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_BOOST_OVERRIDE_PLATINUM = "baikalos_boost_override_platinum";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BRIGHTNESS_CURVE = "baikalos_brightness_curve";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CHARGING_MODE = "baikalos_charging_mode";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_ALLOW_DOWNGRADE = "baikalos_allow_downgrade";
+
 
 
 
