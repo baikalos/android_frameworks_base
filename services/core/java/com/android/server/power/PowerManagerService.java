@@ -228,6 +228,7 @@ public final class PowerManagerService extends SystemService
     static final int WAKE_LOCK_STAY_AWAKE = 1 << 5; // only set if already awake
     static final int WAKE_LOCK_DOZE = 1 << 6;
     static final int WAKE_LOCK_DRAW = 1 << 7;
+    static final int WAKE_LOCK_AUDIO = 1 << 8;
 
     // Summarizes the user activity state.
     static final int USER_ACTIVITY_SCREEN_BRIGHT = 1 << 0;
@@ -426,6 +427,8 @@ public final class PowerManagerService extends SystemService
 
     // True if the display suspend blocker has been acquired.
     private boolean mHoldingDisplaySuspendBlocker;
+
+    private boolean mHoldingAudioBlocker;
 
     // True if systemReady() has been called.
     private boolean mSystemReady;
@@ -1282,7 +1285,7 @@ public final class PowerManagerService extends SystemService
 
             mNativeWrapper.nativeInit(this);
             mNativeWrapper.nativeSetAutoSuspend(false);
-            mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, true);
+            //mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, true);
             mNativeWrapper.nativeSetPowerMode(Mode.DOUBLE_TAP_TO_WAKE, false);
             mInjector.invalidateIsInteractiveCaches();
         }
@@ -2043,9 +2046,9 @@ public final class PowerManagerService extends SystemService
                     wakeLock.mOwnerUid, wakeLock.mOwnerPid, wakeLock.mWorkSource,
                     wakeLock.mHistoryTag, wakeLock.mCallback);
             restartNofifyLongTimerLocked(wakeLock);
-            if( wakeLock.mTag.startsWith("Audio") ) {
+            /*if( wakeLock.mTag.startsWith("Audio") ) {
                 AppProfileManager.setAudioMode(true);
-            }
+            }*/
         }
     }
 
@@ -2126,7 +2129,7 @@ public final class PowerManagerService extends SystemService
                     wakeLock.mWorkSource, wakeLock.mHistoryTag, wakeLock.mCallback);
             notifyWakeLockLongFinishedLocked(wakeLock);
 
-            if( wakeLock.mTag.startsWith("Audio") ) checkIsAudioPlayingLocked();
+            //if( wakeLock.mTag.startsWith("Audio") ) checkIsAudioPlayingLocked();
         }
     }
 
@@ -2702,6 +2705,7 @@ public final class PowerManagerService extends SystemService
             // Because we might release the last suspend blocker here, we need to make sure
             // we finished everything else first!
             updateSuspendBlockerLocked();
+            updateAudioModeLocked();
         } finally {
             Trace.traceEnd(Trace.TRACE_TAG_POWER);
             mUpdatePowerStateInProgress = false;
@@ -3014,6 +3018,8 @@ public final class PowerManagerService extends SystemService
                 final PowerGroup powerGroup = mPowerGroups.get(groupId);
                 final int wakeLockFlags = getWakeLockSummaryFlags(wakeLock);
                 mWakeLockSummary |= wakeLockFlags;
+
+                if (wakeLock.mAudio) mWakeLockSummary |= WAKE_LOCK_AUDIO;
 
                 if (groupId != Display.INVALID_DISPLAY_GROUP) {
                     int wakeLockSummary = powerGroup.getWakeLockSummaryLocked();
@@ -4128,6 +4134,18 @@ public final class PowerManagerService extends SystemService
                         & WAKE_LOCK_PROXIMITY_SCREEN_OFF) != 0;
     }
 
+
+    @GuardedBy("mLock")
+    private void updateAudioModeLocked() {
+        boolean needAudioBlocker = ((mWakeLockSummary & WAKE_LOCK_AUDIO) != 0);
+        if ( needAudioBlocker != mHoldingAudioBlocker ) {
+            mHoldingAudioBlocker = needAudioBlocker;
+            AppProfileManager.setAudioMode(needAudioBlocker);
+        }
+    }
+
+
+
     /**
      * Updates the suspend blocker that keeps the CPU alive.
      *
@@ -4565,7 +4583,7 @@ public final class PowerManagerService extends SystemService
         }
     }
 
-
+/*
     @GuardedBy("mLock")
     private void checkIsAudioPlayingLocked() {
         boolean isPlaying = false;
@@ -4579,7 +4597,7 @@ public final class PowerManagerService extends SystemService
         }
         AppProfileManager.setAudioMode(isPlaying);
     }    
-
+*/
     @GuardedBy("mLock")
     private void updateWakeLockDisabledStatesLocked() {
         boolean changed = false;
@@ -5689,6 +5707,7 @@ public final class PowerManagerService extends SystemService
         public boolean mNotifiedAcquired;
         public boolean mNotifiedLong;
         public boolean mDisabled;
+        public boolean mAudio;
         public IWakeLockCallback mCallback;
 
         public WakeLock(IBinder lock, int displayId, int flags, String tag, String packageName,
@@ -5705,6 +5724,9 @@ public final class PowerManagerService extends SystemService
             mOwnerPid = ownerPid;
             mUidState = uidState;
             mCallback = callback;
+            if( mTag.startsWith("Audio") ) mAudio = true;
+            else if( mTag.startsWith("RingtonePlayer") ) mAudio = true;
+            else if( mTag.startsWith("android.media.MediaPlayer") ) mAudio = true;
             linkToDeath();
         }
 
@@ -5768,6 +5790,10 @@ public final class PowerManagerService extends SystemService
             updateWorkSource(workSource);
             mHistoryTag = historyTag;
             mCallback = callback;
+            mAudio = false;
+            if( mTag.startsWith("Audio") ) mAudio = true;
+            else if( mTag.startsWith("RingtonePlayer") ) mAudio = true;
+            else if( mTag.startsWith("android.media.MediaPlayer") ) mAudio = true;
         }
 
         public boolean hasSameWorkSource(WorkSource workSource) {
@@ -5884,6 +5910,9 @@ public final class PowerManagerService extends SystemService
             }
             if ((mFlags & PowerManager.SYSTEM_WAKELOCK) != 0) {
                 result += " SYSTEM_WAKELOCK";
+            }
+            if (mAudio) {
+                result += " AUDIO_LOCK";
             }
             return result;
         }
