@@ -1715,8 +1715,8 @@ public final class ProcessList {
                     if (pm.checkPermission(Manifest.permission.INSTALL_PACKAGES,
                             app.info.packageName, userId)
                             == PackageManager.PERMISSION_GRANTED) {
-                        Slog.i(TAG, app.info.packageName + " is exempt from freezer");
-                        app.mOptRecord.setFreezeExempt(true);
+                        //Slog.i(TAG, app.info.packageName + " is exempt from freezer");
+                        //app.mOptRecord.setFreezeExempt(true);
                     }
                 } catch (RemoteException e) {
                     throw e.rethrowAsRuntimeException();
@@ -4383,9 +4383,15 @@ public final class ProcessList {
                 foreground = 'S';
             } else if (r.mAppProfile.mPinned) {
                 foreground = 'P';
+            } else if (r.mOptRecord.isFrozen()) {
+                foreground = 'F';
+            } else if (r.mOptRecord.isPendingFreeze()) {
+                foreground = 'f';
             } else {
                 foreground = ' ';
             }
+
+
             String procState = makeProcStateString(state.getCurProcState());
             pw.print(prefix);
             pw.print(r.isPersistent() ? persistentLabel : normalLabel);
