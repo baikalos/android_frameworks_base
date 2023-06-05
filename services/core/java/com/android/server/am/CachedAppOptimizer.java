@@ -1675,11 +1675,31 @@ public final class CachedAppOptimizer {
             final ProcessCachedOptimizerRecord opt = proc.mOptRecord;
 
             opt.setPendingFreeze(false);
+    
+            boolean shouldFreeze = false;
+
+            if (mAm.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE ) {
+                if( proc.mState.getCurAdj() >= ProcessList.HOME_APP_ADJ ) shouldFreeze = true;
+                if( !shouldFreeze 
+                    && mAm.mAppProfileManager.isExtreme()
+                    && proc.mState.getCurAdj() >= ProcessList.PERCEPTIBLE_LOW_APP_ADJ
+                    && proc.mState.getCurrentSchedulingGroup() == ProcessList.SCHED_GROUP_BACKGROUND ) {
+                        shouldFreeze = true;
+                }
+            } else {
+                if( proc.mState.getCurAdj() >= ProcessList.CACHED_APP_MIN_ADJ ) shouldFreeze = true;
+                if( !shouldFreeze 
+                    && mAm.mAppProfileManager.isExtreme()
+                    && proc.mState.getCurAdj() > ProcessList.HOME_APP_ADJ ) {
+                        shouldFreeze = true;
+                }
+            }
+
 
             synchronized (mProcLock) {
                 pid = proc.getPid();
                 if (/*proc.mState.getCurAdj() < ProcessList.CACHED_APP_MIN_ADJ
-                        ||*/ opt.shouldNotFreeze()) {
+                        ||*/  !shouldFreeze  || opt.shouldNotFreeze()) {
                     if (DEBUG_FREEZER) {
                         Slog.d(TAG_AM, "Skipping freeze for process " + pid
                                 + " " + name + " curAdj = " + proc.mState.getCurAdj()
