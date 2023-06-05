@@ -244,8 +244,10 @@ import com.nvidia.NvAppProfileService;
 
 import dalvik.system.VMRuntime;
 
-import ink.kaleidoscope.server.GmsManagerService;
 import ink.kaleidoscope.server.ParallelSpaceManagerService;
+
+import com.android.server.baikalos.BaikalAppManagerService;
+
 
 import libcore.util.HexEncoding;
 
@@ -3854,7 +3856,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                     }
                     // Don't allow changing protected packages.
                     if (mProtectedPackages.isPackageStateProtected(userId, packageName) &&
-                            !Arrays.asList(GmsManagerService.GMS_PACKAGES).contains(packageName)) {
+                            !Arrays.asList(BaikalAppManagerService.GMS_PACKAGES).contains(packageName)) {
                         throw new SecurityException(
                                 "Cannot disable a protected package: " + packageName);
                     }
