@@ -3745,6 +3745,16 @@ public final class Settings {
         @UnsupportedAppUsage
         public static String getStringForUser(ContentResolver resolver, String name,
                 int userHandle) {
+
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    Settings.Global.ADB_ENABLED.equals(name) || 
+                    Settings.Global.ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return "0";
+                }
+            }
+
             if (MOVED_TO_SECURE.contains(name)) {
                 Log.w(TAG, "Setting " + name + " has moved from android.provider.Settings.System"
                         + " to android.provider.Settings.Secure, returning read-only value.");
@@ -17424,6 +17434,12 @@ public final class Settings {
         public static final String BAIKALOS_ALLOW_DOWNGRADE = "baikalos_allow_downgrade";
 
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_IGNORE_ZERO_BATTERY = "baikalos_ignore_zero_battery";
 
 
         /* End of BaikalOS Global Settings */
@@ -17528,9 +17544,10 @@ public final class Settings {
         public static String getStringForUser(ContentResolver resolver, String name,
                 int userHandle) {
 
-            if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || ADB_ENABLED.equals(name) ) {
-                Log.d(TAG, "getStringForUser." + name +": " + Process.myUid());
-                if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
                     Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
                     return "0";
                 }
@@ -17747,9 +17764,10 @@ public final class Settings {
          */
         public static int getInt(ContentResolver cr, String name, int def) {
 
-            if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || ADB_ENABLED.equals(name) ) {
-                Log.d(TAG, "getStringForUser." + name +": " + Process.myUid());
-                if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
                     Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
                     return 0;
                 }
@@ -17780,9 +17798,10 @@ public final class Settings {
         public static int getInt(ContentResolver cr, String name)
                 throws SettingNotFoundException {
 
-            if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || ADB_ENABLED.equals(name) ) {
-                Log.d(TAG, "getStringForUser." + name +": " + Process.myUid());
-                if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
                     Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
                     return 0;
                 }
