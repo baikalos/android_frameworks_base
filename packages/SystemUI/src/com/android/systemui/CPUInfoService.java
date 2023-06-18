@@ -63,6 +63,8 @@ public class CPUInfoService extends Service {
     private String[] mCurrFreq=null;
     private String[] mCurrGov=null;
 
+    private static final String DISPLAY_HBM = "/sys/devices/platform/soc/soc:qcom,dsi-display/hbm";
+
     private static final String NUM_OF_CPUS_PATH = "/sys/devices/system/cpu/present";
     private int CPU_TEMP_DIVIDER = 1;
     private int SYS_TEMP_DIVIDER = 1;
@@ -94,6 +96,8 @@ public class CPUInfoService extends Service {
     private boolean mPowerProfileAvail = false;
     private boolean mThermalProfileAvail = false;
     private boolean mBoostActive = false;
+    private boolean mHbmAvail = false;
+    private boolean mHbmActive = false;
 
     private static boolean mIsolationSupported = true;
     private static boolean mCpuLoadSupported = true;
@@ -348,7 +352,7 @@ public class CPUInfoService extends Service {
 
             if(mBrightness !=null && !mBrightness.equals("-")) {
                 canvas.drawText("brt " + getBrightness(mBrightness) + " %",
-                        RIGHT-mPaddingRight-mMaxWidth, y-1, mOnlinePaint);
+                        RIGHT-mPaddingRight-mMaxWidth, y-1, mHbmActive ? mOfflinePaint : mOnlinePaint);
                 y += mFH;
                 mNumberOfRows++;
             }
@@ -361,25 +365,25 @@ public class CPUInfoService extends Service {
             }
 
             if( mCurrFreq != null ) {
-            for(int i=0; i<mCurrFreq.length; i++){
-                String s=getCPUInfoString(i);
-                String freq=mCurrFreq[i];
-                if(!freq.equals("-")) {
-                    if(freq.equals("0") || freq.equals("off") ){
-                        canvas.drawText(s, RIGHT-mPaddingRight-mMaxWidth,
-                            y-1, mOfflinePaint);
-
-                    } else if ( freq.equals("iso") ) {
-                        canvas.drawText(s, RIGHT-mPaddingRight-mMaxWidth,
-                            y-1, mIsolatedPaint);
-                    } else {
-                        canvas.drawText(s, RIGHT-mPaddingRight-mMaxWidth,
-                            y-1, mOnlinePaint);
+                for(int i=0; i<mCurrFreq.length; i++){
+                    String s=getCPUInfoString(i);
+                    String freq=mCurrFreq[i];
+                    if(!freq.equals("-")) {
+                        if(freq.equals("0") || freq.equals("off") ){
+                            canvas.drawText(s, RIGHT-mPaddingRight-mMaxWidth,
+                                y-1, mOfflinePaint);
+    
+                        } else if ( freq.equals("iso") ) {
+                            canvas.drawText(s, RIGHT-mPaddingRight-mMaxWidth,
+                                y-1, mIsolatedPaint);
+                        } else {
+                            canvas.drawText(s, RIGHT-mPaddingRight-mMaxWidth,
+                                y-1, mOnlinePaint);
+                        }
+                        y += mFH;
+                        mNumberOfRows++;
                     }
-                    y += mFH;
-                    mNumberOfRows++;
                 }
-            }
             }
         }
 
@@ -511,7 +515,10 @@ public class CPUInfoService extends Service {
                     sb.append(sBatAvg == null ? "-" : sBatAvg);
                     sb.append(";");
 
-                    
+                    if( mHbmAvail ) {
+                        String hbm = readOneLine(DISPLAY_HBM);
+                        mHbmActive = hbm != null && !"0".equals(hbm);
+                    }
 
                     String sBrightness = CPUInfoService.readOneLine(BRIGHTNESS_SENSOR);
                     sb.append(sBrightness == null ? "-" : sBrightness);
@@ -625,11 +632,13 @@ public class CPUInfoService extends Service {
 
         mSysTempAvail = readOneLine(SYS_TEMP_SENSOR) != null;
         mBatTempAvail = readOneLine(BAT_TEMP_SENSOR) != null;
+        mHbmAvail = readOneLine(DISPLAY_HBM) != null;
 
         Log.e(TAG, "CPU_TEMP_NUMBER " + CPU_TEMP_NUMBER);
         Log.e(TAG, "mCpuTempAvail " + mCpuTempAvail);
         Log.e(TAG, "mSysTempAvail " + mSysTempAvail);
         Log.e(TAG, "mBatTempAvail " + mBatTempAvail);
+        Log.e(TAG, "mHbmAvail " + mHbmAvail);
 
         mView = new CPUView(this);
         WindowManager.LayoutParams params = new WindowManager.LayoutParams(
