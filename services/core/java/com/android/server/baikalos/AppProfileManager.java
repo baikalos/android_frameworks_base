@@ -795,18 +795,28 @@ public class AppProfileManager {
         try {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked 2 minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
 
-            float oldmin = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE);
-            float oldmax = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE);
+            float oldmin = 0.0F; 
+            float oldmax = 960.0F; 
+
+            try {
+                oldmin = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE);
+            } catch(Exception me) {}
+
+            try {
+                oldmax = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE);
+            } catch(Exception me) {}
 
             if( minFps > maxFps ) minFps = maxFps;
 
             if( minFps != 0 ) {
-                if( minFps > oldmax ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)minFps);
-                if( minFps != oldmin ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)minFps);
+                //if( minFps > oldmax ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)minFps);
+                //if( minFps != oldmin ) 
+                Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)minFps);
             }
             if( maxFps != 0 ) {
-                if( maxFps < oldmin ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)maxFps);
-                if( maxFps != oldmax ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)maxFps);
+                //if( maxFps < oldmin ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.MIN_REFRESH_RATE,(float)maxFps);
+                //if( maxFps != oldmax ) 
+                Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)maxFps);
             }
         } catch(Exception f) {
             Slog.e(TAG,"setHwFrameRateLocked exception minFps=" + minFps + ", maxFps=" + maxFps, f);
@@ -946,8 +956,8 @@ public class AppProfileManager {
 
         int level = 0;
 
+        AppProfile cur_profile = getCurrentProfile();
         if( schedGroup == SCHED_GROUP_TOP_APP_BOUND ) {
-            AppProfile cur_profile = getCurrentProfile();
             if( cur_profile != null ) {
                 level = cur_profile.mPerformanceLevel;
             }
@@ -957,6 +967,13 @@ public class AppProfileManager {
 
         if( level == 0 ) {
             return processGroup;
+        }
+
+        if( cur_profile.mHeavyCPU && schedGroup != SCHED_GROUP_TOP_APP_BOUND && schedGroup != SCHED_GROUP_TOP_APP ) {
+            if( processGroup != THREAD_GROUP_RESTRICTED && processGroup != THREAD_GROUP_BACKGROUND ) {
+                if( processGroup != r_processGroup && BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.i(TAG,"updateSchedGroupLocked: heavy app active, level=" + level + " " + profile.mPackageName + " " + r_processGroup + " -> " + processGroup);
+                return THREAD_GROUP_RESTRICTED;
+            }
         }
 
         switch( processGroup ) {

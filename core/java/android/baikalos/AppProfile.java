@@ -146,6 +146,12 @@ public class AppProfile {
     public boolean mDebug;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mHeavyMemory;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mHeavyCPU;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     private static boolean sDebug;
@@ -201,6 +207,8 @@ public class AppProfile {
         mFileAccess = 0;
         mOverrideFonts = false;
         mDebug = false;
+        mHeavyMemory = false;
+        mHeavyCPU = false;
     }
 
     public AppProfile(@Nullable String packageName) {
@@ -224,6 +232,8 @@ public class AppProfile {
         mFileAccess = 0;
         mOverrideFonts = false;
         mDebug = false;
+        mHeavyMemory = false;
+        mHeavyCPU = false;
     }
 
     public AppProfile(@Nullable AppProfile profile) {
@@ -265,11 +275,18 @@ public class AppProfile {
         this.mBypassCharging = profile.mBypassCharging;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
         this.mDebug = profile.mDebug;
+        this.mHeavyMemory = profile.mHeavyMemory;
+        this.mHeavyCPU = profile.mHeavyCPU;
+
     }
 
     public int getBackground() {
         if( mSystemWhitelisted && mBackground >=0 ) return -1;
         return mBackground;
+    }
+
+    public boolean isHeavy() {
+        return mHeavyCPU | mHeavyMemory;
     }
 
     public boolean isDefault() {
@@ -306,6 +323,8 @@ public class AppProfile {
             mSonification == 0 &&
             !mBypassCharging &&
             !mDebug &&
+            !mHeavyMemory &&
+            !mHeavyCPU &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -349,6 +368,9 @@ public class AppProfile {
         this.mBypassCharging = profile.mBypassCharging;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
         this.mDebug = profile.mDebug;
+        this.mHeavyMemory = profile.mHeavyMemory;
+        this.mHeavyCPU = profile.mHeavyCPU;
+
     }
 
 
@@ -390,6 +412,8 @@ public class AppProfile {
         if( mBypassCharging ) result +=  "," + "bpc=" + mBypassCharging;
         if( mDebug ) result +=  "," + "dbg=" + mDebug;
         if( mDisableFreezer ) result +=  "," + "fr=" + mDisableFreezer;
+        if( mHeavyMemory ) result +=  "," + "hm=" + mHeavyMemory;
+        if( mHeavyCPU ) result +=  "," + "hc=" + mHeavyCPU;
         return result;
     }
 
@@ -443,6 +467,8 @@ public class AppProfile {
             mSonification = parser.getInt("sonf",0);
             mDebug = parser.getBoolean("dbg",false);
             mDisableFreezer = parser.getBoolean("fr",false);
+            mHeavyMemory = parser.getBoolean("hm",false);
+            mHeavyCPU = parser.getBoolean("hc",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
