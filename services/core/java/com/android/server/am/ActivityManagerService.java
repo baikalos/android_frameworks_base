@@ -76,6 +76,7 @@ import static android.os.Process.SIGNAL_USR1;
 import static android.os.Process.SYSTEM_UID;
 import static android.os.Process.THREAD_PRIORITY_FOREGROUND;
 import static android.os.Process.THREAD_PRIORITY_TOP_APP_BOOST;
+import static android.os.Process.THREAD_PRIORITY_URGENT_DISPLAY;
 import static android.os.Process.ZYGOTE_POLICY_FLAG_BATCH_LAUNCH;
 import static android.os.Process.ZYGOTE_POLICY_FLAG_EMPTY;
 import static android.os.Process.ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE;
@@ -7457,8 +7458,8 @@ public class ActivityManagerService extends IActivityManager.Stub
                         setThreadScheduler(proc.getRenderThreadTid(),
                                 SCHED_FIFO | SCHED_RESET_ON_FORK, 1);
                     } else {
-                        if( Process.getThreadPriority(proc.getRenderThreadTid()) > (THREAD_PRIORITY_TOP_APP_BOOST+1) ) 
-                            setThreadPriority(proc.getRenderThreadTid(), THREAD_PRIORITY_TOP_APP_BOOST+1);
+                        if( Process.getThreadPriority(proc.getRenderThreadTid()) > THREAD_PRIORITY_URGENT_DISPLAY ) 
+                            setThreadPriority(proc.getRenderThreadTid(), THREAD_PRIORITY_URGENT_DISPLAY);
                     }
                 }
             } else {
