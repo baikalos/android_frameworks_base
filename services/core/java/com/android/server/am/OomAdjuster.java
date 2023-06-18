@@ -115,6 +115,8 @@ import com.android.server.am.PlatformCompatCache.CachedCompatChangeId;
 import com.android.server.wm.ActivityServiceConnectionsHolder;
 import com.android.server.wm.WindowProcessController;
 
+import com.android.server.baikalos.AppProfileManager;
+
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
@@ -1159,6 +1161,13 @@ public class OomAdjuster {
                         && app.getLastActivityTime() < oldTimeExtreme ) ) {
                             app.killLocked("baikalos - extreme cached background process",
                             "baikalos - extreme cached background process",
+                            ApplicationExitInfo.REASON_OTHER,
+                            ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                            true);
+                    } else if( mService.mAppProfileManager.getCurrentProfile().isHeavy()
+                        && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {
+                            app.killLocked("baikalos - heavy process active",
+                            "baikalos - heavy process active",
                             ApplicationExitInfo.REASON_OTHER,
                             ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                             true);
