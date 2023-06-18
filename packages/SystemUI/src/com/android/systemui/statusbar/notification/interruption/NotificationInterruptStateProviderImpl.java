@@ -62,6 +62,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     private static final String TAG = "InterruptionStateProvider";
     private static final boolean ENABLE_HEADS_UP = true;
     private static final String SETTING_HEADS_UP_TICKER = "ticker_gets_heads_up";
+    private static final boolean DEBUG_HEADS_UP = true;
 
     private final List<NotificationInterruptSuppressor> mSuppressors = new ArrayList<>();
     private final StatusBarStateController mStatusBarStateController;
@@ -471,6 +472,28 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             if (log) mLogger.logNoHeadsUpNotImportant(entry);
             return false;
         }
+
+        StatusBarNotification sbn = entry.getSbn();
+        if( sbn != null ) {
+            String notificationPackageName = sbn.getPackageName();
+
+            if( notificationPackageName != null ) {
+
+                if( mInCall && notificationPackageName.equals(getDefaultDialerPackage(mTm)) ) {
+                    if( sbn.getTag() == null ) {
+                        if (DEBUG_HEADS_UP) {
+                            Log.d(TAG, "No heads up: incoming call notification: " + sbn.getKey());
+                        }
+                        return false;
+                    } else {
+                        if (DEBUG_HEADS_UP) {
+                            Log.d(TAG, "Heads up: incoming call notification: " + sbn.getKey() + ":" + sbn.getTag());
+                        }
+                    } 
+                }
+            }
+        }
+
 
         boolean inUse = mPowerManager.isScreenOn() && !mStatusBarStateController.isDreaming();
 
