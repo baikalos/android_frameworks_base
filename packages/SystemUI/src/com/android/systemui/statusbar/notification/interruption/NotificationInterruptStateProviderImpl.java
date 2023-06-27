@@ -473,7 +473,6 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             return false;
         }
 
-        StatusBarNotification sbn = entry.getSbn();
         if( sbn != null ) {
             String notificationPackageName = sbn.getPackageName();
 
@@ -481,14 +480,14 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
                 if( mInCall && notificationPackageName.equals(getDefaultDialerPackage(mTm)) ) {
                     if( sbn.getTag() == null ) {
-                        if (DEBUG_HEADS_UP) {
+                        /*if (DEBUG_HEADS_UP) {
                             Log.d(TAG, "No heads up: incoming call notification: " + sbn.getKey());
-                        }
+                        }*/
                         return false;
                     } else {
-                        if (DEBUG_HEADS_UP) {
+                        /*if (DEBUG_HEADS_UP) {
                             Log.d(TAG, "Heads up: incoming call notification: " + sbn.getKey() + ":" + sbn.getTag());
-                        }
+                        }*/
                     } 
                 }
             }

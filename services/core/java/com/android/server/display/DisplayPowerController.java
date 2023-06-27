@@ -894,7 +894,7 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
      * of each display need to be properly reflected in AutomaticBrightnessController.
      */
     @GuardedBy("DisplayManagerService.mSyncRoot")
-    public void onDisplaySettingsChanged() {
+    public void onDisplaySettingsChanged(HighBrightnessModeMetadata hbmMetadata) {
         final DisplayDevice device = mLogicalDisplay.getPrimaryDisplayDeviceLocked();
         if (device == null) {
             Slog.wtf(TAG, "Display Device is null in DisplayPowerController for display: "
@@ -915,7 +915,7 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
             mUniqueDisplayId = uniqueId;
             mDisplayStatsId = mUniqueDisplayId.hashCode();
             mDisplayDeviceConfig = config;
-            loadFromDisplayDeviceConfig(token, info);
+            loadFromDisplayDeviceConfig(token, info, hbmMetadata);
 
             /// Since the underlying display-device changed, we really don't know the
             // last command that was sent to change it's state. Lets assume it is unknown so

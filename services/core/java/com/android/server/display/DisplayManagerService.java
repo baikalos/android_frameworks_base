@@ -1602,7 +1602,10 @@ public final class DisplayManagerService extends SystemService {
         DisplayPowerController dpc = mDisplayPowerControllers.get(displayId);
         if (dpc != null) {
             Slog.i(TAG, "onDisplaySettingsChanged()");
-            dpc.onDisplaySettingsChanged();
+            final DisplayDevice device = display.getPrimaryDisplayDeviceLocked();
+            final String uniqueId = device.getUniqueId();
+            HighBrightnessModeMetadata hbmMetadata = mHighBrightnessModeMetadataMap.get(uniqueId);
+            dpc.onDisplaySettingsChanged(hbmMetadata);
         }
     }
 
