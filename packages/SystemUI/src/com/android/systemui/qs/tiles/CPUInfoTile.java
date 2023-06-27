@@ -52,7 +52,7 @@ public class CPUInfoTile extends QSTileImpl<BooleanState> {
 
     private SettingObserver mSetting = null;
     private final Icon mIcon = ResourceIcon.get(R.drawable.ic_qs_cpu_info);
-    private boolean isAvailable = false;
+    private boolean isAvailable = true;
 
     @Inject
     public CPUInfoTile(
@@ -68,8 +68,11 @@ public class CPUInfoTile extends QSTileImpl<BooleanState> {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
 
-        if( !BaikalConstants.isKernelCompatible() ) return;
-        isAvailable = true;
+        if( !BaikalConstants.isKernelCompatible() ) {
+            isAvailable = false;
+            return;
+        }
+        
 
         mSetting = new SettingObserver(secureSettings, mHandler, Secure.SHOW_CPU_OVERLAY, getHost().getUserId()) {
             @Override
