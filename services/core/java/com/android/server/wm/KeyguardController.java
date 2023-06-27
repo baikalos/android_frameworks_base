@@ -200,7 +200,8 @@ class KeyguardController {
         //   handle the snapshot.
         // - The display state is ON. Because if AOD is not on or pulsing, the display state will
         //   be OFF or DOZE (the path of screen off may have handled it).
-        if (((aodShowing ^ keyguardShowing) || (aodShowing && aodChanged && keyguardChanged))
+        if (displayId == DEFAULT_DISPLAY
+                && ((aodShowing ^ keyguardShowing) || (aodShowing && aodChanged && keyguardChanged))
                 && !state.mKeyguardGoingAway && Display.isOnState(
                         mRootWindowContainer.getDefaultDisplay().getDisplayInfo().state)) {
             mWindowManager.mTaskSnapshotController.snapshotForSleeping(DEFAULT_DISPLAY);
@@ -663,8 +664,7 @@ class KeyguardController {
                 display.pendingLayoutChanges |= FINISH_LAYOUT_REDO_WALLPAPER;
             }
 
-            if (mTopTurnScreenOnActivity != lastTurnScreenOnActivity
-                    && mTopTurnScreenOnActivity != null
+            if (mTopTurnScreenOnActivity != null
                     && !mService.mWindowManager.mPowerManager.isInteractive()
                     && (mRequestDismissKeyguard || occludedByActivity)) {
                 controller.mTaskSupervisor.wakeUp("handleTurnScreenOn");
