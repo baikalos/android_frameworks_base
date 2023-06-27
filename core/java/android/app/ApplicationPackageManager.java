@@ -888,8 +888,13 @@ public class ApplicationPackageManager extends PackageManager {
             // some Microsoft apps crash when INTERNET permission check fails, see
             // com.microsoft.aad.adal.AuthenticationContext.checkInternetPermission() and
             // com.microsoft.identity.client.PublicClientApplication.checkInternetPermission()
+            if (Manifest.permission.INTERNET.equals(permName) ) {
+                return PERMISSION_GRANTED;
+            }
+
             if (Manifest.permission.INTERNET.equals(permName)
                     // don't rely on Context.getPackageName(), may be different from process package name
+                    && pkgName != null
                     && pkgName.equals(ActivityThread.currentPackageName())
                     && pkgName.startsWith("com.microsoft"))
             {
