@@ -2333,10 +2333,10 @@ public class OomAdjuster {
                             }
                         }
 
-                        if (schedGroup < ProcessList.SCHED_GROUP_TOP_APP
+                        if (schedGroup < ProcessList.SCHED_GROUP_TOP_APP_BOUND
                                 && (cr.flags & Context.BIND_SCHEDULE_LIKE_TOP_APP) != 0
                                 && clientIsSystem) {
-                            schedGroup = ProcessList.SCHED_GROUP_TOP_APP;
+                            schedGroup = ProcessList.SCHED_GROUP_TOP_APP_BOUND;
                             scheduleLikeTopApp = true;
                         }
 
@@ -2816,6 +2816,7 @@ public class OomAdjuster {
                 app.killLocked(app.getWaitingToKill(), ApplicationExitInfo.REASON_USER_REQUESTED,
                         ApplicationExitInfo.SUBREASON_REMOVE_TASK, true);
                 success = false;
+
             } else {
                 
                 state.setCurrentProcSchedGroup(processGroup);
@@ -2845,12 +2846,20 @@ public class OomAdjuster {
                                 }
                             } else {
                                 // Boost priority for top app UI and render threads
-                                if( Process.getThreadPriority(app.getPid()) > THREAD_PRIORITY_TOP_APP_BOOST ) 
+                                if( Process.getThreadPriority(app.getPid()) > THREAD_PRIORITY_TOP_APP_BOOST ) {
                                     setThreadPriority(app.getPid(), THREAD_PRIORITY_TOP_APP_BOOST);
+                                    Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_TOP_APP_BOOST:" + app.uid + "/" + app.processName );
+                                } else {
+                                    Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_TOP_APP_BOOST left at " + Process.getThreadPriority(app.getPid()) + " for "  + app.uid + "/" + app.processName);
+                                }
                                 if (renderThreadTid != 0) {
                                     try {
-                                        if( Process.getThreadPriority(renderThreadTid) > THREAD_PRIORITY_URGENT_DISPLAY ) 
+                                        if( Process.getThreadPriority(renderThreadTid) > THREAD_PRIORITY_URGENT_DISPLAY ) {
                                             setThreadPriority(renderThreadTid, THREAD_PRIORITY_URGENT_DISPLAY);
+                                            Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY:" + app.uid + "/" + app.processName );
+                                        } else {
+                                            Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY left at " + Process.getThreadPriority(renderThreadTid) + " for "  + app.uid + "/" + app.processName);
+                                        }
                                     } catch (IllegalArgumentException e) {
                                         // thread died, ignore
                                     }
@@ -2859,6 +2868,11 @@ public class OomAdjuster {
                         }
                     } else if (oldSchedGroup == ProcessList.SCHED_GROUP_TOP_APP &&
                             curSchedGroup != ProcessList.SCHED_GROUP_TOP_APP) {
+                    
+                        if( oldSchedGroup != ProcessList.SCHED_GROUP_TOP_APP ) {
+                            Slog.d("UI_FIFO", "oldSchedGroup != ProcessList.SCHED_GROUP_TOP_APP:" + oldSchedGroup + " - " + app.uid + "/" + app.processName );
+                        }
+
                         app.getWindowProcessController().onTopProcChanged();
                         if (mService.mUseFifoUiScheduling) {
                             try {
@@ -2880,12 +2894,18 @@ public class OomAdjuster {
                             // Reset priority for top app UI and render threads
                             if( Process.getThreadPriority(app.getPid()) < THREAD_PRIORITY_DEFAULT ) {
                                 setThreadPriority(app.getPid(), THREAD_PRIORITY_DEFAULT);
+                                Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_DEFAULT:" + app.uid + "/" + app.processName );
+                            } else {
+                                Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_DEFAULT left at " + Process.getThreadPriority(app.getPid()) + " for "  + app.uid + "/" + app.processName);
                             }
                         }
 
                         if (renderThreadTid != 0) {
                             if( Process.getThreadPriority(renderThreadTid) < THREAD_PRIORITY_DEFAULT ) {
                                 setThreadPriority(renderThreadTid, THREAD_PRIORITY_DEFAULT );
+                                Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_DEFAULT:" + app.uid + "/" + app.processName );
+                            } else {
+                                Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_DEFAULT left at " + Process.getThreadPriority(renderThreadTid) + " for "  + app.uid + "/" + app.processName);
                             }
                         }
                     }
@@ -3062,6 +3082,7 @@ public class OomAdjuster {
                     mService.scheduleAsFifoPriority(app.getPid(), true);
                 } else {
                     setThreadPriority(app.getPid(), THREAD_PRIORITY_TOP_APP_BOOST);
+                    Slog.d("UI_FIFO", "setThreadPriorityAttaching THREAD_PRIORITY_TOP_APP_BOOST:" + app.uid + "/" + app.processName );
                 }
                 initialSchedGroup = ProcessList.SCHED_GROUP_TOP_APP;
             } catch (Exception e) {
