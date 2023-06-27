@@ -125,6 +125,7 @@ public class AppProfileManager {
     final AppProfileManagerHandler mHandler;
     final Looper mLooper;
 
+    private static Boolean mBypassChargingAvailable;
     private static String mPowerInputSuspendSysfsNode;
     private static String mPowerInputSuspendValue;
     private static String mPowerInputResumeValue;
@@ -311,6 +312,8 @@ public class AppProfileManager {
         final Resources resources = mContext.getResources();
 
 
+        mBypassChargingAvailable = resources.getBoolean(
+                com.android.internal.R.bool.config_bypassChargingAvailable);
         mPowerInputSuspendSysfsNode = resources.getString(
                 com.android.internal.R.string.config_bypassChargingSysfsNode);
         mPowerInputSuspendValue = resources.getString(
@@ -1226,6 +1229,9 @@ public class AppProfileManager {
     public boolean updateBypassChargingLocked() {
         if( !BaikalConstants.isKernelCompatible() ) {
             Slog.w(TAG, "Bypass charging disabled. Unsupported kernel!");
+            return false;
+        }
+        if( !mBypassChargingAvailable ) {
             return false;
         }
 
