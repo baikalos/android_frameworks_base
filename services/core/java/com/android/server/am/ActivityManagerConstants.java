@@ -228,11 +228,11 @@ final class ActivityManagerConstants extends ContentObserver {
              DEFER_BOOT_COMPLETED_BROADCAST_BACKGROUND_RESTRICTED_ONLY
              | DEFER_BOOT_COMPLETED_BROADCAST_TARGET_T_ONLY;
 
-    private static final int DEFAULT_SERVICE_START_FOREGROUND_TIMEOUT_MS = 30 * 1000;
+    private static final int DEFAULT_SERVICE_START_FOREGROUND_TIMEOUT_MS = 60 * 1000;
 
-    private static final int DEFAULT_SERVICE_START_FOREGROUND_ANR_DELAY_MS = 10 * 1000;
+    private static final int DEFAULT_SERVICE_START_FOREGROUND_ANR_DELAY_MS = 30 * 1000;
 
-    private static final long DEFAULT_SERVICE_BIND_ALMOST_PERCEPTIBLE_TIMEOUT_MS = 15 * 1000;
+    private static final long DEFAULT_SERVICE_BIND_ALMOST_PERCEPTIBLE_TIMEOUT_MS = 30 * 1000;
 
     // Flag stored in the DeviceConfig API.
     /**

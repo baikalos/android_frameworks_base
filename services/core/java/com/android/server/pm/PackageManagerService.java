@@ -244,8 +244,10 @@ import com.nvidia.NvAppProfileService;
 
 import dalvik.system.VMRuntime;
 
-import ink.kaleidoscope.server.GmsManagerService;
 import ink.kaleidoscope.server.ParallelSpaceManagerService;
+
+import com.android.server.baikalos.BaikalAppManagerService;
+
 
 import libcore.util.HexEncoding;
 
@@ -3108,6 +3110,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                 callingMethod);
 
         final int packageUid = snapshot.getPackageUid(callingPackage, 0, userId);
+
         if (packageUid == callingUid) {
             return;
         }
@@ -3117,10 +3120,20 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             return;
         }
  
+        final boolean allowedPackageUid = packageUid == callingUid;
+        // TODO(b/139383163): remove special casing for shell and enforce INTERACT_ACROSS_USERS_FULL
+        final boolean allowedShell = callingUid == SHELL_UID
+                && UserHandle.isSameApp(packageUid, callingUid);
+
+        if (!allowedShell && !allowedPackageUid) {
+            /*throw new SecurityException("Calling package " + callingPackage + " in user "
+                    + userId + " does not belong to calling uid " + callingUid);*/
+        }
+
         final String callerMismatchMessage = "Calling package " + callingPackage + " in user "
                 + userId + " does not belong to calling uid " + callingUid;
         if (!UserHandle.isSameApp(packageUid, callingUid)) {
-            throw new SecurityException(callerMismatchMessage);
+            //throw new SecurityException(callerMismatchMessage);
         }
 
         final UserManagerService ums = UserManagerService.getInstance();
@@ -3843,7 +3856,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                     }
                     // Don't allow changing protected packages.
                     if (mProtectedPackages.isPackageStateProtected(userId, packageName) &&
-                            !Arrays.asList(GmsManagerService.GMS_PACKAGES).contains(packageName)) {
+                            !Arrays.asList(BaikalAppManagerService.GMS_PACKAGES).contains(packageName)) {
                         throw new SecurityException(
                                 "Cannot disable a protected package: " + packageName);
                     }

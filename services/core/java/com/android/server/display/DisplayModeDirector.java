@@ -88,7 +88,7 @@ import java.util.concurrent.Callable;
  */
 public class DisplayModeDirector {
     private static final String TAG = "DisplayModeDirector";
-    private boolean mLoggingEnabled;
+    private boolean mLoggingEnabled = true;
 
     private static final int MSG_REFRESH_RATE_RANGE_CHANGED = 1;
     private static final int MSG_LOW_BRIGHTNESS_THRESHOLDS_CHANGED = 2;
@@ -324,7 +324,7 @@ public class DisplayModeDirector {
             int lowestConsideredPriority = Vote.MIN_PRIORITY;
             int highestConsideredPriority = Vote.MAX_PRIORITY;
 
-            if (mAlwaysRespectAppRequest) {
+            if (false /*mAlwaysRespectAppRequest*/) {
                 lowestConsideredPriority = Vote.PRIORITY_APP_REQUEST_BASE_MODE_REFRESH_RATE;
                 highestConsideredPriority = Vote.PRIORITY_APP_REQUEST_SIZE;
             }
@@ -381,16 +381,21 @@ public class DisplayModeDirector {
             }
 
             VoteSummary appRequestSummary = new VoteSummary();
+
+            appRequestSummary.minRefreshRate = primarySummary.minRefreshRate;
+            appRequestSummary.maxRefreshRate = primarySummary.maxRefreshRate;
+
             summarizeVotes(
                     votes,
                     Vote.APP_REQUEST_REFRESH_RATE_RANGE_PRIORITY_CUTOFF,
                     Vote.MAX_PRIORITY,
                     appRequestSummary);
-            appRequestSummary.minRefreshRate =
+
+            /*appRequestSummary.minRefreshRate =
                     Math.min(appRequestSummary.minRefreshRate, primarySummary.minRefreshRate);
             appRequestSummary.maxRefreshRate =
-                    Math.max(appRequestSummary.maxRefreshRate, primarySummary.maxRefreshRate);
-            if (mLoggingEnabled) {
+                    Math.max(appRequestSummary.maxRefreshRate, primarySummary.maxRefreshRate);*/
+            if (/*mLoggingEnabled*/ true) {
                 Slog.i(TAG,
                         String.format("App request range: [%.0f %.0f]",
                                 appRequestSummary.minRefreshRate,
@@ -444,8 +449,10 @@ public class DisplayModeDirector {
                     || primarySummary.disableRefreshRateSwitching) {
                 float fps = baseMode.getRefreshRate();
                 primarySummary.minRefreshRate = primarySummary.maxRefreshRate = fps;
+                Slog.w(TAG, "disableRefreshRateSwitching fps=" + fps);
                 if (mModeSwitchingType == DisplayManager.SWITCHING_TYPE_NONE) {
                     appRequestSummary.minRefreshRate = appRequestSummary.maxRefreshRate = fps;
+                    Slog.w(TAG, "SWITCHING_TYPE_NONE fps=" + fps);
                 }
             }
 
@@ -457,7 +464,9 @@ public class DisplayModeDirector {
                     new RefreshRateRange(
                             primarySummary.minRefreshRate, primarySummary.maxRefreshRate),
                     new RefreshRateRange(
-                            appRequestSummary.minRefreshRate, appRequestSummary.maxRefreshRate));
+                            primarySummary.minRefreshRate, primarySummary.maxRefreshRate)
+                    /*new RefreshRateRange(
+                            appRequestSummary.minRefreshRate, appRequestSummary.maxRefreshRate)*/);
         }
     }
 
@@ -664,6 +673,21 @@ public class DisplayModeDirector {
                     + ", priority=" + Vote.priorityToString(priority)
                     + ", vote=" + vote + ")");
         }
+
+        if( /*priority == Vote.PRIORITY_FLICKER_REFRESH_RATE || */
+            priority == Vote.PRIORITY_APP_REQUEST_REFRESH_RATE_RANGE || 
+            priority == Vote.PRIORITY_APP_REQUEST_BASE_MODE_REFRESH_RATE /*|| 
+            priority == Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH */ ) {
+            Slog.i(TAG, "updateVoteLocked(displayId=" + displayId
+                    + ", priority=" + Vote.priorityToString(priority)
+                    + ", vote=" + vote + ") - ignored by baikalos");
+            return;
+        } else {
+            Slog.i(TAG, "updateVoteLocked(displayId=" + displayId
+                    + ", priority=" + Vote.priorityToString(priority)
+                    + ", vote=" + vote + ")");
+        }
+
         if (priority < Vote.MIN_PRIORITY || priority > Vote.MAX_PRIORITY) {
             Slog.w(TAG, "Received a vote with an invalid priority, ignoring:"
                     + " priority=" + Vote.priorityToString(priority)
@@ -1293,7 +1317,7 @@ public class DisplayModeDirector {
                     Settings.Global.LOW_POWER_MODE, 0 /*default*/) != 0;
             final Vote vote;
             if (inLowPowerMode) {
-                vote = Vote.forRefreshRates(0f, 60f);
+                vote = Vote.forRefreshRates(0f, 120f);
             } else {
                 vote = null;
             }
@@ -1312,6 +1336,9 @@ public class DisplayModeDirector {
 
         private void updateRefreshRateSettingLocked(
                 float minRefreshRate, float peakRefreshRate, float defaultRefreshRate) {
+
+            Slog.i(TAG, "updateRefreshRateSettingLocked " + minRefreshRate + ", " + peakRefreshRate + ", " + defaultRefreshRate);
+
             // TODO(b/156304339): The logic in here, aside from updating the refresh rate votes, is
             // used to predict if we're going to be doing frequent refresh rate switching, and if
             // so, enable the brightness observer. The logic here is more complicated and fragile
@@ -1343,6 +1370,7 @@ public class DisplayModeDirector {
                 maxRefreshRate = Math.min(defaultRefreshRate, peakRefreshRate);
             }
 
+            Slog.i(TAG, "updateRefreshRateSettingLocked " + minRefreshRate + ", " + maxRefreshRate);
             mBrightnessObserver.onRefreshRateSettingChangedLocked(minRefreshRate, maxRefreshRate);
         }
 
@@ -1402,14 +1430,16 @@ public class DisplayModeDirector {
                 sizeVote = null;
             }
 
-            updateVoteLocked(displayId, Vote.PRIORITY_APP_REQUEST_BASE_MODE_REFRESH_RATE,
-                    baseModeRefreshRateVote);
+            //updateVoteLocked(displayId, Vote.PRIORITY_APP_REQUEST_BASE_MODE_REFRESH_RATE,
+            //        baseModeRefreshRateVote);
             updateVoteLocked(displayId, Vote.PRIORITY_APP_REQUEST_SIZE, sizeVote);
         }
 
         private void setAppPreferredRefreshRateRangeLocked(int displayId,
                 float requestedMinRefreshRateRange, float requestedMaxRefreshRateRange) {
             final Vote vote;
+
+            if( false ) return;
 
             RefreshRateRange refreshRateRange = null;
             if (requestedMinRefreshRateRange > 0 || requestedMaxRefreshRateRange > 0) {
@@ -1843,7 +1873,7 @@ public class DisplayModeDirector {
         }
 
         public void onRefreshRateSettingChangedLocked(float min, float max) {
-            boolean changeable = (max - min > 1f && max > 60f);
+            boolean changeable = (max - min > 1f || max > 60f);
             if (mRefreshRateChangeable != changeable) {
                 mRefreshRateChangeable = changeable;
                 updateSensorStatus();

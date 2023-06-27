@@ -65,6 +65,8 @@ import android.view.Display;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.ArrayUtils;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -617,12 +619,18 @@ public final class CameraManager {
      * @see android.app.admin.DevicePolicyManager#setCameraDisabled
      */
     @NonNull
-    public CameraCharacteristics getCameraCharacteristics(@NonNull String cameraId)
+    public CameraCharacteristics getCameraCharacteristics(@NonNull String oCameraId)
             throws CameraAccessException {
         CameraCharacteristics characteristics = null;
         if (CameraManagerGlobal.sCameraServiceDisabled) {
             throw new IllegalArgumentException("No cameras available on device");
         }
+
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,2);
+
+        Log.v(TAG, "getCameraCharacteristics cameraId " + cameraId);
+
         synchronized (mLock) {
             ICameraService cameraService = CameraManagerGlobal.get().getCameraService();
             if (cameraService == null) {
@@ -638,7 +646,7 @@ public final class CameraManager {
                 try {
                     info.setCameraId(Integer.parseInt(cameraId));
                 } catch (NumberFormatException e) {
-                    Log.v(TAG, "Failed to parse camera Id " + cameraId + " to integer");
+                    Log.e(TAG, "Failed to parse camera Id " + cameraId + " to integer");
                 }
 
                 boolean hasConcurrentStreams =
@@ -694,6 +702,7 @@ public final class CameraManager {
         Set<String> physicalCameraIds = chars.getPhysicalCameraIds();
         for (String physicalCameraId : physicalCameraIds) {
             CameraCharacteristics physicalChars = getCameraCharacteristics(physicalCameraId);
+            Log.v(TAG, "getPhysicalIdToCharsMap physicalCameraId " + physicalCameraId + ":" + physicalChars);
             physicalIdsToChars.put(physicalCameraId, physicalChars);
         }
         return physicalIdsToChars;
@@ -722,9 +731,15 @@ public final class CameraManager {
      * @see #getCameraIdList
      * @see android.app.admin.DevicePolicyManager#setCameraDisabled
      */
-    private CameraDevice openCameraDeviceUserAsync(String cameraId,
+    private CameraDevice openCameraDeviceUserAsync(String oCameraId,
             CameraDevice.StateCallback callback, Executor executor, final int uid,
             final int oomScoreOffset) throws CameraAccessException {
+
+
+        String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
+
+        Log.v(TAG, "openCameraDeviceUserAsync cameraId " + cameraId);
+
         CameraCharacteristics characteristics = getCameraCharacteristics(cameraId);
         CameraDevice device = null;
         Map<String, CameraCharacteristics> physicalIdsToChars =
@@ -2036,10 +2051,10 @@ public final class CameraManager {
                 /* Force to expose only two cameras
                  * if the package name does not falls in this bucket
                  */
-                boolean exposeAuxCamera = Camera.shouldExposeAuxCamera();
+                /*boolean exposeAuxCamera = Camera.shouldExposeAuxCamera();
                 if (exposeAuxCamera == false && (Integer.parseInt(cameraId) >= 2)) {
                     throw new IllegalArgumentException("invalid cameraId");
-                }
+                }*/
 
                 ICameraService cameraService = getCameraService();
                 if (cameraService == null) {
@@ -2461,11 +2476,11 @@ public final class CameraManager {
             /* Force to ignore the aux or composite camera torch status update
              * if the package name does not falls in this bucket
              */
-            boolean exposeAuxCamera = Camera.shouldExposeAuxCamera();
+            /*boolean exposeAuxCamera = Camera.shouldExposeAuxCamera();
             if (exposeAuxCamera == false && Integer.parseInt(id) >= 2) {
                 Log.w(TAG, "ignore the torch status update of camera: " + id);
                 return;
-            }
+            }*/
 
 
             if (!validTorchStatus(status)) {

@@ -28,6 +28,9 @@ import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 import com.android.server.audio.MediaFocusControl.AudioFocusDeathHandler;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+
 import java.io.PrintWriter;
 
 /**
@@ -391,6 +394,22 @@ public class FocusRequester {
                     return;
                 }
 
+                AppProfile profile = AppProfileSettings.getInstance().getProfile(mPackageName);
+                if( (mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS || 
+                    mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK )
+                    && profile != null && profile.mBAFRecv ) {
+                    if (DEBUG) {
+                        Log.v(TAG, "blocked dispatching " + focusChangeToString(mFocusLossReceived) + " to "
+                            + mClientId + ", app=" + mCallingUid + "/" + mPackageName);
+                    }
+                    return;
+                }
+
+                if (DEBUG) {
+                    Log.v(TAG, "not blocked dispatching " + focusChangeToString(mFocusLossReceived) + " to "
+                        + mClientId + ", app=" + mCallingUid + "/" + mPackageName);
+                }
+
                 // check enforcement by the framework
                 boolean handled = false;
                 if (frWinner != null) {
@@ -411,10 +430,11 @@ public class FocusRequester {
                 if (fd != null) {
                     if (DEBUG) {
                         Log.v(TAG, "dispatching " + focusChangeToString(mFocusLossReceived) + " to "
-                            + mClientId);
+                            + mClientId + ", app=" + mCallingUid + "/" + mPackageName);
                     }
                     mFocusController.notifyExtPolicyFocusLoss_syncAf(
                             toAudioFocusInfo(), true /* wasDispatched */);
+
                     mFocusLossWasNotified = true;
                     fd.dispatchAudioFocusChange(mFocusLossReceived, mClientId);
                 }
@@ -439,6 +459,7 @@ public class FocusRequester {
             // happen as if the framework was not involved.
             return false;
         }
+
 
         if (focusLoss == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK) {
             if (!MediaFocusControl.ENFORCE_DUCKING) {
