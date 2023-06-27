@@ -71,5 +71,8 @@
     <!-- The Brightness temperature sensor path, defaults to empty -->
     <string name="config_brightnessSensor" translatable="false"></string>
 
+    <!-- The Brightness temperature sensor path, defaults to empty -->
+    <string name="config_chargerRealType" translatable="false"></string>
+
 
 </resources>
