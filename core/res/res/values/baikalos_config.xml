@@ -19,7 +19,7 @@
     <bool name="config_bypassChargingAvailable">false</bool>
     <integer name="config_bypassChargingBatteryLevel">80</integer>
     <integer name="config_bypassChargingBatteryResumeLevel">60</integer>
-    <string name="config_bypassChargingSysfsNode" translatable="false">/sys/class/power_supply/battery/charging_enabled</string>
+    <string name="config_bypassChargingSysfsNode" translatable="false"></string>
     <string name="config_bypassChargingSuspendValue" translatable="false">0</string>
     <string name="config_bypassChargingResumeValue" translatable="false">1</string>
     <string name="config_bypassChargingLimitValue" translatable="false">none</string>
