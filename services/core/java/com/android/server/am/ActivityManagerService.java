@@ -7486,8 +7486,12 @@ public class ActivityManagerService extends IActivityManager.Stub
                         setThreadScheduler(proc.getRenderThreadTid(),
                                 SCHED_FIFO | SCHED_RESET_ON_FORK, 1);
                     } else {
-                        if( Process.getThreadPriority(proc.getRenderThreadTid()) > THREAD_PRIORITY_URGENT_DISPLAY ) 
+                        if( Process.getThreadPriority(proc.getRenderThreadTid()) > THREAD_PRIORITY_URGENT_DISPLAY ) {
                             setThreadPriority(proc.getRenderThreadTid(), THREAD_PRIORITY_URGENT_DISPLAY);
+                            Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY:" + proc.uid + "/" + proc.processName );
+                        } else {
+                            Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY left at " + Process.getThreadPriority(proc.getRenderThreadTid()) + " for "  + proc.uid + "/" + proc.processName);
+                        }
                     }
                 }
             } else {
