@@ -202,6 +202,8 @@ public class KeyguardIndicationController {
 
     private int mCurrentDivider;
 
+    private String mChargerRealType;
+
     private boolean mFaceDetectionRunning;
 
     private IBatteryPropertiesRegistrar mBatteryPropertiesRegistrar;
@@ -330,6 +332,7 @@ public class KeyguardIndicationController {
         mStatusBarStateListener.onDozingChanged(mStatusBarStateController.isDozing());
 
         mCurrentDivider = mContext.getResources().getInteger(R.integer.config_currentInfoDivider);
+        mChargerRealType = mContext.getResources().getString(R.string.config_chargerRealType);
 
         mAlternateFastchargeInfoUpdate =
                     mContext.getResources().getBoolean(R.bool.config_alternateFastchargeInfoUpdate);
@@ -338,6 +341,7 @@ public class KeyguardIndicationController {
                     IBatteryPropertiesRegistrar.Stub.asInterface(
                     ServiceManager.getService("batteryproperties"));
         }
+
     }
 
     public void setIndicationArea(ViewGroup indicationArea) {
@@ -1061,15 +1065,17 @@ public class KeyguardIndicationController {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
                         mTemperature / 10 + "°C";
 
-            try  {
-                BufferedReader br = new BufferedReader(new FileReader("/sys/class/power_supply/usb/real_type"), 512);
-                try {
-                    String line = br.readLine();
-                    batteryInfo = batteryInfo + " " + line;
-                } finally {
-                    br.close();
+            if( mChargerRealType != null && !"".equals(mChargerRealType) ) {
+                try  {
+                    BufferedReader br = new BufferedReader(new FileReader(mChargerRealType), 512);
+                    try {
+                        String line = br.readLine();
+                        batteryInfo = batteryInfo + " " + line;
+                    } finally {
+                        br.close();
+                    }
+                } catch(Exception fe) {
                 }
-            } catch(Exception fe) {
             }
             //}
             if (batteryInfo != "") {
