@@ -55,7 +55,7 @@ import com.android.internal.baikalos.BaikalConstants;
 
 public class BypassChargingTile extends QSTileImpl<BooleanState> {
 
-    public static final String TILE_SPEC = "bypass";
+    public static final String TILE_SPEC = "bpcharge";
 
     private boolean mBPCEnabled;
     private boolean mListening;
