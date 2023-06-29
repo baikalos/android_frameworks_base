@@ -43,9 +43,9 @@ public class PixelPropsUtils {
     private static final Map<String, Object> propsToChangeXP5;
     private static final Map<String, Object> propsToChangeOP8P;
     private static final Map<String, Object> propsToChangeOP9P;
-    private static final Map<String, Object> propsToChange11T;
+    private static final Map<String, Object> propsToChangeMI11T;
     private static final Map<String, Object> propsToChangeMI13P;
-    private static final Map<String, Object> propsToChangeF4;
+    private static final Map<String, Object> propsToChangeF5;
     private static final Map<String, Object> propsToChangeK30U;
     private static final Map<String, ArrayList<String>> propsToKeep;
 
@@ -91,11 +91,14 @@ public class PixelPropsUtils {
             "com.google.android.youtube",
             "com.google.android.apps.youtube.kids",
             "com.google.android.apps.youtube.music",
+            "com.google.android.apps.pixelmigrate",
             "com.google.android.apps.recorder",
+            "com.google.android.apps.restore",
             "com.google.android.apps.wearables.maestro.companion",
             "com.google.android.apps.subscriptions.red",
             "com.google.android.apps.tachyon",
-            "com.google.android.apps.tycho"
+            "com.google.android.apps.tycho",
+            "com.google.android.setupwizard"
     };
 
     // Packages to Spoof as ROG Phone 6
@@ -137,7 +140,7 @@ public class PixelPropsUtils {
     };
 
     // Packages to Spoof as Mi 11T
-    private static final String[] packagesToChange11T = {
+    private static final String[] packagesToChangeMI11T = {
             "com.ea.gp.apexlegendsmobilefps",
             "com.levelinfinite.hotta.gp",
             "com.supercell.clashofclans",
@@ -150,8 +153,8 @@ public class PixelPropsUtils {
             "com.tencent.tmgp.sgame"
     };
 
-    // Packages to Spoof as POCO F4
-    private static final String[] packagesToChangeF4 = {
+    // Packages to Spoof as POCO F5
+    private static final String[] packagesToChangeF5 = {
             "com.dts.freefiremax",
             "com.dts.freefireth"
     };
@@ -163,6 +166,7 @@ public class PixelPropsUtils {
 
     // Codenames for currently supported Pixels by Google
     private static final String[] pixelCodenames = {
+            "tangorpro",
             "lynx",
             "cheetah",
             "panther",
@@ -219,16 +223,16 @@ public class PixelPropsUtils {
         propsToChangeOP9P = new HashMap<>();
         propsToChangeOP9P.put("MODEL", "LE2123");
         propsToChangeOP9P.put("MANUFACTURER", "OnePlus");
-        propsToChange11T = new HashMap<>();
-        propsToChange11T.put("MODEL", "21081111RG");
-        propsToChange11T.put("MANUFACTURER", "Xiaomi");
+        propsToChangeMI11T = new HashMap<>();
+        propsToChangeMI11T.put("MODEL", "21081111RG");
+        propsToChangeMI11T.put("MANUFACTURER", "Xiaomi");
         propsToChangeMI13P = new HashMap<>();
         propsToChangeMI13P.put("BRAND", "Xiaomi");
         propsToChangeMI13P.put("MANUFACTURER", "Xiaomi");
         propsToChangeMI13P.put("MODEL", "2210132C");
-        propsToChangeF4 = new HashMap<>();
-        propsToChangeF4.put("MODEL", "22021211RG");
-        propsToChangeF4.put("MANUFACTURER", "Xiaomi");
+        propsToChangeF5 = new HashMap<>();
+        propsToChangeF5.put("MODEL", "23049PCD8G");
+        propsToChangeF5.put("MANUFACTURER", "Xiaomi");
         propsToChangeK30U = new HashMap<>();
         propsToChangeK30U.put("MODEL", "M2006J10C");
         propsToChangeK30U.put("MANUFACTURER", "Xiaomi");
@@ -290,7 +294,9 @@ public class PixelPropsUtils {
             }
             if (packageName.equals("com.google.android.gms")) {
                 final String processName = Application.getProcessName();
-                if (processName.equals("com.google.android.gms.unstable")) {
+                if (processName.toLowerCase().contains("unstable")
+                    || processName.toLowerCase().contains("pixelmigrate")
+                    || processName.toLowerCase().contains("instrumentation")) {
                     sIsGms = true;
                     spoofBuildGms();
                 }
@@ -333,9 +339,9 @@ public class PixelPropsUtils {
                     Object value = prop.getValue();
                     setPropValue(key, value);
                 }
-            } else if (Arrays.asList(packagesToChange11T).contains(packageName)) {
+            } else if (Arrays.asList(packagesToChangeMI11T).contains(packageName)) {
                 if (DEBUG) Log.d(TAG, "Defining props for: " + packageName);
-                for (Map.Entry<String, Object> prop : propsToChange11T.entrySet()) {
+                for (Map.Entry<String, Object> prop : propsToChangeMI11T.entrySet()) {
                     String key = prop.getKey();
                     Object value = prop.getValue();
                     setPropValue(key, value);
@@ -347,9 +353,9 @@ public class PixelPropsUtils {
                     Object value = prop.getValue();
                     setPropValue(key, value);
                 }
-            } else if (Arrays.asList(packagesToChangeF4).contains(packageName)) {
+            } else if (Arrays.asList(packagesToChangeF5).contains(packageName)) {
                 if (DEBUG) Log.d(TAG, "Defining props for: " + packageName);
-                for (Map.Entry<String, Object> prop : propsToChangeF4.entrySet()) {
+                for (Map.Entry<String, Object> prop : propsToChangeF5.entrySet()) {
                     String key = prop.getKey();
                     Object value = prop.getValue();
                     setPropValue(key, value);
@@ -410,12 +416,12 @@ public class PixelPropsUtils {
     }
 
     private static void spoofBuildGms() {
-        // Alter model name and fingerprint to avoid hardware attestation enforcement
-        setBuildField("FINGERPRINT", "google/marlin/marlin:7.1.2/NJH47F/4146041:user/release-keys");
-        setBuildField("PRODUCT", "marlin");
-        setBuildField("DEVICE", "marlin");
-        setBuildField("MODEL", "Pixel XL");
-        setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.N_MR1);
+        // Alter model name and fingerprint to Pixel 2 to avoid hardware attestation enforcement
+        setPropValue("DEVICE", "walleye");
+        setPropValue("FINGERPRINT", "google/walleye/walleye:8.1.0/OPM1.171019.011/4448085:user/release-keys");
+        setPropValue("MODEL", "Pixel 2");
+        setPropValue("PRODUCT", "walleye");
+        setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.O);
     }
 
     private static boolean isCallerSafetyNet() {
