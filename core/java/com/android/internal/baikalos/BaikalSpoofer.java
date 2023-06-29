@@ -139,14 +139,21 @@ public class BaikalSpoofer {
                 packageName.contains("com.google.android.apps.photos") ) {
 
             Log.i(TAG, "App " + packageName + " is requested " + name + " feature with " + version + " version");
-            if( name.contains("PIXEL_2021_EXPERIENCE") || name.contains("PIXEL_2022_EXPERIENCE") ) {
+            if( name.contains("PIXEL_2021_EXPERIENCE") || 
+                name.contains("PIXEL_2022_EXPERIENCE") || 
+                name.contains("PIXEL_2023_EXPERIENCE") || 
+                name.contains("PIXEL_2024_EXPERIENCE") ) {
                 return 0;
             }
             if( "com.google.photos.trust_debug_certs".equals(name) ) return 1;
             if( "com.google.android.apps.photos.NEXUS_PRELOAD".equals(name) ) return 1;
-            if( "com.google.android.feature.PIXEL_EXPERIENCE".equals(name) ) return 1;
+            if( "com.google.android.apps.photos.nexus_preload".equals(name) ) return 1;
             if( "com.google.android.apps.photos.PIXEL_PRELOAD".equals(name) ) return 1;
             if( "com.google.android.apps.photos.PIXEL_2016_PRELOAD".equals(name) ) return 1;
+            if( "com.google.android.feature.PIXEL_EXPERIENCE".equals(name) ) return 1;
+            if( "com.google.android.feature.GOOGLE_BUILD".equals(name) ) return 1;
+            if( "com.google.android.feature.GOOGLE_EXPERIENCE".equals(name) ) return 1;
+
             if( name != null ) {
                 if( name.startsWith("com.google.android.apps.photos.PIXEL") ) return 0;
                 if( name.startsWith("com.google.android.feature.PIXEL") ) return 0;
