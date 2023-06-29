@@ -17441,6 +17441,26 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_IGNORE_ZERO_BATTERY = "baikalos_ignore_zero_battery";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_ON = "baikalos_power_level_on";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_STANDBY = "baikalos_power_level_standby";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_IDLE = "baikalos_power_level_idle";
 
         /* End of BaikalOS Global Settings */
 

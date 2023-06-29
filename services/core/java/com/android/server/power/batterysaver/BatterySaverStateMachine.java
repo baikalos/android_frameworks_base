@@ -582,7 +582,7 @@ public class BatterySaverStateMachine {
         updateStateLocked(false, false);
 
         // Adaptive control.
-        if (SystemClock.elapsedRealtime() - mLastAdaptiveBatterySaverChangedExternallyElapsed
+        /*if (SystemClock.elapsedRealtime() - mLastAdaptiveBatterySaverChangedExternallyElapsed
                 > ADAPTIVE_CHANGE_TIMEOUT_MS) {
             mBatterySaverController.setAdaptivePolicyEnabledLocked(
                     false, BatterySaverController.REASON_TIMEOUT);
@@ -591,7 +591,7 @@ public class BatterySaverStateMachine {
         } else if (mIsPowered && mBatteryLevel >= ADAPTIVE_AUTO_DISABLE_BATTERY_LEVEL) {
             mBatterySaverController.setAdaptivePolicyEnabledLocked(false,
                     BatterySaverController.REASON_PLUGGED_IN);
-        }
+        }*/
     }
 
     /**

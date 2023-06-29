@@ -193,6 +193,7 @@ public class AppProfileManager {
     static AppProfileManager mInstance;
     static BaikalDebugManager mDebugManager;
     static BaikalBoostManager mBoostManager;
+    static BaikalPowerSaveManager mBaikalPowerSaveManager;
 
     private PowerManagerInternal mPowerManagerInternal;
 
@@ -380,6 +381,9 @@ public class AppProfileManager {
             mBoostManager = BaikalBoostManager.getInstance(mLooper,mContext); 
             mBoostManager.initialize();
 
+            mBaikalPowerSaveManager = BaikalPowerSaveManager.getInstance(mLooper,mContext); 
+            mBaikalPowerSaveManager.initialize();
+
         }
     }
 
@@ -492,6 +496,9 @@ public class AppProfileManager {
                     }
                 }, 100);
             //}
+
+            if( mBaikalPowerSaveManager != null ) mBaikalPowerSaveManager.setDeviceIdle(mode);
+
         }
     }
 
@@ -536,6 +543,7 @@ public class AppProfileManager {
                     }
                 }
             }, 100);
+
         }
     }
 
@@ -552,6 +560,8 @@ public class AppProfileManager {
                     }
                 }
             }, 100);
+
+            if( mBaikalPowerSaveManager != null ) mBaikalPowerSaveManager.setScreenMode(mWakefulness == WAKEFULNESS_AWAKE);
         }
     }
 
@@ -590,7 +600,7 @@ public class AppProfileManager {
 
         //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
 
-        if( !mPhoneCall && !mScreenMode && /*!isAudioPlaying() &&*/ !wakeup)  {
+        if( !mPhoneCall && !mScreenMode && /*!isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE )  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mScreenMode=" + mScreenMode +
@@ -713,6 +723,7 @@ public class AppProfileManager {
             mOnCharger = mode;
             BaikalConstants.setAodOnChargerEnabled(isAodOnChargerEnabled());
             activateCurrentProfileLocked(true,false);
+            if( mBaikalPowerSaveManager != null ) mBaikalPowerSaveManager.setIsPowered(mode);
         }
     }
 
@@ -1198,7 +1209,8 @@ public class AppProfileManager {
     }
 
     public boolean isExtreme() {
-        return mExtremeMode;
+        if( mBaikalPowerSaveManager != null ) return mBaikalPowerSaveManager.getCurrentPowerSaverLevel() > 2;
+        return false;
     }
 
     public boolean isAggressive() {
