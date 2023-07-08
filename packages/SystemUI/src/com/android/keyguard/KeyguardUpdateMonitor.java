@@ -2516,13 +2516,13 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
     private void updateFingerprintSettings() {
         boolean defFingerprintSettings = mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_performantAuthDefault);
-        if (defFingerprintSettings) {
+        //if (defFingerprintSettings) {
             mFingerprintWakeAndUnlock = Settings.Secure.getIntForUser(mContext.getContentResolver(),
                     Settings.Secure.SFPS_PERFORMANT_AUTH_ENABLED,
                     1, UserHandle.USER_CURRENT) == 1;
-        } else {
-            mFingerprintWakeAndUnlock = defFingerprintSettings;
-        }
+        //} else {
+        //    mFingerprintWakeAndUnlock = true; //defFingerprintSettings;
+        //}
 
         updateFaceUnlockBehavior();
         mFaceUnlockPrefObserver = new ContentObserver(mHandler) {
