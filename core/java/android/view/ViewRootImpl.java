@@ -4159,7 +4159,7 @@ public final class ViewRootImpl implements ViewParent,
                                     final View view = finalRequesters.get(i);
                                     Log.w("View", "requestLayout() improperly called by " + view +
                                             " during second layout pass: posting in next frame");
-                                    view.requestLayout();
+                                    //view.requestLayout();
                                 }
                             }
                         });
