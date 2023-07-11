@@ -334,11 +334,18 @@ public class AppProfileManager {
     	return false;
     }
 
+    public void init_debug() {
+        Slog.i(TAG,"init_debug()");                
+        mDebugManager = BaikalDebugManager.getInstance(mLooper,mContext); 
+        mDebugManager.initialize();
+    }
+
     public void initialize() {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"initialize()");                
         synchronized(this) {
 
             mInstance = this;
+
             mAppSettings = AppProfileSettings.getInstance(); 
 
             mPowerManager = IPowerManager.Stub.asInterface(ServiceManager.getService(Context.POWER_SERVICE));
@@ -375,8 +382,6 @@ public class AppProfileManager {
             mObserver = new AppProfileContentObserver(mHandler);
 
             mGmsUid = BaikalConstants.getUidByPackage(mContext, "com.google.android.gms");
-            mDebugManager = BaikalDebugManager.getInstance(mLooper,mContext); 
-            mDebugManager.initialize();
 
             mBoostManager = BaikalBoostManager.getInstance(mLooper,mContext); 
             mBoostManager.initialize();
@@ -841,9 +846,7 @@ public class AppProfileManager {
     }
 
     private void SystemPropertiesSet(String key, String value) {
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.d(TAG, "SystemProperties.set("+key+","+value+")");
-        }
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.d(TAG, "SystemProperties.set("+key+","+value+")");
         try {
             SystemProperties.set(key,value);
         }
@@ -1105,7 +1108,7 @@ public class AppProfileManager {
         if( profile == null ) return false;
         if( isStamina() && !profile.mStamina ) {
             if( profile.getBackground() >= 0 ) {
-                Slog.w(TAG, "Background execution restricted by baikalos stamina ("
+                if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos stamina ("
                     + profile.getBackground() + "," 
                     + profile.mStamina + ") : " 
                     + profile.mPackageName);
@@ -1116,7 +1119,7 @@ public class AppProfileManager {
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
             if( profile.getBackground() > mode ) {
-                Slog.w(TAG, "Background execution restricted by baikalos (" 
+                if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos (" 
                     + profile.getBackground() + "," 
                     + profile.mStamina + ") : " 
                     + profile.mPackageName);
@@ -1125,7 +1128,7 @@ public class AppProfileManager {
             }
         } else {
             if( profile.getBackground() > 0 ) {
-                Slog.w(TAG, "Background execution restricted by baikalos ("
+                if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos ("
                     + profile.getBackground() + "," 
                     + profile.mStamina + ") : " 
                     + profile.mPackageName);
@@ -1156,7 +1159,7 @@ public class AppProfileManager {
         if( profile.mUid < Process.FIRST_APPLICATION_UID ) return false;
         if( isStamina() && !profile.mStamina ) {
             if( profile.getBackground() >= 0 ) {
-                Slog.w(TAG, "Background execution disabled by baikalos stamina (" + 
+                if( profile.mDebug ) Slog.w(TAG, "Background execution disabled by baikalos stamina (" + 
                     + profile.getBackground() + "," 
                     + profile.mStamina + ") : " 
                     + profile.mPackageName);
@@ -1167,7 +1170,7 @@ public class AppProfileManager {
         if( mAwake ) {
             int mode = mExtremeMode ? 0 : 1;
             if( profile.getBackground() > mode ) {
-                Slog.w(TAG, "Background execution disabled by baikalos ("
+                if( profile.mDebug ) Slog.w(TAG, "Background execution disabled by baikalos ("
                     + profile.getBackground() + "," 
                     + profile.mStamina + ") : " 
                     + profile.mPackageName);
@@ -1176,7 +1179,7 @@ public class AppProfileManager {
             }
         } else {
             if( profile.getBackground() > 0 ) {
-                Slog.w(TAG, "Background execution limited by baikalos ("
+                if( profile.mDebug ) Slog.w(TAG, "Background execution limited by baikalos ("
                     + profile.getBackground() + "," 
                     + profile.mStamina + ") : " 
                     + profile.mPackageName);
@@ -1239,11 +1242,13 @@ public class AppProfileManager {
     }
    
     public boolean updateBypassChargingLocked() {
-        if( !BaikalConstants.isKernelCompatible() ) {
-            Slog.w(TAG, "Bypass charging disabled. Unsupported kernel!");
+
+        if( !mBypassChargingAvailable ) {
             return false;
         }
-        if( !mBypassChargingAvailable ) {
+
+        if( !BaikalConstants.isKernelCompatible() ) {
+            Slog.w(TAG, "Bypass charging disabled. Unsupported kernel!");
             return false;
         }
 
@@ -1252,11 +1257,11 @@ public class AppProfileManager {
 
         try {
             if( !bypassEnabled && limitedEnabled ) {
-                Slog.w(TAG, "Update Limited charging " + limitedEnabled);
+                if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Limited charging " + limitedEnabled);
                 FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputLimitValue);
                 Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,2);
             } else {
-                Slog.w(TAG, "Update Bypass/Limited charging " + bypassEnabled);
+                if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Bypass/Limited charging " + bypassEnabled);
                 FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
                 SystemPropertiesSet("baikal.charging.mode", bypassEnabled ? "1" : "0");
                 Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,bypassEnabled ? 1 : 0);

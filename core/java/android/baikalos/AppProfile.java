@@ -237,8 +237,9 @@ public class AppProfile {
     }
 
     public AppProfile(@Nullable AppProfile profile) {
-        if( profile == null ) return;
-        this.mPackageName = profile.mPackageName;
+        update(profile);
+
+/*        this.mPackageName = profile.mPackageName;
         this.mBrightness = profile.mBrightness;
         this.mReader = profile.mReader;
         this.mPinned = profile.mPinned;
@@ -277,7 +278,7 @@ public class AppProfile {
         this.mDebug = profile.mDebug;
         this.mHeavyMemory = profile.mHeavyMemory;
         this.mHeavyCPU = profile.mHeavyCPU;
-
+*/
     }
 
     public int getBackground() {
@@ -325,12 +326,18 @@ public class AppProfile {
             !mDebug &&
             !mHeavyMemory &&
             !mHeavyCPU &&
+            !mSystemWhitelisted &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
     }
 
     public void update(@Nullable AppProfile profile) {
+        if( profile == null ) {
+            Slog.e(TAG, "Invalid profile assignment", new Throwable());
+            return;
+        }
+
         this.mPackageName = profile.mPackageName;
         this.mBrightness = profile.mBrightness;
         this.mReader = profile.mReader;
@@ -370,6 +377,7 @@ public class AppProfile {
         this.mDebug = profile.mDebug;
         this.mHeavyMemory = profile.mHeavyMemory;
         this.mHeavyCPU = profile.mHeavyCPU;
+        this.mSystemWhitelisted = profile.mSystemWhitelisted;
 
     }
 
@@ -411,9 +419,10 @@ public class AppProfile {
         if( mSonification != 0 ) result +=  "," + "sonf=" + mSonification;
         if( mBypassCharging ) result +=  "," + "bpc=" + mBypassCharging;
         if( mDebug ) result +=  "," + "dbg=" + mDebug;
-        if( mDisableFreezer ) result +=  "," + "fr=" + mDisableFreezer;
+        if( mDisableFreezer ) result +=  "," + "dfr=" + mDisableFreezer;
         if( mHeavyMemory ) result +=  "," + "hm=" + mHeavyMemory;
         if( mHeavyCPU ) result +=  "," + "hc=" + mHeavyCPU;
+        if( mSystemWhitelisted ) result +=  "," + "sw=" + mSystemWhitelisted;
         return result;
     }
 
@@ -425,7 +434,6 @@ public class AppProfile {
             parser.setString(profileString);
         } catch (IllegalArgumentException e) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
-            //throw new IllegalArgumentException();
             return;
         }
 
@@ -466,9 +474,10 @@ public class AppProfile {
             mBypassCharging = parser.getBoolean("bpc",false);
             mSonification = parser.getInt("sonf",0);
             mDebug = parser.getBoolean("dbg",false);
-            mDisableFreezer = parser.getBoolean("fr",false);
+            mDisableFreezer = parser.getBoolean("dfr",false);
             mHeavyMemory = parser.getBoolean("hm",false);
             mHeavyCPU = parser.getBoolean("hc",false);
+            mSystemWhitelisted = parser.getBoolean("sw",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
@@ -482,7 +491,6 @@ public class AppProfile {
             return profile;
         } catch (IllegalArgumentException e) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
-            //throw new IllegalArgumentException();
             return null;
         }
     }

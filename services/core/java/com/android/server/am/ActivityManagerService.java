@@ -8135,6 +8135,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             mAppOpsService.systemReady();
             mProcessList.onSystemReady();
             mAppRestrictionController.onSystemReady();
+            mAppProfileManager.init_debug();
             mAppProfileSettings.registerObserver(true);
             mAppProfileManager.initialize();
             mBaikalAlarmManager.initialize();

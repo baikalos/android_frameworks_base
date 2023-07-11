@@ -1285,7 +1285,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
     }
 
     private boolean isForceAllAppsStandbyEnabledLocked() {
-        return mForceAllAppsStandby || mAppProfileManager.isStamina() || ( mAppProfileManager.isExtreme() && !mAppProfileManager.isScreenActive() );
+        return mForceAllAppsStandby || mAppProfileManager.isStamina();
     }
 
     /**
@@ -1293,7 +1293,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     public boolean isForceAllAppsStandbyEnabled() {
         synchronized (mLock) {
-            return mForceAllAppsStandby || mAppProfileManager.isStamina() || ( mAppProfileManager.isExtreme() && !mAppProfileManager.isScreenActive() );
+            return mForceAllAppsStandby || mAppProfileManager.isStamina();
         }
     }
 

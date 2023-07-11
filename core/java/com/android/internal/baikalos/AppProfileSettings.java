@@ -167,18 +167,54 @@ public class AppProfileSettings extends ContentObserver {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Preferences changed. Reloading - done");
     }
 
-    private AppProfile updateProfileFromSystemSettingsLocked(AppProfile profile) {
-        int uid = getAppUidLocked(profile.mPackageName);
-        if( uid == -1 )  {
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Can't get uid for " + profile.mPackageName);
-            return new AppProfile(profile.mPackageName);
-        }
-        boolean isSystemWhitelisted = mBackend.isSysWhitelisted(profile.mPackageName);
+
+    private static AppProfile updateProfileFromSystemWhitelistStatic(AppProfile profile, Context context) {
+
+        PowerWhitelistBackend backend = PowerWhitelistBackend.getInstance(context);
+        backend.refreshList(false);
+
+        boolean isSystemWhitelisted = backend.isSysWhitelisted(profile.mPackageName);
+
+        Slog.i(TAG, "updateProfileFromSystemWhitelistStatic " + profile.mPackageName + ", isSystemWhitelisted=" + isSystemWhitelisted);
+
         if( isSystemWhitelisted ) {
             if( profile.mBackground >= -1 ) profile.mBackground = 0;
             profile.mSystemWhitelisted = true;
-            return profile;
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "System whitelisted app (static) " + profile.mPackageName);
+        } else {
+            profile.mSystemWhitelisted = false;
         }
+
+        return profile;
+    }
+
+    private AppProfile updateProfileFromSystemWhitelistLocked(AppProfile profile) {
+
+        boolean isSystemWhitelisted = mBackend.isSysWhitelisted(profile.mPackageName);
+
+        Slog.i(TAG, "updateProfileFromSystemWhitelistLocked " + profile.mPackageName + ", isSystemWhitelisted=" + isSystemWhitelisted);
+
+        if( isSystemWhitelisted ) {
+            if( profile.mBackground >= -1 ) profile.mBackground = 0;
+            profile.mSystemWhitelisted = true;
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE )  Slog.i(TAG, "System whitelisted app " + profile.mPackageName);
+        } else {
+            profile.mSystemWhitelisted = false;
+        }
+
+        return profile;
+    }
+
+    private AppProfile updateProfileFromSystemSettingsLocked(AppProfile profile) {
+
+        int uid = getAppUidLocked(profile.mPackageName);
+        if( uid == -1 )  {
+            Slog.e(TAG, "Can't get uid for " + profile.mPackageName);
+            return new AppProfile(profile.mPackageName);
+        }
+
+        profile = updateProfileFromSystemWhitelistLocked(profile);
+        if( profile.mSystemWhitelisted ) return profile;
 
         boolean isWhitelisted = mBackend.isWhitelisted(profile.mPackageName);
         if( isWhitelisted ) {
@@ -197,6 +233,7 @@ public class AppProfileSettings extends ContentObserver {
             + ", runInBackground=" + runInBackground
             + ", runAnyInBackground=" + runAnyInBackground
             + ", profile.mBackground=" + profile.mBackground
+            + ", profile.mSystemWhitelisted=" + profile.mSystemWhitelisted
             );
 
 
@@ -251,15 +288,11 @@ public class AppProfileSettings extends ContentObserver {
 
         if( isSystemWhitelisted ) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "System Whitelisted " + profile.mPackageName);
-        }
-
-        if( isSystemWhitelisted ) {
             if( profile.mBackground > 0 ) { 
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "System Whitelisted for profile.mBackground > 0. Fix it " + profile.mPackageName);
                 profile.mBackground = 0;
             }
             profile.mSystemWhitelisted = true;
-            return profile;
         }
 
 
@@ -274,6 +307,7 @@ public class AppProfileSettings extends ContentObserver {
             + ", runInBackground=" + runInBackground
             + ", runAnyInBackground=" + runAnyInBackground
             + ", profile.mBackground=" + profile.mBackground
+            + ", profile.mSystemWhitelisted=" + profile.mSystemWhitelisted
             );
 
         switch(profile.mBackground) {
@@ -333,14 +367,14 @@ public class AppProfileSettings extends ContentObserver {
         return profile;
     }
 
-    public static AppProfile loadSingleProfile(String packageName, ContentResolver resolver) {
+    public static AppProfile loadSingleProfile(String packageName, Context context) {
 
         Slog.e(TAG, "loadSingleProfile:" + packageName);
 
         if( "android".equals(packageName) || "system".equals(packageName) ) return sSystemProfile;
 
         try {
-            String appProfiles = Settings.Global.getString(resolver,
+            String appProfiles = Settings.Global.getString(context.getContentResolver(),
                     Settings.Global.BAIKALOS_APP_PROFILES);
 
             if( appProfiles == null ) {
@@ -360,14 +394,15 @@ public class AppProfileSettings extends ContentObserver {
             for(String profileString:splitter) {
                 AppProfile profile = AppProfile.deserializeProfile(profileString);
                 if( profile != null  ) {
-                    if( profile.mPackageName.equals(packageName) ) return profile;
+                    if( profile.mPackageName.equals(packageName) ) 
+                        return updateProfileFromSystemWhitelistStatic(profile,context);
                 }
             }
         } catch (Exception e) {
             Slog.e(TAG, "Bad BaikalService settings", e);
-            return null;
         } 
-        return null;
+        AppProfile default_profile = new AppProfile(packageName);
+        return updateProfileFromSystemWhitelistStatic(default_profile,context);
     }
 
 
@@ -416,13 +451,9 @@ public class AppProfileSettings extends ContentObserver {
                     int uid = getAppUidLocked(profile.mPackageName);
                     if( uid == -1 ) continue;
 
-                    if( profile == null ) {
-                        continue;
-                    }
-
                     profile.mUid = uid;
  
-                    if( !_mAppsForDebug.contains(uid)  ) {
+                    if( profile.mDebug && !_mAppsForDebug.contains(uid)  ) {
                         _mAppsForDebug.add(uid);
                     }
 
@@ -433,10 +464,15 @@ public class AppProfileSettings extends ContentObserver {
                     } 
 
                     if( !_profilesByPackageName.containsKey(profile.mPackageName)  ) {
+                        profile = updateProfileFromSystemWhitelistLocked(profile);
+                        updateSystemSettingsLocked(profile);
                         _profilesByPackageName.put(profile.mPackageName, profile);
                     }
                 }
             }
+
+            //updateProfilesFromInstalledPackagesLocked();
+            updateProfilesFromSystemWhitelistedPackagesLocked();
 
             for(Map.Entry<String, AppProfile> entry : _oldProfiles.entrySet()) {
                 entry.getValue().isInvalidated = true;
@@ -471,6 +507,28 @@ public class AppProfileSettings extends ContentObserver {
         }
     }
 
+    private void updateProfilesFromSystemWhitelistedPackagesLocked() {
+        mBackend.refreshList();
+        for( String packageName: mBackend.getSystemWhitelistedApps() ){
+            AppProfile profile = null ; 
+            if( !_profilesByPackageName.containsKey(packageName) ) {
+                profile = new AppProfile(packageName);
+            } else {
+                profile = _profilesByPackageName.get(packageName);
+            }
+            profile = updateProfileFromSystemSettingsLocked(profile);
+            if( !profile.isDefault() && !_profilesByPackageName.containsKey(packageName) ) {
+                _profilesByPackageName.put(packageName,profile);
+            }
+        }
+        for( Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet() ) {
+            if( entry.getValue().mSystemWhitelisted ) {
+                Slog.e(TAG, "Updated system whitelisted app " + entry.getValue().toString());
+            }
+        } 
+
+    }
+
     private void updateProfilesFromInstalledPackagesLocked() {
         boolean changed = false;
         List<PackageInfo> installedAppInfo = mPackageManager.getInstalledPackages(/*PackageManager.GET_PERMISSIONS*/0);
@@ -487,6 +545,11 @@ public class AppProfileSettings extends ContentObserver {
                 _profilesByPackageName.put(info.packageName,profile);
             }
         }
+        for( Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet() ) {
+            if( entry.getValue().mSystemWhitelisted ) {
+                Slog.e(TAG, "Loaded system whitelisted app " + entry.getValue().toString());
+            }
+        } 
     }
 
     public void updateSystemFromInstalledPackages() {

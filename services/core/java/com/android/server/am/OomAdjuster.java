@@ -1109,9 +1109,11 @@ public class OomAdjuster {
                 if( !app.mAppProfile.mPinned ) {
 
                     final boolean appLimited = app.mAppProfile.getBackground() > (awake ? 1 : 0);
+                    boolean killed = false;
 
                     if( mService.mAppProfileManager.isStamina() 
                         && !app.mAppProfile.mStamina
+                        && app.mAppProfile.getBackground() >= 0
                         && state.getCurProcState() > ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
                         && state.getCurProcState() != ActivityManager.PROCESS_STATE_HOME
                         && app.getLastActivityTime() < oldTimeStamina )  {
@@ -1120,58 +1122,77 @@ public class OomAdjuster {
                             ApplicationExitInfo.REASON_OTHER,
                             ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                             true);
-                    } else if( state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_BACKGROUND
+                        killed = true;
+                    }
+
+                    if( !killed
                         && appLimited
-                        && app.getLastActivityTime() < oldTimeExtreme )  {
+                        && state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_BACKGROUND
+                        && app.getLastActivityTime() < oldTimeExtreme ) {
                             app.killLocked("baikalos - disabled background process",
                             "baikalos - disabled background process",
                             ApplicationExitInfo.REASON_OTHER,
                             ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                             true);
-                    } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+                        killed = true;
+                    } 
+
+                    if( !killed 
                         && mService.mAppProfileManager.isKillInBackground()
-                        && app.mAppProfile.getBackground() >= 0
-                        && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 50))
-                            || app.getLastActivityTime() < oldTimeExtreme ) )  {
-                            app.killLocked("baikalos - expired background process",
-                            "baikalos - expired background process",
-                            ApplicationExitInfo.REASON_OTHER,
-                            ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
-                            true);
-                    } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
-                        && (mService.mAppProfileManager.isKillInBackground())
-                        && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 35))
-                        && app.getLastActivityTime() < oldTimeExtreme ) ) {
-                            app.killLocked("baikalos - cached background process",
-                            "baikalos - cached background process",
-                            ApplicationExitInfo.REASON_OTHER,
-                            ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
-                            true);
-                    } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
-                        && (state != null && state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 65)) ) {
-                            app.killLocked("baikalos - cached (65) background process",
-                            "baikalos - cached (95) background process",
-                            ApplicationExitInfo.REASON_OTHER,
-                            ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
-                            true);
-                    } else if( mService.mAppProfileManager.isExtreme() && !awake
-                        && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY 
-                        && mService.mAppProfileManager.isKillInBackground()
-                        && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 25))
-                        && app.getLastActivityTime() < oldTimeExtreme ) ) {
-                            app.killLocked("baikalos - extreme cached background process",
-                            "baikalos - extreme cached background process",
-                            ApplicationExitInfo.REASON_OTHER,
-                            ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
-                            true);
-                    } else if( mService.mAppProfileManager.getCurrentProfile().isHeavy()
-                        && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {
-                            app.killLocked("baikalos - heavy process active",
-                            "baikalos - heavy process active",
-                            ApplicationExitInfo.REASON_OTHER,
-                            ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
-                            true);
-                    } else {
+                        && app.mAppProfile.getBackground() >= 0 ) {
+
+                        if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+                            && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 50))
+                                || app.getLastActivityTime() < oldTimeExtreme ) )  {
+                                app.killLocked("baikalos - expired background process",
+                                "baikalos - expired background process",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
+                        } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
+                            && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 35))
+                            && app.getLastActivityTime() < oldTimeExtreme ) ) {
+                                app.killLocked("baikalos - cached background process",
+                                "baikalos - cached background process",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
+                        } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
+                            && (state != null && state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 85))
+                            && app.getLastActivityTime() < oldTimeExtreme ) {
+                                app.killLocked("baikalos - cached (65) background process",
+                                "baikalos - cached (95) background process",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
+                        } else if( mService.mAppProfileManager.isExtreme() && !awake
+                            && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY 
+                            && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 25))
+                            && app.getLastActivityTime() < oldTimeExtreme ) ) {
+                                app.killLocked("baikalos - extreme cached background process",
+                                "baikalos - extreme cached background process",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
+                        } 
+                    } 
+                    if( !killed &&
+                        mService.mAppProfileManager.getCurrentProfile().isHeavy() ) {
+                        if( app.mAppProfile.getBackground() >= 0
+                            && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {
+                                app.killLocked("baikalos - heavy process active",
+                                "baikalos - heavy process active",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
+                        }
+                    }
+                    if( !killed ) {
                         // Count the number of process types.
                         switch (state.getCurProcState()) {
                             case PROCESS_STATE_CACHED_ACTIVITY:
@@ -3319,21 +3340,21 @@ public class OomAdjuster {
 
         if (mService.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE ) {
             if( state.getCurAdj() >= ProcessList.HOME_APP_ADJ ) shouldFreeze = true;
-            if( !shouldFreeze 
+            /*if( !shouldFreeze 
                 && mService.mAppProfileManager.isExtreme()
                 && state.getCurAdj() >= ProcessList.PERCEPTIBLE_LOW_APP_ADJ
                 && state.getCurrentSchedulingGroup() == ProcessList.SCHED_GROUP_BACKGROUND ) {
                     Slog.d(TAG, "Extreme freeze " + app + ", state=" + state.getCurAdj() + ", sched=" + state.getCurrentSchedulingGroup());
                     shouldFreeze = true;
-            }
+            }*/
         } else {
             if( state.getCurAdj() >= ProcessList.CACHED_APP_MIN_ADJ ) shouldFreeze = true;
-            if( !shouldFreeze 
+            /*if( !shouldFreeze 
                 && mService.mAppProfileManager.isExtreme()
                 && state.getCurAdj() > ProcessList.HOME_APP_ADJ ) {
                     Slog.d(TAG, "Extreme freeze screenon " + app + ", state=" + state.getCurAdj() + ", sched=" + state.getCurrentSchedulingGroup());
                     shouldFreeze = true;
-            }
+            }*/
         }
 
         if (shouldFreeze && !opt.shouldNotFreeze()) {

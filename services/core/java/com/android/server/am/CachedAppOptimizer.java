@@ -1680,19 +1680,19 @@ public final class CachedAppOptimizer {
 
             if (mAm.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE ) {
                 if( proc.mState.getCurAdj() >= ProcessList.HOME_APP_ADJ ) shouldFreeze = true;
-                if( !shouldFreeze 
+                /*if( !shouldFreeze 
                     && mAm.mAppProfileManager.isExtreme()
                     && proc.mState.getCurAdj() >= ProcessList.PERCEPTIBLE_LOW_APP_ADJ
                     && proc.mState.getCurrentSchedulingGroup() == ProcessList.SCHED_GROUP_BACKGROUND ) {
                         shouldFreeze = true;
-                }
+                }*/
             } else {
                 if( proc.mState.getCurAdj() >= ProcessList.CACHED_APP_MIN_ADJ ) shouldFreeze = true;
-                if( !shouldFreeze 
+                /*if( !shouldFreeze 
                     && mAm.mAppProfileManager.isExtreme()
                     && proc.mState.getCurAdj() > ProcessList.HOME_APP_ADJ ) {
                         shouldFreeze = true;
-                }
+                }*/
             }
 
 

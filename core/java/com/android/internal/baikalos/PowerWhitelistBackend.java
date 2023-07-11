@@ -56,9 +56,8 @@ public class PowerWhitelistBackend {
     }
 
     PowerWhitelistBackend(Context context, IDeviceIdleController deviceIdleService) {
-        mAppContext = context.getApplicationContext();
+        mAppContext = context; 
         mDeviceIdleService = deviceIdleService;
-        refreshList();
     }
 
     public int getWhitelistSize() {
@@ -66,40 +65,13 @@ public class PowerWhitelistBackend {
     }
 
     public boolean isSysWhitelisted(String pkg) {
-        return mSysWhitelistedApps.contains(pkg) || mSysWhitelistedAppsExceptIdle.contains(pkg) || mDefaultActiveApps.contains(pkg);
+        return mSysWhitelistedApps.contains(pkg) || mSysWhitelistedAppsExceptIdle.contains(pkg);
     }
 
     public boolean isWhitelisted(String pkg) {
         if (mWhitelistedApps.contains(pkg)) {
             return true;
         }
-
-        /*if (isDefaultActiveApp(pkg)) {
-            return true;
-        }*/
-
-        return false;
-    }
-
-    /**
-     * Check if it is default active app in multiple area(i.e. SMS, Dialer, Device admin..)
-     */
-    public boolean isDefaultActiveApp(String pkg) {
-
-        // if( pkg.startsWith("com.google.android.gms") ) return false;
-        // Additionally, check if pkg is default dialer/sms. They are considered essential apps and
-        // should be automatically whitelisted (otherwise user may be able to set restriction on
-        // them, leading to bad device behavior.)
-
-        if (mDefaultActiveApps.contains(pkg)) {
-            return true;
-        }
-
-        /*final DevicePolicyManager devicePolicyManager = mAppContext.getSystemService(
-                DevicePolicyManager.class);
-        if (devicePolicyManager.packageHasActiveAdmins(pkg)) {
-            return true;
-        }*/
 
         return false;
     }
@@ -149,6 +121,8 @@ public class PowerWhitelistBackend {
             mWhitelistedApps.remove(pkg);
         } catch (RemoteException e) {
             Log.w(TAG, "Unable to reach IDeviceIdleController", e);
+        } catch (Exception ex) {
+            Log.w(TAG, "Unable to removeApp:" + pkg, ex);
         }
     }
 
@@ -164,16 +138,22 @@ public class PowerWhitelistBackend {
         return mSysWhitelistedAppsExceptIdle;
     }
 
+
     public void refreshList() {
+        refreshList(true);
+    }
+
+    public void refreshList(boolean update) {
         mSysWhitelistedApps.clear();
         mSysWhitelistedAppsExceptIdle.clear();
         mWhitelistedApps.clear();
-        mDefaultActiveApps.clear();
+        Log.w(TAG, "refreshList: update=" + update);
         if (mDeviceIdleService == null) {
+            Log.w(TAG, "mDeviceIdleService = null!!!!!!!!!!");
             return;
         }
         try {
-            final String[] whitelistedApps = mDeviceIdleService.getFullPowerWhitelist();
+            final String[] whitelistedApps = mDeviceIdleService.getUserPowerWhitelist();
             for (String app : whitelistedApps) {
                 mWhitelistedApps.add(app);
             }
@@ -186,37 +166,44 @@ public class PowerWhitelistBackend {
             for (String app : sysWhitelistedAppsExceptIdle) {
                 mSysWhitelistedAppsExceptIdle.add(app);
             }
-            final boolean hasTelephony = mAppContext.getPackageManager().hasSystemFeature(
-                    PackageManager.FEATURE_TELEPHONY);
-            final ComponentName defaultSms = SmsApplication.getDefaultSmsApplication(mAppContext,
-                    true /* updateIfNeeded */);
-            final String defaultDialer = DefaultDialerManager.getDefaultDialerApplication(
-                    mAppContext);
 
-            final String defaultCallScreening = DefaultDialerManager.getDefaultCallScreeningApplication(mAppContext);
+            if( update ) {
+                mDefaultActiveApps.clear();
 
-            if (hasTelephony) {
-                if (defaultSms != null) {
-                    mDefaultActiveApps.add(defaultSms.getPackageName());
-                    SystemProperties.set("baikal.sms", defaultSms.getPackageName());
-                } else {
-                    SystemProperties.set("baikal.sms", "");
-                }
-                if (!TextUtils.isEmpty(defaultDialer)) {
-                    mDefaultActiveApps.add(defaultDialer);
-                    SystemProperties.set("baikal.dialer", defaultDialer);
-                } else {
-                    SystemProperties.set("baikal.dialer", "");
-                }
-                if (!TextUtils.isEmpty(defaultCallScreening)) {
-                    mDefaultActiveApps.add(defaultCallScreening);
-                    SystemProperties.set("baikal.call_screening", defaultCallScreening);
-                } else {
-                    SystemProperties.set("baikal.call_screening", "");
+                final boolean hasTelephony = mAppContext.getPackageManager().hasSystemFeature(
+                        PackageManager.FEATURE_TELEPHONY);
+                final ComponentName defaultSms = SmsApplication.getDefaultSmsApplication(mAppContext,
+                        true /* updateIfNeeded */);
+                final String defaultDialer = DefaultDialerManager.getDefaultDialerApplication(
+                        mAppContext);
+
+                final String defaultCallScreening = DefaultDialerManager.getDefaultCallScreeningApplication(mAppContext);
+
+                if (hasTelephony) {
+                    if (defaultSms != null) {
+                        mDefaultActiveApps.add(defaultSms.getPackageName());
+                        SystemProperties.set("baikal.sms", defaultSms.getPackageName());
+                    } else {
+                        SystemProperties.set("baikal.sms", "");
+                    }
+                    if (!TextUtils.isEmpty(defaultDialer)) {
+                        mDefaultActiveApps.add(defaultDialer);
+                        SystemProperties.set("baikal.dialer", defaultDialer);
+                    } else {
+                        SystemProperties.set("baikal.dialer", "");
+                    }
+                    if (!TextUtils.isEmpty(defaultCallScreening)) {
+                        mDefaultActiveApps.add(defaultCallScreening);
+                        SystemProperties.set("baikal.call_screening", defaultCallScreening);
+                    } else {
+                        SystemProperties.set("baikal.call_screening", "");
+                    }
                 }
             }
-        } catch (RemoteException e) {
-            Log.w(TAG, "Unable to reach IDeviceIdleController", e);
+        } catch (RemoteException re) {
+            Log.w(TAG, "Unable to reach IDeviceIdleController", re);
+        } catch (Exception e) {
+            Log.w(TAG, "Exception:", e);
         }
     }
 

@@ -344,7 +344,7 @@ public class BaikalSpoofer {
                     Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
 
 
-            AppProfile profile = AppProfileSettings.loadSingleProfile(packageName, context.getContentResolver());
+            AppProfile profile = AppProfileSettings.loadSingleProfile(packageName, context);
 
             spoofedProfile = profile;
 
