@@ -151,8 +151,7 @@ import com.android.server.utils.WatchedLongSparseArray;
 import com.android.server.utils.WatchedSparseBooleanArray;
 import com.android.server.utils.WatchedSparseIntArray;
 import com.android.server.wm.ActivityTaskManagerInternal;
-
-import ink.kaleidoscope.server.GmsManagerService;
+import com.android.server.baikalos.BaikalAppManagerService;
 
 import libcore.util.EmptyArray;
 
@@ -950,7 +949,7 @@ public class ComputerEngine implements Computer {
 
     public final ApplicationInfo getApplicationInfo(String packageName,
             @PackageManager.ApplicationInfoFlagsBits long flags, int userId) {
-        if (GmsManagerService.shouldHide(userId, packageName))
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
             return null;
         return getApplicationInfoInternal(packageName, flags, Binder.getCallingUid(), userId);
     }
@@ -965,7 +964,7 @@ public class ComputerEngine implements Computer {
             @PackageManager.ApplicationInfoFlagsBits long flags,
             int filterCallingUid, int userId) {
         if (!mUserManager.exists(userId)) return null;
-        if (GmsManagerService.shouldHide(userId, packageName))
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
             return null;
         flags = updateFlagsForApplication(flags, userId);
 
@@ -1716,7 +1715,7 @@ public class ComputerEngine implements Computer {
 
     public final PackageInfo getPackageInfo(String packageName,
             @PackageManager.PackageInfoFlagsBits long flags, int userId) {
-        if (GmsManagerService.shouldHide(userId, packageName))
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
             return null;
         return getPackageInfoInternal(packageName, PackageManager.VERSION_CODE_HIGHEST,
                 flags, Binder.getCallingUid(), userId);
@@ -1731,7 +1730,7 @@ public class ComputerEngine implements Computer {
     public final PackageInfo getPackageInfoInternal(String packageName, long versionCode,
             long flags, int filterCallingUid, int userId) {
         if (!mUserManager.exists(userId)) return null;
-        if (GmsManagerService.shouldHide(userId, packageName))
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) == 0 && BaikalAppManagerService.shouldHide(userId, packageName))
             return null;
         flags = updateFlagsForPackage(flags, userId);
         enforceCrossUserPermission(Binder.getCallingUid(), userId,
@@ -1829,7 +1828,9 @@ public class ComputerEngine implements Computer {
         enforceCrossUserPermission(callingUid, userId, false /* requireFullPermission */,
                 false /* checkShell */, "get installed packages");
 
-        return GmsManagerService.recreatePackageList(
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) != 0 ) return getInstalledPackagesBody(flags, userId, callingUid);
+
+        return BaikalAppManagerService.recreatePackageList(
                         userId, getInstalledPackagesBody(flags, userId, callingUid));
     }
 
@@ -4788,7 +4789,9 @@ public class ComputerEngine implements Computer {
             }
         }
 
-        return GmsManagerService.recreateApplicationList(userId, list);
+        if ( (flags & PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS) != 0 ) return list;
+
+        return BaikalAppManagerService.recreateApplicationList(userId, list);
     }
 
     @Nullable
@@ -5583,7 +5586,7 @@ public class ComputerEngine implements Computer {
                     ApplicationInfo ai = PackageInfoUtils.generateApplicationInfo(p, flags,
                             ps.getUserStateOrDefault(userId), userId, ps);
                     if (ai != null) {
-                        finalList.add(ai);
+                        if( !BaikalAppManagerService.shouldHide(userId, ai.packageName) ) finalList.add(ai);
                     }
                 }
             }

@@ -26,6 +26,7 @@ import android.app.ApplicationExitInfo;
 import android.app.ApplicationExitInfo.Reason;
 import android.app.ApplicationExitInfo.SubReason;
 import android.app.IApplicationThread;
+import android.baikalos.AppProfile;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManagerInternal;
 import android.content.pm.ProcessInfo;
@@ -57,6 +58,8 @@ import com.android.internal.os.Zygote;
 import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.wm.WindowProcessController;
 import com.android.server.wm.WindowProcessListener;
+
+import com.android.internal.baikalos.AppProfileSettings;
 
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -381,6 +384,8 @@ class ProcessRecord implements WindowProcessListener {
      */
     Runnable mSuccessorStartRunnable;
 
+    volatile AppProfile mAppProfile;
+
     void setStartParams(int startUid, HostingRecord hostingRecord, String seInfo,
             long startUptime, long startElapsedTime) {
         this.mStartUid = startUid;
@@ -506,6 +511,20 @@ class ProcessRecord implements WindowProcessListener {
         mService = _service;
         mProcLock = _service.mProcLock;
         info = _info;
+
+        AppProfileSettings appSettings = AppProfileSettings.getInstance();
+        if( appSettings != null ) { 
+            mAppProfile = appSettings.getProfile(_info.packageName);
+            if( mAppProfile == null ) mAppProfile = new AppProfile(_info.packageName);
+            Slog.d(TAG,"Baikal.AppProfile: Loaded ProcessRecord AppProfile:" + mAppProfile.toString());
+            if( mAppProfile.getBackground() > 0 ) {
+                Slog.d(TAG,"Baikal.AppProfile: Started ProcessRecord for background restricted app from:" + mAppProfile.toString(), new Throwable());
+            }
+        } else {
+            Slog.w(TAG,"Baikal.AppProfile: Not ready for package:" + _info.packageName);
+            mAppProfile = new AppProfile(_info.packageName);
+        }
+
         ProcessInfo procInfo = null;
         if (_service.mPackageManagerInt != null) {
             if (_definingUid > 0) {
@@ -527,6 +546,7 @@ class ProcessRecord implements WindowProcessListener {
                 procInfo = null;
             }
         }
+
         processInfo = procInfo;
         isolated = Process.isIsolated(_uid);
         isSdkSandbox = Process.isSdkSandboxUid(_uid);

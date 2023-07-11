@@ -228,6 +228,8 @@ public final class BatteryService extends SystemService {
     private int mLastModStatus;
     private int mLastModType;
 
+    private boolean mIgnoreZeroBattery;
+
     public BatteryService(Context context) {
         super(context);
 
@@ -319,6 +321,11 @@ public final class BatteryService extends SystemService {
                 resolver.registerContentObserver(Settings.Global.getUriFor(
                         Settings.Global.LOW_POWER_MODE_TRIGGER_LEVEL),
                         false, obs, UserHandle.USER_ALL);
+
+                resolver.registerContentObserver(Settings.Global.getUriFor(
+                        Settings.Global.BAIKALOS_IGNORE_ZERO_BATTERY),
+                        false, obs, UserHandle.USER_ALL);
+
                 updateBatteryWarningLevelLocked();
             }
         } else if (phase == PHASE_BOOT_COMPLETED) {
@@ -388,6 +395,11 @@ public final class BatteryService extends SystemService {
         mLowBatteryCloseWarningLevel = mLowBatteryWarningLevel + mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_lowBatteryCloseWarningBump);
         processValuesLocked(true);
+
+
+        mIgnoreZeroBattery = Settings.Global.getInt(resolver,
+                Settings.Global.BAIKALOS_IGNORE_ZERO_BATTERY, 0) != 0;
+
     }
 
     private boolean isPoweredLocked(int plugTypeSet) {
@@ -437,6 +449,9 @@ public final class BatteryService extends SystemService {
     }
 
     private boolean shouldShutdownLocked() {
+
+        if (mIgnoreZeroBattery) return false;
+
         if (mHealthInfo.batteryCapacityLevel != BatteryCapacityLevel.UNSUPPORTED) {
             return (mHealthInfo.batteryCapacityLevel == BatteryCapacityLevel.CRITICAL);
         }

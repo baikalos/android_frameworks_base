@@ -34,6 +34,8 @@ import android.text.TextUtils;
 import android.util.ArraySet;
 import android.util.Slog;
 import android.view.View;
+import android.system.Os;
+import android.system.StructUtsname;
 
 import dalvik.system.VMRuntime;
 
@@ -1170,10 +1172,10 @@ public class Build {
     }
 
     /** The type of build, like "user" or "eng". */
-    public static final String TYPE = getString("ro.build.type");
+    public static final String TYPE = getStringString("user"); // getString("ro.build.type");
 
     /** Comma-separated tags describing the build, like "unsigned,debug". */
-    public static final String TAGS = getString("ro.build.tags");
+    public static final String TAGS = getStringString("release-keys"); // getString("ro.build.tags");
 
     /** A string that uniquely identifies this build.  Do not attempt to parse this value. */
     public static final String FINGERPRINT = deriveFingerprint();
@@ -1250,6 +1252,12 @@ public class Build {
     public static boolean isBuildConsistent() {
         // Don't care on eng builds.  Incremental build may trigger false negative.
         if (IS_ENG) return true;
+
+        if( Os.uname() == null || Os.uname().release == null || !Os.uname().release.contains("baikalos") ) { 
+            Slog.e(TAG, "Mismatched kernel version: build requires baikalos compatible kernel");
+            return false;
+        }
+
 
         if (IS_TREBLE_ENABLED) {
             // If we can run this code, the device should already pass AVB.
@@ -1422,8 +1430,8 @@ public class Build {
      * @hide
      */
     @UnsupportedAppUsage
-    public static final boolean IS_DEBUGGABLE =
-            SystemProperties.getInt("ro.debuggable", 0) == 1;
+    public static final boolean IS_DEBUGGABLE = false;
+            //SystemProperties.getInt("ro.debuggable", 0) == 1;
 
     /**
      * Returns true if the device is running a debuggable build such as "userdebug" or "eng".
@@ -1436,15 +1444,15 @@ public class Build {
     @TestApi
     @SystemApi(client = SystemApi.Client.MODULE_LIBRARIES)
     public static boolean isDebuggable() {
-        return IS_DEBUGGABLE;
+        return false; //IS_DEBUGGABLE;
     }
 
     /** {@hide} */
-    public static final boolean IS_ENG = "eng".equals(TYPE);
+    public static final boolean IS_ENG = false; //"eng".equals(TYPE);
     /** {@hide} */
-    public static final boolean IS_USERDEBUG = "userdebug".equals(TYPE);
+    public static final boolean IS_USERDEBUG = false; //"userdebug".equals(TYPE);
     /** {@hide} */
-    public static final boolean IS_USER = "user".equals(TYPE);
+    public static final boolean IS_USER = true; //"user".equals(TYPE);
 
     /**
      * Whether this build is running on ARC, the Android Runtime for Chrome
@@ -1491,8 +1499,22 @@ public class Build {
         return SystemProperties.get(property, UNKNOWN);
     }
 
+    @UnsupportedAppUsage
+    private static String getStringString(String property) {
+        return property;
+    }
+
     private static String[] getStringList(String property, String separator) {
         String value = SystemProperties.get(property);
+        if (value.isEmpty()) {
+            return new String[0];
+        } else {
+            return value.split(separator);
+        }
+    }
+
+    private static String[] getStringListString(String property, String separator) {
+        String value = property;
         if (value.isEmpty()) {
             return new String[0];
         } else {
@@ -1504,6 +1526,15 @@ public class Build {
     private static long getLong(String property) {
         try {
             return Long.parseLong(SystemProperties.get(property));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    @UnsupportedAppUsage
+    private static long getLongString(String property) {
+        try {
+            return Long.parseLong(property);
         } catch (NumberFormatException e) {
             return -1;
         }
