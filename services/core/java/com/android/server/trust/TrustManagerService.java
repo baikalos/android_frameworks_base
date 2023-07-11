@@ -1272,7 +1272,7 @@ public class TrustManagerService extends SystemService {
 	            updateTrustAll();
 	        }
 
-            if( baikalTrusted ) {
+            if( mBaikalTrusted ) {
                 Log.w(TAG, "aggregateIsTrusted: baikal trusted");
                 return true; 
             }
