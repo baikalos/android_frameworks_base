@@ -37,6 +37,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Trace;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.Pair;
 import android.view.ActionMode;
 import android.view.DisplayCutout;
@@ -59,6 +60,7 @@ import com.android.internal.view.FloatingActionMode;
 import com.android.internal.widget.floatingtoolbar.FloatingToolbar;
 import com.android.systemui.R;
 import com.android.systemui.compose.ComposeFacade;
+import com.android.systemui.util.LargeScreenUtils;
 
 /**
  * Combined keyguard and notification panel view. Also holding backdrop and scrims.
@@ -111,11 +113,15 @@ public class NotificationShadeWindowView extends FrameLayout {
 
         mLeftInset = 0;
         mRightInset = 0;
-        DisplayCutout displayCutout = getRootWindowInsets().getDisplayCutout();
-        Pair<Integer, Integer> pairInsets = mLayoutInsetProvider
-                .getinsets(windowInsets, displayCutout);
-        mLeftInset = pairInsets.first;
-        mRightInset = pairInsets.second;
+
+        if( !LargeScreenUtils.shouldUseSplitNotificationShade(mContext.getResources()) ) {
+            DisplayCutout displayCutout = getRootWindowInsets().getDisplayCutout();
+            Pair<Integer, Integer> pairInsets = mLayoutInsetProvider
+                    .getinsets(windowInsets, displayCutout);
+            mLeftInset = pairInsets.first;
+            mRightInset = pairInsets.second;
+        }
+
         applyMargins();
         return windowInsets;
     }
@@ -131,6 +137,7 @@ public class NotificationShadeWindowView extends FrameLayout {
                     lp.rightMargin = mRightInset;
                     lp.leftMargin = mLeftInset;
                     child.requestLayout();
+                    Log.e(TAG, "BaikalShade: ignoreRightInset = false, mRightInset=" + mRightInset + ", mLeftInset=" + mLeftInset);
                 }
             }
         }

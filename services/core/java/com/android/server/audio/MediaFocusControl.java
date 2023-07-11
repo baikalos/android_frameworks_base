@@ -42,6 +42,10 @@ import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+
+
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -963,6 +967,22 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
                         AudioManager.audioFocusToString(focusChangeHint))
                 //.set(MediaMetrics.Property.SDK, sdk)
                 .record();
+
+
+        AppProfile profile = AppProfileSettings.getInstance().getProfile(callingPackageName);
+        if( profile != null &&  profile.mBAFSend ) {
+            if (DEBUG) {
+                Log.v(TAG, "requestAudioFocus() blocked from uid/pid " + Binder.getCallingUid()
+                    + "/" + Binder.getCallingPid()
+                    + " clientId=" + clientId + " callingPackage=" + callingPackageName
+                    + " req=" + focusChangeHint
+                    + " flags=0x" + Integer.toHexString(flags)
+                    + " sdk=" + sdk);
+            }
+            return AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+        }
+
+        
 
         // when using the test API, a fake UID can be injected (testUid is ignored otherwise)
         // note that the test on flags is not a mask test on purpose, AUDIOFOCUS_FLAG_TEST is

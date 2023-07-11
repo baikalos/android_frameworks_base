@@ -2537,15 +2537,15 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
     }
 
     private void updateFingerprintSettings() {
-        boolean defFingerprintSettings = mContext.getResources().getBoolean(
-                org.lineageos.platform.internal.R.bool.config_fingerprintWakeAndUnlock);
-        if (defFingerprintSettings) {
+        //boolean defFingerprintSettings = mContext.getResources().getBoolean(
+        //        org.lineageos.platform.internal.R.bool.config_fingerprintWakeAndUnlock);
+        //if (defFingerprintSettings) {
             mFingerprintWakeAndUnlock = Settings.Secure.getIntForUser(mContext.getContentResolver(),
                     Settings.Secure.SFPS_PERFORMANT_AUTH_ENABLED,
                     1, UserHandle.USER_CURRENT) == 1;
-        } else {
-            mFingerprintWakeAndUnlock = defFingerprintSettings;
-        }
+        //} else {
+        //    mFingerprintWakeAndUnlock = defFingerprintSettings;
+        //}
     }
 
     private void initializeSimState() {

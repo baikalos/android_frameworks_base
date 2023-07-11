@@ -112,6 +112,8 @@ import com.android.systemui.util.concurrency.DelayableExecutor;
 import com.android.systemui.util.wakelock.SettableWakeLock;
 import com.android.systemui.util.wakelock.WakeLock;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.PrintWriter;
 import java.text.NumberFormat;
 import java.util.HashSet;
@@ -207,6 +209,8 @@ public class KeyguardIndicationController {
     private boolean mInited;
 
     private int mCurrentDivider;
+
+    private String mChargerRealType;
 
     private boolean mFaceDetectionRunning;
 
@@ -354,6 +358,7 @@ public class KeyguardIndicationController {
         mStatusBarStateListener.onDozingChanged(mStatusBarStateController.isDozing());
 
         mCurrentDivider = mContext.getResources().getInteger(R.integer.config_currentInfoDivider);
+        mChargerRealType = mContext.getResources().getString(R.string.config_chargerRealType);
 
         mAlternateFastchargeInfoUpdate =
                     mContext.getResources().getBoolean(R.bool.config_alternateFastchargeInfoUpdate);
@@ -362,6 +367,7 @@ public class KeyguardIndicationController {
                     IBatteryPropertiesRegistrar.Stub.asInterface(
                     ServiceManager.getService("batteryproperties"));
         }
+
     }
 
     public void setIndicationArea(ViewGroup indicationArea) {
@@ -1035,22 +1041,58 @@ public class KeyguardIndicationController {
         String batteryInfo = "";
         boolean showbatteryInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
             Settings.System.LOCKSCREEN_BATTERY_INFO, 1, UserHandle.USER_CURRENT) == 1;
-         if (showbatteryInfo) {
-            if (mChargingCurrent > 0) {
-                batteryInfo = batteryInfo + (mChargingCurrent / mCurrentDivider) + "mA";
+
+        String bolt = "\u26A1"; // "\uFE0E";
+        String brick = "\u26D4"; // "\uFE0E";
+        String exclamation = "\u26A0"; // "\uFE0E";
+
+          
+        int mode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_CHARGING_MODE, 0);
+
+        if (showbatteryInfo) {
+
+            if( mPowerPluggedIn ) {
+                switch(mode) {
+                    case 0:
+                        batteryInfo = bolt + " ";
+                        break;
+                    case 1:
+                        batteryInfo = brick + " ";
+                        break;
+                    case 2:
+                        batteryInfo = exclamation + " ";
+                        break;
+                }
             }
-            if (mChargingWattage > 0) {
+
+            //if (mChargingCurrent != 0) {
+                batteryInfo = batteryInfo + (mChargingCurrent / mCurrentDivider) + "mA";
+            //}
+            //if (mChargingWattage != 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
                         String.format("%.1f" , (mChargingWattage / mCurrentDivider / 1000)) + "W";
-            }
-            if (mChargingVoltage > 0) {
+            //}
+            //if (mChargingVoltage != 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
                         String.format("%.1f", (float) (mChargingVoltage / 1000 / 1000)) + "V";
-            }
-            if (mTemperature > 0) {
+            //}
+            //if (mTemperature != 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
                         mTemperature / 10 + "°C";
+
+            if( mChargerRealType != null && !"".equals(mChargerRealType) ) {
+                try  {
+                    BufferedReader br = new BufferedReader(new FileReader(mChargerRealType), 512);
+                    try {
+                        String line = br.readLine();
+                        batteryInfo = batteryInfo + " " + line;
+                    } finally {
+                        br.close();
+                    }
+                } catch(Exception fe) {
+                }
             }
+            //}
             if (batteryInfo != "") {
                 batteryInfo = "\n" + batteryInfo;
             }

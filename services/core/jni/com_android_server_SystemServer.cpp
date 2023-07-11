@@ -129,11 +129,11 @@ static void android_server_SystemServer_initZygoteChildHeapProfiling(JNIEnv* /* 
     android_mallopt(M_INIT_ZYGOTE_CHILD_PROFILING, nullptr, 0);
 }
 
-static void android_server_SystemServer_fdtrackAbort(JNIEnv*, jobject) {
+/*static void android_server_SystemServer_fdtrackAbort(JNIEnv*, jobject) {
     sigval val;
     val.sival_int = 1;
     sigqueue(getpid(), BIONIC_SIGNAL_FDTRACK, val);
-}
+}*/
 
 static jlong android_server_SystemServer_startIncrementalService(JNIEnv* env, jclass klass,
                                                                  jobject self) {
@@ -156,11 +156,11 @@ static const JNINativeMethod gMethods[] = {
         {"startHidlServices", "()V", (void*)android_server_SystemServer_startHidlServices},
         {"initZygoteChildHeapProfiling", "()V",
          (void*)android_server_SystemServer_initZygoteChildHeapProfiling},
-        {"fdtrackAbort", "()V", (void*)android_server_SystemServer_fdtrackAbort},
         {"startIncrementalService", "()J",
          (void*)android_server_SystemServer_startIncrementalService},
         {"setIncrementalServiceSystemReady", "(J)V",
          (void*)android_server_SystemServer_setIncrementalServiceSystemReady},
+        /*{"fdtrackAbort", "()V", (void*)android_server_SystemServer_fdtrackAbort},*/
 };
 
 int register_android_server_SystemServer(JNIEnv* env)

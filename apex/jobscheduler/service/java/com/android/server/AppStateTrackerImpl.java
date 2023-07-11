@@ -59,6 +59,13 @@ import com.android.server.AppStateTrackerProto.RunAnyInBackgroundRestrictedPacka
 import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+
+import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAlarmManager;
+
 import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collections;
@@ -92,6 +99,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
     PowerManagerInternal mPowerManagerInternal;
     StandbyTracker mStandbyTracker;
     AppStandbyInternal mAppStandbyInternal;
+    AppProfileManager mAppProfileManager;
 
     private final MyHandler mHandler;
 
@@ -563,6 +571,8 @@ public class AppStateTrackerImpl implements AppStateTracker {
 
             mBatterySaverEnabled = mPowerManagerInternal.getLowPowerState(
                     ServiceType.FORCE_ALL_APPS_STANDBY).batterySaverEnabled;
+
+            mAppProfileManager = AppProfileManager.getInstance();
 
             updateForceAllAppStandbyState();
         }
@@ -1198,7 +1208,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     && mExemptedBucketPackages.contains(userId, packageName)) {
                 return false;
             }
-            return mForceAllAppsStandby;
+            return isForceAllAppsStandbyEnabledLocked(); //mForceAllAppsStandby;
         }
     }
 
@@ -1237,7 +1247,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     && mExemptedBucketPackages.contains(userId, packageName)) {
                 return false;
             }
-            return mForceAllAppsStandby;
+            return isForceAllAppsStandbyEnabledLocked(); // mForceAllAppsStandby;
         }
     }
 
@@ -1274,12 +1284,16 @@ public class AppStateTrackerImpl implements AppStateTracker {
         return ret;
     }
 
+    private boolean isForceAllAppsStandbyEnabledLocked() {
+        return mForceAllAppsStandby || mAppProfileManager.isStamina();
+    }
+
     /**
      * @return whether force all apps standby is enabled or not.
      */
     public boolean isForceAllAppsStandbyEnabled() {
         synchronized (mLock) {
-            return mForceAllAppsStandby;
+            return mForceAllAppsStandby || mAppProfileManager.isStamina();
         }
     }
 
@@ -1342,9 +1356,11 @@ public class AppStateTrackerImpl implements AppStateTracker {
      * @return whether the app is restricted battery usage
      */
     public boolean isAppRestricted(int uid, String packageName) {
-        return mAppOpsManager.checkOpNoThrow(
+        /*return mAppOpsManager.checkOpNoThrow(
                 AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
                 uid, packageName) != AppOpsManager.MODE_ALLOWED;
+        */
+        return mAppProfileManager.isAppRestricted(uid,packageName);
     }
 
     /**
