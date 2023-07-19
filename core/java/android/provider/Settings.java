@@ -5169,6 +5169,16 @@ public final class Settings {
         public static final String ACCELEROMETER_ROTATION = "accelerometer_rotation";
 
         /**
+         * Control whether the accelerometer will be used to change screen
+         * orientation.  If 0, it will not be used unless explicitly requested
+         * by the application; if 1, it will be used by default unless explicitly
+         * disabled by the application.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String ACCELEROMETER_ROTATION_DEFAULT = "accelerometer_rotation_default";
+
+        /**
          * Control the type of rotation which can be performed using the accelerometer
          * if ACCELEROMETER_ROTATION is enabled.
          * Value is a bitwise combination of
@@ -6369,6 +6379,7 @@ public final class Settings {
             PUBLIC_SETTINGS.add(DATE_FORMAT);
             PUBLIC_SETTINGS.add(SETUP_WIZARD_HAS_RUN);
             PUBLIC_SETTINGS.add(ACCELEROMETER_ROTATION);
+            PUBLIC_SETTINGS.add(ACCELEROMETER_ROTATION_DEFAULT);
             PUBLIC_SETTINGS.add(USER_ROTATION);
             PUBLIC_SETTINGS.add(DTMF_TONE_WHEN_DIALING);
             PUBLIC_SETTINGS.add(SOUND_EFFECTS_ENABLED);
@@ -6485,6 +6496,7 @@ public final class Settings {
             INSTANT_APP_SETTINGS.add(TIME_12_24);
             INSTANT_APP_SETTINGS.add(SOUND_EFFECTS_ENABLED);
             INSTANT_APP_SETTINGS.add(ACCELEROMETER_ROTATION);
+            INSTANT_APP_SETTINGS.add(ACCELEROMETER_ROTATION_DEFAULT);
         }
 
         /**
@@ -17362,6 +17374,20 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_DEFAULT_THERMAL = "baikalos_default_thermal";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_IDLE_PERFORMANCE = "baikalos_default_idle_performance";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_IDLE_THERMAL = "baikalos_default_idle_thermal";
 
         /**
          * This preference holds app profiles.

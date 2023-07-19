@@ -266,12 +266,28 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
     @Override
     public FullScreenIntentDecision getFullScreenIntentDecision(NotificationEntry entry) {
+
         /*if (mFlags.disableFsi()) {
             return FullScreenIntentDecision.NO_FSI_DISABLED;
         }*/
+
         if (entry.getSbn().getNotification().fullScreenIntent == null) {
             Log.d(TAG, "FSI: NO_FULL_SCREEN_INTENT " + entry.getSbn());
             return FullScreenIntentDecision.NO_FULL_SCREEN_INTENT;
+        }
+
+
+        INotificationManager iNm = INotificationManager.Stub.asInterface(
+            ServiceManager.getService(Context.NOTIFICATION_SERVICE));
+
+        try {
+            if( mInCall && iNm.isInCall(entry.getSbn().getPackageName(), entry.getSbn().getUid()) ) {
+                Log.d(TAG, "FSI: incoming call notification: " + entry.getSbn().getKey());
+                Log.d(TAG, "FSI: FSI_EXPECTED_NOT_TO_HUN " + entry.getSbn());
+                return getDecisionGivenSuppression(FullScreenIntentDecision.FSI_EXPECTED_NOT_TO_HUN, false);
+            }
+        } catch(RemoteException ex) {
+            Log.d(TAG, "FSI: incoming call check exception: " + ex);
         }
 
         // Boolean indicating whether this FSI would have been suppressed by DND. Because we
@@ -365,11 +381,11 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
             // Detect the case determined by b/231322873 to launch FSI while device is in use,
             // as blocked by the correct implementation, and report the event.
-            if( !mInCall ) {
-                Log.d(TAG, "FSI: NO_FSI_NO_HUN_OR_KEYGUARD " + entry.getSbn());
-                return getDecisionGivenSuppression(FullScreenIntentDecision.NO_FSI_NO_HUN_OR_KEYGUARD,
+            //if( !mInCall ) {
+            Log.d(TAG, "FSI: NO_FSI_NO_HUN_OR_KEYGUARD " + entry.getSbn());
+            return getDecisionGivenSuppression(FullScreenIntentDecision.NO_FSI_NO_HUN_OR_KEYGUARD,
                         suppressedByDND);
-            }
+            //}
         }
 
         // If the notification won't HUN for some other reason (DND/snooze/etc), launch FSI.

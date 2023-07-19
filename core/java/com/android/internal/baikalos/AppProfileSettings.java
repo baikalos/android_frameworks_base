@@ -395,7 +395,9 @@ public class AppProfileSettings extends ContentObserver {
                 AppProfile profile = AppProfile.deserializeProfile(profileString);
                 if( profile != null  ) {
                     if( profile.mPackageName.equals(packageName) ) 
-                        return updateProfileFromSystemWhitelistStatic(profile,context);
+                        return profile;
+                        //return updateProfileFromSystemWhitelistStatic(profile,context);
+                    
                 }
             }
         } catch (Exception e) {

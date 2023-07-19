@@ -2849,7 +2849,7 @@ public final class PowerManagerService extends SystemService
 
     private boolean updateAodOnChargerStatus() {
 
-        Slog.i(TAG, "updateAodOnChargerStatus");
+        if (DEBUG) Slog.i(TAG, "updateAodOnChargerStatus");
         final ContentResolver resolver = mContext.getContentResolver();
 
         boolean enabled = Settings.Secure.getIntForUser(resolver,
@@ -4435,7 +4435,7 @@ public final class PowerManagerService extends SystemService
             }
             mDeviceIdleMode = enabled;
             updateWakeLockDisabledStatesLocked();
-            setPowerModeInternal(MODE_DEVICE_IDLE, mDeviceIdleMode || mLightDeviceIdleMode);
+            //setPowerModeInternal(MODE_DEVICE_IDLE, mDeviceIdleMode || mLightDeviceIdleMode);
         }
         if (enabled) {
             EventLogTags.writeDeviceIdleOnPhase("power");
@@ -4449,7 +4449,7 @@ public final class PowerManagerService extends SystemService
         synchronized (mLock) {
             if (mLightDeviceIdleMode != enabled) {
                 mLightDeviceIdleMode = enabled;
-                setPowerModeInternal(MODE_DEVICE_IDLE, mDeviceIdleMode || mLightDeviceIdleMode);
+                //setPowerModeInternal(MODE_DEVICE_IDLE, mDeviceIdleMode || mLightDeviceIdleMode);
                 return true;
             }
             return false;
@@ -4811,6 +4811,7 @@ public final class PowerManagerService extends SystemService
         if (mode == Mode.LAUNCH && enabled && mBatterySaverController.isLaunchBoostDisabled()) {
             return false;
         }
+        Slog.d(TAG, "setPowerModeInternal: mode=" + mode + " enabled=" +enabled, new Throwable());
         return mNativeWrapper.nativeSetPowerMode(mode, enabled);
     }
 

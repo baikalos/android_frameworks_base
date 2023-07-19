@@ -898,6 +898,8 @@ public class DisplayRotation {
                     userRotationMode == WindowManagerPolicy.USER_ROTATION_LOCKED ? 0 : 1;
             Settings.System.putIntForUser(res, Settings.System.ACCELEROMETER_ROTATION,
                     accelerometerRotation, UserHandle.USER_CURRENT);
+            Settings.System.putIntForUser(res, Settings.System.ACCELEROMETER_ROTATION_DEFAULT,
+                    accelerometerRotation, UserHandle.USER_CURRENT);
             Settings.System.putIntForUser(res, Settings.System.USER_ROTATION, userRotation,
                     UserHandle.USER_CURRENT);
             return;
@@ -2107,6 +2109,9 @@ public class DisplayRotation {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.ACCELEROMETER_ROTATION), false, this,
+                    UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.ACCELEROMETER_ROTATION_DEFAULT), false, this,
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.ACCELEROMETER_ROTATION_ANGLES), false, this,

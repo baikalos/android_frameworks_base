@@ -165,6 +165,9 @@ public class AppProfileManager {
     private int mDefaultPerformanceProfile;
     private int mDefaultThermalProfile;
 
+    private int mDefaultIdlePerformanceProfile;
+    private int mDefaultIdleThermalProfile;
+
     private boolean mSmartBypassChargingEnabled;
     private boolean mBypassChargingForced;
     private boolean mBypassChargingScreenOn;
@@ -239,6 +242,14 @@ public class AppProfileManager {
 
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEFAULT_THERMAL),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEFAULT_IDLE_PERFORMANCE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEFAULT_IDLE_THERMAL),
                     false, this);
 
                 mResolver.registerContentObserver(
@@ -404,7 +415,6 @@ public class AppProfileManager {
 
         int defaultPerformanceProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_PERFORMANCE, -1);
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading performance profile=" + defaultPerformanceProfile);
-
         if( mDefaultPerformanceProfile != defaultPerformanceProfile ) {
             mDefaultPerformanceProfile = defaultPerformanceProfile;
             changed = true;
@@ -414,6 +424,20 @@ public class AppProfileManager {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading thermal profile=" + defaultThermalProfile);
         if( mDefaultThermalProfile != defaultThermalProfile ) {
             mDefaultThermalProfile = defaultThermalProfile;
+            changed = true;
+        }
+
+        int defaultIdlePerformanceProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_IDLE_PERFORMANCE, -1);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading idle performance profile=" + defaultIdlePerformanceProfile);
+        if( mDefaultIdlePerformanceProfile != defaultIdlePerformanceProfile ) {
+            mDefaultIdlePerformanceProfile = defaultIdlePerformanceProfile;
+            changed = true;
+        }
+
+        int defaultIdleThermalProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_IDLE_THERMAL, -1);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading idle thermal profile=" + defaultIdleThermalProfile);
+        if( mDefaultIdleThermalProfile != defaultIdleThermalProfile ) {
+            mDefaultIdleThermalProfile = defaultIdleThermalProfile;
             changed = true;
         }
 
@@ -585,13 +609,11 @@ public class AppProfileManager {
 
     protected void activateIdleProfileLocked(boolean force) {
 
-        int thermMode = mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile;
+        int thermMode = mDefaultIdleThermalProfile <= 0 ?  1 : mDefaultIdleThermalProfile;
         if( force || thermMode != mActiveThermProfile ) activateThermalProfile(thermMode);
 
-        int perfMode = MODE_DEVICE_IDLE;
-        if( mDeviceIdleMode ) {
-            perfMode = MODE_DEVICE_IDLE;
-        }
+        int perfMode = mDefaultIdlePerformanceProfile <= 0 ? MODE_DEVICE_IDLE : mDefaultIdlePerformanceProfile;
+
         try {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", idle=" + mDeviceIdleMode + ", screen=" + mScreenMode);
             if( force || perfMode != mActivePerfProfile ) activatePowerMode(perfMode, true);
@@ -669,7 +691,7 @@ public class AppProfileManager {
 	    if( enable ) {
             if( mActivePerfProfile != -1 ) {
                 try {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + mActivePerfProfile + ", deactivating");
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + mActivePerfProfile + ", deactivating previous");
                     //activatePowerMode(mActivePerfProfile,false);
                     mPowerManager.setPowerMode(mActivePerfProfile, false);
                     mActivePerfProfile = -1;
@@ -685,9 +707,11 @@ public class AppProfileManager {
         try {
             mPowerManager.setPowerMode(mode, enable);
             if( enable ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + mode + ", activating");
                 SystemPropertiesSet("baikal.power.perf",Integer.toString(mode));
                 mActivePerfProfile = mode;
             } else {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + mode + ", deactivating");
                 SystemPropertiesSet("baikal.power.perf","-1");
 		        mActivePerfProfile = -1;
             }
@@ -921,9 +945,30 @@ public class AppProfileManager {
         setRotationLock(rotation);
     }
 
-    private void setRotationLock(final int rotation) {
+    private void setRotationLock(final int rotation) {  
+
+        int autoRotationMode = 0;
+
+        final int currentAutoRotationMode = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.ACCELEROMETER_ROTATION,
+                    0, UserHandle.USER_CURRENT);
+
+        if( rotation == -1 ) {
+            autoRotationMode = Settings.System.getIntForUser(mContext.getContentResolver(), Settings.System.ACCELEROMETER_ROTATION_DEFAULT,
+                    0, UserHandle.USER_CURRENT);
+        } else if ( rotation == 0 ) {
+            autoRotationMode = 1;
+        } else {
+            autoRotationMode = 0;
+        }
+
+        if( currentAutoRotationMode != autoRotationMode ) { 
+            Settings.System.putIntForUser(mContext.getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, 
+                    autoRotationMode, UserHandle.USER_CURRENT);
+        }
+
         Settings.Global.putInt(mContext.getContentResolver(),
                         Settings.Global.BAIKALOS_DEFAULT_ROTATION,rotation);
+
     }
 
     public boolean isPhoneCall() {

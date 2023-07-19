@@ -21,6 +21,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.IDeviceIdleController;
+import android.os.DeviceIdleManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
@@ -41,7 +42,7 @@ public class PowerWhitelistBackend {
 
     private static final String DEVICE_IDLE_SERVICE = "deviceidle";
 
-    private static PowerWhitelistBackend sInstance;
+    private static PowerWhitelistBackend sInstance = null;
 
     private final Context mAppContext;
     private final IDeviceIdleController mDeviceIdleService;
@@ -51,13 +52,16 @@ public class PowerWhitelistBackend {
     private final ArraySet<String> mDefaultActiveApps = new ArraySet<>();
 
     public PowerWhitelistBackend(Context context) {
-        this(context, IDeviceIdleController.Stub.asInterface(
-                ServiceManager.getService(DEVICE_IDLE_SERVICE)));
+        this(context, IDeviceIdleController.Stub.asInterface(ServiceManager.getService(DEVICE_IDLE_SERVICE)));
     }
 
     PowerWhitelistBackend(Context context, IDeviceIdleController deviceIdleService) {
         mAppContext = context; 
         mDeviceIdleService = deviceIdleService;
+        if (mDeviceIdleService == null) {
+            Log.w(TAG, "mDeviceIdleService = null!!!!!!!!!! (ctor)", new Throwable());
+            return;
+        }
     }
 
     public int getWhitelistSize() {
@@ -149,7 +153,7 @@ public class PowerWhitelistBackend {
         mWhitelistedApps.clear();
         Log.w(TAG, "refreshList: update=" + update);
         if (mDeviceIdleService == null) {
-            Log.w(TAG, "mDeviceIdleService = null!!!!!!!!!!");
+            Log.w(TAG, "mDeviceIdleService = null!!!!!!!!!!", new Throwable());
             return;
         }
         try {
