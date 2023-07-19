@@ -835,6 +835,20 @@
     <protected-broadcast android:name="com.android.server.app.AppLockManagerService.APP_LOCK_TIMEOUT" />
     <protected-broadcast android:name="android.app.action.UNLOCK_APP" />
 
+    <!-- BaikalOS broadcasts -->
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_IDLE_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_POWER_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_CHARGER_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_STAMINA_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_SCREEN_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_READER_MODE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_TOP_APP_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_BRIGHTNESS_OVERRIDE" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_BLUETOOTH_DEVICE_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_NET_WIFI_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_NET_MOBILE_DATA_CHANGED" />
+    <protected-broadcast android:name="com.android.internal.baikalos.Actions.ACTION_WAKEFULNESS_CHANGED" />
+
     <!-- ====================================================================== -->
     <!--                          RUNTIME PERMISSIONS                           -->
     <!-- ====================================================================== -->

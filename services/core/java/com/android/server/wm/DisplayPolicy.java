@@ -557,28 +557,28 @@ public class DisplayPolicy {
 
                     @Override
                     public void onVerticalFling(int duration) {
-                        if (mService.mPowerManagerInternal != null) {
+                        /*if (mService.mPowerManagerInternal != null) {
                             mService.mPowerManagerInternal.setPowerBoost(
-                                    Boost.INTERACTION, duration + 320);
-                        }
+                                    Boost.INTERACTION, duration + 160);
+                        }*/
                     }
 
                     @Override
                     public void onHorizontalFling(int duration) {
-                        if (mService.mPowerManagerInternal != null) {
+                        /*if (mService.mPowerManagerInternal != null) {
                             mService.mPowerManagerInternal.setPowerBoost(
                                     Boost.INTERACTION, duration + 160);
-                        }
+                        }*/
                     }
 
                     @Override
                     public void onScroll(boolean started) {
-                    	if (started) {
-                          if (mService.mPowerManagerInternal != null) {
-                              mService.mPowerManagerInternal.setPowerBoost(
-                                     Boost.DISPLAY_UPDATE_IMMINENT, 500);
-                         }
-                        }
+                    	//if (started) {
+                            if (mService.mPowerManagerInternal != null) {
+                                //mService.mPowerManagerInternal.setPowerBoost(
+                                //        Boost.INTERACTION, 160);
+                            }
+                        //}
                     }
 
                     @Override

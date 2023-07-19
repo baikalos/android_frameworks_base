@@ -452,7 +452,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
 
         final PowerManagerInternal pmi = LocalServices.getService(PowerManagerInternal.class);
         if (pmi != null) {
-            pmi.setPowerMode(Mode.LOW_POWER, isEnabled());
+            //pmi.setPowerMode(Mode.LOW_POWER, isEnabled());
         }
 
         updateBatterySavingStats();
