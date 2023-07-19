@@ -2790,6 +2790,22 @@ public class AppOpsService extends IAppOpsService.Stub {
         verifyIncomingOp(code);
         verifyIncomingPackage(packageName, UserHandle.getUserId(uid));
 
+        if( code == AppOpsManager.OP_MANAGE_EXTERNAL_STORAGE ) {
+            Slog.e(TAG, "setMode OP_MANAGE_EXTERNAL_STORAGE for " + packageName + "/" + uid + " to " + mode, new Throwable());
+        }
+
+        if( code == AppOpsManager.OP_READ_SMS ) {
+            Slog.e(TAG, "setMode OP_READ_SMS for " + packageName + "/" + uid + " to " + mode, new Throwable());
+        }
+
+        if( code == AppOpsManager.OP_RECEIVE_SMS ) {
+            Slog.e(TAG, "setMode OP_RECEIVE_SMS for " + packageName + "/" + uid + " to " + mode, new Throwable());
+        }
+
+        if( code == AppOpsManager.OP_ACCESS_NOTIFICATIONS ) {
+            Slog.e(TAG, "setMode OP_ACCESS_NOTIFICATIONS for " + packageName + "/" + uid + " to " + mode, new Throwable());
+        }
+
         ArraySet<ModeCallback> repCbs = null;
         code = AppOpsManager.opToSwitch(code);
 

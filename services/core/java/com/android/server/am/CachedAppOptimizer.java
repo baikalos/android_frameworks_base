@@ -134,7 +134,8 @@ public final class CachedAppOptimizer {
     // Format of this string should be a comma separated list of integers.
     @VisibleForTesting static final String DEFAULT_COMPACT_PROC_STATE_THROTTLE =
             String.valueOf(ActivityManager.PROCESS_STATE_RECEIVER);
-    @VisibleForTesting static final long DEFAULT_FREEZER_DEBOUNCE_TIMEOUT = 600_000L;
+    //@VisibleForTesting static final long DEFAULT_FREEZER_DEBOUNCE_TIMEOUT = 600_000L;
+    @VisibleForTesting static final long DEFAULT_FREEZER_DEBOUNCE_TIMEOUT = 30_000L;
 
     @VisibleForTesting static final Uri CACHED_APP_FREEZER_ENABLED_URI = Settings.Global.getUriFor(
                 Settings.Global.CACHED_APPS_FREEZER_ENABLED);
@@ -684,7 +685,7 @@ public final class CachedAppOptimizer {
      * @return true if the operation completed successfully, false otherwise.
      */
     public synchronized boolean enableFreezer(boolean enable) {
-        if (!mUseFreezer) {
+        if (!mUseFreezer && enable) {
             return false;
         }
 
@@ -786,9 +787,9 @@ public final class CachedAppOptimizer {
                 Slog.e(TAG_AM, "unexpected value in cgroup.freeze");
             }
         } catch (java.io.FileNotFoundException e) {
-            Slog.w(TAG_AM, "cgroup.freeze not present");
+            Slog.w(TAG_AM, "cgroup.freeze not present",e);
         } catch (RuntimeException e) {
-            Slog.w(TAG_AM, "unable to read freezer info");
+            Slog.w(TAG_AM, "unable to read freezer info",e);
         } catch (Exception e) {
             Slog.w(TAG_AM, "unable to read cgroup.freeze: " + e.toString());
         }
@@ -813,9 +814,10 @@ public final class CachedAppOptimizer {
         final String configOverride = Settings.Global.getString(mAm.mContext.getContentResolver(),
                 Settings.Global.CACHED_APPS_FREEZER_ENABLED);
 
-        if ("disabled".equals(configOverride)) {
+        if ("disabled".equals(configOverride) || "0".equals(configOverride)) {
             mUseFreezer = false;
-        } else if ("enabled".equals(configOverride)
+        } else if ("enabled".equals(configOverride) 
+                || "1".equals(configOverride)
                 || DeviceConfig.getBoolean(DeviceConfig.NAMESPACE_ACTIVITY_MANAGER_NATIVE_BOOT,
                     KEY_USE_FREEZER, DEFAULT_USE_FREEZER)) {
             mUseFreezer = isFreezerSupported();
@@ -1000,13 +1002,13 @@ public final class CachedAppOptimizer {
 
     @GuardedBy("mPhenotypeFlagLock")
     private void updateFreezerDebounceTimeout() {
-        mFreezerDebounceTimeout = DeviceConfig.getLong(
-                DeviceConfig.NAMESPACE_ACTIVITY_MANAGER_NATIVE_BOOT,
-                KEY_FREEZER_DEBOUNCE_TIMEOUT, DEFAULT_FREEZER_DEBOUNCE_TIMEOUT);
+        //mFreezerDebounceTimeout = DeviceConfig.getLong(
+        //        DeviceConfig.NAMESPACE_ACTIVITY_MANAGER_NATIVE_BOOT,
+        //        KEY_FREEZER_DEBOUNCE_TIMEOUT, DEFAULT_FREEZER_DEBOUNCE_TIMEOUT);
 
-        if (mFreezerDebounceTimeout < 0) {
+        //if (mFreezerDebounceTimeout < 0) {
             mFreezerDebounceTimeout = DEFAULT_FREEZER_DEBOUNCE_TIMEOUT;
-        }
+        //}
     }
 
     private boolean parseProcStateThrottle(String procStateThrottleString) {
@@ -1673,11 +1675,31 @@ public final class CachedAppOptimizer {
             final ProcessCachedOptimizerRecord opt = proc.mOptRecord;
 
             opt.setPendingFreeze(false);
+    
+            boolean shouldFreeze = false;
+
+            if (mAm.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE ) {
+                if( proc.mState.getCurAdj() >= ProcessList.HOME_APP_ADJ ) shouldFreeze = true;
+                /*if( !shouldFreeze 
+                    && mAm.mAppProfileManager.isExtreme()
+                    && proc.mState.getCurAdj() >= ProcessList.PERCEPTIBLE_LOW_APP_ADJ
+                    && proc.mState.getCurrentSchedulingGroup() == ProcessList.SCHED_GROUP_BACKGROUND ) {
+                        shouldFreeze = true;
+                }*/
+            } else {
+                if( proc.mState.getCurAdj() >= ProcessList.CACHED_APP_MIN_ADJ ) shouldFreeze = true;
+                /*if( !shouldFreeze 
+                    && mAm.mAppProfileManager.isExtreme()
+                    && proc.mState.getCurAdj() > ProcessList.HOME_APP_ADJ ) {
+                        shouldFreeze = true;
+                }*/
+            }
+
 
             synchronized (mProcLock) {
                 pid = proc.getPid();
-                if (proc.mState.getCurAdj() < ProcessList.CACHED_APP_MIN_ADJ
-                        || opt.shouldNotFreeze()) {
+                if (/*proc.mState.getCurAdj() < ProcessList.CACHED_APP_MIN_ADJ
+                        ||*/  !shouldFreeze  || opt.shouldNotFreeze()) {
                     if (DEBUG_FREEZER) {
                         Slog.d(TAG_AM, "Skipping freeze for process " + pid
                                 + " " + name + " curAdj = " + proc.mState.getCurAdj()

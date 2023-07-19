@@ -3967,8 +3967,13 @@
   <java-symbol type="bool" name="config_enableIdleScreenBrightnessMode" />
   <java-symbol type="array" name="config_autoBrightnessDisplayValuesNits" />
   <java-symbol type="array" name="config_autoBrightnessDisplayValuesNitsIdle" />
-  <java-symbol type="array" name="config_screenBrightnessBacklight" />
   <java-symbol type="array" name="config_screenBrightnessNits" />
+  <java-symbol type="array" name="config_screenBrightnessBacklight" />
+  <java-symbol type="array" name="config_screenBrightnessBacklight1" />
+  <java-symbol type="array" name="config_screenBrightnessBacklight2" />
+  <java-symbol type="array" name="config_screenBrightnessBacklight3" />
+  <java-symbol type="array" name="config_screenBrightnessBacklight4" />
+  <java-symbol type="array" name="config_screenBrightnessBacklight5" />
 
   <java-symbol type="string" name="shortcut_disabled_reason_unknown" />
 

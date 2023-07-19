@@ -93,6 +93,13 @@ abstract class DisplayDevice {
         return mDisplayDeviceConfig;
     }
 
+    public DisplayDeviceConfig getDisplayDeviceConfig(boolean force) {
+        if (mDisplayDeviceConfig == null || force) {
+            mDisplayDeviceConfig = loadDisplayDeviceConfig();
+        }
+        return mDisplayDeviceConfig;
+    }
+
     /**
      * Gets the Surface Flinger display token for this display.
      *
