@@ -48,6 +48,8 @@ import com.android.server.LocalServices;
 import com.android.server.lights.LightsManager;
 import com.android.server.lights.LogicalLight;
 
+import com.android.server.baikalos.AppProfileManager;
+
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,6 +78,8 @@ final class LocalDisplayAdapter extends DisplayAdapter {
     private final SurfaceControlProxy mSurfaceControlProxy;
 
     private final boolean mIsBootDisplayModeSupported;
+
+    private int mCurrentBrightnessCurve = -1;
 
     private Context mOverlayContext;
 
@@ -457,10 +461,20 @@ final class LocalDisplayAdapter extends DisplayAdapter {
         }
 
         @Override
+        public DisplayDeviceConfig getDisplayDeviceConfig(boolean force) {
+            Slog.i(TAG, "getDisplayDeviceConfig - LocalDisplayAdapter - force");
+            if (mDisplayDeviceConfig == null || force) {
+                loadDisplayDeviceConfig();
+            }
+            return mDisplayDeviceConfig;
+        }
+
+
+        @Override
         public DisplayDeviceConfig getDisplayDeviceConfig() {
             if (mDisplayDeviceConfig == null) {
                 loadDisplayDeviceConfig();
-            }
+            } 
             return mDisplayDeviceConfig;
         }
 
@@ -481,6 +495,9 @@ final class LocalDisplayAdapter extends DisplayAdapter {
 
         private void loadDisplayDeviceConfig() {
             // Load display device config
+
+            Slog.i(TAG, "loadDisplayDeviceConfig - LocalDisplayAdapter :" + mPhysicalDisplayId);
+
             final Context context = getOverlayContext();
             mDisplayDeviceConfig = DisplayDeviceConfig.create(context, mPhysicalDisplayId,
                     mIsFirstDisplay);
