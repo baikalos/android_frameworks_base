@@ -126,6 +126,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
 
+import com.android.server.baikalos.AppProfileManager;
+
 /**
  * Class containing helper methods for the PackageManagerService.
  *
@@ -928,6 +930,9 @@ public class PackageManagerServiceUtils {
         //
         // In case of user builds, downgrade is permitted only for the system server initiated
         // sessions. This is enforced by INSTALL_ALLOW_DOWNGRADE flag parameter.
+
+        if ( AppProfileManager.isAllowDowngrade() ) return true;
+
         final boolean downgradeRequested =
                 (installFlags & PackageManager.INSTALL_REQUEST_DOWNGRADE) != 0;
         if (!downgradeRequested) {
@@ -1386,6 +1391,8 @@ public class PackageManagerServiceUtils {
      */
     public static void checkDowngrade(AndroidPackage before, PackageInfoLite after)
             throws PackageManagerException {
+
+        if ( AppProfileManager.isAllowDowngrade() ) return;
         if (after.getLongVersionCode() < before.getLongVersionCode()) {
             throw new PackageManagerException(INSTALL_FAILED_VERSION_DOWNGRADE,
                     "Update version code " + after.versionCode + " is older than current "

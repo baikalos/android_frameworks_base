@@ -43,6 +43,16 @@ import com.android.systemui.qs.tiles.VpnTile
 import com.android.systemui.qs.tiles.WeatherTile
 import com.android.systemui.qs.tiles.WifiTile
 
+/* BaikalOS tiles */
+
+import com.android.systemui.qs.tiles.BypassChargingTile
+import com.android.systemui.qs.tiles.BoostTile
+import com.android.systemui.qs.tiles.CPUInfoLiteTile
+import com.android.systemui.qs.tiles.StaminaModeTile
+
+/* End of BaikalOS tiles */
+
+
 import dagger.Binds
 import dagger.Module
 import dagger.multibindings.IntoMap
@@ -199,4 +209,29 @@ interface LineageModule {
     @IntoMap
     @StringKey(WifiTile.TILE_SPEC)
     fun bindWifiTile(wifiTile: WifiTile): QSTileImpl<*>
+
+    /** Inject BypassChargingTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(BypassChargingTile.TILE_SPEC)
+    fun bindBypassChargingTile(bypassChargingTile: BypassChargingTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(BoostTile.TILE_SPEC)
+    fun bindBoostTile(boostTile: BoostTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(CPUInfoLiteTile.TILE_SPEC)
+    fun bindCPUInfoLiteTile(cpuInfoLiteTile: CPUInfoLiteTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(StaminaModeTile.TILE_SPEC)
+    fun bindStaminaModeTile(staminaModeTile: StaminaModeTile): QSTileImpl<*>
+
 }

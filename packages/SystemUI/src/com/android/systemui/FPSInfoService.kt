@@ -73,6 +73,7 @@ class FPSInfoService @Inject constructor(
     }
 
     private lateinit var fpsInfoNode: RandomAccessFile
+    private var fpsInfoBaikal: Boolean = false
 
     private var fpsReadJob: Job? = null
 
@@ -105,9 +106,19 @@ class FPSInfoService @Inject constructor(
             setPadding(padding, padding, padding, padding)
         }
 
+        val nodePathBaikal = getString(R.string.config_fpsInfoSysNodeBaikal)
+        try {
+            fpsInfoNode = RandomAccessFile(nodePathBaikal, "r")
+            fpsInfoBaikal = true
+            return
+        } catch (e: FileNotFoundException) {
+        }
+
+
         val nodePath = getString(R.string.config_fpsInfoSysNode)
         try {
             fpsInfoNode = RandomAccessFile(nodePath, "r")
+            fpsInfoBaikal = false
         } catch (e: FileNotFoundException) {
             Log.e(TAG, "Sysfs node $nodePath does not exist, stopping service")
             stopSelf()
@@ -137,13 +148,14 @@ class FPSInfoService @Inject constructor(
         .windowInsets.getInsets(WindowInsets.Type.statusBars()).top
 
     private fun startReading() {
+        if (fpsInfoNode == null) return
         if (fpsReadJob != null) return
         if (fpsInfoView.parent == null) windowManager.addView(fpsInfoView, layoutParams)
         fpsReadJob = coroutineScope.launch {
             do {
-                val fps = measureFps()
+                val fps = if( fpsInfoBaikal ) measureFpsBaikal() else measureFpsOs();
                 handler.post {
-                    fpsInfoView.text = getString(R.string.fps_text_placeholder, fps)
+                    fpsInfoView.text = fps; // getString(R.string.fps_text_placeholder, fps)
                 }
                 delay(fpsReadInterval)
             } while (isActive)
@@ -157,24 +169,40 @@ class FPSInfoService @Inject constructor(
         if (fpsInfoView.parent != null) windowManager.removeViewImmediate(fpsInfoView)
     }
 
-    private fun measureFps(): Int {
-        fpsInfoNode.seek(0L)
+    private fun measureFpsOs(): String {
         val measuredFps: String
+        val measuredFpsNullable: String?
         try {
-            measuredFps = fpsInfoNode.readLine()
-        } catch (e: IOException) {
+            fpsInfoNode?.seek(0L)
+            measuredFpsNullable = fpsInfoNode?.readLine()
+            if( measuredFpsNullable == null ) return ""
+            measuredFps = measuredFpsNullable.toString()
+        } catch (e: Throwable) {
             Log.e(TAG, "IOException while reading from FPS node, ${e.message}")
-            return -1
+            return ""
         }
         try {
             val fps: Float = measuredFps.trim().let {
                 if (it.contains(": ")) it.split("\\s+".toRegex())[1] else it
             }.toFloat()
-            return fps.roundToInt()
+            return fps.roundToInt().toString();
         } catch (e: NumberFormatException) {
             Log.e(TAG, "NumberFormatException occurred while parsing FPS info, ${e.message}")
         }
-        return -1
+        return ""
+    }
+
+    private fun measureFpsBaikal(): String {
+        val measuredFps: String?
+        try {
+            fpsInfoNode?.seek(0L)
+            measuredFps = fpsInfoNode?.readLine()
+            return if( measuredFps == null ) "" else measuredFps;
+        } catch (e: Throwable) {
+            Log.e(TAG, "IOException while reading from FPS node, ${e.message}")
+            return ""
+        }
+        return ""
     }
 
     override fun onDestroy() {
@@ -193,7 +221,7 @@ class FPSInfoService @Inject constructor(
 
     private companion object {
         private const val TAG = "FPSInfoService"
-        private const val FPS_MEASURE_INTERVAL_DEFAULT = 1000L
+        private const val FPS_MEASURE_INTERVAL_DEFAULT = 500L
 
         private const val BACKGROUND_ALPHA = 120
     }

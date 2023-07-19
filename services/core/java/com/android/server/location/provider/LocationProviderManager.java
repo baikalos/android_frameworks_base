@@ -2191,13 +2191,23 @@ public class LocationProviderManager extends
                     }
                     break;
                 case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF:
+                    if (registration.isForeground()) {
+                        break;
+                    }
                     if (!GPS_PROVIDER.equals(mName)) {
                         break;
                     }
-                    // fall through
+                    if (!mScreenInteractiveHelper.isInteractive()) {
+                        return false;
+                    }
+                    break;
+
                 case LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF:
-                    // fall through
                 case LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF:
+                    // fall through
+                    if (!registration.isForeground()) {
+                        return false;
+                    }
                     if (!mScreenInteractiveHelper.isInteractive()) {
                         return false;
                     }
