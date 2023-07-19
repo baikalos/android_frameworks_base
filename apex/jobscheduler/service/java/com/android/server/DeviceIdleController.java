@@ -2399,6 +2399,8 @@ public class DeviceIdleController extends SystemService
 
                     mPowerSaveWhitelistAppsExceptIdle.put(ai.packageName, appid);
                     mPowerSaveWhitelistSystemAppIdsExceptIdle.put(appid, true);
+                    mPowerSaveWhitelistApps.put(ai.packageName, appid);
+                    mPowerSaveWhitelistSystemAppIds.put(appid, true);
                 } catch (PackageManager.NameNotFoundException e) {
                 }
             }
@@ -4338,7 +4340,8 @@ public class DeviceIdleController extends SystemService
     private void passWhiteListsToForceAppStandbyTrackerLocked() {
         mAppStateTracker.setPowerSaveExemptionListAppIds(
                 mPowerSaveWhitelistSystemAppIdArray,
-                mPowerSaveWhitelistExceptIdleAppIdArray,
+                /*mPowerSaveWhitelistExceptIdleAppIdArray,*/
+                mPowerSaveWhitelistAllAppIdArray,
                 mPowerSaveWhitelistUserAppIdArray,
                 mTempWhitelistAppIdArray);
     }
