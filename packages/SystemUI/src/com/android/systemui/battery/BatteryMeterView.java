@@ -25,8 +25,10 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.text.TextUtils;
@@ -114,6 +116,9 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
     private BatteryEstimateFetcher mBatteryEstimateFetcher;
 
+    private SettingsObserver mSettingsObserver;
+    private final Handler mHandler = new Handler();
+
     public BatteryMeterView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
@@ -168,7 +173,26 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
         setClipChildren(false);
         setClipToPadding(false);
+
+        mSettingsObserver = new SettingsObserver(mHandler);
     }
+
+
+    private class SettingsObserver extends ContentObserver {
+        SettingsObserver(Handler handler) {
+            super(handler);
+
+            mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_CHARGING_MODE), false, this);
+        }
+
+        @Override
+        public void onChange(boolean selfChange) {
+            updateBatteryStyle();
+        }
+    }
+
+
 
     private boolean isNightMode() {
         return (mContext.getResources().getConfiguration().uiMode
@@ -378,8 +402,18 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             // Use the high voltage symbol ⚡ (u26A1 unicode) but prevent the system
             // to load its emoji colored variant with the uFE0E flag
             String bolt = "\u26A1\uFE0E";
+            String brick = "\u26D4"; // "\uFE0E";
+            String exclamation = "\u26A0"; // "\uFE0E";
+
             CharSequence mChargeIndicator = mCharging && (mBatteryStyle == BATTERY_STYLE_HIDDEN ||
                     mBatteryStyle == BATTERY_STYLE_TEXT) ? (bolt + " ") : "";
+            
+            if( mCharging ) {
+                int mode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_CHARGING_MODE, 0);
+                if( mode ==  1 ) mChargeIndicator = brick + " ";
+                else if( mode == 2 ) mChargeIndicator = exclamation + " ";  
+            }
+
             String percentText = mChargeIndicator + text;
             // Setting text actually triggers a layout pass (because the text view is set to
             // wrap_content width and TextView always relayouts for this). Avoid needless

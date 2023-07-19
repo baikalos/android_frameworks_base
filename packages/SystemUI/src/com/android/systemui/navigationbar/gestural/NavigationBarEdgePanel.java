@@ -777,8 +777,8 @@ public class NavigationBarEdgePanel extends View implements NavigationEdgeBackPl
         if (!mDragSlopPassed && touchTranslation > mSwipeTriggerThreshold) {
             mDragSlopPassed = true;
             if (mEdgeHapticEnabled) {
-                mVibratorHelper.vibrate(VibrationEffect.EFFECT_TICK);
-                mVibrationTime = SystemClock.uptimeMillis();
+                //mVibratorHelper.vibrate(VibrationEffect.EFFECT_TICK);
+                //mVibrationTime = SystemClock.uptimeMillis();
             }
 
             // Let's show the arrow and animate it in!
