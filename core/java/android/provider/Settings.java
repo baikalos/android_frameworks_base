@@ -37,6 +37,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.SearchManager;
 import android.app.WallpaperManager;
+import android.baikalos.AppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -3060,6 +3061,9 @@ public final class Settings {
             // Settings.Global and is not annotated as @Readable.
             // Notice that a key string that is not defined in any of the Settings.* classes will
             // still be regarded as readable.
+
+            if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name);
+
             if (!isCallerExemptFromReadableRestriction() && mAllFields.contains(name)) {
                 if (!mReadableFields.contains(name)) {
                     throw new SecurityException(
@@ -3741,6 +3745,16 @@ public final class Settings {
         @UnsupportedAppUsage
         public static String getStringForUser(ContentResolver resolver, String name,
                 int userHandle) {
+
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    Settings.Global.ADB_ENABLED.equals(name) || 
+                    Settings.Global.ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return "0";
+                }
+            }
+
             if (MOVED_TO_SECURE.contains(name)) {
                 Log.w(TAG, "Setting " + name + " has moved from android.provider.Settings.System"
                         + " to android.provider.Settings.Secure, returning read-only value.");
@@ -5155,6 +5169,16 @@ public final class Settings {
         public static final String ACCELEROMETER_ROTATION = "accelerometer_rotation";
 
         /**
+         * Control whether the accelerometer will be used to change screen
+         * orientation.  If 0, it will not be used unless explicitly requested
+         * by the application; if 1, it will be used by default unless explicitly
+         * disabled by the application.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String ACCELEROMETER_ROTATION_DEFAULT = "accelerometer_rotation_default";
+
+        /**
          * Control the type of rotation which can be performed using the accelerometer
          * if ACCELEROMETER_ROTATION is enabled.
          * Value is a bitwise combination of
@@ -5887,6 +5911,56 @@ public final class Settings {
          */
         public static final String NOTIFICATION_MATERIAL_DISMISS = "notification_material_dismiss";
 
+		/* Start of BaikalOS System Settings */
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING = "baikalos_smart_charging";
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING_RESET_STATS = "baikalos_smart_charging_reset_stats";
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING_LEVEL = "baikalos_smart_charging_level";
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING_RESUME_LEVEL = "baikalos_smart_charging_resume_level";
+
+        
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_MINFPS = "baikalos_default_minfps";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_MAXFPS = "baikalos_default_maxfps";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BACKGROUND_BLUR_RADIUS = "background_blur_radius";
+
+
+        /* End of BaikalOS System Settings */
         /**
          * Change quick settings tiles animation style
          * @hide
@@ -6305,6 +6379,7 @@ public final class Settings {
             PUBLIC_SETTINGS.add(DATE_FORMAT);
             PUBLIC_SETTINGS.add(SETUP_WIZARD_HAS_RUN);
             PUBLIC_SETTINGS.add(ACCELEROMETER_ROTATION);
+            PUBLIC_SETTINGS.add(ACCELEROMETER_ROTATION_DEFAULT);
             PUBLIC_SETTINGS.add(USER_ROTATION);
             PUBLIC_SETTINGS.add(DTMF_TONE_WHEN_DIALING);
             PUBLIC_SETTINGS.add(SOUND_EFFECTS_ENABLED);
@@ -6421,6 +6496,7 @@ public final class Settings {
             INSTANT_APP_SETTINGS.add(TIME_12_24);
             INSTANT_APP_SETTINGS.add(SOUND_EFFECTS_ENABLED);
             INSTANT_APP_SETTINGS.add(ACCELEROMETER_ROTATION);
+            INSTANT_APP_SETTINGS.add(ACCELEROMETER_ROTATION_DEFAULT);
         }
 
         /**
@@ -9668,6 +9744,30 @@ public final class Settings {
         public static final String DOZE_ALWAYS_ON = "doze_always_on";
 
         /**
+         * Indicates whether doze should be always on.
+         * <p>
+         * Type: int (0 for false, 1 for true)
+         *
+         * @hide
+         */
+        @SystemApi
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String DOZE_ALWAYS_ON_CHARGER = "doze_always_on_charger";
+
+        /**
+         * Indicates whether doze should be always on.
+         * <p>
+         * Type: int (0 for false, 1 for true)
+         *
+         * @hide
+         */
+        @SystemApi
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String DOZE_ALWAYS_ON_CHARGER_ON = "doze_always_on_charger_on";
+
+        /**
          * Whether the device should pulse on pick up gesture.
          * @hide
          */
@@ -11750,6 +11850,12 @@ public final class Settings {
         public static final String SHOW_CPU_OVERLAY = "show_cpu_overlay";
 
         /**
+         * Control whether the process CPU info meter should be shown.
+         * @hide
+         */
+        public static final String SHOW_CPU_OVERLAY_LITE = "show_cpu_overlay_lite";
+
+        /**
          * Control whether the process FPS info meter should be shown.
          * @hide
          */
@@ -12067,6 +12173,69 @@ public final class Settings {
         public static final String EXTRA_AUTOMATIC_POWER_SAVE_MODE =
                 "extra_automatic_power_save_mode";
 
+        
+        /* Start of BaikalOS Secure Settings */
+
+        /**
+         * BaikalOS Trust Settings
+         * @hide
+         */
+
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_ENABLED = "baikalos_trust_enabled";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_ALWAYS = "baikalos_trust_always";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_BTLE_DEV = "baikalos_trust_btle_dev";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_WIFI_DEV = "baikalos_trust_wifi_dev";
+
+        /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String GMS_ENABLED = "gms_enabled";
+
+        /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String HMS_ENABLED = "hms_enabled";
+
+        /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String FDROID_ENABLED = "fdroid_enabled";
+
+        /**
+         * Control whether GMS is enabled for this user.
+         * @hide
+         */
+        public static final String AURORA_ENABLED = "aurora_enabled";
+        
+        
+        /* End of BaikalOS Secure Settings */
+        
+
         /**
          * Whether lockscreen weather is enabled.
          *
@@ -12086,12 +12255,6 @@ public final class Settings {
          * @hide
          */
         public static final String FACE_UNLOCK_METHOD = "face_unlock_method";
-
-        /**
-         * Control whether GMS is enabled for this user.
-         * @hide
-         */
-        public static final String GMS_ENABLED = "gms_enabled";
 
         /**
          * Whether to enable DOZE only when charging
@@ -17053,6 +17216,290 @@ public final class Settings {
                 CLOCKWORK_HOME_READY,
         };
 
+        /* Start of BaikalOS Global Settings */
+
+        /**
+         * This preference enables Debug
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEBUG = "baikalos_debug";
+
+        /**
+         * This preference DebugMask
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEBUG_MASK = "baikalos_debug_mask";
+
+        /**
+         * This preference enables Aggressive Idle.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_AGGRESSIVE_IDLE = "baikalos_aggressive_idle";
+
+        /**
+         * This preference enables Extreme Idle.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_EXTREME_IDLE = "baikalos_extreme_idle";
+
+        /**
+         * This preference enables Aggressive Device Idle.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_AGGRESSIVE_DEVICE_IDLE = "baikalos_aggressive_device_idle";
+
+        /**
+         * This preference disables Alarm wakeups for regular apps.
+         * @hide
+         */
+        public static final String BAIKALOS_ALARMS_NOWAKE = "baikalos_alarms_no_wake";
+
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_KILL_IN_BACKGROUND = "baikalos_kill_in_background";
+
+        /**
+         * This preference enables Stamina Mode.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_STAMINA_ENABLED = "baikalos_stamina_enabled";
+
+        /**
+         * This preference enables Hide GMS powersave option.
+         * @hide
+         */
+        public static final String BAIKALOS_UNRESTRICTED_NET = "baikalos_unrestricted_net";
+
+        /**
+         * This preference holds SBC priority option.
+         * @hide
+         */
+        public static final String BAIKALOS_BT_SBC_PRIORITY = "baikalos_bt_sbc_priority";
+
+
+        /**
+         * This preference set current active routation mode
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_ROTATION = "baikalos_default_rotation";
+
+        /**
+         * This preference enabled forced fullscreen Incoming Call UI
+         * @hide
+         */
+        public static final String BAIKALOS_HEADSUP_INCALL = "baikalos_headsup_incall";
+
+        /**
+         * This preference enabled forced fullscreen UI
+         * @hide
+         */
+        public static final String BAIKALOS_HEADSUP_FORCE_FULLSCREEN = "baikalos_headsup_force_fullscreen";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_BPCHARGE_FORCE = "baikalos_bpcharge_force";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_BPCHARGE_SCREEN_ON = "baikalos_bpcharge_screen_on";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_LIMITED_CHARGE_SCREEN_ON = "baikalos_limited_charge_screen_on";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_AOD_ON_CHARGER = "baikalos_aod_on_charger";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_APP_PROFILES = "baikalos_app_profiles";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_APP_PROFILES_BACKUP = "baikalos_app_profiles_backup";
+
+        /**
+         * This preference holds app profiles.
+         * 
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_SBC_BITRATE = "baikalos_sbc_bitrate";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PROXIMITY_DISABLE = "baikalos_proximity_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_PERFORMANCE = "baikalos_default_performance";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_THERMAL = "baikalos_default_thermal";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_IDLE_PERFORMANCE = "baikalos_default_idle_performance";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_IDLE_THERMAL = "baikalos_default_idle_thermal";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_R_SECURE = "baikalos_r_secure";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_DISABLE_AUTOREVOKE = "baikalos_disable_autorevoke";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_INTERACTION_DISABLE = "baikalos_boost_interaction_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE = "baikalos_boost_display_update_imminent_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_RENDERING_DISABLE = "baikalos_boost_rendering_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_SILVER = "baikalos_boost_override_silver";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_GOLD = "baikalos_boost_override_gold";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_PLATINUM = "baikalos_boost_override_platinum";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BRIGHTNESS_CURVE = "baikalos_brightness_curve";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CHARGING_MODE = "baikalos_charging_mode";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_ALLOW_DOWNGRADE = "baikalos_allow_downgrade";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_IGNORE_ZERO_BATTERY = "baikalos_ignore_zero_battery";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_ON = "baikalos_power_level_on";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_STANDBY = "baikalos_power_level_standby";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_IDLE = "baikalos_power_level_idle";
+
+        /* End of BaikalOS Global Settings */
+
+
         /**
          * The amount of time in milliseconds before wifi is turned off
          * @hide
@@ -17151,6 +17598,16 @@ public final class Settings {
         @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
         public static String getStringForUser(ContentResolver resolver, String name,
                 int userHandle) {
+
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return "0";
+                }
+            }
+
             if (MOVED_TO_SECURE.contains(name)) {
                 Log.w(TAG, "Setting " + name + " has moved from android.provider.Settings.Global"
                         + " to android.provider.Settings.Secure, returning read-only value.");
@@ -17361,6 +17818,16 @@ public final class Settings {
          * or not a valid integer.
          */
         public static int getInt(ContentResolver cr, String name, int def) {
+
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return 0;
+                }
+            }
+
             String v = getString(cr, name);
             return parseIntSettingWithDefault(v, def);
         }
@@ -17385,6 +17852,16 @@ public final class Settings {
          */
         public static int getInt(ContentResolver cr, String name)
                 throws SettingNotFoundException {
+
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return 0;
+                }
+            }
+
             String v = getString(cr, name);
             return parseIntSetting(v, name);
         }

@@ -8799,7 +8799,7 @@ public class AppOpsManager {
     @Deprecated
     public void checkPackage(int uid, @NonNull String packageName) {
         try {
-            if (mService.checkPackage(uid, packageName) != MODE_ALLOWED) {
+            if (!"android".equals(packageName) && mService.checkPackage(uid, packageName) != MODE_ALLOWED) {
                 throw new SecurityException(
                         "Package " + packageName + " does not belong to " + uid);
             }

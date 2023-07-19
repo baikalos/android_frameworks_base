@@ -781,10 +781,11 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
      * then try the request again later until the state converges.
      */
     public boolean requestPowerState(DisplayPowerRequest request,
-            boolean waitForNegativeProximity) {
+            boolean waitForNegativeProximity, boolean useAutoBrightness) {
         if (DEBUG) {
-            Slog.d(TAG, "requestPowerState: "
-                    + request + ", waitForNegativeProximity=" + waitForNegativeProximity);
+            Slog.d(TAG, "requestPowerState: " + request + 
+                ", waitForNegativeProximity=" + waitForNegativeProximity +
+                ", useAutoBrightness=" + useAutoBrightness);
         }
 
         synchronized (mLock) {
@@ -793,6 +794,12 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
             }
 
             boolean changed = false;
+
+            if( mUseAutoBrightness != useAutoBrightness ) {
+                mUseAutoBrightness = useAutoBrightness;
+                changed = true;
+            }
+
 
             if (waitForNegativeProximity
                     && !mPendingWaitForNegativeProximityLocked) {
@@ -863,6 +870,58 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
                 // that we trigger a change immediately.
                 mPowerState.resetScreenState();
             }
+            if (mIsEnabled != isEnabled || mIsInTransition != isInTransition) {
+                changed = true;
+                mIsEnabled = isEnabled;
+                mIsInTransition = isInTransition;
+            }
+
+            if (changed) {
+                if (DEBUG) {
+                    Trace.beginAsyncSection("DisplayPowerController#updatePowerState", 0);
+                }
+                updatePowerState();
+                if (DEBUG) {
+                    Trace.endAsyncSection("DisplayPowerController#updatePowerState", 0);
+                }
+            }
+        });
+    }
+
+    /**
+     * Notified when the display is changed. We use this to apply any changes that might be needed
+     * when displays get swapped on foldable devices.  For example, different brightness properties
+     * of each display need to be properly reflected in AutomaticBrightnessController.
+     */
+    @GuardedBy("DisplayManagerService.mSyncRoot")
+    public void onDisplaySettingsChanged(HighBrightnessModeMetadata hbmMetadata) {
+        final DisplayDevice device = mLogicalDisplay.getPrimaryDisplayDeviceLocked();
+        if (device == null) {
+            Slog.wtf(TAG, "Display Device is null in DisplayPowerController for display: "
+                    + mLogicalDisplay.getDisplayIdLocked());
+            return;
+        }
+
+        final String uniqueId = device.getUniqueId();
+        final DisplayDeviceConfig config = device.getDisplayDeviceConfig(true);
+        final IBinder token = device.getDisplayTokenLocked();
+        final DisplayDeviceInfo info = device.getDisplayDeviceInfoLocked();
+        final boolean isEnabled = mLogicalDisplay.isEnabledLocked();
+        final boolean isInTransition = mLogicalDisplay.isInTransitionLocked();
+        mHandler.post(() -> {
+            boolean changed = false;
+            changed = true;
+            mDisplayDevice = device;
+            mUniqueDisplayId = uniqueId;
+            mDisplayStatsId = mUniqueDisplayId.hashCode();
+            mDisplayDeviceConfig = config;
+            loadFromDisplayDeviceConfig(token, info, hbmMetadata);
+
+            /// Since the underlying display-device changed, we really don't know the
+            // last command that was sent to change it's state. Lets assume it is unknown so
+            // that we trigger a change immediately.
+            mPowerState.resetScreenState();
+
             if (mIsEnabled != isEnabled || mIsInTransition != isInTransition) {
                 changed = true;
                 mIsEnabled = isEnabled;

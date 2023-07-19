@@ -1698,6 +1698,21 @@
     <integer-array name="config_screenBrightnessBacklight">
     </integer-array>
 
+    <integer-array name="config_screenBrightnessBacklight1">
+    </integer-array>
+
+    <integer-array name="config_screenBrightnessBacklight2">
+    </integer-array>
+
+    <integer-array name="config_screenBrightnessBacklight3">
+    </integer-array>
+
+    <integer-array name="config_screenBrightnessBacklight4">
+    </integer-array>
+
+    <integer-array name="config_screenBrightnessBacklight5">
+    </integer-array>
+
     <!-- An array of floats describing the screen brightness in nits corresponding to the backlight
          values in the config_screenBrightnessBacklight array.  On OLED displays these  values
          should be measured with an all white image while the display is in the fully on state.
@@ -4950,7 +4965,7 @@
 
     <!-- The type of the light sensor to be used by the display framework for things like
          auto-brightness. If unset, then it just gets the default sensor of type TYPE_LIGHT. -->
-    <string name="config_displayLightSensorType" translatable="false" />
+    <string name="config_displayLightSensorType" translatable="false">android.sensor.light</string>
 
     <!-- Whether or not to enable automatic heap dumps for the system server on debuggable builds. -->
     <bool name="config_debugEnableAutomaticSystemServerHeapDumps">false</bool>
