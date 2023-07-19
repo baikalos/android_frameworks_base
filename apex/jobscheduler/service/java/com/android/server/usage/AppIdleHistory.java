@@ -46,6 +46,9 @@ import android.util.SparseLongArray;
 import android.util.TimeUtils;
 import android.util.Xml;
 
+import android.baikalos.AppProfile;
+import com.android.server.baikalos.AppProfileManager;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.CollectionUtils;
 import com.android.internal.util.FastXmlSerializer;
@@ -431,6 +434,17 @@ public class AppIdleHistory {
 
     public void setAppStandbyBucket(String packageName, int userId, long elapsedRealtime,
             int bucket, int reason, boolean resetExpiryTimes) {
+        
+        if( bucket >= STANDBY_BUCKET_ACTIVE && bucket < IDLE_BUCKET_CUTOFF ) {
+            AppProfile profile = AppProfileManager.getProfile(packageName);
+            if( profile.getBackground() > 0 ) {
+                bucket = STANDBY_BUCKET_RESTRICTED;
+            }
+            if( AppProfileManager.getInstance().isStamina() && !profile.mStamina && profile.getBackground() >= 0 ) {
+                bucket = STANDBY_BUCKET_RESTRICTED;
+            }
+        } 
+
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);
         AppUsageHistory appUsageHistory =
                 getPackageHistory(userHistory, packageName, elapsedRealtime, true);

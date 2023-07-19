@@ -198,6 +198,7 @@ final class DreamController {
                     try {
                         dream.mStopReason = reason;
                         dream.mService.wakeUp();
+                        Slog.i(TAG, "Stopping dream: name=" + dream.mName + " delayed ");
                         mHandler.postDelayed(dream.mStopStubbornDreamRunnable,
                                 DREAM_FINISH_TIMEOUT);
                         return;

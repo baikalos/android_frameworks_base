@@ -18,6 +18,7 @@ package com.android.systemui.shade;
 
 import static android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;
 import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+import static android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
 import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_BEHAVIOR_CONTROLLED;
 import static android.view.WindowManager.LayoutParams.PRIVATE_FLAG_OPTIMIZE_MEASURE;
 
@@ -71,6 +72,7 @@ import com.android.systemui.statusbar.phone.StatusBarWindowCallback;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.ConfigurationController.ConfigurationListener;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
+import com.android.systemui.util.LargeScreenUtils;
 
 import lineageos.providers.LineageSettings;
 
@@ -276,6 +278,12 @@ public class NotificationShadeWindowControllerImpl implements NotificationShadeW
         mLp.setTitle("NotificationShade");
         mLp.packageName = mContext.getPackageName();
         mLp.layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+        if( LargeScreenUtils.shouldUseSplitNotificationShade(mContext.getResources()) ) {
+            Log.e(TAG, "BaikalShade: LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER");
+            mLp.layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER;
+        } else {
+            Log.e(TAG, "BaikalShade: LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS");
+        }
         mLp.privateFlags |= PRIVATE_FLAG_OPTIMIZE_MEASURE;
 
         // We use BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE here, however, there is special logic in
