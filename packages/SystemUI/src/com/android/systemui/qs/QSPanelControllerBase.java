@@ -278,21 +278,26 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
     }
 
     private void addTile(final QSTile tile, boolean collapsedView) {
-        final TileRecord r =
-                new TileRecord(tile, mHost.createTileView(getContext(), tile, collapsedView));
-        // TODO(b/250618218): Remove the QSLogger in QSTileViewImpl once we know the root cause of
-        // b/250618218.
+
         try {
-            QSTileViewImpl qsTileView = (QSTileViewImpl) (r.tileView);
-            if (qsTileView != null) {
-                qsTileView.setQsLogger(mQSLogger);
+            final TileRecord r =
+                    new TileRecord(tile, mHost.createTileView(getContext(), tile, collapsedView));
+            // TODO(b/250618218): Remove the QSLogger in QSTileViewImpl once we know the root cause of
+            // b/250618218.
+            try {
+                QSTileViewImpl qsTileView = (QSTileViewImpl) (r.tileView);
+                if (qsTileView != null) {
+                    qsTileView.setQsLogger(mQSLogger);
+                }
+            } catch (ClassCastException e) {
+                Log.e(TAG, "Failed to cast QSTileView to QSTileViewImpl", e);
             }
-        } catch (ClassCastException e) {
-            Log.e(TAG, "Failed to cast QSTileView to QSTileViewImpl", e);
+            mView.addTile(r);
+            mRecords.add(r);
+            mCachedSpecs = getTilesSpecs();
+        } catch(Exception ex) {
+            Log.e(TAG, "Failed to create tile " + tile.getClass().getSimpleName(), ex);
         }
-        mView.addTile(r);
-        mRecords.add(r);
-        mCachedSpecs = getTilesSpecs();
     }
 
     /** */
