@@ -159,12 +159,12 @@ public class AppProfileSettings extends ContentObserver {
 
     @Override
     public void onChange(boolean selfChange, Uri uri) {
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Preferences changed. Reloading");
+        Slog.i(TAG, "Preferences changed. Reloading");
         synchronized(this) {
             mBackend.refreshList();
             updateConstantsLocked();
         }
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Preferences changed. Reloading - done");
+        Slog.i(TAG, "Preferences changed. Reloading - done");
     }
 
 
@@ -180,7 +180,7 @@ public class AppProfileSettings extends ContentObserver {
         if( isSystemWhitelisted ) {
             if( profile.mBackground >= -1 ) profile.mBackground = 0;
             profile.mSystemWhitelisted = true;
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "System whitelisted app (static) " + profile.mPackageName);
+            Slog.i(TAG, "System whitelisted app (static) " + profile.mPackageName);
         } else {
             profile.mSystemWhitelisted = false;
         }
@@ -197,7 +197,7 @@ public class AppProfileSettings extends ContentObserver {
         if( isSystemWhitelisted ) {
             if( profile.mBackground >= -1 ) profile.mBackground = 0;
             profile.mSystemWhitelisted = true;
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE )  Slog.i(TAG, "System whitelisted app " + profile.mPackageName);
+            Slog.i(TAG, "System whitelisted app " + profile.mPackageName);
         } else {
             profile.mSystemWhitelisted = false;
         }
@@ -239,7 +239,7 @@ public class AppProfileSettings extends ContentObserver {
 
         if( runInBackground && runAnyInBackground ) {
             if( profile.mBackground > 0 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateProfileFromSystemSettingsLocked fix background 0 packageName=" + profile.mPackageName);
+                Slog.i(TAG, "updateProfileFromSystemSettingsLocked fix background 0 packageName=" + profile.mPackageName);
                 profile.mBackground = 0;
             }
             return profile;
@@ -247,7 +247,7 @@ public class AppProfileSettings extends ContentObserver {
 
         if( runInBackground && !runAnyInBackground ) {
             if( profile.mBackground != 1 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateProfileFromSystemSettingsLocked fix background 1 packageName=" + profile.mPackageName);
+                Slog.i(TAG, "updateProfileFromSystemSettingsLocked fix background 1 packageName=" + profile.mPackageName);
                 profile.mBackground = 1;
             }
             return profile;
@@ -255,7 +255,7 @@ public class AppProfileSettings extends ContentObserver {
         
         if( !runInBackground ) {
             if( profile.mBackground != 2 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateProfileFromSystemSettingsLocked fix background 2 packageName=" + profile.mPackageName);
+                Slog.i(TAG, "updateProfileFromSystemSettingsLocked fix background 2 packageName=" + profile.mPackageName);
                 profile.mBackground = 2;
             }
             return profile;
@@ -523,11 +523,12 @@ public class AppProfileSettings extends ContentObserver {
                 _profilesByPackageName.put(packageName,profile);
             }
         }
-        for( Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet() ) {
+
+        /*for( Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet() ) {
             if( entry.getValue().mSystemWhitelisted ) {
                 Slog.e(TAG, "Updated system whitelisted app " + entry.getValue().toString());
             }
-        } 
+        }*/
 
     }
 
@@ -608,7 +609,7 @@ public class AppProfileSettings extends ContentObserver {
         }
 
         //synchronized(mBackend) {
-        mBackend.refreshList();
+        //mBackend.refreshList();
         //}
 
         for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
@@ -627,7 +628,8 @@ public class AppProfileSettings extends ContentObserver {
             if( entryString != null ) val += entryString + "|";
         } 
 
-        if( appProfiles != null && !appProfiles.equals(val) ) {
+        if( !val.equals(appProfiles) ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Write profile data string " + val, new Throwable());
             Settings.Global.putString(mResolver,
                 Settings.Global.BAIKALOS_APP_PROFILES,val);
         }
