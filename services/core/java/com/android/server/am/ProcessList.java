@@ -3066,7 +3066,11 @@ public final class ProcessList {
         }
 
         if( r.mAppProfile.mPinned ) {
-            state.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
+            state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
+            state.setSetSchedGroup(ProcessList.SCHED_GROUP_DEFAULT);
+            r.setPersistent(true);
+            state.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
+            //state.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
             Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
         }
 

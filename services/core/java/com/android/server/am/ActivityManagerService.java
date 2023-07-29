@@ -6810,7 +6810,9 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
 
         if( app.mAppProfile != null && app.mAppProfile.mPinned ) {
-            app.mState.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
+            app.setPersistent(true);
+            app.mState.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
+            //app.mState.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
             Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
         }
 
