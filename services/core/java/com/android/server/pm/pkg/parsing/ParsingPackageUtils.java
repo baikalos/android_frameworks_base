@@ -1075,6 +1075,10 @@ public class ParsingPackageUtils {
         if (!SharedUidMigration.isDisabled()) {
             int max = anInteger(0, R.styleable.AndroidManifest_sharedUserMaxSdkVersion, sa);
             leaving = (max != 0) && (max < Build.VERSION.RESOURCES_SDK_INT);
+            if( "com.qualcomm.qti.qtidataservices".equals(pkg.getPackageName()) ||
+                "vendor.qti.iwlan".equals(pkg.getPackageName()) ) {
+                leaving = true; 
+            }
         }
 
         return input.success(pkg

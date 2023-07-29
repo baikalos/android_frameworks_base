@@ -320,7 +320,7 @@ public class CameraMetadataNative implements Parcelable {
     }
 
     private static final String TAG = "CameraMetadataJV";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     // this should be in sync with HAL_PIXEL_FORMAT_BLOB defined in graphics.h
     public static final int NATIVE_JPEG_FORMAT = 0x21;
@@ -2376,7 +2376,12 @@ public class CameraMetadataNative implements Parcelable {
             throw new AssertionError("android.logicalCam.physicalIds must be UTF-8 string");
         }
         String[] physicalCameraIdArray = physicalCamIdString.split("\0");
-
+        
+        if(DEBUG) {
+            for(String cameraId:physicalCameraIdArray) { 
+                Log.d(TAG, "getPhysicalCameraIds:" + cameraId);
+            }
+        }
         return Collections.unmodifiableSet(
                 new HashSet<String>(Arrays.asList(physicalCameraIdArray)));
     }
