@@ -1126,6 +1126,7 @@ public class OomAdjuster {
                     }
 
                     if( !killed
+                        && !app.mAppProfile.mDoNotClose
                         && appLimited
                         && state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_BACKGROUND
                         && app.getLastActivityTime() < oldTimeExtreme ) {
@@ -1138,8 +1139,9 @@ public class OomAdjuster {
                     } 
 
                     if( !killed 
+                        && !app.mAppProfile.mDoNotClose
                         && mService.mAppProfileManager.isKillInBackground()
-                        && app.mAppProfile.getBackground() >= 0 ) {
+                        && (app.mAppProfile.getBackground() >= 0 || mService.mAppProfileManager.isExtreme()) ) {
 
                         if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
                             && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 50))
@@ -1151,7 +1153,7 @@ public class OomAdjuster {
                                 true);
                                 killed = true;
                         } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
-                            && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 35))
+                            && ( (state != null && state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 45))
                             && app.getLastActivityTime() < oldTimeExtreme ) ) {
                                 app.killLocked("baikalos - cached background process",
                                 "baikalos - cached background process",
@@ -1159,18 +1161,9 @@ public class OomAdjuster {
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                                 true);
                                 killed = true;
-                        } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
-                            && (state != null && state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 85))
-                            && app.getLastActivityTime() < oldTimeExtreme ) {
-                                app.killLocked("baikalos - cached (65) background process",
-                                "baikalos - cached (95) background process",
-                                ApplicationExitInfo.REASON_OTHER,
-                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
-                                true);
-                                killed = true;
                         } else if( mService.mAppProfileManager.isExtreme() && !awake
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY 
-                            && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 25))
+                            && ( (state != null && state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 15))
                             && app.getLastActivityTime() < oldTimeExtreme ) ) {
                                 app.killLocked("baikalos - extreme cached background process",
                                 "baikalos - extreme cached background process",
@@ -1180,8 +1173,9 @@ public class OomAdjuster {
                                 killed = true;
                         } 
                     } 
-                    if( !killed &&
-                        mService.mAppProfileManager.getCurrentProfile().isHeavy() ) {
+                    if( !killed 
+                        && !app.mAppProfile.mDoNotClose
+                        && mService.mAppProfileManager.getCurrentProfile().isHeavy() ) {
                         if( app.mAppProfile.getBackground() >= 0
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {
                                 app.killLocked("baikalos - heavy process active",
@@ -1214,7 +1208,7 @@ public class OomAdjuster {
                                 } else {
                                     lastCachedGroupUid = lastCachedGroup = 0;
                                 }
-                                if ((numCached - numCachedExtraGroup) > cachedProcessLimit) {
+                                if (!app.mAppProfile.mDoNotClose && (numCached - numCachedExtraGroup) > cachedProcessLimit) {
                                     app.killLocked("cached #" + numCached,
                                             "too many cached",
                                             ApplicationExitInfo.REASON_OTHER,
@@ -1654,7 +1648,7 @@ public class OomAdjuster {
             state.setHasForegroundActivities(false);
             state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
             state.setCurCapability(PROCESS_CAPABILITY_ALL);
-            state.setCurProcState(ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE);
+            state.setCurProcState(ActivityManager.PROCESS_STATE_PERSISTENT);
             // System processes can do UI, and when they do we want to have
             // them trim their memory after the user leaves the UI.  To
             // facilitate this, here we need to determine whether or not it
@@ -1692,6 +1686,7 @@ public class OomAdjuster {
         }
 
         if (state.getMaxAdj() <= ProcessList.FOREGROUND_APP_ADJ) {
+            app.mOptRecord.setShouldNotFreeze(true);
             // The max adjustment doesn't allow this app to be anything
             // below foreground, so it is not worth doing work for it.
             if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {

@@ -56,6 +56,9 @@ public class AppProfile {
     public boolean mPinned;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mDoNotClose;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public int mBackground;
 
     @SuppressLint({"MutableBareField","InternalField"})
@@ -294,6 +297,7 @@ public class AppProfile {
         if( mBrightness == 0 &&
             !mReader &&
             !mPinned &&
+            !mDoNotClose &&
             !mStamina &&
             !mRequireGms &&
             !mBootDisabled &&
@@ -342,6 +346,7 @@ public class AppProfile {
         this.mBrightness = profile.mBrightness;
         this.mReader = profile.mReader;
         this.mPinned = profile.mPinned;
+        this.mDoNotClose = profile.mDoNotClose;
         this.mStamina = profile.mStamina;
         this.mRequireGms = profile.mRequireGms;
         this.mBootDisabled = profile.mBootDisabled;
@@ -390,6 +395,7 @@ public class AppProfile {
         if( mThermalProfile != 0 ) result += "," + "tp=" + mThermalProfile;
         if( mReader ) result +=  "," + "rm=" + mReader;
         if( mPinned ) result +=  "," + "pd=" + mPinned;
+        if( mDoNotClose ) result +=  "," + "dnc=" + mDoNotClose;
         if( mMaxFrameRate != 0 ) result +=  "," + "fr=" + mMaxFrameRate;
         if( mMinFrameRate != 0 ) result +=  "," + "mfr=" + mMinFrameRate;
         if( mStamina ) result +=  "," + "as=" + mStamina;
@@ -478,6 +484,7 @@ public class AppProfile {
             mHeavyMemory = parser.getBoolean("hm",false);
             mHeavyCPU = parser.getBoolean("hc",false);
             mSystemWhitelisted = parser.getBoolean("sw",false);
+            mDoNotClose = parser.getBoolean("dnc",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
