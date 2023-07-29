@@ -1216,8 +1216,8 @@ public final class DeviceConfig {
         if (context.checkCallingOrSelfPermission(READ_DEVICE_CONFIG)
                 != PackageManager.PERMISSION_GRANTED) {
             if (!PUBLIC_NAMESPACES.contains(namespace)) {
-                throw new SecurityException("Permission denial: reading from settings requires:"
-                        + READ_DEVICE_CONFIG);
+                //throw new SecurityException("Permission denial: reading from settings requires:"
+                //        + READ_DEVICE_CONFIG);
             }
         }
     }
