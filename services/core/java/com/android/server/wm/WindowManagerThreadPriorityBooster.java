@@ -58,7 +58,7 @@ class WindowManagerThreadPriorityBooster extends ThreadPriorityBooster {
         if (myTid == mAnimationThreadId || myTid == mSurfaceAnimationThreadId) {
             return;
         }
-        super.boost();
+        //super.boost();
     }
 
     @Override
@@ -69,7 +69,7 @@ class WindowManagerThreadPriorityBooster extends ThreadPriorityBooster {
         if (myTid == mAnimationThreadId || myTid == mSurfaceAnimationThreadId) {
             return;
         }
-        super.reset();
+        //super.reset();
     }
 
     void setAppTransitionRunning(boolean running) {
@@ -94,8 +94,8 @@ class WindowManagerThreadPriorityBooster extends ThreadPriorityBooster {
     private void updatePriorityLocked() {
         int priority = (mAppTransitionRunning || mBoundsAnimationRunning)
                 ? THREAD_PRIORITY_TOP_APP_BOOST : THREAD_PRIORITY_DISPLAY;
-        setBoostToPriority(priority);
-        setThreadPriority(mAnimationThreadId, priority);
-        setThreadPriority(mSurfaceAnimationThreadId, priority);
+        //setBoostToPriority(priority);
+        //setThreadPriority(mAnimationThreadId, priority);
+        //setThreadPriority(mSurfaceAnimationThreadId, priority);
     }
 }
