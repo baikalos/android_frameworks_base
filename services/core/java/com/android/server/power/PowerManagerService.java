@@ -4811,7 +4811,7 @@ public final class PowerManagerService extends SystemService
         if (mode == Mode.LAUNCH && enabled && mBatterySaverController.isLaunchBoostDisabled()) {
             return false;
         }
-        Slog.d(TAG, "setPowerModeInternal: mode=" + mode + " enabled=" +enabled, new Throwable());
+        Slog.d(TAG, "setPowerModeInternal: mode=" + mode + ", enabled=" + enabled);
         return mNativeWrapper.nativeSetPowerMode(mode, enabled);
     }
 
