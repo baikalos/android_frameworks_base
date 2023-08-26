@@ -115,7 +115,7 @@ public class BaikalSpoofer {
         new SpoofDeviceInfo("vayu", "M2102J20SG","Xiaomi", "Poco X3 Pro", "xiaomi", "POCO/vayu_global/vayu:11/RKQ1.200826.002/V12.0.4.0.RJUMIXM:user/release-keys"), // 19
         new SpoofDeviceInfo("agate", "21081111RG","Xiaomi", "Xiaomi Mi 11T", "xiaomi", null), // 20
         new SpoofDeviceInfo("vayu", "R11 Plus","Oppo", "Oppo R11 Plus", "oppo", null), // 21
-        new SpoofDeviceInfo("marlin","Pixel XL","Google","Pixel XL", "google" , "google/marlin/marlin:10/QP1A.191005.007.A3/5972272:user/release-keys" ), // 22
+        new SpoofDeviceInfo("marlin","Pixel XL","Google","Pixel XL", "google" , "google/marlin/marlin:7.1.2/NJH47F/4146041:user/release-keys" ), // 22
         new SpoofDeviceInfo("star", "M2102K1G","Xiaomi", "Xiaomi Mi 11", "xiaomi", null), // 23 
         new SpoofDeviceInfo("cheetah", "Pixel 7 Pro","Google", "Pixel 7 Pro", "google", "google/cheetah/cheetah:13/TQ2A.230505.002/9891397:user/release-keys"), // 24
         new SpoofDeviceInfo("PDX-206", "SO-52A","Sony", "Sony Xperia 5", "Sony" , null), // 25
@@ -544,19 +544,19 @@ public class BaikalSpoofer {
     public static TileMode getDefaultBlurTileMode(TileMode mode) {
         switch(sDefaultBlurModeInt) {
             case 1:
-                Log.e(TAG, "Backgroudn blur mode : CLAMP");
+                Log.e(TAG, "Background blur mode : CLAMP");
                 return TileMode.CLAMP;
             case 2:
-                Log.e(TAG, "Backgroudn blur mode : REPEAT");
+                Log.e(TAG, "Background blur mode : REPEAT");
                 return TileMode.REPEAT;
             case 3:
-                Log.e(TAG, "Backgroudn blur mode : MIRROR");
+                Log.e(TAG, "Background blur mode : MIRROR");
                 return TileMode.MIRROR;
             case 4:
-                Log.e(TAG, "Backgroudn blur mode : DECAL");
+                Log.e(TAG, "Background blur mode : DECAL");
                 return TileMode.DECAL;
         }
-        Log.e(TAG, "Backgroudn bluer mode : default:" + mode);
+        Log.e(TAG, "Background bluer mode : default:" + mode);
         return mode;
     }
 
@@ -565,13 +565,7 @@ public class BaikalSpoofer {
 
         Log.e(TAG, "overrideCameraId: " + cameraId + " -> " + id);
         if( scenario == 0 ) return cameraId; 
-        /*{
-            if("25".equals(cameraId)) {
-                return "2";
-            }
-        }*/
         if( id != null &&  !"".equals(id) && !"-1".equals(id) ) return id;
-        //if( "25".equals(cameraId) ) return "2";
         return cameraId;
     }
 
