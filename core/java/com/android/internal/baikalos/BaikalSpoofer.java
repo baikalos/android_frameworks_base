@@ -270,36 +270,16 @@ public class BaikalSpoofer {
         sProcessName = processName;
         sPackageName = packageName;
 
-        boolean needsWASpoof = List.of("pixelmigrate", "restore", "snapchat").stream().anyMatch(packageName::contains);
+        //boolean needsWASpoof = List.of("pixelmigrate", "restore", "snapchat", "instrumentation").stream().anyMatch(packageName::contains);
 
-        if (packageName.contains("com.google.android.gms")) {
+        if ("com.google.android.gms".equals(packageName) ) {
             if( processName != null ) {
-                sIsGmsUnstable = List.of(".persistent", ".unstable").stream().anyMatch(processName.toLowerCase()::contains);
+                sIsGmsUnstable = List.of("unstable", "instrumentation").stream().anyMatch(processName.toLowerCase()::contains);
             }
         }
 
         
-        if( /*"com.google.android.gms.unstable".equals(processName) &&
-            "com.google.android.gms".equals(packageName)*/ sIsGmsUnstable || needsWASpoof ) {
-
-            //sIsGmsUnstable = true;
-
-            /*
-            String stockFp = SystemProperties.get("ro.build.stock_fingerprint", null);
-            String stockSecurityPatch = SystemProperties.get("ro.build.stock_sec_patch", null);
-
-            setBuildField("MODEL", Build.MODEL + "\u200b");
-            setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.S);
-
-            Log.e(TAG, "Spoof Device GMS FINGERPRINT: [" + stockFp + "], " + Application.getProcessName());
-            if( stockFp != null && !stockFp.isEmpty() )
-                setBuildField("FINGERPRINT", stockFp);
-
-            Log.e(TAG, "Spoof Device GMS SECURITY_PATCH: [" + stockSecurityPatch + "]");
-            if( stockSecurityPatch != null && !stockSecurityPatch.isEmpty() )
-                setVersionField("SECURITY_PATCH", stockSecurityPatch);
-            */
-
+        if(  sIsGmsUnstable ) {
             Log.e(TAG, "Spoof Device for GMS SN check: " + Application.getProcessName());
 
             setBuildField("BRAND", "google");
@@ -323,8 +303,6 @@ public class BaikalSpoofer {
     private static void maybeSpoofDevice(String packageName, Context context) {
 
         if( packageName == null ) return;
-
-        //sBaikalSpooferActive = false;
 
         setOverrideSharedPrefs(packageName);
 
