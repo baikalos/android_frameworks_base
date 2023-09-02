@@ -1266,7 +1266,7 @@ public class PreferencesHelper implements RankingConfig {
             for (PackageInfo pi : packages) {
                 boolean fixed = mPermissionHelper.isPermissionFixed(
                         pi.packageName, user.getUserHandle().getIdentifier());
-                if (fixed) {
+                if (false /*fixed*/) {
                     synchronized (mPackagePreferences) {
                         PackagePreferences p = getOrCreatePackagePreferencesLocked(
                                 pi.packageName, pi.applicationInfo.uid);
