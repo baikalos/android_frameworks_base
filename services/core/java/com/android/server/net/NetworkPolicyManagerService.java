@@ -758,9 +758,8 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
         }
 
         public boolean isRestrictedModeEnabled() {
-            /*return Settings.Global.getInt(mContext.getContentResolver(),
-                    Settings.Global.RESTRICTED_NETWORKING_MODE, 0) != 0;*/
-            return false;
+            return Settings.Global.getInt(mContext.getContentResolver(),
+                    Settings.Global.RESTRICTED_NETWORKING_MODE, 1) != 0;
         }
 
         @Override
