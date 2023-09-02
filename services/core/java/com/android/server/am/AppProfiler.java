@@ -128,7 +128,7 @@ public class AppProfiler {
     // write battery stats every 30 minutes.
     static final long BATTERY_STATS_TIME = 30 * 60 * 1000;
 
-    static final boolean MONITOR_CPU_USAGE = false;
+    static final boolean MONITOR_CPU_USAGE = true;
 
     // don't sample cpu less than every 15 seconds.
     static final long MONITOR_CPU_MIN_TIME = 15 * 1000;
