@@ -18732,6 +18732,13 @@ public class ActivityManagerService extends IActivityManager.Stub
                 info.uid, info.packageName) != AppOpsManager.MODE_ALLOWED;
         */
         //return mAppStateTracker.isAppRestricted(uid,packageName);
+
+        AppProfile appProfile = null;
+       
+        appProfile = AppProfileSettings.getInstance().getProfileLocked(info.packageName);
+
+        if( appProfile == null ) return false;
+        if( appProfile.mBootDisabled || appProfile.getBackground() > 0 ) return true;
         return false;
 
     }
