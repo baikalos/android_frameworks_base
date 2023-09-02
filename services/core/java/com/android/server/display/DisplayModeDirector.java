@@ -1316,11 +1316,11 @@ public class DisplayModeDirector {
             boolean inLowPowerMode = Settings.Global.getInt(mContext.getContentResolver(),
                     Settings.Global.LOW_POWER_MODE, 0 /*default*/) != 0;
             final Vote vote;
-            if (inLowPowerMode) {
-                vote = Vote.forRefreshRates(0f, 120f);
-            } else {
+            //if (inLowPowerMode) {
+            //    vote = Vote.forRefreshRates(0f, 120f);
+            //} else {
                 vote = null;
-            }
+            //}
             updateVoteLocked(Vote.PRIORITY_LOW_POWER_MODE, vote);
             mBrightnessObserver.onLowPowerModeEnabledLocked(inLowPowerMode);
         }
