@@ -652,7 +652,6 @@ public class AppProfileManager {
             } catch(Exception e) {
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate perfromance profile failed profile=" + perfMode, e);
             }
-                //if( mDefaultThermalProfile > 0 )
             int thermMode = mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile;
 	        if( force || thermMode != mActiveThermProfile ) activateThermalProfile(thermMode);
         } else {
@@ -677,13 +676,13 @@ public class AppProfileManager {
 
     public void wakeUp() {
         activateCurrentProfileLocked(true,true);
-        /*
+        
         try {
             mPowerManager.setPowerBoost(BOOST_INTERACTION,4000);
             //mPowerManager.setPowerMode(MODE_LAUNCH,true);
         } catch (Exception e) {
             e.printStackTrace();
-        }*/
+        }
     }
 
     protected void activatePowerMode(int mode, boolean enable) {
@@ -1329,26 +1328,37 @@ public class AppProfileManager {
 
     public static AppProfile getProfile(String packageName) {
         AppProfile profile = null;
-        if( mInstance != null ) profile =  mInstance.getAppProfile(packageName);
-        return profile != null ? profile : new AppProfile(packageName);
+        if( mInstance != null ) { 
+            profile =  mInstance.getAppProfile(packageName);
+            return profile != null ? profile : new AppProfile(packageName);
+        }
+        Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
+        return new AppProfile(packageName);
     }
 
     public static boolean isAppBlocked(AppProfile profile, String packageName, int uid) {
         if( mInstance != null ) return mInstance.isBlocked(profile, packageName, uid);
+        Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
         return false;
     }
 
     public static boolean isAppBlocked(AppProfile profile) {
         if( mInstance != null ) return mInstance.isBlocked(profile);
+        Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
         return false;
     }
 
     public static void setAudioMode(boolean playing) {
-        if( mInstance != null ) mInstance.onAudioModeChanged(playing);
+        if( mInstance != null ) { 
+            mInstance.onAudioModeChanged(playing);
+            return;
+        }
+        Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
     }
 
     public static boolean isAllowDowngrade() {
         if( mInstance != null ) return mInstance.mAllowDowngrade;
+        Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
         return false;
     }
 
