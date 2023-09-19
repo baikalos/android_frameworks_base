@@ -16,9 +16,13 @@
 
 package com.android.systemui.shade
 
+import android.content.Context
 import android.hardware.display.AmbientDisplayConfiguration
+import android.os.AsyncTask
 import android.os.PowerManager
 import android.os.SystemClock
+import android.os.Vibrator
+import android.os.VibrationEffect
 import android.provider.Settings
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -47,6 +51,7 @@ import javax.inject.Inject
  */
 @CentralSurfacesComponent.CentralSurfacesScope
 class PulsingGestureListener @Inject constructor(
+        private val context: Context,
         private val notificationShadeWindowView: NotificationShadeWindowView,
         private val falsingManager: FalsingManager,
         private val dockManager: DockManager,
@@ -61,6 +66,7 @@ class PulsingGestureListener @Inject constructor(
     private var doubleTapEnabled = false
     private var singleTapEnabled = false
     private var doubleTapEnabledNative = false
+    private val vibratorHelper: Vibrator? = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
 
     init {
         val tunable = Tunable { key: String?, value: String? ->
@@ -91,6 +97,7 @@ class PulsingGestureListener @Inject constructor(
             val isNotAFalseTap = !falsingManager.isFalseTap(LOW_PENALTY)
             shadeLogger.logSingleTapUpFalsingState(proximityIsNotNear, isNotAFalseTap)
             if (proximityIsNotNear && isNotAFalseTap) {
+                triggerVibration()
                 shadeLogger.d("Single tap handled, requesting centralSurfaces.wakeUpIfDozing")
                 centralSurfaces.wakeUpIfDozing(
                     SystemClock.uptimeMillis(),
@@ -118,6 +125,7 @@ class PulsingGestureListener @Inject constructor(
                 !falsingManager.isProximityNear &&
                 !falsingManager.isFalseDoubleTap
         ) {
+            triggerVibration()
             centralSurfaces.wakeUpIfDozing(
                     SystemClock.uptimeMillis(),
                     notificationShadeWindowView,
@@ -126,6 +134,13 @@ class PulsingGestureListener @Inject constructor(
             return true
         }
         return false
+    }
+
+    private fun triggerVibration() {
+        vibratorHelper?.let { vibrator ->
+            val effect: VibrationEffect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+            AsyncTask.execute { vibrator.vibrate(effect) }
+        }
     }
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
