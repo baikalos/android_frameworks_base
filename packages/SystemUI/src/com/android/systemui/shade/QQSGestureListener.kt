@@ -16,8 +16,12 @@
 
 package com.android.systemui.shade
 
+import android.content.Context
 import android.content.res.Resources
 import android.os.PowerManager
+import android.os.AsyncTask
+import android.os.Vibrator
+import android.os.VibrationEffect
 import android.view.GestureDetector
 import android.view.MotionEvent
 import com.android.systemui.dagger.qualifiers.Main
@@ -32,6 +36,7 @@ import javax.inject.Inject
 
 @CentralSurfacesComponent.CentralSurfacesScope
 class QQSGestureListener @Inject constructor(
+        private val context: Context,
         private val falsingManager: FalsingManager,
         private val powerManager: PowerManager,
         private val statusBarStateController: StatusBarStateController,
@@ -46,6 +51,7 @@ class QQSGestureListener @Inject constructor(
 
     private var doubleTapToSleepEnabled = false
     private val quickQsOffsetHeight: Int
+    private val vibratorHelper: Vibrator? = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
 
     init {
         val tunable = Tunable { key: String?, value: String? ->
@@ -68,10 +74,17 @@ class QQSGestureListener @Inject constructor(
                 e.getY() < quickQsOffsetHeight &&
                 !falsingManager.isFalseDoubleTap
         ) {
+            triggerVibration()
             powerManager.goToSleep(e.getEventTime())
             return true
         }
         return false
     }
 
+    private fun triggerVibration() {
+        vibratorHelper?.let { vibrator ->
+            val effect: VibrationEffect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK)
+            AsyncTask.execute { vibrator.vibrate(effect) }
+        }
+    }
 }
