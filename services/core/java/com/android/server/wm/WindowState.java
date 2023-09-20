@@ -3457,12 +3457,12 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
                 mDrawLock.setWorkSource(new WorkSource(mOwnerUid, mAttrs.packageName));
             }
             // Each call to acquire resets the timeout.
-            if (DEBUG_POWER) {
+            /*if (DEBUG_POWER) {*/
                 Slog.d(TAG, "pokeDrawLock: poking draw lock on behalf of visible window owned by "
                         + mAttrs.packageName);
-            }
+            /*}*/
             mDrawLock.acquire(timeout);
-        } else if (DEBUG_POWER) {
+        } else /*if (DEBUG_POWER)*/ {
             Slog.d(TAG, "pokeDrawLock: suppressed draw lock request for invisible window "
                     + "owned by " + mAttrs.packageName);
         }

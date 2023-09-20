@@ -1958,14 +1958,18 @@ public final class ViewRootImpl implements ViewParent,
         if (mWindowAttributes.type != WindowManager.LayoutParams.TYPE_BASE_APPLICATION) {
             // Non-activity windows should be responsible to hold wake lock by themself, because
             // usually they are system windows.
-            return;
+            Slog.w(TAG, "Non-activity in doze state :" + mWindowAttributes.type);
+            //return;
         }
         if (mAdded && mTraversalScheduled && mAttachInfo.mHasWindowFocus) {
             try {
+                Slog.w(TAG, "Activity in doze state :" + mWindowAttributes.type);
                 mWindowSession.pokeDrawLock(mWindow);
             } catch (RemoteException ex) {
                 // System server died, oh well.
             }
+        } else {
+            Slog.w(TAG, "mAdded=" + mAdded + ", mTraversalScheduled=" + mTraversalScheduled + ", mHasWindowFocus=" + mAttachInfo.mHasWindowFocus);
         }
     }
 

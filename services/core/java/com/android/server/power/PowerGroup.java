@@ -503,7 +503,9 @@ public class PowerGroup {
 
         if (mDisplayPowerRequest.policy == DisplayPowerRequest.POLICY_DOZE) {
             mDisplayPowerRequest.dozeScreenState = dozeScreenState;
+            Slog.i(TAG, "Update doze: draw=" + (getWakeLockSummaryLocked() & WAKE_LOCK_DRAW));
             if ((getWakeLockSummaryLocked() & WAKE_LOCK_DRAW) != 0 && !overrideDrawWakeLock) {
+                Slog.i(TAG, "Request draw while doze: state=" + mDisplayPowerRequest.dozeScreenState);
                 if (mDisplayPowerRequest.dozeScreenState == Display.STATE_DOZE_SUSPEND) {
                     mDisplayPowerRequest.dozeScreenState = Display.STATE_DOZE;
                 }
