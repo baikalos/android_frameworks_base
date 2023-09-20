@@ -43,6 +43,7 @@ public class ThreadPriorityBooster {
     }
 
     public void boost() {
+        /*
         final PriorityState state = mThreadState.get();
         if (state.regionCounter == 0) {
             final int prevPriority = getThreadPriority(state.tid);
@@ -54,16 +55,17 @@ public class ThreadPriorityBooster {
         state.regionCounter++;
         if (ENABLE_LOCK_GUARD) {
             LockGuard.guard(mLockGuardIndex);
-        }
+        }*/
     }
 
     public void reset() {
+        /*
         final PriorityState state = mThreadState.get();
         state.regionCounter--;
         if (state.regionCounter == 0 && state.prevPriority != PRIORITY_NOT_ADJUSTED) {
             setThreadPriority(state.tid, state.prevPriority);
             state.prevPriority = PRIORITY_NOT_ADJUSTED;
-        }
+        }*/
     }
 
     /**
@@ -79,7 +81,7 @@ public class ThreadPriorityBooster {
         if (state.regionCounter != 0) {
             final int prevPriority = getThreadPriority(state.tid);
             if (prevPriority != priority) {
-                setThreadPriority(state.tid, priority);
+                //setThreadPriority(state.tid, priority);
             }
         }
     }
