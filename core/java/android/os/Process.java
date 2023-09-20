@@ -31,6 +31,7 @@ import android.system.Os;
 import android.system.OsConstants;
 import android.system.StructPollfd;
 import android.util.Pair;
+import android.util.Slog;
 import android.webkit.WebViewZygote;
 
 import dalvik.system.VMRuntime;
@@ -46,6 +47,9 @@ import java.util.concurrent.TimeoutException;
  * Tools for managing OS processes.
  */
 public class Process {
+
+    private static final String TAG = "Process";
+
     private static final String LOG_TAG = "Process";
 
     /**
@@ -1023,8 +1027,13 @@ public class Process {
      * not have permission to modify the given thread, or to use the given
      * priority.
      */
-    public static final native void setThreadPriority(int tid, int priority)
+    public static final native void setThreadPriorityNative(int tid, int priority)
             throws IllegalArgumentException, SecurityException;
+
+    public static void setThreadPriority(int tid, int priority) throws IllegalArgumentException, SecurityException {
+        //Slog.v(TAG, "setThreadPriority:" + myPid() + ", tid=" + tid + ", priority=" + priority);
+        setThreadPriorityNative(tid,priority);
+    }
 
     /**
      * Call with 'false' to cause future calls to {@link #setThreadPriority(int)} to
@@ -1052,8 +1061,13 @@ public class Process {
      * Does not set cpuset for some historical reason, just calls
      * libcutils::set_sched_policy().
      */
-    public static final native void setThreadGroup(int tid, int group)
+    public static final native void setThreadGroupNative(int tid, int group)
             throws IllegalArgumentException, SecurityException;
+
+    public static void setThreadGroup(int tid, int group) throws IllegalArgumentException, SecurityException {
+        //Slog.v(TAG, "setThreadGroup:" + myPid() + ", tid=" + tid + ", group=" + group);
+        setThreadGroupNative(tid, group);
+    }
 
     /**
      * Sets the scheduling group and the corresponding cpuset group
@@ -1090,9 +1104,15 @@ public class Process {
      *
      * Always sets cpusets.
      */
-    @UnsupportedAppUsage
-    public static final native void setProcessGroup(int pid, int group)
+    /*@UnsupportedAppUsage*/
+    public static final native void setProcessGroupNative(int pid, int group)
             throws IllegalArgumentException, SecurityException;
+
+    /*@UnsupportedAppUsage*/
+    public static void setProcessGroup(int pid, int group) throws IllegalArgumentException, SecurityException {
+        //Slog.v(TAG, "setProcessGroup:" + myPid() + ", pid=" + pid + ", group=" + group);
+        setProcessGroupNative(pid,group);
+    }
 
     /**
      * Freeze or unfreeze the specified process.
@@ -1176,8 +1196,13 @@ public class Process {
      *
      * @see #setThreadPriority(int, int)
      */
-    public static final native void setThreadPriority(int priority)
+    public static final native void setThreadPriorityNative(int priority)
             throws IllegalArgumentException, SecurityException;
+
+    public static void setThreadPriority(int priority) throws IllegalArgumentException, SecurityException {
+        //Slog.v(TAG, "setThreadPriority:" + myPid() + "/" + myTid() + ", priority=" + priority);
+        setThreadPriorityNative(priority);
+    }
 
     /**
      * Return the current priority of a thread, based on Linux priorities.
@@ -1229,8 +1254,13 @@ public class Process {
      * {@hide}
      */
 
-    public static final native void setThreadScheduler(int tid, int policy, int priority)
+    public static final native void setThreadSchedulerNative(int tid, int policy, int priority)
             throws IllegalArgumentException;
+
+    public static void setThreadScheduler(int tid, int policy, int priority) throws IllegalArgumentException {
+        //Slog.v(TAG, "setThreadScheduler:" + myPid() + ", tid=" + tid + ", policy=" + policy + ", priority=" + priority);
+        setThreadSchedulerNative(tid,policy,priority);
+    }
 
     /**
      * Determine whether the current environment supports multiple processes.
