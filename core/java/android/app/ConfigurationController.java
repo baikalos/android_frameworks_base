@@ -267,20 +267,25 @@ class ConfigurationController {
      * original LocaleList.
      */
     void updateLocaleListFromAppContext(@NonNull Context context) {
-        final Locale bestLocale = context.getResources().getConfiguration().getLocales().get(0);
-        final LocaleList newLocaleList = mResourcesManager.getConfiguration().getLocales();
-        final int newLocaleListSize = newLocaleList.size();
-        for (int i = 0; i < newLocaleListSize; i++) {
-            if (bestLocale.equals(newLocaleList.get(i))) {
-                LocaleList.setDefault(newLocaleList, i);
-                return;
+        try {
+            final Locale bestLocale = context.getResources().getConfiguration().getLocales().get(0);
+            final LocaleList newLocaleList = mResourcesManager.getConfiguration().getLocales();
+            final int newLocaleListSize = newLocaleList.size();
+            for (int i = 0; i < newLocaleListSize; i++) {
+                if (bestLocale.equals(newLocaleList.get(i))) {
+                    LocaleList.setDefault(newLocaleList, i);
+                    return;
+                }
             }
-        }
 
-        // The app may have overridden the LocaleList with its own Locale
-        // (not present in the available list). Push the chosen Locale
-        // to the front of the list.
-        LocaleList.setDefault(new LocaleList(bestLocale, newLocaleList));
+            // The app may have overridden the LocaleList with its own Locale
+            // (not present in the available list). Push the chosen Locale
+            // to the front of the list.
+            LocaleList.setDefault(new LocaleList(bestLocale, newLocaleList));
+        } catch(Exception e) {
+            Slog.e(TAG, "updateLocaleListFromAppContext:", e);
+            return;
+        }
     }
 
     /**
