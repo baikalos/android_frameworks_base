@@ -2104,6 +2104,7 @@ public class DisplayDeviceConfig {
         for (int i = 0; i < sysBrightness.length; i++) {
             sysBrightnessFloat[i] = BrightnessSynchronizer.brightnessIntToFloat(
                     sysBrightness[i]);
+            //Slog.i(TAG, "   curve: " + sysNits[i] + "=" + sysBrightnessFloat[i]);
         }
 
         // These arrays are allowed to be empty, we set null values so that
@@ -2139,11 +2140,15 @@ public class DisplayDeviceConfig {
         if (mRawBacklight[0] > mBacklightMinimum
                 || mRawBacklight[mRawBacklight.length - 1] < mBacklightMaximum
                 || mBacklightMinimum > mBacklightMaximum) {
-            throw new IllegalStateException("Min or max values are invalid"
+            //throw new IllegalStateException("Min or max values are invalid"
+            Slog.w(TAG, "Min or max values are invalid"
                     + "; raw min=" + mRawBacklight[0]
                     + "; raw max=" + mRawBacklight[mRawBacklight.length - 1]
                     + "; backlight min=" + mBacklightMinimum
                     + "; backlight max=" + mBacklightMaximum);
+            if( mBacklightMinimum < mRawBacklight[0] ) mBacklightMinimum = mRawBacklight[0];
+            if( mBacklightMaximum > mRawBacklight[mRawBacklight.length - 1] ) mBacklightMaximum = mRawBacklight[mRawBacklight.length - 1];
+            if( mBacklightMinimum > mBacklightMaximum ) mBacklightMinimum = mBacklightMaximum;
         }
 
         float[] newNits = new float[mRawBacklight.length];
