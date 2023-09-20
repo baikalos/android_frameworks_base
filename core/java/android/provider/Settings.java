@@ -3105,6 +3105,7 @@ public final class Settings {
                             }
                             mValues.clear();
                         } else if (mValues.containsKey(name)) {
+                            if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " =\'" + mValues.get(name) + "\'");
                             return mValues.get(name);
                         }
                         if (mGenerationTracker != null) {
@@ -3214,6 +3215,7 @@ public final class Settings {
                                     + " by " + UserHandle.myUserId()
                                     + " so not updating cache");
                         }
+                        if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " =\'" + value + "\'");
                         return value;
                     }
                     // If the response Bundle is null, we fall through
@@ -3243,6 +3245,7 @@ public final class Settings {
                 }
                 if (c == null) {
                     Log.w(TAG, "Can't get key " + name + " from " + mUri);
+                    if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " = null");
                     return null;
                 }
 
@@ -3257,9 +3260,11 @@ public final class Settings {
                     Log.v(TAG, "cache miss [" + mUri.getLastPathSegment() + "]: " +
                             name + " = " + (value == null ? "(null)" : value));
                 }
+                if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " =\'" + value + "\'");
                 return value;
             } catch (RemoteException e) {
                 Log.w(TAG, "Can't get key " + name + " from " + mUri, e);
+                if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " = null");
                 return null;  // Return null, but don't cache it.
             } finally {
                 if (c != null) c.close();
