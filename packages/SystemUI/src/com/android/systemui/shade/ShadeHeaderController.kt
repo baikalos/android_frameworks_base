@@ -366,6 +366,7 @@ constructor(
 
             qsCarrierGroup.setPaddingRelative((v.width * v.scaleX).toInt(), 0, 0, 0)
         }
+        clock.setLayerType(View.LAYER_TYPE_HARDWARE, /* paint= */ null)
 
         dumpManager.registerDumpable(this)
         configurationController.addCallback(configurationControllerListener)
@@ -380,6 +381,7 @@ constructor(
         configurationController.removeCallback(configurationControllerListener)
         demoModeController.removeCallback(demoModeReceiver)
         statusBarIconController.removeIconGroup(iconManager)
+        clock.setLayerType(View.LAYER_TYPE_NONE, /* paint= */ null)
     }
 
     fun disable(state1: Int, state2: Int, animate: Boolean) {
