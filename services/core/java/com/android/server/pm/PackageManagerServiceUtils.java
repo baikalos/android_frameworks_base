@@ -1382,6 +1382,13 @@ public class PackageManagerServiceUtils {
             }
         }
 
+        if (SystemProperties.getBoolean("persist.baikal.purge_package_cache", false)) {
+            SystemProperties.set("persist.baikal.purge_package_cache", "0");
+            Slog.w(TAG, "Wiping cache directory by the user property.");
+            FileUtils.deleteContents(cacheBaseDir);
+            cacheDir = FileUtils.createDir(cacheBaseDir, cacheName);
+        }
+
         return cacheDir;
     }
 
