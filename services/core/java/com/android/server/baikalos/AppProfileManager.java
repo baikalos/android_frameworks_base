@@ -848,7 +848,7 @@ public class AppProfileManager {
                 oldmax = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE);
             } catch(Exception me) {}
 
-            if( minFps > maxFps ) minFps = maxFps;
+            if( maxFps > 0 && minFps > maxFps ) minFps = maxFps;
 
             if( minFps != 0 ) {
                 //if( minFps > oldmax ) Settings.System.putFloat(mContext.getContentResolver(), Settings.System.PEAK_REFRESH_RATE,(float)minFps);
