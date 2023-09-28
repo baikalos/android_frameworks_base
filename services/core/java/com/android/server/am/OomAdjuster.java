@@ -1176,7 +1176,7 @@ public class OomAdjuster {
                     if( !killed 
                         && !app.mAppProfile.mDoNotClose
                         && mService.mAppProfileManager.getCurrentProfile().isHeavy() ) {
-                        if( app.mAppProfile.getBackground() >= 0
+                        if( app.mAppProfile.getBackground() >= -1
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {
                                 app.killLocked("baikalos - heavy process active",
                                 "baikalos - heavy process active",
@@ -2784,7 +2784,7 @@ public class OomAdjuster {
         }
 
         if (state.getCurAdj() != state.getSetAdj()) {
-            ProcessList.setOomAdj(app.getPid(), app.uid, state.getCurAdj(), app.mAppProfile.mPinned);
+            ProcessList.setOomAdj(app.getPid(), app.uid, state.getCurAdj(), app.mAppProfile.mPinned || app.mAppProfile.mDoNotClose);
             if (DEBUG_SWITCH || DEBUG_OOM_ADJ || mService.mCurOomAdjUid == app.info.uid) {
                 String msg = "Set " + app.getPid() + " " + app.processName + " adj "
                         + state.getCurAdj() + ": " + state.getAdjType();
@@ -2826,7 +2826,7 @@ public class OomAdjuster {
                         + " to " + curSchedGroup + ": " + state.getAdjType();
                 reportOomAdjMessageLocked(TAG_OOM_ADJ, msg);
             }
-            if (!app.mAppProfile.mPinned &&
+            if (/*!app.mAppProfile.mPinned &&*/
                 app.getWaitingToKill() != null && app.mReceivers.numberOfCurReceivers() == 0
                     && state.getSetSchedGroup() == ProcessList.SCHED_GROUP_BACKGROUND) {
                 app.killLocked(app.getWaitingToKill(), ApplicationExitInfo.REASON_USER_REQUESTED,
