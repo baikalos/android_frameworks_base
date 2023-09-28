@@ -52,7 +52,7 @@ public abstract class DisplayManagerInternal {
     public @interface RefreshRateLimitType {}
 
     /** Refresh rate should be limited when High Brightness Mode is active. */
-    public static final int REFRESH_RATE_LIMIT_HIGH_BRIGHTNESS_MODE = 1;
+    public static final int REFRESH_RATE_LIMIT_HIGH_BRIGHTNESS_MODE = 0;
 
     /**
      * Called by the power manager to initialize power management facilities.
@@ -457,7 +457,7 @@ public abstract class DisplayManagerInternal {
             useProximitySensor = false;
             screenBrightnessOverride = PowerManager.BRIGHTNESS_INVALID_FLOAT;
             screenAutoBrightnessAdjustmentOverride = Float.NaN;
-            screenLowPowerBrightnessFactor = 0.5f;
+            screenLowPowerBrightnessFactor = 1.0f;
             blockScreenOn = false;
             dozeScreenBrightness = PowerManager.BRIGHTNESS_INVALID_FLOAT;
             dozeScreenState = Display.STATE_UNKNOWN;
@@ -635,7 +635,7 @@ public abstract class DisplayManagerInternal {
         public static final String TAG = "RefreshRateRange";
 
         // The tolerance within which we consider something approximately equals.
-        public static final float FLOAT_TOLERANCE = 0.01f;
+        public static final float FLOAT_TOLERANCE = 0.5f;
 
         /**
          * The lowest desired refresh rate.
