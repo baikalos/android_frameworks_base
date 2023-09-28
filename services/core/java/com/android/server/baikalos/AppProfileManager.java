@@ -1018,23 +1018,27 @@ public class AppProfileManager {
         int level = 0;
 
         AppProfile cur_profile = getCurrentProfile();
-        if( schedGroup == SCHED_GROUP_TOP_APP_BOUND ) {
+        /*if( schedGroup == SCHED_GROUP_TOP_APP_BOUND ) {
             if( cur_profile != null ) {
                 level = cur_profile.mPerformanceLevel;
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.v(TAG,"updateSchedGroupLocked: override profile from " + cur_profile.mPackageName + " level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup);
             }
-        } else {
+        } else {*/
             if( profile != null ) level = profile.mPerformanceLevel;
-        }
-
-        if( level == 0 ) {
-            return processGroup;
-        }
+        /*}*/
 
         if( cur_profile.mHeavyCPU && schedGroup != SCHED_GROUP_TOP_APP_BOUND && schedGroup != SCHED_GROUP_TOP_APP ) {
             if( processGroup != THREAD_GROUP_RESTRICTED && processGroup != THREAD_GROUP_BACKGROUND ) {
-                if( processGroup != r_processGroup && BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.i(TAG,"updateSchedGroupLocked: heavy app active, level=" + level + " " + profile.mPackageName + " " + r_processGroup + " -> " + processGroup);
-                return THREAD_GROUP_RESTRICTED;
-            }
+                processGroup = THREAD_GROUP_RESTRICTED;
+                if( (processGroup != r_processGroup &&  BaikalConstants.BAIKAL_DEBUG_OOM) || 
+                    BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.d(TAG,"updateSchedGroupLocked: heavy app active, level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup);
+                return processGroup;
+            } 
+        }
+
+        if( level == 0 ) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup);
+            return processGroup;
         }
 
         switch( processGroup ) {
@@ -1096,11 +1100,12 @@ public class AppProfileManager {
             case THREAD_GROUP_AUDIO_SYS:
             case THREAD_GROUP_RT_APP:
             default:
-                Slog.i(TAG,"updateSchedGroupLocked: Unsupported thread group "  + profile.mPackageName + " " + r_processGroup + " -> " + processGroup);
+                Slog.w(TAG,"updateSchedGroupLocked: Unsupported thread group "  + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup);
                 break;
         }
 
-        if( processGroup != r_processGroup && BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.i(TAG,"updateSchedGroupLocked: level=" + level + " " + profile.mPackageName + " " + r_processGroup + " -> " + processGroup);
+        if( (processGroup != r_processGroup && BaikalConstants.BAIKAL_DEBUG_OOM) ||
+             BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup);
         return processGroup;
 
     }
