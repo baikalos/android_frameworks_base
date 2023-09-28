@@ -15983,7 +15983,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         boolean didSomething = false;
         for (int i = mProcessList.mRemovedProcesses.size() - 1; i >= 0; i--) {
             final ProcessRecord app = mProcessList.mRemovedProcesses.get(i);
-            if( app.mAppProfile.mPinned ) continue;
+            //if( app.mAppProfile.mPinned ) continue;
             if (!app.hasActivitiesOrRecentTasks()
                     && app.mReceivers.numberOfCurReceivers() == 0
                     && app.mServices.numberOfRunningServices() == 0) {
