@@ -3547,8 +3547,13 @@ public final class PowerManagerService extends SystemService
 
     @GuardedBy("mLock")
     private long getScreenDimDurationLocked(long screenOffTimeout) {
-        return Math.min(mMaximumScreenDimDurationConfig,
+        //return Math.min(mMaximumScreenDimDurationConfig,
+        //        (long)(screenOffTimeout * mMaximumScreenDimRatioConfig));
+
+        long timeout = Math.min(mMaximumScreenDimDurationConfig,
                 (long)(screenOffTimeout * mMaximumScreenDimRatioConfig));
+        if( timeout >= screenOffTimeout ) timeout = screenOffTimeout/2;
+        return timeout;
     }
 
     @GuardedBy("mLock")
