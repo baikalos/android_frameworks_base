@@ -23,4 +23,5 @@
     <java-symbol type="string" name="config_bypassChargingSuspendValue" />
     <java-symbol type="string" name="config_bypassChargingResumeValue" />
     <java-symbol type="string" name="config_bypassChargingLimitValue" />
+    <java-symbol type="bool" name="config_interactiveForDoze" />
 </resources>

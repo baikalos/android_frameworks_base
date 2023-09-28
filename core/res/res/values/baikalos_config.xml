@@ -23,4 +23,5 @@
     <string name="config_bypassChargingSuspendValue" translatable="false">0</string>
     <string name="config_bypassChargingResumeValue" translatable="false">1</string>
     <string name="config_bypassChargingLimitValue" translatable="false">none</string>
+    <bool name="config_interactiveForDoze">false</bool>
 </resources>

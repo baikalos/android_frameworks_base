@@ -18,13 +18,13 @@
 
 #define ATRACE_TAG ATRACE_TAG_INPUT
 
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 
 // Log debug messages about InputReaderPolicy
-#define DEBUG_INPUT_READER_POLICY 0
+#define DEBUG_INPUT_READER_POLICY 1
 
 // Log debug messages about InputDispatcherPolicy
-#define DEBUG_INPUT_DISPATCHER_POLICY 0
+#define DEBUG_INPUT_DISPATCHER_POLICY 1
 
 #include <android-base/parseint.h>
 #include <android-base/stringprintf.h>
@@ -779,10 +779,10 @@ std::string NativeInputManager::getDeviceAlias(const InputDeviceIdentifier& iden
 }
 
 void NativeInputManager::notifySwitch(nsecs_t when,
-        uint32_t switchValues, uint32_t switchMask, uint32_t /* policyFlags */) {
+        uint32_t switchValues, uint32_t switchMask, uint32_t policyFlags) {
 #if DEBUG_INPUT_DISPATCHER_POLICY
     ALOGD("notifySwitch - when=%lld, switchValues=0x%08x, switchMask=0x%08x, policyFlags=0x%x",
-            when, switchValues, switchMask, policyFlags);
+            (long long)when, switchValues, switchMask, policyFlags);
 #endif
     ATRACE_CALL();
 
@@ -795,7 +795,7 @@ void NativeInputManager::notifySwitch(nsecs_t when,
 
 void NativeInputManager::notifyConfigurationChanged(nsecs_t when) {
 #if DEBUG_INPUT_DISPATCHER_POLICY
-    ALOGD("notifyConfigurationChanged - when=%lld", when);
+    ALOGD("notifyConfigurationChanged - when=%lld", (long long)when);
 #endif
     ATRACE_CALL();
 

@@ -16,6 +16,8 @@
 
 package com.android.server.power;
 
+import static android.os.PowerManagerInternal.WAKEFULNESS_DOZING;
+
 import android.annotation.Nullable;
 import android.annotation.UserIdInt;
 import android.app.ActivityManagerInternal;
@@ -88,7 +90,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Notifier {
     private static final String TAG = "PowerManagerNotifier";
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     private static final int INTERACTIVE_STATE_UNKNOWN = 0;
     private static final int INTERACTIVE_STATE_AWAKE = 1;
@@ -147,11 +149,14 @@ public class Notifier {
     // True if the device should suspend when the screen is off due to proximity.
     private final boolean mSuspendWhenScreenOffDueToProximityConfig;
 
+    private final boolean mInteractiveForDoze;
+
     // The current interactive state.  This is set as soon as an interactive state
     // transition begins so as to capture the reason that it happened.  At some point
     // this state will propagate to the pending state then eventually to the
     // broadcasted state over the course of reporting the transition asynchronously.
     private boolean mInteractive = true;
+    private boolean mInputInteractive = true;
     private int mInteractiveChangeReason;
     private long mInteractiveChangeStartTime; // In SystemClock.uptimeMillis()
     private boolean mInteractiveChanging;
@@ -208,6 +213,11 @@ public class Notifier {
 
         mSuspendWhenScreenOffDueToProximityConfig = context.getResources().getBoolean(
                 com.android.internal.R.bool.config_suspendWhenScreenOffDueToProximity);
+
+        mInteractiveForDoze = context.getResources().getBoolean(
+                com.android.internal.R.bool.config_interactiveForDoze);
+
+
 
         mWakeLockLog = new WakeLockLog();
 
@@ -414,9 +424,14 @@ public class Notifier {
      */
     public void onWakefulnessChangeStarted(final int wakefulness, int reason, long eventTime) {
         final boolean interactive = PowerManagerInternal.isInteractive(wakefulness);
+        boolean inputInteractive = interactive;
+        if( mInteractiveForDoze ) {
+            if( wakefulness == WAKEFULNESS_DOZING ) inputInteractive = true;
+        }
+
         if (DEBUG) {
             Slog.d(TAG, "onWakefulnessChangeStarted: wakefulness=" + wakefulness
-                    + ", reason=" + reason + ", interactive=" + interactive);
+                    + ", reason=" + reason + ", interactive=" + interactive + ", inputInteractive=" + inputInteractive);
         }
 
         // Tell the activity manager about changes in wakefulness, not just interactivity.
@@ -430,15 +445,15 @@ public class Notifier {
 
         // Handle any early interactive state changes.
         // Finish pending incomplete ones from a previous cycle.
-        if (mInteractive != interactive) {
+        if (mInteractive != interactive || mInputInteractive != inputInteractive) {
             // Finish up late behaviors if needed.
             if (mInteractiveChanging) {
                 handleLateInteractiveChange();
             }
 
             // Start input as soon as we start waking up or going to sleep.
-            mInputManagerInternal.setInteractive(interactive);
-            mInputMethodManagerInternal.setInteractive(interactive);
+            mInputManagerInternal.setInteractive(inputInteractive);
+            mInputMethodManagerInternal.setInteractive(inputInteractive);
 
             // Notify battery stats.
             try {
@@ -450,6 +465,7 @@ public class Notifier {
 
             // Handle early behaviors.
             mInteractive = interactive;
+            mInputInteractive = inputInteractive;
             mInteractiveChangeReason = reason;
             mInteractiveChangeStartTime = eventTime;
             mInteractiveChanging = true;

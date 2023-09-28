@@ -159,7 +159,7 @@ import java.util.function.Consumer;
 public class InputManagerService extends IInputManager.Stub
         implements Watchdog.Monitor {
     static final String TAG = "InputManager";
-    static final boolean DEBUG = false;
+    static final boolean DEBUG = true;
 
     private static final String EXCLUDED_DEVICES_PATH = "etc/excluded-input-devices.xml";
     private static final String PORT_ASSOCIATIONS_PATH = "etc/input-port-associations.xml";
@@ -3201,6 +3201,9 @@ public class InputManagerService extends IInputManager.Stub
     // Native callback.
     @SuppressWarnings("unused")
     private int interceptKeyBeforeQueueing(KeyEvent event, int policyFlags) {
+        if (DEBUG) {
+            Slog.d(TAG, "interceptKeyBeforeQueueing: KeyEvent=" + event);
+        }
         return mWindowManagerCallbacks.interceptKeyBeforeQueueing(event, policyFlags);
     }
 
@@ -3215,12 +3218,18 @@ public class InputManagerService extends IInputManager.Stub
     // Native callback.
     @SuppressWarnings("unused")
     private long interceptKeyBeforeDispatching(IBinder focus, KeyEvent event, int policyFlags) {
+        if (DEBUG) {
+            Slog.d(TAG, "interceptKeyBeforeDispatching: KeyEvent=" + event);
+        }
         return mWindowManagerCallbacks.interceptKeyBeforeDispatching(focus, event, policyFlags);
     }
 
     // Native callback.
     @SuppressWarnings("unused")
     private KeyEvent dispatchUnhandledKey(IBinder focus, KeyEvent event, int policyFlags) {
+        if (DEBUG) {
+            Slog.d(TAG, "dispatchUnhandledKey: KeyEvent=" + event);
+        }
         return mWindowManagerCallbacks.dispatchUnhandledKey(focus, event, policyFlags);
     }
 
@@ -3928,6 +3937,7 @@ public class InputManagerService extends IInputManager.Stub
 
         @Override
         public void setInteractive(boolean interactive) {
+            Log.d(TAG, "setInteractive:" + interactive);
             mNative.setInteractive(interactive);
         }
 

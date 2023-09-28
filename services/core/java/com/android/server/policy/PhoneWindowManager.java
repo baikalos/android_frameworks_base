@@ -267,11 +267,11 @@ import java.util.Set;
  */
 public class PhoneWindowManager implements WindowManagerPolicy {
     static final String TAG = "WindowManager";
-    static final boolean localLOGV = false;
-    static final boolean DEBUG = false;
-    static final boolean DEBUG_INPUT = false;
+    static final boolean localLOGV = true;
+    static final boolean DEBUG = true;
+    static final boolean DEBUG_INPUT = true;
     static final boolean DEBUG_KEYGUARD = false;
-    static final boolean DEBUG_WAKEUP = false;
+    static final boolean DEBUG_WAKEUP = true;
 
     // Whether to allow dock apps with METADATA_DOCK_HOME to temporarily take over the Home key.
     // No longer recommended for desk docks;
