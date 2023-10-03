@@ -390,7 +390,7 @@ import javax.xml.datatype.DatatypeConfigurationException;
  */
 public class DisplayDeviceConfig {
     private static final String TAG = "DisplayDeviceConfig";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     public static final float HIGH_BRIGHTNESS_MODE_UNSUPPORTED = Float.NaN;
 

@@ -90,7 +90,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Notifier {
     private static final String TAG = "PowerManagerNotifier";
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private static final int INTERACTIVE_STATE_UNKNOWN = 0;
     private static final int INTERACTIVE_STATE_AWAKE = 1;
