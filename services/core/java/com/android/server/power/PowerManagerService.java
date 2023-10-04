@@ -2797,10 +2797,16 @@ public final class PowerManagerService extends SystemService
                             //    now, Process.SYSTEM_UID);
                             dozeFromDozePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
                                 now, PowerManager.WAKE_REASON_PLUGGED_IN, Process.SYSTEM_UID);
+
+                            //mContext.sendBroadcastAsUser(new Intent("com.android.systemui.doze.pulse"),
+                            //    new UserHandle(UserHandle.USER_CURRENT));
+
                         } else {
                             sleepPowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
                                 now, PowerManager.WAKE_REASON_PLUGGED_IN, Process.SYSTEM_UID);
                         }
+
+
                     }
                 } else {
 
