@@ -720,6 +720,7 @@ public class DeviceIdleController extends SystemService
 
     private final AlarmManager.OnAlarmListener mMotionTimeoutAlarmListener = () -> {
         synchronized (DeviceIdleController.this) {
+            if( mAggressiveDeviceIdleMode ) return;
             if (!isStationaryLocked()) {
                 // If the device keeps registering motion, then the alarm should be
                 // rescheduled, so this shouldn't go off until the device is stationary.
@@ -794,6 +795,8 @@ public class DeviceIdleController extends SystemService
 
     @GuardedBy("this")
     private boolean isStationaryLocked() {
+        if( mAggressiveDeviceIdleMode ) return true;
+
         final long now = mInjector.getElapsedRealtime();
         return mMotionListener.active
                 // Listening for motion for long enough and last motion was long enough ago.
@@ -808,6 +811,8 @@ public class DeviceIdleController extends SystemService
                 // Listener already registered.
                 return;
             }
+            if( mAggressiveDeviceIdleMode ) return;
+
             postStationaryStatus(listener);
             if (mMotionListener.active) {
                 if (!isStationaryLocked() && mStationaryListeners.size() == 1) {
@@ -1664,8 +1669,13 @@ public class DeviceIdleController extends SystemService
 
     @Override
     public void onAnyMotionResult(int result) {
+
+        if( mAggressiveDeviceIdleMode ) result = AnyMotionDetector.RESULT_STATIONARY;
+
         if (DEBUG) Slog.d(TAG, "onAnyMotionResult(" + result + ")");
         synchronized (this) {
+
+
             if (result != AnyMotionDetector.RESULT_UNKNOWN) {
                 cancelSensingTimeoutAlarmLocked();
             }
