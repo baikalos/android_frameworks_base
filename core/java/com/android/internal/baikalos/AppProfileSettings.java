@@ -159,7 +159,7 @@ public class AppProfileSettings extends ContentObserver {
 
     @Override
     public void onChange(boolean selfChange, Uri uri) {
-        Slog.i(TAG, "Preferences changed. Reloading");
+        Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading");
         synchronized(this) {
             mBackend.refreshList();
             updateConstantsLocked();
@@ -413,9 +413,13 @@ public class AppProfileSettings extends ContentObserver {
         updateSystemFromInstalledPackagesLocked();
     }
 
+    private static boolean selfUpdate;
     private void updateConstantsLocked() {
 
-        Slog.e(TAG, "Loading AppProfiles");
+        Slog.e(TAG, "Loading AppProfiles selfUpdate:" + selfUpdate);
+        if( selfUpdate ) return;
+        selfUpdate = true;
+
         mBackend.refreshList();
 
         try {
@@ -435,6 +439,7 @@ public class AppProfileSettings extends ContentObserver {
                 mSplitter.setString(appProfiles);
             } catch (IllegalArgumentException e) {
                 Slog.e(TAG, "Bad profiles settings", e);
+                selfUpdate = false;
                 return ;
             }
 
@@ -481,14 +486,18 @@ public class AppProfileSettings extends ContentObserver {
             }
             _oldProfiles.clear();
 
+            _staticProfilesByPackageName =  _profilesByPackageName;
 
         } catch (Exception e) {
             Slog.e(TAG, "Bad BaikalService settings", e);
+            selfUpdate = false;
             return;
         }
 
-        _staticProfilesByPackageName =  _profilesByPackageName;
         Slog.e(TAG, "Loaded " + _profilesByPackageName.size() + " AppProfiles");
+        saveLocked();
+
+        selfUpdate = false;
     }
 
     private void updateSystemFromInstalledPackagesLocked() {
