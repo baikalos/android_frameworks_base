@@ -2782,7 +2782,7 @@ public class AppOpsManager {
             AppOpsManager.MODE_IGNORED, // ACTIVATE_PLATFORM_VPN
             AppOpsManager.MODE_DEFAULT, // LOADER_USAGE_STATS
             AppOpsManager.MODE_IGNORED, // deprecated operation
-            AppOpsManager.MODE_DEFAULT, // OP_AUTO_REVOKE_PERMISSIONS_IF_UNUSED
+            AppOpsManager.MODE_IGNORED, // OP_AUTO_REVOKE_PERMISSIONS_IF_UNUSED
             AppOpsManager.MODE_ALLOWED, // OP_AUTO_REVOKE_MANAGED_BY_INSTALLER
             AppOpsManager.MODE_ERRORED, // OP_NO_ISOLATED_STORAGE
             AppOpsManager.MODE_ALLOWED, // PHONE_CALL_MICROPHONE
