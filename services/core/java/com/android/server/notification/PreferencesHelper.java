@@ -805,7 +805,7 @@ public class PreferencesHelper implements RankingConfig {
     boolean isImportanceLocked(String pkg, int uid) {
         synchronized (mPackagePreferences) {
             PackagePreferences r = getOrCreatePackagePreferencesLocked(pkg, uid);
-            return r.fixedImportance || r.defaultAppLockedImportance;
+            return r.fixedImportance;// || r.defaultAppLockedImportance;
         }
     }
 
