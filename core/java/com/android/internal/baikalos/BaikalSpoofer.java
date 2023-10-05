@@ -124,8 +124,8 @@ public class BaikalSpoofer {
         new SpoofDeviceInfo("OnePlus9R","LE2101","OnePlus","OnePlus 9R", "OnePlus", null), // 28
         new SpoofDeviceInfo("munch","22021211RG","Xiaomi","POCO F4", "POCO", "POCO/munch_global/munch:13/RKQ1.211001.001/V14.0.1.0.TLMMIXM:user/release-keys"), // 29
         new SpoofDeviceInfo("cezanne","M2006J10C","Xiaomi","Redmi K30 Ultra","xiaomi", null), // 30
-        
-
+        new SpoofDeviceInfo("tangorpro","Pixel Tablet","Google","Pixel Tablet","google", "google/tangorpro/tangorpro:13/TQ3A.230901.001.B1/10750577:user/release-keys"), // 31
+        new SpoofDeviceInfo("felix","Pixel Fold","Google","Pixel Fold","google", "google/felix/felix:13/TQ3C.230901.001.B1/10750989:user/release-keys"), // 32
     };
 
     public static void maybeSpoofProperties(Application app, Context context) {
@@ -135,6 +135,16 @@ public class BaikalSpoofer {
     }
 
     public static int maybeSpoofFeature(String packageName, String name, int version) {
+        if (packageName != null &&
+                packageName.contains("com.google.android.apps.as") ) {
+            Log.i(TAG, "App " + packageName + " is requested " + name + " feature with " + version + " version");
+            if( name.contains("PIXEL_2022_EXPERIENCE") || 
+                name.contains("PIXEL_2022_MIDYEAR_EXPERIENCE") ) {
+                return 0;
+            }
+            return -1;
+        }
+
         if (packageName != null &&
                 packageName.contains("com.google.android.apps.photos") ) {
 
