@@ -25,7 +25,9 @@ import static com.android.systemui.statusbar.notification.interruption.Notificat
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.INotificationManager;
+import android.app.role.RoleManager;
 import android.content.ContentResolver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.database.ContentObserver;
 import android.hardware.display.AmbientDisplayConfiguration;
@@ -33,10 +35,12 @@ import android.os.Handler;
 import android.os.PowerManager;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.provider.Telephony.Sms;
 import android.service.notification.StatusBarNotification;
 import android.telecom.TelecomManager;
+import android.telecom.DefaultDialerManager;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -52,6 +56,8 @@ import com.android.systemui.statusbar.notification.collection.NotificationEntry;
 import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.HeadsUpManager;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
+
+import com.android.internal.telephony.SmsApplication;
 
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -92,6 +98,11 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     private Context mContext;
     private boolean mInCall = false;
 
+<<<<<<< HEAD
+=======
+    private List<String> mHeadsUpAllowList = new ArrayList<String>();
+
+>>>>>>> 926f4ddbfe3a (Fix after merge)
     public enum NotificationInterruptEvent implements UiEventLogger.UiEventEnum {
         @UiEvent(doc = "FSI suppressed for suppressive GroupAlertBehavior")
         FSI_SUPPRESSED_SUPPRESSIVE_GROUP_ALERT_BEHAVIOR(1235),
@@ -185,6 +196,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                     Settings.Global.getUriFor(Settings.Global.HEADS_UP_NOTIFICATIONS_ENABLED),
                     true,
                     headsUpObserver);
+
             mContentResolver.registerContentObserver(
                     Settings.Global.getUriFor(SETTING_HEADS_UP_TICKER), true,
                     headsUpObserver);
@@ -663,12 +675,21 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     }
 
     private static String getDefaultSmsPackage(Context ctx) {
-        // for reference, there's also a new RoleManager api with getDefaultSmsPackage(context, userid)
-        return Sms.getDefaultSmsPackage(ctx);
+        int contextUserId = UserHandle.myUserId();
+        return ctx.getSystemService(RoleManager.class).getSmsRoleHolder(contextUserId);
     }
 
+<<<<<<< HEAD
     private static String getDefaultDialerPackage(TelecomManager tm) {
         return tm != null ? tm.getDefaultDialerPackage() : "";
+=======
+    private static String getDefaultDialerPackage(Context ctx) {
+        //TelecomManager tm = (TelecomManager) ctx.getSystemService(Context.TELECOM_SERVICE);
+        //return tm != null ? tm.getDefaultDialerPackage() : "";
+
+        final String defaultDialer = DefaultDialerManager.getDefaultDialerApplication(ctx);
+        return defaultDialer;
+>>>>>>> 926f4ddbfe3a (Fix after merge)
     }
 
     /**
