@@ -238,8 +238,6 @@ public final class DisplayManagerService extends SystemService {
     // very very sure that no deadlock can occur.
     private final SyncRoot mSyncRoot = new SyncRoot();
 
-    private final boolean mInteractiveForDoze;
-
     // True if in safe mode.
     // This option may disable certain display adapters.
     public boolean mSafeMode;
@@ -515,10 +513,6 @@ public final class DisplayManagerService extends SystemService {
         ColorSpace[] colorSpaces = SurfaceControl.getCompositionColorSpaces();
         mWideColorSpace = colorSpaces[1];
         mAllowNonNativeRefreshRateOverride = mInjector.getAllowNonNativeRefreshRateOverride();
-
-        mInteractiveForDoze = context.getResources().getBoolean(
-                com.android.internal.R.bool.config_interactiveForDoze);
-
 
         mSystemReady = false;
     }
@@ -2399,15 +2393,7 @@ public final class DisplayManagerService extends SystemService {
         device.populateViewportLocked(viewport);
         viewport.valid = true;
         viewport.displayId = displayId;
-        if( mInteractiveForDoze ) {
-            viewport.isActive = 
-                info.state == Display.STATE_ON || 
-                info.state == Display.STATE_VR || 
-                info.state == Display.STATE_DOZE || 
-                info.state == Display.STATE_DOZE_SUSPEND;
-        } else {
-            viewport.isActive = Display.isActiveState(info.state);
-        }
+        viewport.isActive = Display.isActiveState(info.state);
     }
 
     private void updateViewportPowerStateLocked(LogicalDisplay display) {
