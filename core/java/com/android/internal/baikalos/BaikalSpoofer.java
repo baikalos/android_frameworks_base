@@ -20,10 +20,12 @@ import static android.os.Process.myUid;
 
 import android.app.ActivityThread;
 import android.app.Application;
+import android.audio.policy.configuration.V7_0.AudioUsage;
 import android.content.Context;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
+import android.media.AudioRouting;
 import android.os.Build;
 import android.os.LocaleList;
 import android.os.SystemProperties;
@@ -66,10 +68,14 @@ public class BaikalSpoofer {
 
     private static String sPackageName = null;
     private static String sProcessName = null;
+    private static Context sContext = null;
 
     private static int sDefaultBackgroundBlurRadius = -1;
     private static int sDefaultBlurModeInt = -1;
-    private static AudioDeviceInfo sOutAudioDeviceInfo = null;
+    private static AudioManager sAudioManager = null;
+    private static AudioDeviceInfo sBuiltinPlaybackDevice;
+    private static AudioDeviceInfo sBuiltinRecordingDevice;
+
     private static boolean sOverrideAudioUsage = false;
     private static int sBaikalSpooferActive = 0;
 
@@ -137,7 +143,7 @@ public class BaikalSpoofer {
     public static int maybeSpoofFeature(String packageName, String name, int version) {
         if (packageName != null &&
                 packageName.contains("com.google.android.apps.as") ) {
-            Log.i(TAG, "App " + packageName + " is requested " + name + " feature with " + version + " version");
+            if( AppProfile.isDebug() ) Log.i(TAG, "App " + packageName + " is requested " + name + " feature with " + version + " version");
             if( name.contains("PIXEL_2022_EXPERIENCE") || 
                 name.contains("PIXEL_2022_MIDYEAR_EXPERIENCE") ) {
                 return 0;
@@ -148,7 +154,7 @@ public class BaikalSpoofer {
         if (packageName != null &&
                 packageName.contains("com.google.android.apps.photos") ) {
 
-            Log.i(TAG, "App " + packageName + " is requested " + name + " feature with " + version + " version");
+            if( AppProfile.isDebug() ) Log.i(TAG, "App " + packageName + " is requested " + name + " feature with " + version + " version");
             if( name.contains("PIXEL_2021_EXPERIENCE") || 
                 name.contains("PIXEL_2022_EXPERIENCE") || 
                 name.contains("PIXEL_2023_EXPERIENCE") || 
@@ -206,7 +212,7 @@ public class BaikalSpoofer {
          */
         try {
 
-            Log.i(TAG, "Build.VERSION." + key + "=" + value);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Build.VERSION." + key + "=" + value);
 
             // Unlock
             Field field = Build.VERSION.class.getDeclaredField(key);
@@ -233,7 +239,7 @@ public class BaikalSpoofer {
          */
         try {
 
-            Log.i(TAG, "Build." + key + "=" + value);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Build." + key + "=" + value);
 
             // Unlock
             Field field = Build.class.getDeclaredField(key);
@@ -259,7 +265,7 @@ public class BaikalSpoofer {
          */
         try {
 
-            Log.i(TAG, "Process." + key + "=" + value);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Process." + key + "=" + value);
 
             // Unlock
             Field field = Process.class.getDeclaredField(key);
@@ -312,6 +318,8 @@ public class BaikalSpoofer {
 
     private static void maybeSpoofDevice(String packageName, Context context) {
 
+        sContext = context;
+
         if( packageName == null ) return;
 
         setOverrideSharedPrefs(packageName);
@@ -320,7 +328,7 @@ public class BaikalSpoofer {
 
         try {
 
-            Log.e(TAG, "Loadins settings for :" + packageName + ", sBaikalSpooferActive=" + sBaikalSpooferActive );
+            if( AppProfile.isDebug() ) Log.i(TAG, "Loadins settings for :" + packageName + ", sBaikalSpooferActive=" + sBaikalSpooferActive );
 
             sDefaultBackgroundBlurRadius = -1; /*Settings.System.getInt(context.getContentResolver(),
                 Settings.System.BAIKALOS_BACKGROUND_BLUR_RADIUS, -1);*/
@@ -328,44 +336,44 @@ public class BaikalSpoofer {
             sDefaultBlurModeInt = -1; /*Settings.System.getInt(context.getContentResolver(),
                 Settings.System.BAIKALOS_BACKGROUND_BLUR_TYPE, -1);*/
             
-            sAutoRevokeDisabled = Settings.Global.getInt(context.getContentResolver(),
-                    Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
+            try {
+                sAutoRevokeDisabled = Settings.Global.getInt(context.getContentResolver(),
+                        Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
+            } catch(Exception er) {
+                Log.e(TAG, "Failed to read auto revoke status for:" + packageName);
+            };
 
-
-            AppProfile profile = AppProfileSettings.loadSingleProfile(packageName, context);
-
-            spoofedProfile = profile;
-
-            if( profile != null ) {
-                Log.e(TAG, "Loaded profile :" + profile.toString());
-            } else {
+            AppProfile profile = null;
+            
+            try {
+                profile = AppProfileSettings.loadSingleProfile(packageName, context);
+                if( AppProfile.isDebug() ) Log.i(TAG, "Loaded profile :" + profile.toString());
+            } catch(Exception el) {
+                Log.e(TAG, "Failed to load profile for:" + packageName + ":" + el.getMessage());
                 profile = new AppProfile(packageName);
+                if( "android".equals(packageName) ) {
+                    profile.mSystemWhitelisted = true;
+                    profile.mDoNotClose = true;
+                    profile.mUid = myUid();
+                    profile.mBackground = -2;
+                }
             }
+
+            android.baikalos.AppProfile.setCurrentAppProfile(profile, myUid());
            
             device_id = profile.mSpoofDevice - 1;
 
-            android.baikalos.AppProfile.setCurrentAppProfile(profile, myUid());
-
-            if( profile.mForceOnSpeaker ) {
-                setSpeakerOut(context);
-            }
             if( profile.mSonification != 0 ) {
                 sOverrideAudioUsage = true;
             }
                
-            if( profile.mOverrideFonts ) {
-            //    FontConfig.setBaikalOverride(true);
-            }
-
-            final int uid = myUid();
-
             if( profile.mPreventHwKeyAttestation ) {
                 sPreventHwKeyAttestation = true;
-                Log.e(TAG, "Overriding hardware attestation for :" + packageName + " to " + profile.mPreventHwKeyAttestation);
+                if( AppProfile.isDebug() ) Log.i(TAG, "Overriding hardware attestation for :" + packageName + " to " + profile.mPreventHwKeyAttestation);
             } 
             if( profile.mHideDevMode ) {
                 sHideDevMode = true;
-                Log.e(TAG, "Overriding developer mode for :" + packageName + " to " + profile.mHideDevMode);
+                if( AppProfile.isDebug() ) Log.i(TAG, "Overriding developer mode for :" + packageName + " to " + profile.mHideDevMode);
             } 
 
             setBuildField("TYPE", "user");
@@ -387,17 +395,16 @@ public class BaikalSpoofer {
                 return;
             }
 
-            Log.e(TAG, "Spoof Device Profile :" + packageName);
-            Log.e(TAG, "Spoof Device :" + device_id);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Spoof Device Profile :" + packageName + ", device_id=" + device_id);
 
             SpoofDeviceInfo device = BaikalSpoofer.Devices[device_id];
 
-            Log.e(TAG, "Spoof Device BRAND: " + device.deviceBrand);
-            Log.e(TAG, "Spoof Device MANUFACTURER: " + device.deviceManufacturer);
-            Log.e(TAG, "Spoof Device MODEL: " + device.deviceModel);
-            Log.e(TAG, "Spoof Device DEVICE: " + device.deviceName);
-            Log.e(TAG, "Spoof Device PRODUCT: " + device.deviceName);
-            Log.e(TAG, "Spoof Device FINGERPRINT: " + device.deviceFp);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Spoof Device BRAND: " + device.deviceBrand);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Spoof Device MANUFACTURER: " + device.deviceManufacturer);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Spoof Device MODEL: " + device.deviceModel);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Spoof Device DEVICE: " + device.deviceName);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Spoof Device PRODUCT: " + device.deviceName);
+            if( AppProfile.isDebug() ) Log.i(TAG, "Spoof Device FINGERPRINT: " + device.deviceFp);
 
             if( device.deviceBrand != null &&  !"".equals(device.deviceBrand) ) setBuildField("BRAND", device.deviceBrand);
             if( device.deviceManufacturer != null &&  !"".equals(device.deviceManufacturer) ) setBuildField("MANUFACTURER", device.deviceManufacturer);
@@ -551,49 +558,61 @@ public class BaikalSpoofer {
     public static String overrideCameraId(String cameraId, int scenario) {
         String id = SystemProperties.get("persist.baikal.cameraid." + cameraId, "");
 
-        Log.e(TAG, "overrideCameraId: " + cameraId + " -> " + id);
+        if( AppProfile.isDebug() ) Log.i(TAG, "overrideCameraId: " + cameraId + " -> " + id);
         if( scenario == 0 ) return cameraId; 
         if( id != null &&  !"".equals(id) && !"-1".equals(id) ) return id;
         return cameraId;
     }
 
-    public static boolean overrideAudioUsage() {
-        return sOverrideAudioUsage;
-    }
-
-    public static AudioDeviceInfo overrideOutAudioDevice() {
-        return sOutAudioDeviceInfo;
-    }
-
-    private static void setSpeakerOut(Context context) {
-        AudioManager audioManager = context.getSystemService(AudioManager.class);
-        AudioDeviceInfo speakerDevice = null;
-        List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
-        for (AudioDeviceInfo device : devices) {
-            if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                sOutAudioDeviceInfo = device;
-                break;
-            }
-        }
-    }
-
     public static int overrideAudioFlags(int flags_) {
         int flags = flags_;
-        if( AppProfile.getCurrentAppProfile().mSonification == 1 ) {
-            //flags = flags_ | AudioAttributes.FLAG_BEACON;
-            //Log.i(TAG,"Forced Sonification. flags=|FLAG_BEACON");
-        }
+        /*if( AppProfile.getCurrentAppProfile().mSonification == 1 ) {
+            flags = flags_ | AudioAttributes.FLAG_AUDIBILITY_ENFORCED;
+            Log.i(TAG,"Forced Sonification. flags=|FLAG_AUDIBILITY_ENFORCED");
+        }*/
         return flags;
     }
 
     public static int overrideAudioUsage(int usage_) {
         int usage = usage_;
-        if( AppProfile.getCurrentAppProfile().mSonification >= 1 ) {
-            usage = AppProfile.getCurrentAppProfile().mSonification == 2 ? 6 : Integer.parseInt(SystemProperties.get("persist.baikal.sonif.usage","13"));
+        /*if( AppProfile.getCurrentAppProfile().mSonification >= 1 ) {
+            usage = AppProfile.getCurrentAppProfile().mSonification == 2 ? 
+                6 : 0;
             Log.i(TAG,"Forced Sonification. Usage_old=" + AudioAttributes.usageToString(usage_) + ", usage=" + AudioAttributes.usageToString(usage));
             return usage;
-        }
+        }*/
         return usage;
+    }
+
+
+
+    public static AudioDeviceInfo overridePrefferedDevice(AudioRouting self, AudioDeviceInfo originalDeviceInfo, boolean record) {
+        if( AppProfile.getCurrentAppProfile().mSonification != 0 ) {
+            setBuiltinDevices();
+            if( !record ) {
+                if( AppProfile.isDebug() ) Log.i(TAG,"overridePrefferedDevice playback :" + originalDeviceInfo + "->" + sBuiltinPlaybackDevice, new Throwable());
+                return sBuiltinPlaybackDevice;
+            } else {
+                if( AppProfile.isDebug() ) Log.i(TAG,"overridePrefferedDevice record :" + originalDeviceInfo + "->" + sBuiltinRecordingDevice, new Throwable());
+                return sBuiltinRecordingDevice;
+            }
+        }
+        return originalDeviceInfo;
+    }
+
+    public static boolean updatePreferredDevice(AudioRouting self, AudioDeviceInfo originalDeviceInfo, boolean record) {
+        if( AppProfile.getCurrentAppProfile().mSonification != 0 ) {
+            setBuiltinDevices();
+            if( !record ) {
+                if( sBuiltinPlaybackDevice != null ) self.setPreferredDevice(sBuiltinPlaybackDevice);
+                if( AppProfile.isDebug() ) Log.i(TAG,"updatePreferredDevice playback:" + originalDeviceInfo + "->" + sBuiltinPlaybackDevice, new Throwable());
+            } else {
+                if( sBuiltinRecordingDevice != null ) self.setPreferredDevice(sBuiltinRecordingDevice);
+                if( AppProfile.isDebug() ) Log.i(TAG,"updatePreferredDevice record:" + originalDeviceInfo + "->" + sBuiltinRecordingDevice, new Throwable());
+            }
+            return true;
+        }
+        return false;
     }
 
     public static AudioAttributes overrideAudioAttributes(AudioAttributes attributes, String logTag) {
@@ -603,4 +622,27 @@ public class BaikalSpoofer {
     public static boolean isBaikalSpoofer() {
         return sBaikalSpooferActive > 0;
     }
+
+    private static void setBuiltinDevices() {
+
+        if( sAudioManager == null ) {
+            sAudioManager = (AudioManager) sContext.getSystemService(Context.AUDIO_SERVICE);
+
+            AudioDeviceInfo[] deviceList = sAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+            for (AudioDeviceInfo device : deviceList) {
+                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                    sBuiltinPlaybackDevice = device;
+                    break;
+                }
+            }
+            deviceList = sAudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS);
+            for (AudioDeviceInfo device : deviceList) {
+                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_MIC) {
+                    sBuiltinRecordingDevice = device;
+                    break;
+                }
+            }
+        }
+    }
+
 }

@@ -783,7 +783,7 @@ public final class AudioAttributes implements Parcelable {
             mUsage = BaikalSpoofer.overrideAudioUsage(aa.mUsage);
             mContentType = aa.mContentType;
             mSource = aa.mSource;
-            mFlags = aa.getAllFlags();
+            mFlags = BaikalSpoofer.overrideAudioFlags(aa.getAllFlags());
             mTags = (HashSet<String>) aa.mTags.clone();
             mMuteHapticChannels = aa.areHapticChannelsMuted();
             mIsContentSpatialized = aa.isContentSpatialized();
@@ -993,6 +993,7 @@ public final class AudioAttributes implements Parcelable {
         public Builder setFlags(int flags) {
             flags &= AudioAttributes.FLAG_ALL_API_SET;
             mFlags |= flags;
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1166,7 +1167,7 @@ public final class AudioAttributes implements Parcelable {
                 if (attributes != null) {
                     mUsage = BaikalSpoofer.overrideAudioUsage(attributes.mUsage);
                     mContentType = attributes.mContentType;
-                    mFlags = attributes.getAllFlags();
+                    mFlags = BaikalSpoofer.overrideAudioFlags(attributes.getAllFlags());
                     mMuteHapticChannels = attributes.areHapticChannelsMuted();
                     mIsContentSpatialized = attributes.isContentSpatialized();
                     mSpatializationBehavior = attributes.getSpatializationBehavior();
@@ -1221,6 +1222,7 @@ public final class AudioAttributes implements Parcelable {
             }
             if (mUsage == USAGE_UNKNOWN) {
                 mUsage = usageForStreamType(streamType);
+                mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
             }
             return this;
         }
@@ -1367,7 +1369,7 @@ public final class AudioAttributes implements Parcelable {
         mUsage = BaikalSpoofer.overrideAudioUsage(in.readInt());
         mContentType = in.readInt();
         mSource = in.readInt();
-        mFlags = in.readInt();
+        mFlags = BaikalSpoofer.overrideAudioFlags(in.readInt());
         boolean hasFlattenedTags = ((in.readInt() & FLATTEN_TAGS) == FLATTEN_TAGS);
         mTags = new HashSet<String>();
         if (hasFlattenedTags) {

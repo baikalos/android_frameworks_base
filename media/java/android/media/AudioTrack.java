@@ -40,6 +40,8 @@ import android.os.PersistableBundle;
 import android.util.ArrayMap;
 import android.util.Log;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import com.android.internal.annotations.GuardedBy;
 
 import java.lang.annotation.Retention;
@@ -2955,6 +2957,7 @@ public class AudioTrack extends PlayerBase
         }
         synchronized(mPlayStateLock) {
             baseStart(0); // unknown device at this point
+            BaikalSpoofer.updatePreferredDevice(this, mPreferredDevice, false);
             native_start();
             // FIXME see b/179218630
             //baseStart(native_getRoutedDeviceId());
@@ -3689,6 +3692,7 @@ public class AudioTrack extends PlayerBase
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
+        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, false);
         // Do some validation....
         if (deviceInfo != null && !deviceInfo.isSink()) {
             return false;
