@@ -74,8 +74,9 @@ class PulsingGestureListener @Inject constructor(
                 Settings.Secure.DOUBLE_TAP_TO_WAKE ->
                     doubleTapEnabledNative = TunerService.parseIntegerSwitch(value, false)
                 Settings.Secure.DOZE_DOUBLE_TAP_GESTURE ->
-                    doubleTapEnabled = ambientDisplayConfiguration.doubleTapGestureEnabled(
-                            userTracker.userId)
+                    doubleTapEnabled = doubleTapEnabledNative;
+                    //doubleTapEnabled = ambientDisplayConfiguration.doubleTapGestureEnabled(
+                    //        userTracker.userId)
                 Settings.Secure.DOZE_TAP_SCREEN_GESTURE ->
                     singleTapEnabled = ambientDisplayConfiguration.tapGestureEnabled(
                             userTracker.userId)
