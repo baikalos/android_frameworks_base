@@ -74,7 +74,7 @@ public class MediaOutputAdapter extends MediaOutputBaseAdapter {
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder viewHolder, int position) {
         if (mController.isAdvancedLayoutSupported()) {
-            if (position >= mController.getMediaItemList().size()) {
+            if (mController.getMediaItemList().size() == 0 || position >= mController.getMediaItemList().size()) {
                 if (DEBUG) {
                     Log.d(TAG, "Incorrect position: " + position + " list size: "
                             + mController.getMediaItemList().size());
