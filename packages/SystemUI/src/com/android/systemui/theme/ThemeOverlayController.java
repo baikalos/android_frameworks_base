@@ -113,7 +113,7 @@ public class ThemeOverlayController implements CoreStartable, Dumpable, TunerSer
     protected static final String TAG = "ThemeOverlayController";
     protected static final String OVERLAY_BERRY_BLACK_THEME =
             "com.android.system.theme.black";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private static final String PREF_CHROMA_FACTOR ="monet_engine_chroma_factor";
     private static final String PREF_LUMINANCE_FACTOR ="monet_engine_luminance_factor";
@@ -368,7 +368,7 @@ public class ThemeOverlayController implements CoreStartable, Dumpable, TunerSer
                         jsonObject.toString(), UserHandle.USER_CURRENT);
             }
         } catch (JSONException e) {
-            Log.i(TAG, "Failed to parse THEME_CUSTOMIZATION_OVERLAY_PACKAGES.", e);
+            Log.i(TAG, "Failed to parse THEME_CUSTOMIZATION_OVERLAY_PACKAGES. " + overlayPackageJson, e);
         }
         reevaluateSystemTheme(false /* forceReload */);
     }
@@ -822,7 +822,7 @@ public class ThemeOverlayController implements CoreStartable, Dumpable, TunerSer
                     }
                 }
             } catch (JSONException e) {
-                Log.i(TAG, "Failed to parse THEME_CUSTOMIZATION_OVERLAY_PACKAGES.", e);
+                Log.i(TAG, "Failed to parse THEME_CUSTOMIZATION_OVERLAY_PACKAGES. " + overlayPackageJson, e);
             }
         }
 
@@ -923,7 +923,7 @@ public class ThemeOverlayController implements CoreStartable, Dumpable, TunerSer
                     style = Style.TONAL_SPOT;
                 }
             } catch (JSONException | IllegalArgumentException e) {
-                Log.i(TAG, "Failed to parse THEME_CUSTOMIZATION_OVERLAY_PACKAGES.", e);
+                //Log.i(TAG, "Failed to parse THEME_CUSTOMIZATION_OVERLAY_PACKAGES. " + overlayPackageJson);
                 style = Style.TONAL_SPOT;
             }
         }
