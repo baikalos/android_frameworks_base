@@ -41,7 +41,7 @@ import java.util.concurrent.Executor;
 @Deprecated
 public class ImsConfig {
     private static final String TAG = "ImsConfig";
-    private boolean DBG = false;
+    private boolean DBG = true;
     private final IImsConfig miConfig;
 
     /**

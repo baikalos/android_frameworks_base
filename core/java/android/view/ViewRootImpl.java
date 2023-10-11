@@ -1955,17 +1955,28 @@ public final class ViewRootImpl implements ViewParent,
             // Only need to acquire wake lock for DOZE state.
             return;
         }
-        if (mWindowAttributes.type != WindowManager.LayoutParams.TYPE_BASE_APPLICATION) {
+        if (mWindowAttributes.type != WindowManager.LayoutParams.TYPE_BASE_APPLICATION && 
+            mWindowAttributes.type != WindowManager.LayoutParams.TYPE_NOTIFICATION_SHADE && 
+            mWindowAttributes.type != WindowManager.LayoutParams.TYPE_STATUS_BAR) {
             // Non-activity windows should be responsible to hold wake lock by themself, because
             // usually they are system windows.
+            //Slog.w(TAG, "Non-activity in doze state :" + mWindowAttributes.type);
             return;
         }
-        if (mAdded && mTraversalScheduled && mAttachInfo.mHasWindowFocus) {
+        if (mAdded && mTraversalScheduled && (mAttachInfo.mHasWindowFocus || 
+            mWindowAttributes.type == WindowManager.LayoutParams.TYPE_NOTIFICATION_SHADE ||
+            mWindowAttributes.type == WindowManager.LayoutParams.TYPE_STATUS_BAR ) ) {
             try {
+                Slog.w(TAG, "Activity or system window in doze state mAdded=" + mAdded + 
+                            ", mTraversalScheduled=" + mTraversalScheduled + 
+                            ", mHasWindowFocus=" + mAttachInfo.mHasWindowFocus + 
+                            ", " + mWindowAttributes.type);
                 mWindowSession.pokeDrawLock(mWindow);
             } catch (RemoteException ex) {
                 // System server died, oh well.
             }
+        } else {
+            //Slog.w(TAG, "mAdded=" + mAdded + ", mTraversalScheduled=" + mTraversalScheduled + ", mHasWindowFocus=" + mAttachInfo.mHasWindowFocus);
         }
     }
 
