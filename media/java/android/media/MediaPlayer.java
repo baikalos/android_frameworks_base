@@ -65,6 +65,8 @@ import android.widget.VideoView;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import libcore.io.IoBridge;
 import libcore.io.Streams;
 
@@ -1368,6 +1370,7 @@ public class MediaPlayer extends PlayerBase
         baseStart(0); // unknown device at this point
         stayAwake(true);
         tryToEnableNativeRoutingCallback();
+        BaikalSpoofer.updatePreferredDevice(this, mPreferredDevice, false);
         _start();
     }
 
@@ -1466,6 +1469,7 @@ public class MediaPlayer extends PlayerBase
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
+        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, false);
         if (deviceInfo != null && !deviceInfo.isSink()) {
             return false;
         }

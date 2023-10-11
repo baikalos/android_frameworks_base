@@ -53,6 +53,8 @@ import android.util.Pair;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -2017,6 +2019,7 @@ public class AudioRecord implements AudioRouting, MicrophoneDirection,
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
+        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, true);
         // Do some validation....
         if (deviceInfo != null && !deviceInfo.isSource()) {
             return false;
