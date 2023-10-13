@@ -65,6 +65,7 @@ public class BaikalConstants {
     public static boolean BAIKAL_DEBUG_POWERHAL = BAIKAL_DEBUG | false;
     public static boolean BAIKAL_DEBUG_POWER = BAIKAL_DEBUG | false;
     public static boolean BAIKAL_DEBUG_JOBS = BAIKAL_DEBUG | false;
+    public static boolean BAIKAL_DEBUG_WAKELOCKS = BAIKAL_DEBUG | false;
 
 
     public static final int DEBUG_MASK_ALL = 0x0001;
@@ -92,6 +93,7 @@ public class BaikalConstants {
 
     public static final int DEBUG_MASK_POWER = 0x100000;
     public static final int DEBUG_MASK_JOBS = 0x200000;
+    public static final int DEBUG_MASK_WAKELOCKS = 0x400000;
 
     public static void Logv(boolean type, int uid,String tag, String msg) {
         if( type ) { Slog.v(tag,msg); return; }

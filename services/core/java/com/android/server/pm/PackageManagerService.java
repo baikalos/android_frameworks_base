@@ -3686,7 +3686,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                             "");
                 }
                 Log.w(TAG, "Missing required system package: " + packageName + (packageInfo != null
-                        ? ", but found with extended search." : "."));
+                        ? ", but found with extended search." : "."), new Throwable());
                 return null;
             }
         } finally {

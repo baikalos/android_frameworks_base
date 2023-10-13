@@ -216,6 +216,7 @@ public class BaikalDebugManager {
         BaikalConstants.BAIKAL_DEBUG_POWERHAL = false;
         BaikalConstants.BAIKAL_DEBUG_POWER = false;
         BaikalConstants.BAIKAL_DEBUG_JOBS = false;
+        BaikalConstants.BAIKAL_DEBUG_WAKELOCKS = false;
 
         int debugMask = 0;
 
@@ -251,5 +252,6 @@ public class BaikalDebugManager {
         if( (debugMask&BaikalConstants.DEBUG_MASK_POWERHAL) !=0 ) BaikalConstants.BAIKAL_DEBUG_POWERHAL = true;
         if( (debugMask&BaikalConstants.DEBUG_MASK_POWER) !=0 ) BaikalConstants.BAIKAL_DEBUG_POWER = true;
         if( (debugMask&BaikalConstants.DEBUG_MASK_JOBS) !=0 ) BaikalConstants.BAIKAL_DEBUG_JOBS = true;
+        if( (debugMask&BaikalConstants.DEBUG_MASK_WAKELOCKS) !=0 ) BaikalConstants.BAIKAL_DEBUG_WAKELOCKS = true;
     }
 }

@@ -773,4 +773,48 @@ public class AppProfileSettings extends ContentObserver {
     public static boolean isDebugUid(int uid) {
         return _mAppsForDebug.contains(uid);
     }
+
+    private static boolean sSuperSaver;
+    public static boolean isSuperSaver() {
+        return sSuperSaver;
+    }
+
+    public static boolean setSuperSaver(boolean enable) {
+        if( enable != sSuperSaver ) {
+            sSuperSaver = enable;
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean sReaderMode;
+    public static boolean isReaderMode() {
+        return sReaderMode;
+    }
+
+    public static boolean setReaderMode(boolean enable) {
+        if( enable != sReaderMode ) {
+            sReaderMode = enable;
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isSuperSaverActive() {
+        return (sSuperSaver && !sSuperSaverOverride) || sReaderMode;
+    }
+
+    private static boolean sSuperSaverOverride;
+    public static boolean setSuperSaverOverride(boolean enable) {
+        if( enable != sSuperSaverOverride ) {
+            sSuperSaverOverride = enable;
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isSuperSaverOverride() {
+        return sSuperSaverOverride;
+    }
+
 }

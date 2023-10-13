@@ -17509,6 +17509,14 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_POWER_LEVEL_IDLE = "baikalos_power_level_idle";
 
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SUPER_SAVER = "baikalos_super_saver";
+
         /* End of BaikalOS Global Settings */
 
 

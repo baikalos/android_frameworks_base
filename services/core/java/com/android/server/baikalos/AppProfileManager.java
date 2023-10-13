@@ -300,6 +300,10 @@ public class AppProfileManager {
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_ALLOW_DOWNGRADE),
                     false, this);
 
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_SUPER_SAVER),
+                    false, this);
+
             } catch( Exception e ) {
             }
         
@@ -489,6 +493,9 @@ public class AppProfileManager {
 
         mAllowDowngrade = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_ALLOW_DOWNGRADE, 0) != 0;
 
+        boolean superSaver = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_SUPER_SAVER, 0) != 0;
+        AppProfileSettings.setSuperSaver(superSaver);
+
         if( changed ) {
             activateCurrentProfileLocked(false,false);
         }
@@ -671,6 +678,8 @@ public class AppProfileManager {
 
         updateBypassChargingIfNeededLocked();
         updateStaminaIfNeededLocked();
+        
+        AppProfileSettings.setReaderMode(profile.mReader);
 
     }
 
@@ -716,6 +725,14 @@ public class AppProfileManager {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+        if( enable ) {
+            if( mode == MODE_SUSTAINED_PERFORMANCE || mode == MODE_FIXED_PERFORMANCE ) {
+                AppProfileSettings.setSuperSaverOverride(true);
+            } else {
+                AppProfileSettings.setSuperSaverOverride(false);
+            }
         }
     }
 
@@ -1366,5 +1383,14 @@ public class AppProfileManager {
         Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
         return false;
     }
+
+// ----------------- READER MODE --------------
+
+
+    public static boolean isReaderModeActive() {
+        return AppProfileSettings.isSuperSaverActive();
+    }
+
+// ----------------- READER MODE --------------
 
 }
