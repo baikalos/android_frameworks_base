@@ -41,6 +41,7 @@ import android.util.Slog;
 import android.view.Display;
 
 import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
 import com.android.server.baikalos.AppProfileManager;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -415,7 +416,9 @@ public class PowerGroup {
             // sensor may not be correctly configured as a wake-up source.
             if (!mDisplayPowerRequest.useProximitySensor || !proximityPositive
                     || !suspendWhenScreenOffDueToProximityConfig) {
-                return true;
+                if( !AppProfileSettings.isSuperSaverActive() || mDisplayPowerRequest.useProximitySensor ) {
+                    return true;
+                }
             }
         }
 

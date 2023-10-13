@@ -49,6 +49,7 @@ import com.android.systemui.qs.tiles.BypassChargingTile
 import com.android.systemui.qs.tiles.BoostTile
 import com.android.systemui.qs.tiles.CPUInfoLiteTile
 import com.android.systemui.qs.tiles.StaminaModeTile
+import com.android.systemui.qs.tiles.SuperSaverTile
 
 /* End of BaikalOS tiles */
 
@@ -233,5 +234,11 @@ interface LineageModule {
     @IntoMap
     @StringKey(StaminaModeTile.TILE_SPEC)
     fun bindStaminaModeTile(staminaModeTile: StaminaModeTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(SuperSaverTile.TILE_SPEC)
+    fun bindSuperSaverModeTile(superSaverModeTile: SuperSaverTile): QSTileImpl<*>
 
 }

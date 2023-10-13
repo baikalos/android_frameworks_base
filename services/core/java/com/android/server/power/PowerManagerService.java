@@ -145,6 +145,7 @@ import lineageos.providers.LineageSettings;
 import android.baikalos.AppProfile;
 import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.baikalos.AppProfileManager;
 
 import java.io.FileDescriptor;
@@ -250,7 +251,7 @@ public final class PowerManagerService extends SystemService
     private static final float PROXIMITY_NEAR_THRESHOLD = 5.0f;
 
     // How long a partial wake lock must be held until we consider it a long wake lock.
-    static final long MIN_LONG_WAKE_CHECK_INTERVAL = 60*1000;
+    static final long MIN_LONG_WAKE_CHECK_INTERVAL = 45*1000;
 
     // Default setting for double tap to wake.
     private static final int DEFAULT_DOUBLE_TAP_TO_WAKE = 0;
@@ -2040,15 +2041,17 @@ public final class PowerManagerService extends SystemService
 
     @GuardedBy("mLock")
     private void notifyWakeLockAcquiredLocked(WakeLock wakeLock) {
+        if ( wakeLock.mNotifiedAcquired ) {
+           	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: duplicate " + wakeLock);
+            return;
+        }
+       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: " + wakeLock);
         if (mSystemReady && !wakeLock.mDisabled) {
             wakeLock.mNotifiedAcquired = true;
             mNotifier.onWakeLockAcquired(wakeLock.mFlags, wakeLock.mTag, wakeLock.mPackageName,
                     wakeLock.mOwnerUid, wakeLock.mOwnerPid, wakeLock.mWorkSource,
                     wakeLock.mHistoryTag, wakeLock.mCallback);
             restartNofifyLongTimerLocked(wakeLock);
-            /*if( wakeLock.mTag.startsWith("Audio") ) {
-                AppProfileManager.setAudioMode(true);
-            }*/
         }
     }
 
@@ -2069,31 +2072,59 @@ public final class PowerManagerService extends SystemService
         }
     }
 
+
     @GuardedBy("mLock")
     private void notifyWakeLockLongStartedLocked(WakeLock wakeLock) {
+       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: " + wakeLock);
         if (mSystemReady && !wakeLock.mDisabled) {
             wakeLock.mNotifiedLong = true;
             mNotifier.onLongPartialWakeLockStart(wakeLock.mTag, wakeLock.mOwnerUid,
                     wakeLock.mWorkSource, wakeLock.mHistoryTag);
+            if( !wakeLock.mNotifiedAcquired ) {
+                if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: not acquired LONG " + wakeLock);
+                //return;
+            }
 			if ((wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK) == PowerManager.PARTIAL_WAKE_LOCK ) {
                 int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
-                if( appid < Process.FIRST_APPLICATION_UID && !wakeLock.mTag.startsWith("*job*") ) return;
-	            if( wakeLock.mTag.startsWith("Audio") ) return;
+                if( appid < Process.FIRST_APPLICATION_UID 
+                    && !wakeLock.mTag.startsWith("*job*")
+                    && !wakeLock.mTag.startsWith("*sync*") ) {
+
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: system LONG " + wakeLock);
+                    return;
+                }
+                if( wakeLock.mAudio ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: Audio LONG " + wakeLock);
+                    return;
+                }
+	            ///if( wakeLock.mTag.startsWith("Audio") ) return;
                 if( !AppProfileManager.getInstance().isGmsUid(wakeLock.mOwnerUid) ) {
-                    AppProfile profile = AppProfileManager.getInstance().getProfile(wakeLock.mPackageName);
-                    if( profile.getBackground() < 0 ) return;
+                    //AppProfile profile = AppProfileManager.getInstance().getProfile(wakeLock.mPackageName);
+                    //if( profile.getBackground() < 0 ) return;
+                    if( wakeLock.isWhitelisted(true,true) ) {
+                        if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: whitelisted LONG " + wakeLock);
+                        return;
+                    }
+                } else {
+                    if( wakeLock.isWhitelisted(false,true) ) {
+                        if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: whitelisted(gms) LONG " + wakeLock);
+                        return;
+                    }
                 }
             	wakeLock.mDisabled = true;
             	notifyWakeLockReleasedLocked(wakeLock);
-            	Slog.d(TAG, "notifyWakeLockLongStartedLocked: disabled appid " + wakeLock);
+            	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: disabled appid " + wakeLock);
             	mDirty |= DIRTY_WAKE_LOCKS;
             	updatePowerStateLocked();
 			}
+        } else {
+            if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: already disabled LONG " + wakeLock);
         }
     }
 
     @GuardedBy("mLock")
     private void notifyWakeLockLongFinishedLocked(WakeLock wakeLock) {
+       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongFinishedLocked: " + wakeLock);
         if (wakeLock.mNotifiedLong) {
             wakeLock.mNotifiedLong = false;
             mNotifier.onLongPartialWakeLockFinish(wakeLock.mTag, wakeLock.mOwnerUid,
@@ -2105,6 +2136,7 @@ public final class PowerManagerService extends SystemService
     private void notifyWakeLockChangingLocked(WakeLock wakeLock, int flags, String tag,
             String packageName, int uid, int pid, WorkSource ws, String historyTag,
             IWakeLockCallback callback) {
+       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockChangingLocked: " + wakeLock);
         if (mSystemReady && wakeLock.mNotifiedAcquired) {
             mNotifier.onWakeLockChanging(wakeLock.mFlags, wakeLock.mTag, wakeLock.mPackageName,
                     wakeLock.mOwnerUid, wakeLock.mOwnerPid, wakeLock.mWorkSource,
@@ -2121,6 +2153,7 @@ public final class PowerManagerService extends SystemService
 
     @GuardedBy("mLock")
     private void notifyWakeLockReleasedLocked(WakeLock wakeLock) {
+       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockReleasedLocked: " + wakeLock);
         if (mSystemReady && wakeLock.mNotifiedAcquired) {
             wakeLock.mNotifiedAcquired = false;
             wakeLock.mAcquireTime = 0;
@@ -3015,6 +3048,8 @@ public final class PowerManagerService extends SystemService
             for (int i = 0; i < numWakeLocks; i++) {
                 final WakeLock wakeLock = mWakeLocks.get(i);
                 final Integer groupId = wakeLock.getPowerGroupId();
+
+                if( !wakeLock.mNotifiedAcquired ) continue;
                 // a wakelock with an invalid group ID should affect all groups
                 if (groupId == null || (groupId != Display.INVALID_DISPLAY_GROUP
                         && !mPowerGroups.contains(groupId))) {
@@ -3025,7 +3060,7 @@ public final class PowerManagerService extends SystemService
                 final int wakeLockFlags = getWakeLockSummaryFlags(wakeLock);
                 mWakeLockSummary |= wakeLockFlags;
 
-                if (wakeLock.mAudio) mWakeLockSummary |= WAKE_LOCK_AUDIO;
+                if (!wakeLock.mDisabled && wakeLock.mAudio) mWakeLockSummary |= WAKE_LOCK_AUDIO;
 
                 if (groupId != Display.INVALID_DISPLAY_GROUP) {
                     int wakeLockSummary = powerGroup.getWakeLockSummaryLocked();
@@ -3084,9 +3119,9 @@ public final class PowerManagerService extends SystemService
         // Infer implied wake locks where necessary based on the current state.
         if ((wakeLockSummary & (WAKE_LOCK_SCREEN_BRIGHT | WAKE_LOCK_SCREEN_DIM)) != 0) {
             if (wakefulness == WAKEFULNESS_AWAKE) {
-                wakeLockSummary |= WAKE_LOCK_CPU | WAKE_LOCK_STAY_AWAKE;
+                wakeLockSummary |= /*WAKE_LOCK_CPU |*/ WAKE_LOCK_STAY_AWAKE;
             } else if (wakefulness == WAKEFULNESS_DREAMING) {
-                wakeLockSummary |= WAKE_LOCK_CPU;
+                // wakeLockSummary |= WAKE_LOCK_CPU;
             }
         }
         if ((wakeLockSummary & WAKE_LOCK_DRAW) != 0) {
@@ -4647,28 +4682,34 @@ public final class PowerManagerService extends SystemService
                                     != ActivityManager.PROCESS_STATE_NONEXISTENT &&
                             wakeLock.mUidState.mProcState > ActivityManager.PROCESS_STATE_RECEIVER);
                 }
-                if (mDeviceIdleMode) {
+                if (!disabled && (mDeviceIdleMode || AppProfileSettings.isSuperSaverActive())) {
                     // If we are in idle mode, we will also ignore all partial wake locks that are
                     // for application uids that are not allowlisted.
                     final UidState state = wakeLock.mUidState;
-                    if (Arrays.binarySearch(mDeviceIdleWhitelist, appid) < 0 &&
-                            Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) < 0 &&
-                            state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT &&
-                            state.mProcState >
-                                    ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE) {
+                    if (Arrays.binarySearch(mDeviceIdleWhitelist, appid) < 0
+                            && Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) < 0
+                            && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
+                            && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE
+                            &&  !wakeLock.mAudio
+                            &&  !wakeLock.isWhitelisted(true,false)) {
                         disabled = true;
                     }
                 }
-                if (mLowPowerStandbyActive) {
+                if (!disabled && (mLowPowerStandbyActive || AppProfileSettings.isSuperSaverActive())) {
                     final UidState state = wakeLock.mUidState;
                     if (Arrays.binarySearch(mLowPowerStandbyAllowlist, appid) < 0
                             && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
-                            && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_TOP) {
+                            && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_TOP
+                            && !wakeLock.mAudio
+                            && !wakeLock.isWhitelisted(true,false)) {
                         disabled = true;
                     }
                 }
             }
-            return wakeLock.setDisabled(disabled);
+            boolean wasDisabled = wakeLock.mDisabled;
+            boolean changed = wakeLock.setDisabled(disabled);
+           	if( disabled != wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: " + wakeLock);
+            return changed;
         }
         return false;
     }
@@ -5927,6 +5968,44 @@ public final class PowerManagerService extends SystemService
             }
             return result;
         }
+
+        public boolean isWhitelisted(boolean checkOwner, boolean ignoreGms) {
+            String opPackageName = null;
+            int  opUid = -1;
+
+            if (mWorkSource != null && !mWorkSource.isEmpty()) {
+                WorkSource workSource = mWorkSource;
+                WorkChain workChain = getFirstNonEmptyWorkChain(workSource);
+                if (workChain != null) {
+                    opPackageName = workChain.getAttributionTag();
+                    opUid = workChain.getAttributionUid();
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted ws: opPackageName=" + opPackageName + ", wl=" + this);
+                } else {
+                    opPackageName = workSource.getPackageName(0) != null
+                            ? workSource.getPackageName(0) : mPackageName;
+                    opUid = workSource.getUid(0);
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted wc: opPackageName=" + opPackageName + ", wl=" + this);
+                }
+            } else {
+                if( checkOwner ) { 
+                    opPackageName = mPackageName;
+                    opUid = mOwnerUid;
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: opPackageName=" + opPackageName + ", wl=" + this);
+                }
+            }
+
+            if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) return false;
+
+            if( opPackageName != null ) {
+                AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName);
+                if( profile.getBackground() < 0 ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName + ", wl=" + this);
+                    return true;
+                }
+            }
+            return false;
+        }
+
     }
 
     private final class SuspendBlockerImpl implements SuspendBlocker {
