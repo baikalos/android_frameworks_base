@@ -551,34 +551,34 @@ public class DisplayPolicy {
                     public void onFling(int duration) {
                         if (mService.mPowerManagerInternal != null) {
                             mService.mPowerManagerInternal.setPowerBoost(
-                                    Boost.INTERACTION, duration);
+                                    Boost.INTERACTION, duration + 160);
                         }
                     }
 
                     @Override
                     public void onVerticalFling(int duration) {
-                        /*if (mService.mPowerManagerInternal != null) {
+                        if (mService.mPowerManagerInternal != null) {
                             mService.mPowerManagerInternal.setPowerBoost(
                                     Boost.INTERACTION, duration + 160);
-                        }*/
+                        }
                     }
 
                     @Override
                     public void onHorizontalFling(int duration) {
-                        /*if (mService.mPowerManagerInternal != null) {
+                        if (mService.mPowerManagerInternal != null) {
                             mService.mPowerManagerInternal.setPowerBoost(
                                     Boost.INTERACTION, duration + 160);
-                        }*/
+                        }
                     }
 
                     @Override
                     public void onScroll(boolean started) {
-                    	//if (started) {
+                    	if (started) {
                             if (mService.mPowerManagerInternal != null) {
-                                //mService.mPowerManagerInternal.setPowerBoost(
-                                //        Boost.INTERACTION, 160);
+                                mService.mPowerManagerInternal.setPowerBoost(
+                                        Boost.INTERACTION, 160);
                             }
-                        //}
+                        }
                     }
 
                     @Override
