@@ -157,9 +157,9 @@ public class DozeUi implements DozeMachine.Part {
     }
 
     private void scheduleTimeTick() {
-        if (mTimeTicker.isScheduled()) {
+        /*if (mTimeTicker.isScheduled()) {
             return;
-        }
+        }*/
 
         long time = System.currentTimeMillis();
         long delta = roundToNextMinute(time) - System.currentTimeMillis();
@@ -171,6 +171,7 @@ public class DozeUi implements DozeMachine.Part {
     }
 
     private void unscheduleTimeTick() {
+        //Log.d(DozeMachine.TAG, "Unschedule AOD time tick:", new Throwable());
         if (!mTimeTicker.isScheduled()) {
             return;
         }
