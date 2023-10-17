@@ -48,6 +48,7 @@ public class AlwaysOnDisplayPolicy {
     private static final long DEFAULT_WALLPAPER_FADE_OUT_MS = 400;
 
     static final String KEY_SCREEN_BRIGHTNESS_ARRAY = "screen_brightness_array";
+    static final String KEY_SCREEN_BRIGHTNESS_THRESHOLDS_ARRAY = "screen_brightness_thresholds_array";
     static final String KEY_DIMMING_SCRIM_ARRAY = "dimming_scrim_array";
     static final String KEY_PROX_SCREEN_OFF_DELAY_MS = "prox_screen_off_delay";
     static final String KEY_PROX_COOLDOWN_TRIGGER_MS = "prox_cooldown_trigger";
@@ -77,6 +78,8 @@ public class AlwaysOnDisplayPolicy {
      * @see #KEY_SCREEN_BRIGHTNESS_ARRAY
      */
     public int[] screenBrightnessArray;
+
+    public int[] screenBrightnessThresholdsArray;
 
     /**
      * Integer array to map ambient brightness type to dimming scrim.
@@ -192,6 +195,11 @@ public class AlwaysOnDisplayPolicy {
                 screenBrightnessArray = mParser.getIntArray(KEY_SCREEN_BRIGHTNESS_ARRAY,
                         resources.getIntArray(
                                 R.array.config_doze_brightness_sensor_to_brightness));
+
+                screenBrightnessThresholdsArray = mParser.getIntArray(KEY_SCREEN_BRIGHTNESS_THRESHOLDS_ARRAY,
+                        resources.getIntArray(
+                                R.array.config_doze_brightness_sensor_to_brightness_thresholds));
+
                 dimmingScrimArray = mParser.getIntArray(KEY_DIMMING_SCRIM_ARRAY,
                         resources.getIntArray(
                                 R.array.config_doze_brightness_sensor_to_scrim_opacity));
