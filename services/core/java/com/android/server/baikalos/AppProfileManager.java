@@ -649,6 +649,7 @@ public class AppProfileManager {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate current profile=" + profile);
 
         if( profile == null ) {
+            AppProfileSettings.setReaderMode(0);
             setActiveFrameRateLocked(0,0);
             Actions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(0));
             setRotation(-1);
@@ -662,6 +663,7 @@ public class AppProfileManager {
             int thermMode = mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile;
 	        if( force || thermMode != mActiveThermProfile ) activateThermalProfile(thermMode);
         } else {
+            AppProfileSettings.setReaderMode(profile.mReader);
             setActiveFrameRateLocked(profile.mMinFrameRate,profile.mMaxFrameRate);
             Actions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(profile.mBrightness));
             setRotation(profile.mRotation-1);
@@ -678,9 +680,6 @@ public class AppProfileManager {
 
         updateBypassChargingIfNeededLocked();
         updateStaminaIfNeededLocked();
-        
-        AppProfileSettings.setReaderMode(profile.mReader);
-
     }
 
     public void wakeUp() {

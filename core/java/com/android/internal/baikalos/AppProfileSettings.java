@@ -23,6 +23,7 @@ import android.text.TextUtils;
 import android.os.UserHandle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemProperties;
 
@@ -403,8 +404,16 @@ public class AppProfileSettings extends ContentObserver {
         } catch (Exception e) {
             Slog.e(TAG, "Bad BaikalService settings", e);
         } 
+
         AppProfile default_profile = new AppProfile(packageName);
-        return updateProfileFromSystemWhitelistStatic(default_profile,context);
+        try {
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            if( pm.isIgnoringBatteryOptimizations(packageName) ) {
+                default_profile.mBackground = -1;
+            }
+        } catch(Exception ex) {
+        }
+        return default_profile; 
     }
 
 
@@ -787,12 +796,12 @@ public class AppProfileSettings extends ContentObserver {
         return false;
     }
 
-    private static boolean sReaderMode;
-    public static boolean isReaderMode() {
+    private static int sReaderMode;
+    public static int getReaderMode() {
         return sReaderMode;
     }
 
-    public static boolean setReaderMode(boolean enable) {
+    public static boolean setReaderMode(int enable) {
         if( enable != sReaderMode ) {
             sReaderMode = enable;
             return true;
@@ -801,7 +810,7 @@ public class AppProfileSettings extends ContentObserver {
     }
 
     public static boolean isSuperSaverActive() {
-        return (sSuperSaver && !sSuperSaverOverride) || sReaderMode;
+        return (sReaderMode != -1) && ((sSuperSaver && !sSuperSaverOverride) || (sReaderMode == 1));
     }
 
     private static boolean sSuperSaverOverride;
