@@ -34,6 +34,7 @@ import android.os.Trace;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.IndentingPrintWriter;
+import android.util.Log;
 
 import com.android.internal.R;
 import com.android.systemui.doze.dagger.BrightnessSensor;
@@ -57,8 +58,11 @@ import javax.inject.Inject;
 @DozeScope
 public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachine.Part,
         SensorEventListener {
+
+    public static final String TAG = "DozeScreenBrightness";
+
     private static final boolean DEBUG_AOD_BRIGHTNESS = SystemProperties
-            .getBoolean("debug.aod_brightness", false);
+            .getBoolean("debug.aod_brightness", true);
     protected static final String ACTION_AOD_BRIGHTNESS =
             "com.android.systemui.doze.AOD_BRIGHTNESS";
     protected static final String BRIGHTNESS_BUCKET = "brightness_bucket";
@@ -81,6 +85,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
     private final DozeLog mDozeLog;
     private final SystemSettings mSystemSettings;
     private final int[] mSensorToBrightness;
+    private final int[] mSensorToBrightnessThresholds;
     private final int[] mSensorToScrimOpacity;
     private final int mScreenBrightnessDim;
 
@@ -133,6 +138,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
         mDefaultDozeBrightness = alwaysOnDisplayPolicy.defaultDozeBrightness;
         mScreenBrightnessDim = alwaysOnDisplayPolicy.dimBrightness;
         mSensorToBrightness = alwaysOnDisplayPolicy.screenBrightnessArray;
+        mSensorToBrightnessThresholds = alwaysOnDisplayPolicy.screenBrightnessThresholdsArray;
         mSensorToScrimOpacity = alwaysOnDisplayPolicy.dimmingScrimArray;
 
         mDevicePostureController.addCallback(mDevicePostureCallback);
@@ -182,6 +188,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
         try {
             if (mRegistered) {
                 mLastSensorValue = (int) event.values[0];
+                //Log.d(TAG, "DozeBrightness sensor:" + mLastSensorValue);
                 updateBrightnessAndReady(false /* force */);
             }
         } finally {
@@ -196,8 +203,9 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
             int brightness = computeBrightness(sensorValue);
             boolean brightnessReady = brightness > 0;
             if (brightnessReady) {
-                mDozeService.setDozeScreenBrightness(
-                        clampToDimBrightnessForScreenOff(clampToUserSetting(brightness)));
+                int value = clampToDimBrightnessForScreenOff(clampToUserSetting(brightness));
+                //Log.d(TAG, "DozeBrightness value:" + value + ", brightness=" + brightness);
+                mDozeService.setDozeScreenBrightness(value);
             }
 
             int scrimOpacity = -1;
@@ -243,10 +251,19 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
     }
 
     private int computeBrightness(int sensorValue) {
+        if( mSensorToBrightnessThresholds != null && mSensorToBrightnessThresholds.length > 0 ) return computeBrightnessFromThreshold(sensorValue);
         if (sensorValue < 0 || sensorValue >= mSensorToBrightness.length) {
             return -1;
         }
         return mSensorToBrightness[sensorValue];
+    }
+
+    private int computeBrightnessFromThreshold(int sensorValue) {
+        if( mSensorToBrightnessThresholds.length != mSensorToBrightness.length ) return -1;
+        for(int i=0;i<mSensorToBrightnessThresholds.length;i++) {
+            if( sensorValue < mSensorToBrightnessThresholds[i] ) return mSensorToBrightness[(i>0?i-1:0)];
+        }
+        return mSensorToBrightness[mSensorToBrightness.length-1];
     }
 
     @Override
@@ -261,10 +278,11 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
     }
     //TODO: brightnessfloat change usages to float.
     private int clampToUserSetting(int brightness) {
-        int userSetting = mSystemSettings.getIntForUser(
+        /*int userSetting = mSystemSettings.getIntForUser(
                 Settings.System.SCREEN_BRIGHTNESS, Integer.MAX_VALUE,
                 UserHandle.USER_CURRENT);
-        return Math.min(brightness, userSetting);
+        return Math.min(brightness, userSetting);*/
+        return brightness;
     }
 
     /**
@@ -295,6 +313,9 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
     }
 
     private void setLightSensorEnabled(boolean enabled) {
+        //if( !enabled ) Log.d(TAG, "setLightSensorEnabled:" + enabled, new Throwable());
+        //else Log.d(TAG, "setLightSensorEnabled:" + enabled);
+
         if (enabled && !mRegistered && isLightSensorPresent()) {
             // Wait until we get an event from the sensor until indicating ready.
             mRegistered = mSensorManager.registerListener(this, getLightSensor(),
