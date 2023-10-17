@@ -50,6 +50,8 @@ import com.android.systemui.qs.tiles.BoostTile
 import com.android.systemui.qs.tiles.CPUInfoLiteTile
 import com.android.systemui.qs.tiles.StaminaModeTile
 import com.android.systemui.qs.tiles.SuperSaverTile
+import com.android.systemui.qs.tiles.LogRecorderTile
+import com.android.systemui.qs.tiles.LimitedChargingTile
 
 /* End of BaikalOS tiles */
 
@@ -240,5 +242,17 @@ interface LineageModule {
     @IntoMap
     @StringKey(SuperSaverTile.TILE_SPEC)
     fun bindSuperSaverModeTile(superSaverModeTile: SuperSaverTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(LogRecorderTile.TILE_SPEC)
+    fun bindLogRecorderModeTile(logRecorderModeTile: LogRecorderTile): QSTileImpl<*>
+
+    /** Inject LimitedChargingTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(LimitedChargingTile.TILE_SPEC)
+    fun bindLimitedChargingTile(limitedChargingTile: LimitedChargingTile): QSTileImpl<*>
 
 }
