@@ -50,7 +50,7 @@ public class AppProfile {
     public int mMinFrameRate;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mReader;
+    public int mReader;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mPinned;
@@ -295,7 +295,7 @@ public class AppProfile {
 
     public boolean isDefault() {
         if( mBrightness == 0 &&
-            !mReader &&
+            mReader == 0 &&
             !mPinned &&
             !mDoNotClose &&
             !mStamina &&
@@ -393,7 +393,7 @@ public class AppProfile {
         if( mBrightness != 0 ) result += "," + "br=" + mBrightness;
         if( mPerfProfile != 0 ) result += "," + "pp=" + mPerfProfile;
         if( mThermalProfile != 0 ) result += "," + "tp=" + mThermalProfile;
-        if( mReader ) result +=  "," + "rm=" + mReader;
+        if( mReader != 0 ) result +=  "," + "rm=" + mReader;
         if( mPinned ) result +=  "," + "pd=" + mPinned;
         if( mDoNotClose ) result +=  "," + "dnc=" + mDoNotClose;
         if( mMaxFrameRate != 0 ) result +=  "," + "fr=" + mMaxFrameRate;
@@ -449,7 +449,6 @@ public class AppProfile {
             mBrightness = parser.getInt("br",0);
             mPerfProfile = parser.getInt("pp",0);
             mThermalProfile = parser.getInt("tp",0);
-            mReader = parser.getBoolean("rm",false);
             mPinned = parser.getBoolean("pd",false);
             mStamina = parser.getBoolean("as",false);
             mMaxFrameRate = parser.getInt("fr",0);
@@ -485,6 +484,7 @@ public class AppProfile {
             mHeavyCPU = parser.getBoolean("hc",false);
             mSystemWhitelisted = parser.getBoolean("sw",false);
             mDoNotClose = parser.getBoolean("dnc",false);
+            mReader = parser.getInt("rm",0);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }

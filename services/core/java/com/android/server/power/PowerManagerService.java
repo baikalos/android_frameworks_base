@@ -1717,7 +1717,7 @@ public final class PowerManagerService extends SystemService
         updateSettingsLocked();
         updatePowerStateLocked();
         updateBypassChargingStatus();
-        updateAodOnChargerStatus();
+        //updateAodOnChargerStatus();
     }
 
     private void acquireWakeLockInternal(IBinder lock, int displayId, int flags, String tag,
@@ -2270,7 +2270,7 @@ public final class PowerManagerService extends SystemService
         Trace.traceBegin(Trace.TRACE_TAG_POWER, "userActivity");
         try {
             if (eventTime > mLastInteractivePowerHintTime) {
-                setPowerBoostInternal(Boost.INTERACTION, 0);
+                setPowerBoostInternal(Boost.INTERACTION, 150);
                 mLastInteractivePowerHintTime = eventTime;
             }
 
@@ -2817,15 +2817,16 @@ public final class PowerManagerService extends SystemService
                 // they don't have a charging LED.
                 final long now = mClock.uptimeMillis();
 
-                boolean aod_enabled = updateAodOnChargerStatus();
+                boolean aod_on_charger_enabled = updateAodOnChargerStatus();
+                boolean aod_enabled = updateAodStatus();
 
-                if( aod_enabled ) {
+                if( aod_enabled || aod_on_charger_enabled ) {
                     if( wasPowered != mIsPowered && 
                         (getGlobalWakefulnessLocked() == WAKEFULNESS_ASLEEP || 
                          getGlobalWakefulnessLocked() == WAKEFULNESS_DOZING ) ) {
                         Slog.i(TAG, "Update Aod On Charger Status");
 
-                        if( mIsPowered ) {
+                        if( mIsPowered || aod_enabled ) {
                             //dreamPowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
                             //    now, Process.SYSTEM_UID);
                             dozeFromDozePowerGroupLocked(mPowerGroups.get(Display.DEFAULT_DISPLAY_GROUP), 
@@ -2893,6 +2894,17 @@ public final class PowerManagerService extends SystemService
 
         boolean enabled = Settings.Secure.getIntForUser(resolver,
                 Settings.Secure.DOZE_ON_CHARGE, 0, UserHandle.USER_CURRENT) != 0;
+
+        return enabled;
+    }
+
+    private boolean updateAodStatus() {
+
+        if (DEBUG) Slog.i(TAG, "updateAodOnChargerStatus");
+        final ContentResolver resolver = mContext.getContentResolver();
+
+        boolean enabled = Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.DOZE_ALWAYS_ON, 0, UserHandle.USER_CURRENT) != 0;
 
         return enabled;
     }
@@ -4674,7 +4686,9 @@ public final class PowerManagerService extends SystemService
                 == PowerManager.PARTIAL_WAKE_LOCK) {
             boolean disabled = false;
             final int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
-            if (appid >= Process.FIRST_APPLICATION_UID) {
+            if (appid >= Process.FIRST_APPLICATION_UID 
+                || wakeLock.mTag.startsWith("*job*")
+                || wakeLock.mTag.startsWith("*sync*") ) {
                 // Cached inactive processes are never allowed to hold wake locks.
                 if (mConstants.NO_CACHED_WAKE_LOCKS) {
                     disabled = mForceSuspendActive
@@ -4686,8 +4700,8 @@ public final class PowerManagerService extends SystemService
                     // If we are in idle mode, we will also ignore all partial wake locks that are
                     // for application uids that are not allowlisted.
                     final UidState state = wakeLock.mUidState;
-                    if (Arrays.binarySearch(mDeviceIdleWhitelist, appid) < 0
-                            && Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) < 0
+                    if (/*Arrays.binarySearch(mDeviceIdleWhitelist, appid) < 0
+                            &&*/ Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) < 0
                             && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
                             && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE
                             &&  !wakeLock.mAudio
@@ -4695,9 +4709,10 @@ public final class PowerManagerService extends SystemService
                         disabled = true;
                     }
                 }
-                if (!disabled && (mLowPowerStandbyActive || AppProfileSettings.isSuperSaverActive())) {
+                if (!disabled && mLowPowerStandbyActive) {
                     final UidState state = wakeLock.mUidState;
                     if (Arrays.binarySearch(mLowPowerStandbyAllowlist, appid) < 0
+                            && Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) < 0
                             && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
                             && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_TOP
                             && !wakeLock.mAudio
