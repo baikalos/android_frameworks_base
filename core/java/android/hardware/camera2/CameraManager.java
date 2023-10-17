@@ -1773,7 +1773,7 @@ public final class CameraManager {
         private String[] extractCameraIdListLocked() {
             String[] cameraIds = null;
             boolean exposeAuxCamera = Camera.shouldExposeAuxCamera();
-            int size = exposeAuxCamera ? mDeviceStatus.size() : 2;
+            int size = exposeAuxCamera ? mDeviceStatus.size() : ( mDeviceStatus.size() > 2 ? 2 : mDeviceStatus.size() );
             int idCount = 0;
             for (int i = 0; i < size; i++) {
                 int status = mDeviceStatus.valueAt(i);
