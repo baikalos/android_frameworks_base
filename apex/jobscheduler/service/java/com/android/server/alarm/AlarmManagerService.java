@@ -157,7 +157,9 @@ import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 import android.baikalos.AppProfile;
 import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.baikalos.AppProfileManager;
+
 
 import com.android.server.baikalos.BaikalAlarmManager;
 
@@ -2889,9 +2891,8 @@ public class AlarmManagerService extends SystemService {
 
 
             if (alarmClock == null && (exact || allowWhileIdle || 
-		(flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
-		|| type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP )  
-		) {
+	        	(flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
+        		|| type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP )  ) {
                 if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, listenerTag)) {
                     if( exact ) {
                         exact = false;
@@ -2901,11 +2902,14 @@ public class AlarmManagerService extends SystemService {
                         allowWhileIdle = false;
                     }
 
-		    if( type == ELAPSED_REALTIME_WAKEUP ) type = ELAPSED_REALTIME;
-		    if( type == RTC_WAKEUP ) type = RTC;
+        		    if( type == ELAPSED_REALTIME_WAKEUP ) type = ELAPSED_REALTIME;
+		            if( type == RTC_WAKEUP ) type = RTC;
 
                     flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED | FLAG_ALLOW_WHILE_IDLE_COMPAT);
                     flags &= ~(FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE);
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm disabled:" + callingPackage + "/" + callingUid + ":" + listenerTag );
+                } else {
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm enabled:" + callingPackage + "/" + callingUid + ":" + listenerTag );
                 }
             }
 

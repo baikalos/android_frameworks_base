@@ -23,6 +23,7 @@ import android.app.AlarmManager.OnAlarmListener;
 import android.content.Context;
 import android.os.UserHandle;
 import android.os.WorkSource;
+import android.os.WorkSource.WorkChain;
 import android.util.ArraySet;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
@@ -33,6 +34,12 @@ import android.util.proto.ProtoOutputStream;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.job.JobSchedulerService;
 import com.android.server.job.StateControllerProto;
+
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.BaikalConstants;
+import com.android.server.baikalos.AppProfileManager;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -352,6 +359,68 @@ public final class TimeController extends StateController {
                 mNextDelayExpiredListener, mNextDelayExpiredElapsedMillis, ws);
     }
 
+
+    private static WorkChain getFirstNonEmptyWorkChain(WorkSource workSource) {
+        if (workSource.getWorkChains() == null) {
+            return null;
+        }
+
+        for (WorkChain workChain: workSource.getWorkChains()) {
+            if (workChain.getSize() > 0) {
+                return workChain;
+            }
+        }
+
+        return null;
+    }
+
+    public int getBackgroundMode(WorkSource workSource, boolean ignoreGms) {
+        String opPackageName = null;
+        int  opUid = -1;
+
+        if (workSource == null || workSource.isEmpty()) return 0;
+
+        WorkChain workChain = getFirstNonEmptyWorkChain(workSource);
+        if (workChain != null) {
+            opPackageName = workChain.getAttributionTag();
+            opUid = workChain.getAttributionUid();
+            if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted ws: opPackageName=" + opPackageName);
+        } else {
+            opPackageName = workSource.getPackageName(0) != null
+                    ? workSource.getPackageName(0) : "android";
+            opUid = workSource.getUid(0);
+            if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted wc: opPackageName=" + opPackageName);
+        }
+
+        if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) {
+            if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted gms: opPackageName=" + opPackageName);
+            return 0;
+        }
+
+        if( opPackageName != null ) {
+            AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName);
+
+            if( profile.mDisableWakeup ) {
+                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: alarms disabled opPackageName=" + opPackageName);
+                return 2;
+            }
+            if( profile.mDisableJobs ) {
+                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: jobs disabled opPackageName=" + opPackageName);
+                return 1;
+            }
+
+            if( profile.getBackground() < 0 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName);
+            } else {
+                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: regular opPackageName=" + opPackageName + ", bg=" + profile.getBackground());
+            }
+            return profile.getBackground();
+        }
+
+        if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: default opPackageName=" + opPackageName + ", bg=0");
+        return 0;
+    }
+
     /**
      * Set an alarm with the {@link android.app.AlarmManager} for the next time at which a job's
      * deadline will expire.
@@ -363,8 +432,14 @@ public final class TimeController extends StateController {
             return;
         }
         mNextJobExpiredElapsedMillis = alarmTimeElapsedMillis;
-        updateAlarmWithListenerLocked(DEADLINE_TAG, AlarmManager.ELAPSED_REALTIME_WAKEUP,
+
+        if( getBackgroundMode(ws,false) < 0 ) {
+            updateAlarmWithListenerLocked(DEADLINE_TAG, AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 mDeadlineExpiredListener, mNextJobExpiredElapsedMillis, ws);
+        } else {
+            updateAlarmWithListenerLocked(DEADLINE_TAG, AlarmManager.ELAPSED_REALTIME,
+                mDeadlineExpiredListener, mNextJobExpiredElapsedMillis, ws);
+        }
     }
 
     private long maybeAdjustAlarmTime(long proposedAlarmTimeElapsedMillis) {

@@ -147,12 +147,15 @@ public class BaikalAlarmManager {
             return true;
         }
 
-    	//if( tag != null && tag.startsWith("*job") ) {
-        //    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". delayed for " + packageName);
-        //    return false;
-	    //}
+    	/*if( tag != null && tag.startsWith("*job") ) {
+            if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". delayed for " + packageName);
+            return false;
+	    }*/
 
-        if( uid < Process.FIRST_APPLICATION_UID ) return true;
+        if( uid < Process.FIRST_APPLICATION_UID ) {
+            if( "android.appwidget.action.APPWIDGET_UPDATE".equals(tag) ) return false;
+            return true;
+        }
 
         if( packageName == null ) {
             try {
