@@ -1785,16 +1785,27 @@ public final class BroadcastQueue {
             }
         }
 
-        boolean callerBackground = false;
+        boolean callerBackground = background; // false;
 
-        if( r.callerApp == null || r.callerApp.mState == null || 
-            r.callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP /*||
-            r.callerApp.mState.getCurProcState() > ActivityManager.PROCESS_STATE_FOREGROUND_SERVICE*/ ) callerBackground = true;
+        if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
 
-        if( r.callerApp != null ) {
-            callerBackground |= mService.mAppProfileManager.isTopAppUid(r.callingUid) || 
-                        mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid);
+            if(r.callerApp == null || r.callerApp.mState == null || 
+                (r.callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP && 
+                 r.callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_BOUND_TOP &&
+                 r.callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_PERSISTENT_UI ) ) callerBackground = true;
+
+        } else {
+            if( r.callerApp == null || r.callerApp.mState == null || 
+                (r.callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP) ) callerBackground = true;
+
         }
+
+        //if( r.callerApp != null ) {
+            if( mService.mAppProfileManager.isTopAppUid(r.callingUid) || 
+                mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid) ) {
+                callerBackground = false;
+            }
+        //}
 
         /*if( !skip && callerBackground ) {
             if( mService.mAppProfileManager.isStamina() && !appProfile.mStamina ) {
@@ -1822,7 +1833,7 @@ public final class BroadcastQueue {
         if( !skip && callerBackground ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
                 if( appProfile.getBackground() > 1 ) {
-                    Slog.w(TAG, "Background execution disabled by baikalos: "
+                    Slog.w(TAG, "Background execution limited by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
                             + ", background=" + background
@@ -1841,7 +1852,7 @@ public final class BroadcastQueue {
                 }
             } else {
                 if( appProfile.getBackground() > 0 ) {
-                    Slog.w(TAG, "Background execution limited by baikalos: "
+                    Slog.w(TAG, "Background execution disabled by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
                             + ", background=" + background
