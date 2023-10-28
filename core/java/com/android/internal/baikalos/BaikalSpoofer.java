@@ -350,6 +350,10 @@ public class BaikalSpoofer {
                 if( AppProfile.isDebug() ) Log.i(TAG, "Loaded profile :" + profile.toString());
             } catch(Exception el) {
                 Log.e(TAG, "Failed to load profile for:" + packageName + ":" + el.getMessage());
+            }
+
+            if( profile == null ) {
+                if( packageName == null ) packageName = "android";
                 profile = new AppProfile(packageName);
                 if( "android".equals(packageName) ) {
                     profile.mSystemWhitelisted = true;
@@ -358,6 +362,7 @@ public class BaikalSpoofer {
                     profile.mBackground = -2;
                 }
             }
+
 
             android.baikalos.AppProfile.setCurrentAppProfile(profile, myUid());
            
