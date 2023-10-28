@@ -304,6 +304,10 @@ public class AppProfileManager {
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_SUPER_SAVER),
                     false, this);
 
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_SUPER_SAVER_DRAW),
+                    false, this);
+
             } catch( Exception e ) {
             }
         
@@ -495,6 +499,9 @@ public class AppProfileManager {
 
         boolean superSaver = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_SUPER_SAVER, 0) != 0;
         AppProfileSettings.setSuperSaver(superSaver);
+
+        boolean superSaverForDraw = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_SUPER_SAVER_DRAW, 0) != 0;
+        AppProfileSettings.setSuperSaverActiveForDraw(superSaverForDraw);
 
         if( changed ) {
             activateCurrentProfileLocked(false,false);

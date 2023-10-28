@@ -1952,7 +1952,7 @@ public final class ViewRootImpl implements ViewParent,
     }
 
     void pokeDrawLockIfNeeded() {
-        if (!Display.isDozeState(mAttachInfo.mDisplayState) && !AppProfileSettings.isSuperSaverActive()) {
+        if (!Display.isDozeState(mAttachInfo.mDisplayState) && !AppProfileSettings.isSuperSaverActiveForDraw()) {
             // Only need to acquire wake lock for DOZE state.
             return;
         }
