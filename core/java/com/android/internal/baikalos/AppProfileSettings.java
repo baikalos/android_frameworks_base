@@ -813,6 +813,23 @@ public class AppProfileSettings extends ContentObserver {
         return (sReaderMode != -1) && ((sSuperSaver && !sSuperSaverOverride) || (sReaderMode == 1));
     }
 
+
+    private static boolean sSuperSaverForDraw;
+
+    public static boolean setSuperSaverActiveForDraw(boolean enable) {
+        if( enable != sSuperSaverForDraw ) {
+            sSuperSaverForDraw = enable;
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean isSuperSaverActiveForDraw() {
+        return !sSuperSaverForDraw && isSuperSaverActive();
+    }
+
+
+
     private static boolean sSuperSaverOverride;
     public static boolean setSuperSaverOverride(boolean enable) {
         if( enable != sSuperSaverOverride ) {

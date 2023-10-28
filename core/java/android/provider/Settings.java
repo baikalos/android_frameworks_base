@@ -17517,6 +17517,13 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_SUPER_SAVER = "baikalos_super_saver";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SUPER_SAVER_DRAW = "baikalos_super_saver_draw";
+
         /* End of BaikalOS Global Settings */
 
 
