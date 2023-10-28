@@ -2101,12 +2101,12 @@ public final class PowerManagerService extends SystemService
                 if( !AppProfileManager.getInstance().isGmsUid(wakeLock.mOwnerUid) ) {
                     //AppProfile profile = AppProfileManager.getInstance().getProfile(wakeLock.mPackageName);
                     //if( profile.getBackground() < 0 ) return;
-                    if( wakeLock.isWhitelisted(true,true) ) {
+                    if( wakeLock.getBackgroundMode(true,true) < 0 ) {
                         if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: whitelisted LONG " + wakeLock);
                         return;
                     }
                 } else {
-                    if( wakeLock.isWhitelisted(false,true) ) {
+                    if( wakeLock.getBackgroundMode(false,true) < 0 ) {
                         if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: whitelisted(gms) LONG " + wakeLock);
                         return;
                     }
@@ -4696,28 +4696,43 @@ public final class PowerManagerService extends SystemService
                                     != ActivityManager.PROCESS_STATE_NONEXISTENT &&
                             wakeLock.mUidState.mProcState > ActivityManager.PROCESS_STATE_RECEIVER);
                 }
-                if (!disabled && (mDeviceIdleMode || AppProfileSettings.isSuperSaverActive())) {
-                    // If we are in idle mode, we will also ignore all partial wake locks that are
-                    // for application uids that are not allowlisted.
-                    final UidState state = wakeLock.mUidState;
-                    if (/*Arrays.binarySearch(mDeviceIdleWhitelist, appid) < 0
-                            &&*/ Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) < 0
-                            && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
-                            && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE
-                            &&  !wakeLock.mAudio
-                            &&  !wakeLock.isWhitelisted(true,false)) {
-                        disabled = true;
-                    }
-                }
-                if (!disabled && mLowPowerStandbyActive) {
-                    final UidState state = wakeLock.mUidState;
-                    if (Arrays.binarySearch(mLowPowerStandbyAllowlist, appid) < 0
-                            && Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) < 0
-                            && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
-                            && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_TOP
-                            && !wakeLock.mAudio
-                            && !wakeLock.isWhitelisted(true,false)) {
-                        disabled = true;
+                int mode = wakeLock.getBackgroundMode(true,false);
+                int wakefulness = getGlobalWakefulnessLocked();
+
+                if( !disabled && mode == 2 ) disabled = true;
+                if( !disabled && mode == 1 && wakefulness != WAKEFULNESS_AWAKE ) disabled = true;
+
+                if( !disabled && !wakeLock.mAudio) {
+
+                    boolean tempWhitelisted = Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) >= 0;
+                    if (!tempWhitelisted && mode > -1) {
+                        final UidState state = wakeLock.mUidState;
+
+                        if (!disabled && mDeviceIdleMode) {
+                            // If we are in idle mode, we will also ignore all partial wake locks that are
+                            // for application uids that are not allowlisted.
+                            if (/*Arrays.binarySearch(mDeviceIdleWhitelist, appid) < 0
+                                  &&*/ state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
+                                    && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE) {
+                                disabled = true;
+                            }
+                        }
+                        if (!disabled && mLowPowerStandbyActive) {
+                            if (Arrays.binarySearch(mLowPowerStandbyAllowlist, appid) < 0
+                                    && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
+                                    && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_TOP) {
+                                disabled = true;
+                            }
+                        }
+
+                        if (!disabled && !mDeviceIdleMode && wakefulness == WAKEFULNESS_AWAKE && AppProfileSettings.isSuperSaverActive()) {
+                            // If we are in idle mode, we will also ignore all partial wake locks that are
+                            // for application uids that are not allowlisted.
+                            if (state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
+                                    && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE) {
+                                disabled = true;
+                            }
+                        }
                     }
                 }
             }
@@ -5984,7 +5999,7 @@ public final class PowerManagerService extends SystemService
             return result;
         }
 
-        public boolean isWhitelisted(boolean checkOwner, boolean ignoreGms) {
+        public int getBackgroundMode(boolean checkOwner, boolean ignoreGms) {
             String opPackageName = null;
             int  opUid = -1;
 
@@ -6009,16 +6024,17 @@ public final class PowerManagerService extends SystemService
                 }
             }
 
-            if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) return false;
+            if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) return 0;
 
             if( opPackageName != null ) {
                 AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName);
                 if( profile.getBackground() < 0 ) {
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName + ", wl=" + this);
-                    return true;
+                    //return true;
                 }
+                return profile.getBackground();
             }
-            return false;
+            return 0;
         }
 
     }
