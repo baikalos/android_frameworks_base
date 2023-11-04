@@ -3065,7 +3065,10 @@ public final class ProcessList {
             state.setMaxAdj(ProcessList.PERSISTENT_SERVICE_ADJ);
         }
 
-        if( r.mAppProfile.mPinned ) {
+        if (!isolated && !isSdkSandbox
+                && userId == UserHandle.USER_SYSTEM
+                && r.mAppProfile.mPinned
+                && (TextUtils.equals(proc, info.processName))) {
             state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
             state.setSetSchedGroup(ProcessList.SCHED_GROUP_DEFAULT);
             r.setPersistent(true);
@@ -5102,7 +5105,10 @@ public final class ProcessList {
         final UidRecord uidRec = app.getUidRecord();
         final long lastCanKillTime = app.mState.getLastCanKillOnBgRestrictedAndIdleTime();
         
-        if( app.mAppProfile.mPinned ) return 0;
+        if( app.mAppProfile.mPinned ) {
+            Slog.wtf(TAG, "Killing pinned app!!! :" + app.mAppProfile.mPackageName);
+            //return 0;
+        }
 
         if (!mService.mConstants.mKillBgRestrictedAndCachedIdle
                 || app.isKilled() || app.getThread() == null || uidRec == null || !uidRec.isIdle()
