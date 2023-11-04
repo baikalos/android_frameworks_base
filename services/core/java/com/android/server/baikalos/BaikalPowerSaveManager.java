@@ -328,7 +328,7 @@ public class BaikalPowerSaveManager {
 
         if( powerSaverLevel != mCurrentPowerSaverLevel ) {
 
-            mPowerManager.setAdaptivePowerSaveEnabled(false);
+            if( powerSaverLevel == 0 ) mPowerManager.setAdaptivePowerSaveEnabled(false);
             if( powerSaverLevel > 0 ) {
                 BatterySaverPolicyConfig policy = mLevelLow;
                 switch(powerSaverLevel) {
@@ -346,8 +346,8 @@ public class BaikalPowerSaveManager {
                         policy = mLevelLow;
                         break;
                 }
-                mPowerManager.setAdaptivePowerSaveEnabled(true);
                 mPowerManager.setAdaptivePowerSavePolicy(policy);
+                if( mCurrentPowerSaverLevel == 0 ) mPowerManager.setAdaptivePowerSaveEnabled(true);
             }
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
             mCurrentPowerSaverLevel = powerSaverLevel;
