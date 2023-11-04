@@ -17524,8 +17524,14 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_SUPER_SAVER_DRAW = "baikalos_super_saver_draw";
 
-        /* End of BaikalOS Global Settings */
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BLOCK_OVERLAYS = "baikalos_block_overlays";
 
+        /* End of BaikalOS Global Settings */
 
         /**
          * The amount of time in milliseconds before wifi is turned off

@@ -669,6 +669,7 @@ public class AppProfileManager {
             }
             int thermMode = mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile;
 	        if( force || thermMode != mActiveThermProfile ) activateThermalProfile(thermMode);
+            Settings.Global.putInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BLOCK_OVERLAYS, 0);
         } else {
             AppProfileSettings.setReaderMode(profile.mReader);
             setActiveFrameRateLocked(profile.mMinFrameRate,profile.mMaxFrameRate);
@@ -683,6 +684,7 @@ public class AppProfileManager {
             }
             int thermMode = profile.mThermalProfile <= 0 ? (mDefaultThermalProfile <= 0 ?  1 : mDefaultThermalProfile) : profile.mThermalProfile;
 	        if( force || thermMode != mActiveThermProfile ) activateThermalProfile(thermMode);
+            Settings.Global.putInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BLOCK_OVERLAYS, profile.mBlockOverlays ? 1:0 );
         }
 
         updateBypassChargingIfNeededLocked();
