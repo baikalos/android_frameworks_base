@@ -2393,6 +2393,8 @@ public class AlarmManagerService extends SystemService {
             return false;
         }
         final boolean changedBeforeFuzz = restoreRequestedTime(alarm);
+        return changedBeforeFuzz;
+        /*
         if (mNextWakeFromIdle == null) {
             // No need to change anything in the absence of a wake-from-idle request.
             return changedBeforeFuzz;
@@ -2417,6 +2419,7 @@ public class AlarmManagerService extends SystemService {
             alarm.setPolicyElapsed(REQUESTER_POLICY_INDEX, upcomingWakeFromIdle - fuzz);
         }
         return true;
+        */
     }
 
     /**
@@ -2886,20 +2889,15 @@ public class AlarmManagerService extends SystemService {
                 flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE);
             }
 
-            boolean allowWhileIdle = (flags & FLAG_ALLOW_WHILE_IDLE) != 0;
             boolean exact = (windowLength == 0);
 
-
-            if (alarmClock == null && (exact || allowWhileIdle || 
-	        	(flags & (FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
+            if (alarmClock == null && (exact ||  
+	        	(flags & (FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
         		|| type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP )  ) {
                 if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, listenerTag)) {
                     if( exact ) {
                         exact = false;
                         windowLength = 3600000;
-                    }
-                    if( allowWhileIdle ) {
-                        allowWhileIdle = false;
                     }
 
         		    if( type == ELAPSED_REALTIME_WAKEUP ) type = ELAPSED_REALTIME;
@@ -2913,6 +2911,7 @@ public class AlarmManagerService extends SystemService {
                 }
             }
 
+            boolean allowWhileIdle = (flags & FLAG_ALLOW_WHILE_IDLE) != 0;
 
             // Make sure the caller is allowed to use the requested kind of alarm, and also
             // decide what quota and broadcast options to use.
@@ -4436,6 +4435,7 @@ public class AlarmManagerService extends SystemService {
     }
 
     long currentNonWakeupFuzzLocked(long nowELAPSED) {
+        /*
         long timeSinceOn = nowELAPSED - mNonInteractiveStartTime;
         if (timeSinceOn < 5 * 60 * 1000) {
             // If the screen has been off for 5 minutes, only delay by at most two minutes.
@@ -4446,21 +4446,23 @@ public class AlarmManagerService extends SystemService {
         } else {
             // Otherwise, we will delay by at most an hour.
             return 60 * 60 * 1000;
-        }
+        }*/
+
+        return 6 * 60 * 60 * 1000;
     }
 
     boolean checkAllowNonWakeupDelayLocked(long nowELAPSED) {
         if (mInteractive) {
-            return false;
+            //return false;
         }
         if (mLastAlarmDeliveryTime <= 0) {
-            return false;
+            //return false;
         }
         if (mPendingNonWakeupAlarms.size() > 0 && mNextNonWakeupDeliveryTime < nowELAPSED) {
             // This is just a little paranoia, if somehow we have pending non-wakeup alarms
             // and the next delivery time is in the past, then just deliver them all.  This
             // avoids bugs where we get stuck in a loop trying to poll for alarms.
-            return false;
+            //return false;
         }
         long timeSinceLast = nowELAPSED - mLastAlarmDeliveryTime;
         return timeSinceLast <= currentNonWakeupFuzzLocked(nowELAPSED);
