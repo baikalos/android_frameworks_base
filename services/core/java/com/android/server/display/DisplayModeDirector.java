@@ -88,7 +88,7 @@ import java.util.concurrent.Callable;
  */
 public class DisplayModeDirector {
     private static final String TAG = "DisplayModeDirector";
-    private boolean mLoggingEnabled = false;
+    private boolean mLoggingEnabled = true;
 
     private static final int MSG_REFRESH_RATE_RANGE_CHANGED = 1;
     private static final int MSG_LOW_BRIGHTNESS_THRESHOLDS_CHANGED = 2;
@@ -211,6 +211,7 @@ public class DisplayModeDirector {
     }
 
     public void setLoggingEnabled(boolean loggingEnabled) {
+        loggingEnabled = true;
         if (mLoggingEnabled == loggingEnabled) {
             return;
         }
@@ -391,13 +392,14 @@ public class DisplayModeDirector {
                     Vote.MAX_PRIORITY,
                     appRequestSummary);
 
-            /*appRequestSummary.minRefreshRate =
-                    Math.min(appRequestSummary.minRefreshRate, primarySummary.minRefreshRate);
-            appRequestSummary.maxRefreshRate =
-                    Math.max(appRequestSummary.maxRefreshRate, primarySummary.maxRefreshRate);*/
+            //appRequestSummary.minRefreshRate =
+            //        Math.min(appRequestSummary.minRefreshRate, primarySummary.minRefreshRate);
+            //appRequestSummary.maxRefreshRate =
+            //        Math.max(appRequestSummary.maxRefreshRate, primarySummary.maxRefreshRate);
+
             if (mLoggingEnabled) {
                 Slog.i(TAG,
-                        String.format("App request range: [%.0f %.0f]",
+                        String.format("App requested refresh rate range: [%.0f %.0f]",
                                 appRequestSummary.minRefreshRate,
                                 appRequestSummary.maxRefreshRate));
             }
@@ -1466,7 +1468,7 @@ public class DisplayModeDirector {
                 vote = null;
             }
             synchronized (mLock) {
-                updateVoteLocked(displayId, Vote.PRIORITY_APP_REQUEST_REFRESH_RATE_RANGE, vote);
+                //updateVoteLocked(displayId, Vote.PRIORITY_APP_REQUEST_REFRESH_RATE_RANGE, vote);
             }
         }
 
@@ -1879,8 +1881,8 @@ public class DisplayModeDirector {
                 updateSensorStatus();
                 if (!changeable) {
                     // Revoke previous vote from BrightnessObserver
-                    updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, null);
-                    updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, null);
+                    //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, null);
+                    //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, null);
                 }
             }
         }
@@ -2202,8 +2204,8 @@ public class DisplayModeDirector {
                 Slog.d(TAG, "Display brightness " + mBrightness + ", ambient lux " +  mAmbientLux
                         + ", Vote " + refreshRateVote);
             }
-            updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, refreshRateVote);
-            updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, refreshRateSwitchingVote);
+            //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, refreshRateVote);
+            //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, refreshRateSwitchingVote);
         }
 
         private boolean hasValidLowZone() {
