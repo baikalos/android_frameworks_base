@@ -289,6 +289,7 @@ public class BaikalSpoofer {
         //boolean needsWASpoof = List.of("pixelmigrate", "restore", "snapchat", "instrumentation").stream().anyMatch(packageName::contains);
 
         if ("com.google.android.gms".equals(packageName) ) {
+            setBuildField("TIME", System.currentTimeMillis());
             if( processName != null ) {
                 sIsGmsUnstable = List.of("unstable", "instrumentation").stream().anyMatch(processName.toLowerCase()::contains);
             }

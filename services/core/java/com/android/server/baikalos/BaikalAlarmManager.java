@@ -153,8 +153,12 @@ public class BaikalAlarmManager {
 	    }*/
 
         if( uid < Process.FIRST_APPLICATION_UID ) {
-            if( "android.appwidget.action.APPWIDGET_UPDATE".equals(tag) ) return false;
-            return true;
+            boolean disable = false;
+            if( "android.appwidget.action.APPWIDGET_UPDATE".equals(tag) ) disable = true;
+            if( !disable && "BluetoothMetricsLogger".equals(tag) ) disable = true;
+
+            if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". " + (disable ? "disabled " : "enabled ") + " for " + packageName);
+            return !disable;
         }
 
         if( packageName == null ) {
