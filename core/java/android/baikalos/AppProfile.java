@@ -155,6 +155,9 @@ public class AppProfile {
     public boolean mHeavyCPU;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBlockOverlays;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     private static boolean sDebug;
@@ -212,6 +215,7 @@ public class AppProfile {
         mDebug = false;
         mHeavyMemory = false;
         mHeavyCPU = false;
+        mBlockOverlays = false;
     }
 
     public AppProfile(@Nullable String packageName) {
@@ -237,6 +241,7 @@ public class AppProfile {
         mDebug = false;
         mHeavyMemory = false;
         mHeavyCPU = false;
+        mBlockOverlays = false;
     }
 
     public AppProfile(@Nullable AppProfile profile) {
@@ -331,6 +336,7 @@ public class AppProfile {
             !mHeavyMemory &&
             !mHeavyCPU &&
             !mSystemWhitelisted &&
+            !mBlockOverlays &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -383,6 +389,7 @@ public class AppProfile {
         this.mHeavyMemory = profile.mHeavyMemory;
         this.mHeavyCPU = profile.mHeavyCPU;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
+        this.mBlockOverlays = profile.mBlockOverlays;
 
     }
 
@@ -429,6 +436,7 @@ public class AppProfile {
         if( mHeavyMemory ) result +=  "," + "hm=" + mHeavyMemory;
         if( mHeavyCPU ) result +=  "," + "hc=" + mHeavyCPU;
         if( mSystemWhitelisted ) result +=  "," + "sw=" + mSystemWhitelisted;
+        if( mBlockOverlays ) result +=  "," + "bo=" + mBlockOverlays;
         return result;
     }
 
@@ -485,6 +493,7 @@ public class AppProfile {
             mSystemWhitelisted = parser.getBoolean("sw",false);
             mDoNotClose = parser.getBoolean("dnc",false);
             mReader = parser.getInt("rm",0);
+            mBlockOverlays = parser.getBoolean("bo",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
