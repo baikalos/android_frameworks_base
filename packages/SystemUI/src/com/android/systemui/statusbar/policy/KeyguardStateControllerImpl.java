@@ -195,14 +195,19 @@ public class KeyguardStateControllerImpl implements KeyguardStateController, Dum
     private void notifyKeyguardChanged() {
         Trace.beginSection("KeyguardStateController#notifyKeyguardChanged");
         // Copy the list to allow removal during callback.
-        new ArrayList<>(mCallbacks).forEach(Callback::onKeyguardShowingChanged);
+        new ArrayList<>(mCallbacks).forEach((n) -> {   
+                if( n != null ) n.onKeyguardShowingChanged();
+            });
         Trace.endSection();
     }
 
     private void notifyUnlockedChanged() {
         Trace.beginSection("KeyguardStateController#notifyUnlockedChanged");
         // Copy the list to allow removal during callback.
-        new ArrayList<>(mCallbacks).forEach(Callback::onUnlockedChanged);
+        new ArrayList<>(mCallbacks).forEach((n) -> {
+            if( n != null ) n.onUnlockedChanged();
+        });
+
         Trace.endSection();
     }
 
@@ -220,7 +225,8 @@ public class KeyguardStateControllerImpl implements KeyguardStateController, Dum
             mKeyguardFadingAway = keyguardFadingAway;
             ArrayList<Callback> callbacks = new ArrayList<>(mCallbacks);
             for (int i = 0; i < callbacks.size(); i++) {
-                callbacks.get(i).onKeyguardFadingAwayChanged();
+                if( callbacks.get(i) != null ) 
+                    callbacks.get(i).onKeyguardFadingAwayChanged();
             }
         }
     }
