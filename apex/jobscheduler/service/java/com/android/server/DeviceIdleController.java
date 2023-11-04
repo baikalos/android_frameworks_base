@@ -106,9 +106,10 @@ import com.android.server.net.NetworkPolicyManagerInternal;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
+//import android.baikalos.AppProfile;
+//import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.BaikalConstants;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -299,7 +300,7 @@ public class DeviceIdleController extends SystemService
         implements AnyMotionDetector.DeviceIdleCallback {
     private static final String TAG = "DeviceIdleController";
 
-    private static final boolean DEBUG = false;
+    private static boolean DEBUG = true;
 
     private static final boolean COMPRESS_TIME = false;
 
@@ -720,8 +721,7 @@ public class DeviceIdleController extends SystemService
 
     private final AlarmManager.OnAlarmListener mMotionTimeoutAlarmListener = () -> {
         synchronized (DeviceIdleController.this) {
-            if( mAggressiveDeviceIdleMode ) return;
-            if (!isStationaryLocked()) {
+            if ( !mAggressiveDeviceIdleMode && !isStationaryLocked()) {
                 // If the device keeps registering motion, then the alarm should be
                 // rescheduled, so this shouldn't go off until the device is stationary.
                 // This case may happen in a race condition (alarm goes off right before
@@ -1332,6 +1332,13 @@ public class DeviceIdleController extends SystemService
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_UNRESTRICTED_NET),
                     false, this);
 
+            mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEBUG),
+                    false, this);
+            mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEBUG_MASK),
+                    false, this);
+
             onChange(true, null);
         }
 
@@ -1344,6 +1351,25 @@ public class DeviceIdleController extends SystemService
 
             mUnrestrictedNetwork = Settings.Global.getInt(mResolver,
                     Settings.Global.BAIKALOS_UNRESTRICTED_NET,0) == 1;
+
+            boolean debug = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_DEBUG, 0) != 0;
+        
+            String debugMaskString = Settings.Global.getString(mResolver, Settings.Global.BAIKALOS_DEBUG_MASK);
+            Slog.i(TAG,"enabled=" + debug + ", DebugMask=" + debugMaskString);
+
+            int debugMask = 0;
+        
+            if( debug ) { 
+                try {
+                    debugMask = Integer.parseInt(debugMaskString,16);
+                    Slog.i(TAG, "debugMask=" + debugMask);
+                } catch(Exception e) {
+                    Slog.e(TAG, "Invalid debug mask:" + debugMaskString, e);
+                }
+                if((debugMask&BaikalConstants.DEBUG_MASK_IDLE) != 0 ) DEBUG = true;
+            } else {
+                DEBUG = false;
+            }
 
             if( mAggressiveDeviceIdleMode ) {
                 Slog.i(TAG, "Aggressive device idle mode enabled");
@@ -3236,6 +3262,7 @@ public class DeviceIdleController extends SystemService
     @VisibleForTesting
     @GuardedBy("this")
     void updateQuickDozeFlagLocked(boolean enabled) {
+        enabled = false; // BaikalOS Hack
         if (DEBUG) Slog.i(TAG, "updateQuickDozeFlagLocked: enabled=" + enabled);
         mQuickDozeActivated = enabled;
         mQuickDozeActivatedWhileIdling =
@@ -3974,21 +4001,22 @@ public class DeviceIdleController extends SystemService
 
     @GuardedBy("this")
     void handleMotionDetectedLocked(long timeout, String type) {
-        if( mAggressiveDeviceIdleMode ) return;
-        if (mStationaryListeners.size() > 0) {
-            postStationaryStatusUpdated();
-            cancelMotionTimeoutAlarmLocked();
-            // We need to re-register the motion listener, but we don't want the sensors to be
-            // constantly active or to churn the CPU by registering too early, register after some
-            // delay.
-            scheduleMotionRegistrationAlarmLocked();
-        }
-        if (mQuickDozeActivated && !mQuickDozeActivatedWhileIdling) {
-            // Don't exit idle due to motion if quick doze is enabled.
-            // However, if the device started idling due to the normal progression (going through
-            // all the states) and then had quick doze activated, come out briefly on motion so the
-            // user can get slightly fresher content.
-            return;
+        if( !mAggressiveDeviceIdleMode ) {
+            if (mStationaryListeners.size() > 0) {
+                postStationaryStatusUpdated();
+                cancelMotionTimeoutAlarmLocked();
+                // We need to re-register the motion listener, but we don't want the sensors to be
+                // constantly active or to churn the CPU by registering too early, register after some
+                // delay.
+                scheduleMotionRegistrationAlarmLocked();
+            }
+            if (mQuickDozeActivated && !mQuickDozeActivatedWhileIdling) {
+                // Don't exit idle due to motion if quick doze is enabled.
+                // However, if the device started idling due to the normal progression (going through
+                // all the states) and then had quick doze activated, come out briefly on motion so the
+                // user can get slightly fresher content.
+                return;
+            }
         }
         maybeStopMonitoringMotionLocked();
         // The device is not yet active, so we want to go back to the pending idle
@@ -4203,7 +4231,7 @@ public class DeviceIdleController extends SystemService
 
     private void scheduleMotionRegistrationAlarmLocked() {
         if (DEBUG) Slog.d(TAG, "scheduleMotionRegistrationAlarmLocked");
-        if( mAggressiveDeviceIdleMode ) return;
+        //if( mAggressiveDeviceIdleMode ) return;
         long nextMotionRegistrationAlarmTime =
                 mInjector.getElapsedRealtime() + mConstants.MOTION_INACTIVE_TIMEOUT / 2;
         if (mConstants.USE_WINDOW_ALARMS) {
@@ -4220,7 +4248,7 @@ public class DeviceIdleController extends SystemService
 
     private void scheduleMotionTimeoutAlarmLocked() {
         if (DEBUG) Slog.d(TAG, "scheduleMotionAlarmLocked");
-        if( mAggressiveDeviceIdleMode ) return;
+        //if( mAggressiveDeviceIdleMode ) return;
         long nextMotionTimeoutAlarmTime =
                 mInjector.getElapsedRealtime() + mConstants.MOTION_INACTIVE_TIMEOUT;
         if (mConstants.USE_WINDOW_ALARMS) {
@@ -4237,7 +4265,7 @@ public class DeviceIdleController extends SystemService
     @GuardedBy("this")
     void scheduleSensingTimeoutAlarmLocked(long delay) {
         if (DEBUG) Slog.d(TAG, "scheduleSensingAlarmLocked(" + delay + ")");
-        if( mAggressiveDeviceIdleMode ) return;
+        //if( mAggressiveDeviceIdleMode ) return;
         mNextSensingTimeoutAlarmTime = SystemClock.elapsedRealtime() + delay;
         if (mConstants.USE_WINDOW_ALARMS) {
             mAlarmManager.setWindow(AlarmManager.ELAPSED_REALTIME_WAKEUP,
