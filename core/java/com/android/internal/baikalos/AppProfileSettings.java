@@ -810,7 +810,7 @@ public class AppProfileSettings extends ContentObserver {
     }
 
     public static boolean isSuperSaverActive() {
-        return (sReaderMode != -1) && ((sSuperSaver && !sSuperSaverOverride) || (sReaderMode == 1));
+        return (sReaderMode != -1) && ( (sSuperSaver || sReaderMode == 1)  && !sSuperSaverOverride && !sCameraActive );
     }
 
 
@@ -841,6 +841,20 @@ public class AppProfileSettings extends ContentObserver {
 
     public static boolean isSuperSaverOverride() {
         return sSuperSaverOverride;
+    }
+
+
+    private static boolean sCameraActive;
+    public static boolean isCameraActive() {
+        return sCameraActive;
+    }
+
+    public static boolean setCameraActive(boolean active) {
+        if( active != sCameraActive ) {
+            sCameraActive = active;
+            return true;
+        }
+        return false;
     }
 
 }
