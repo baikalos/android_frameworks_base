@@ -1873,7 +1873,13 @@ public final class BroadcastQueue {
         }
 
         if( !skip && appProfile.getBackground() > 0 ) {
-            Slog.w(TAG, "Background execution enabled for restricted app: "
+            if( "io.chaldeaprjkt.gamespace".equals(appProfile.mPackageName) ) {
+
+                    if( appProfile.getBackground() > 1 || 
+                        (appProfile.getBackground() > 0 && 
+                        mService.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE) ) {
+
+                        Slog.w(TAG, "Background execution of gamespace disabled by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
                             + ", background=" + background
@@ -1889,6 +1895,26 @@ public final class BroadcastQueue {
                             + component.flattenToShortString()
                             );
 
+                    skip = true;
+                }
+            } else {
+        
+                Slog.w(TAG, "Background execution enabled for restricted app: "
+                            + "appProfile=" + appProfile.toString() 
+                            + ", mQueueName=" + mQueueName
+                            + ", background=" + background
+                            + ", callerBackground=" + callerBackground
+                            + ", callingUid=" + r.callingUid
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", Wakefulness=" + mService.mWakefulness.get()
+                            + ", callerApp=" + r.callerApp
+                            + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                            + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                            + " receiving " 
+                            + r.intent + " to "
+                            + component.flattenToShortString()
+                            );
+            }
         }
         
         if (!skip) {
