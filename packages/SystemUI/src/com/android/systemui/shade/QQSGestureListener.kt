@@ -19,6 +19,9 @@ package com.android.systemui.shade
 import android.content.Context
 import android.content.res.Resources
 import android.os.PowerManager
+import android.os.AsyncTask
+import android.os.Vibrator
+import android.os.VibrationEffect
 import android.provider.Settings
 import android.os.AsyncTask
 import android.os.Vibrator
