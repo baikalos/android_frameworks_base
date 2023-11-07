@@ -229,7 +229,7 @@ public class BaikalSpoofer {
     }
 
 
-    public static void setBuildField(String key, String value) {
+    public static void setBuildField(String key, Object value) {
         /*
          * This would be much prettier if we just removed "final" from the Build fields,
          * but that requires changing the API.
