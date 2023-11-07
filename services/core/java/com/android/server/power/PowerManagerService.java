@@ -1913,8 +1913,8 @@ public final class PowerManagerService extends SystemService
             }
 
             wakeLock.unlinkToDeath();
-            wakeLock.setDisabled(true);
             removeWakeLockLocked(wakeLock, index);
+            wakeLock.setDisabled(true);
         }
     }
 
@@ -2111,8 +2111,8 @@ public final class PowerManagerService extends SystemService
                         return;
                     }
                 }
-            	wakeLock.mDisabled = true;
             	notifyWakeLockReleasedLocked(wakeLock);
+            	wakeLock.mDisabled = true;
             	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: disabled appid " + wakeLock);
             	mDirty |= DIRTY_WAKE_LOCKS;
             	updatePowerStateLocked();
@@ -4686,9 +4686,10 @@ public final class PowerManagerService extends SystemService
                 == PowerManager.PARTIAL_WAKE_LOCK) {
             boolean disabled = false;
             final int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
-            if (appid >= Process.FIRST_APPLICATION_UID 
+            if ( !wakeLock.mAudio && 
+                (appid >= Process.FIRST_APPLICATION_UID 
                 || wakeLock.mTag.startsWith("*job*")
-                || wakeLock.mTag.startsWith("*sync*") ) {
+                || wakeLock.mTag.startsWith("*sync*")) ) {
                 // Cached inactive processes are never allowed to hold wake locks.
                 if (mConstants.NO_CACHED_WAKE_LOCKS) {
                     disabled = mForceSuspendActive
@@ -5809,6 +5810,7 @@ public final class PowerManagerService extends SystemService
             if( mTag.startsWith("Audio") ) mAudio = true;
             else if( mTag.startsWith("RingtonePlayer") ) mAudio = true;
             else if( mTag.startsWith("android.media.MediaPlayer") ) mAudio = true;
+            else if( mTag.startsWith("*vibrator*") ) mAudio = true;
             linkToDeath();
         }
 
