@@ -655,7 +655,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
         // List of packages allowed to show headsup notification
         List<String> headsUpWhitelistPackages = Arrays.asList(
-            getDefaultDialerPackage(mTm).toLowerCase(),
+            getDefaultDialerPackage(mContext).toLowerCase(),
             getDefaultSmsPackage(mContext).toLowerCase(),
             "dialer",
             "messaging",
