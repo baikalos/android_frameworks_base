@@ -52,7 +52,7 @@ public class DozePauser implements DozeMachine.Part {
         switch (newState) {
             case DOZE_AOD_PAUSING:
                 mPauseTimeout.schedule(mPolicy.proxScreenOffDelayMs,
-                        AlarmTimeout.MODE_IGNORE_IF_SCHEDULED);
+                        AlarmTimeout.MODE_RESCHEDULE_IF_SCHEDULED);
                 break;
             default:
                 mPauseTimeout.cancel();
