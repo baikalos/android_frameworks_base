@@ -1752,7 +1752,7 @@ public final class PowerManagerService extends SystemService
 
             WakeLock wakeLock;
             int index = findWakeLockIndexLocked(lock);
-            boolean notifyAcquire;
+            boolean notifyAcquire = true;
             if (index >= 0) {
                 wakeLock = mWakeLocks.get(index);
                 if (!wakeLock.hasSameProperties(flags, tag, ws, uid, pid, callback)) {
@@ -1762,7 +1762,7 @@ public final class PowerManagerService extends SystemService
                     wakeLock.updateProperties(flags, tag, packageName, ws, historyTag, uid, pid,
                             callback);
                 }
-                notifyAcquire = false;
+                if( wakeLock.mNotifiedAcquired ) notifyAcquire = false;
             } else {
                 UidState state = mUidState.get(uid);
                 if (state == null) {
@@ -1779,8 +1779,6 @@ public final class PowerManagerService extends SystemService
             }
 
             applyWakeLockFlagsOnAcquireLocked(wakeLock, isCallerPrivileged);
-            mDirty |= DIRTY_WAKE_LOCKS;
-            updatePowerStateLocked();
             if (notifyAcquire) {
                 // This needs to be done last so we are sure we have acquired the
                 // kernel wake lock.  Otherwise we have a race where the system may
@@ -1789,6 +1787,8 @@ public final class PowerManagerService extends SystemService
                 // stay awake.
                 notifyWakeLockAcquiredLocked(wakeLock);
             }
+            mDirty |= DIRTY_WAKE_LOCKS;
+            updatePowerStateLocked();
         }
     }
 
@@ -2045,7 +2045,7 @@ public final class PowerManagerService extends SystemService
            	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: duplicate " + wakeLock);
             return;
         }
-       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: " + wakeLock);
+       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: " + wakeLock, new Throwable());
         if (mSystemReady && !wakeLock.mDisabled) {
             wakeLock.mNotifiedAcquired = true;
             mNotifier.onWakeLockAcquired(wakeLock.mFlags, wakeLock.mTag, wakeLock.mPackageName,
@@ -2696,6 +2696,8 @@ public final class PowerManagerService extends SystemService
             Slog.wtf(TAG, "Power manager lock was not held when calling updatePowerStateLocked");
         }
 
+       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "updatePowerStateLocked");
+
         Trace.traceBegin(Trace.TRACE_TAG_POWER, "updatePowerState");
         mUpdatePowerStateInProgress = true;
         try {
@@ -3072,8 +3074,6 @@ public final class PowerManagerService extends SystemService
                 final int wakeLockFlags = getWakeLockSummaryFlags(wakeLock);
                 mWakeLockSummary |= wakeLockFlags;
 
-                if (!wakeLock.mDisabled && wakeLock.mAudio) mWakeLockSummary |= WAKE_LOCK_AUDIO;
-
                 if (groupId != Display.INVALID_DISPLAY_GROUP) {
                     int wakeLockSummary = powerGroup.getWakeLockSummaryLocked();
                     wakeLockSummary |= wakeLockFlags;
@@ -3117,7 +3117,7 @@ public final class PowerManagerService extends SystemService
     private static int adjustWakeLockSummary(int wakefulness, int wakeLockSummary) {
         // Cancel wake locks that make no sense based on the current state.
         if (wakefulness != WAKEFULNESS_DOZING) {
-            wakeLockSummary &= ~(WAKE_LOCK_DOZE | WAKE_LOCK_DRAW);
+            wakeLockSummary &= ~(WAKE_LOCK_DOZE/* | WAKE_LOCK_DRAW*/);
         }
         if (wakefulness == WAKEFULNESS_ASLEEP
                 || (wakeLockSummary & WAKE_LOCK_DOZE) != 0) {
@@ -3137,6 +3137,8 @@ public final class PowerManagerService extends SystemService
             }
         }
         if ((wakeLockSummary & WAKE_LOCK_DRAW) != 0) {
+            if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) 
+                Slog.d(TAG, "adjustWakeLockSummary: WAKE_LOCK_DRAW wakefullness=" + wakefulness + ", wakeLockSummary=" + wakeLockSummary);
             wakeLockSummary |= WAKE_LOCK_CPU;
         }
 
@@ -3146,27 +3148,40 @@ public final class PowerManagerService extends SystemService
     /** Get wake lock summary flags that correspond to the given wake lock. */
     @SuppressWarnings("deprecation")
     private int getWakeLockSummaryFlags(WakeLock wakeLock) {
+        int wakeLockSummary = 0;
         switch (wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK) {
             case PowerManager.PARTIAL_WAKE_LOCK:
                 if (!wakeLock.mDisabled) {
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) 
+                        Slog.d(TAG, "getWakeLockSummaryFlags: WAKE_LOCK_CPU wakelock=" + wakeLock);
                     // We only respect this if the wake lock is not disabled.
-                    return WAKE_LOCK_CPU;
+                    wakeLockSummary |= WAKE_LOCK_CPU;
+                } else {
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) 
+                        Slog.d(TAG, "getWakeLockSummaryFlags: WAKE_LOCK_CPU DISABLED wakelock=" + wakeLock);
                 }
                 break;
             case PowerManager.FULL_WAKE_LOCK:
-                return WAKE_LOCK_SCREEN_BRIGHT | WAKE_LOCK_BUTTON_BRIGHT;
+                wakeLockSummary |= WAKE_LOCK_SCREEN_BRIGHT | WAKE_LOCK_BUTTON_BRIGHT;
+                break;
             case PowerManager.SCREEN_BRIGHT_WAKE_LOCK:
-                return WAKE_LOCK_SCREEN_BRIGHT;
+                wakeLockSummary |= WAKE_LOCK_SCREEN_BRIGHT;
+                break;
             case PowerManager.SCREEN_DIM_WAKE_LOCK:
-                return WAKE_LOCK_SCREEN_DIM;
+                wakeLockSummary |= WAKE_LOCK_SCREEN_DIM;
+                break;
             case PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK:
-                return WAKE_LOCK_PROXIMITY_SCREEN_OFF;
+                wakeLockSummary |= WAKE_LOCK_PROXIMITY_SCREEN_OFF;
+                break;
             case PowerManager.DOZE_WAKE_LOCK:
-                return WAKE_LOCK_DOZE;
+                wakeLockSummary |= WAKE_LOCK_DOZE;
+                break;
             case PowerManager.DRAW_WAKE_LOCK:
-                return WAKE_LOCK_DRAW;
+                wakeLockSummary |= WAKE_LOCK_DRAW;
+                break;
         }
-        return 0;
+        if( wakeLock.mAudio ) wakeLockSummary |= WAKE_LOCK_AUDIO;
+        return wakeLockSummary;
     }
 
     private boolean wakeLockAffectsUser(WakeLock wakeLock, @UserIdInt int userId) {
