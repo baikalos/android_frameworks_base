@@ -163,7 +163,7 @@ public class DozeUi implements DozeMachine.Part {
 
         long time = System.currentTimeMillis();
         long delta = roundToNextMinute(time) - System.currentTimeMillis();
-        boolean scheduled = mTimeTicker.schedule(delta, AlarmTimeout.MODE_RESCHEDULE_IF_SCHEDULED);
+        boolean scheduled = mTimeTicker.schedule(delta, AlarmTimeout.MODE_IGNORE_IF_SCHEDULED);
         if (scheduled) {
             mDozeLog.traceTimeTickScheduled(time, time + delta);
         }
