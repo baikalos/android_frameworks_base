@@ -393,11 +393,20 @@ public class KeyguardIndicationController {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     updateOrganizedOwnedDevice();
+                    if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+                        int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                        int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                        int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                        float batterylvl = (level / (float) scale) * 100;
+                        mBatteryLevel = (int) batterylvl;
+                        updateDeviceEntryIndication(false);
+                    }
                 }
             };
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(DevicePolicyManager.ACTION_DEVICE_POLICY_MANAGER_STATE_CHANGED);
             intentFilter.addAction(Intent.ACTION_USER_REMOVED);
+            intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
             mBroadcastDispatcher.registerReceiver(mBroadcastReceiver, intentFilter);
         }
     }
@@ -924,10 +933,10 @@ public class KeyguardIndicationController {
             mTopIndicationView.setVisibility(VISIBLE);
             // When dozing we ignore any text color and use white instead, because
             // colors can be hard to read in low brightness.
-            mTopIndicationView.setTextColor(Color.WHITE);
+            // mTopIndicationView.setTextColor(Color.WHITE);
 
             CharSequence newIndication;
-            boolean setWakelock = false;
+            boolean setWakelock = true;
 
             if (!TextUtils.isEmpty(mBiometricMessage)) {
                 newIndication = mBiometricMessage; // note: doesn't show mBiometricMessageFollowUp
@@ -942,14 +951,14 @@ public class KeyguardIndicationController {
             } else if (!TextUtils.isEmpty(mAlignmentIndication)) {
                 newIndication = mAlignmentIndication;
                 mTopIndicationView.setTextColor(mContext.getColor(R.color.misalignment_text_color));
-                setWakelock = false;
+                setWakelock = true;
             } else if (mPowerPluggedIn || mEnableBatteryDefender) {
                 newIndication = computePowerIndication();
-                setWakelock = animate;
+                setWakelock = true; // animate;
             } else {
                 newIndication = NumberFormat.getPercentInstance()
                         .format(mBatteryLevel / 100f);
-                setWakelock = false;
+                setWakelock = true;
             }
 
             if (!TextUtils.equals(mTopIndicationView.getText(), newIndication)) {
@@ -985,7 +994,7 @@ public class KeyguardIndicationController {
             return mContext.getResources().getString(R.string.keyguard_charged);
         }
 
-        final boolean hasChargingTime = mChargingTimeRemaining > 0;
+        final boolean hasChargingTime = false;// mChargingTimeRemaining > 0;
         if (mPowerPluggedInWired) {
             switch (mChargingSpeed) {
                 case BatteryStatus.CHARGING_FAST:
