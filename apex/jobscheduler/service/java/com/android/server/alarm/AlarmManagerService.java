@@ -4435,25 +4435,25 @@ public class AlarmManagerService extends SystemService {
     }
 
     long currentNonWakeupFuzzLocked(long nowELAPSED) {
-        /*
+        
         long timeSinceOn = nowELAPSED - mNonInteractiveStartTime;
         if (timeSinceOn < 5 * 60 * 1000) {
             // If the screen has been off for 5 minutes, only delay by at most two minutes.
-            return 2 * 60 * 1000;
+            return 15 * 60 * 1000;
         } else if (timeSinceOn < 30 * 60 * 1000) {
             // If the screen has been off for 30 minutes, only delay by at most 15 minutes.
-            return 15 * 60 * 1000;
+            return 2 * 60 * 1000;
         } else {
             // Otherwise, we will delay by at most an hour.
-            return 60 * 60 * 1000;
-        }*/
+            return 6 * 60 * 60 * 1000;
+        }
 
-        return 6 * 60 * 60 * 1000;
+        //return 6 * 60 * 60 * 1000;
     }
 
     boolean checkAllowNonWakeupDelayLocked(long nowELAPSED) {
         if (mInteractive) {
-            //return false;
+            return false;
         }
         if (mLastAlarmDeliveryTime <= 0) {
             //return false;
@@ -4462,7 +4462,7 @@ public class AlarmManagerService extends SystemService {
             // This is just a little paranoia, if somehow we have pending non-wakeup alarms
             // and the next delivery time is in the past, then just deliver them all.  This
             // avoids bugs where we get stuck in a loop trying to poll for alarms.
-            //return false;
+            return false;
         }
         long timeSinceLast = nowELAPSED - mLastAlarmDeliveryTime;
         return timeSinceLast <= currentNonWakeupFuzzLocked(nowELAPSED);
