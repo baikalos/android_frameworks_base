@@ -188,7 +188,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
         try {
             if (mRegistered) {
                 mLastSensorValue = (int) event.values[0];
-                //Log.d(TAG, "DozeBrightness sensor:" + mLastSensorValue);
+                Log.d(TAG, "DozeBrightness sensor:" + mLastSensorValue);
                 updateBrightnessAndReady(false /* force */);
             }
         } finally {
@@ -204,7 +204,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
             boolean brightnessReady = brightness > 0;
             if (brightnessReady) {
                 int value = clampToDimBrightnessForScreenOff(clampToUserSetting(brightness));
-                //Log.d(TAG, "DozeBrightness value:" + value + ", brightness=" + brightness);
+                Log.d(TAG, "DozeBrightness value:" + value + ", brightness=" + brightness);
                 mDozeService.setDozeScreenBrightness(value);
             }
 
@@ -255,6 +255,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
         if (sensorValue < 0 || sensorValue >= mSensorToBrightness.length) {
             return -1;
         }
+        Log.d(TAG, "DozeBrightness sensor to value:" + sensorValue + ", " + mSensorToBrightness[sensorValue]);
         return mSensorToBrightness[sensorValue];
     }
 
