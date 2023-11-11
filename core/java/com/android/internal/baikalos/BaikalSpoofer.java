@@ -18,6 +18,10 @@ package com.android.internal.baikalos;
 
 import static android.os.Process.myUid;
 
+import android.annotation.NonNull;
+import android.annotation.Nullable;
+import android.annotation.SystemApi;
+
 import android.app.ActivityThread;
 import android.app.Application;
 import android.audio.policy.configuration.V7_0.AudioUsage;
@@ -56,9 +60,15 @@ public class BaikalSpoofer {
         OVERRIDE_COM_ANDROID_CAMERA
     };
 
+    private enum OverrideSystemPropertiesId {
+        OVERRIDE_NONE,
+        OVERRIDE_COM_GOOGLE_GMS_UNSTABLE
+    };
+
     private static final String TAG = "BaikalSpoofer";
 
     private static OverrideSharedPrefsId sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_NONE;
+    private static OverrideSystemPropertiesId sOverrideSystemPropertiesId = OverrideSystemPropertiesId.OVERRIDE_NONE;
 
     private static boolean sIsGmsUnstable = false;
     private static boolean sIsFinsky = false;
@@ -297,19 +307,21 @@ public class BaikalSpoofer {
 
         
         if(  sIsGmsUnstable ) {
+
+            sOverrideSystemPropertiesId = OverrideSystemPropertiesId.OVERRIDE_COM_GOOGLE_GMS_UNSTABLE;
             Log.e(TAG, "Spoof Device for GMS SN check: " + Application.getProcessName());
 
-            setBuildField("BRAND", "google");
-            setBuildField("PRODUCT", "marlin");
-            setBuildField("MODEL", "Pixel XL");
-        	setBuildField("MANUFACTURER", "Google");
-            setBuildField("DEVICE", "marlin");
-            setBuildField("FINGERPRINT", "google/marlin/marlin:7.1.2/NJH47F/4146041:user/release-keys");
-            setBuildField("ID", "NJH47F");
+            setBuildField("BRAND", "Asus");
+            setBuildField("PRODUCT", "WW_Phone");
+            setBuildField("MODEL", "ASUS_X00HD");
+        	setBuildField("MANUFACTURER", "Asus");
+            setBuildField("DEVICE", "ASUS_X00HD_4");
+            setBuildField("FINGERPRINT", "asus/WW_Phone/ASUS_X00HD_4:7.1.1/NMF26F/14.2016.1801.372-20180119:user/release-keys");
+            //setBuildField("ID", "NJH47F");
             setBuildField("TYPE", "user");
             setBuildField("TAGS", "release-keys");
             setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.N_MR1);
-            setVersionField("SECURITY_PATCH", "2017-08-05");
+            setVersionField("SECURITY_PATCH", "2018-01-05");
 
         } else if( "com.android.vending".equals(packageName) ) {
             sIsFinsky = true;
@@ -517,10 +529,106 @@ public class BaikalSpoofer {
         return result;
     }
 
+    public static String overrideSetSystemProperty(@NonNull String key, @Nullable String val) {
+        //if( AppProfile.isDebug() ) Log.d(TAG, "Tryset " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " val " + val);
+        return null;
+    }
+
+    public static String overrideStringSystemProperty(@NonNull String key, @Nullable String rval) {
+        //if( AppProfile.isDebug() ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " rval " + rval);
+        if( getFilteredDevModeKey(key) ) return "";
+        switch(sOverrideSystemPropertiesId) {
+            case OVERRIDE_NONE:
+                break;
+            case OVERRIDE_COM_GOOGLE_GMS_UNSTABLE:
+                return overrideGmsUnstableString(key,rval);
+        }
+        return rval;
+    }
+
+    public static String overrideStringSystemProperty(@NonNull String key, @Nullable String def, @Nullable String rval) {
+        //if( AppProfile.isDebug() ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( getFilteredDevModeKey(key) ) return def;
+        switch(sOverrideSystemPropertiesId) {
+            case OVERRIDE_NONE:
+                break;
+            case OVERRIDE_COM_GOOGLE_GMS_UNSTABLE:
+                return overrideGmsUnstableString(key,rval);
+        }
+        return rval;
+    }
+
+    public static int overrideIntSystemProperty(@NonNull String key, int def, int rval) {
+        //if( AppProfile.isDebug() ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( getFilteredDevModeKey(key) ) return def;
+        switch(sOverrideSystemPropertiesId) {
+            case OVERRIDE_NONE:
+                break;
+            case OVERRIDE_COM_GOOGLE_GMS_UNSTABLE:
+                return overrideGmsUnstableInt(key,rval);
+        }
+        return rval;
+    }
+
+    public static long overrideLongSystemProperty(@NonNull String key, long def, long rval) {
+        //if( AppProfile.isDebug() ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( getFilteredDevModeKey(key) ) return def;
+        switch(sOverrideSystemPropertiesId) {
+            case OVERRIDE_NONE:
+                break;
+            case OVERRIDE_COM_GOOGLE_GMS_UNSTABLE:
+                return overrideGmsUnstableLong(key,rval);
+        }
+        return rval;
+    }
+
+    public static Boolean overrideBooleanSystemProperty(@NonNull String key, Boolean def, Boolean rval) {
+        //if( AppProfile.isDebug() ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( getFilteredDevModeKey(key) ) return def;
+        switch(sOverrideSystemPropertiesId) {
+            case OVERRIDE_NONE:
+                break;
+            case OVERRIDE_COM_GOOGLE_GMS_UNSTABLE:
+                return overrideGmsUnstableBoolean(key,rval);
+        }
+        return rval;
+    }
+
+    private static boolean getFilteredDevModeKey(String key) {
+        if( AppProfile.getCurrentAppProfile().mHideDevMode ) {
+           if( "init.svc.adbd".equals(key) ||
+                "sys.usb.state".equals(key) ||
+                "sys.usb.config".equals(key) ) {
+                //Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String overrideGmsUnstableString(String key, String def) {
+        if( "ro.product.first_api_level".equals(key) ) return "25";
+        if( "ro.build.version.security_patch".equals(key) ) return "2018-01-05";
+        return def;
+    }
+
+    private static int overrideGmsUnstableInt(String key, int def) {
+        if( "ro.product.first_api_level".equals(key) ) return 25;
+        return def;
+    }
+
+    private static long overrideGmsUnstableLong(String key, long def) {
+        if( "ro.product.first_api_level".equals(key) ) return 25;
+        return def;
+    }
+
+    private static Boolean overrideGmsUnstableBoolean(String key, Boolean def) {
+        return def;
+    }
+
     public static int getDefaultBackgroundBlurRadius() {
         return sDefaultBackgroundBlurRadius;
     }
-
 
     public static boolean isAutoRevokeDisabled() {
         return sAutoRevokeDisabled;
@@ -633,15 +741,21 @@ public class BaikalSpoofer {
 
         if( sAudioManager == null ) {
             sAudioManager = (AudioManager) sContext.getSystemService(Context.AUDIO_SERVICE);
+        }
+
+        if( sAudioManager != null && sBuiltinPlaybackDevice == null ) {
 
             AudioDeviceInfo[] deviceList = sAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
             for (AudioDeviceInfo device : deviceList) {
-                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE) {
                     sBuiltinPlaybackDevice = device;
                     break;
                 }
             }
-            deviceList = sAudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS);
+        }
+
+        if( sAudioManager != null && sBuiltinRecordingDevice == null ) {
+            AudioDeviceInfo[] deviceList = sAudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS);
             for (AudioDeviceInfo device : deviceList) {
                 if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_MIC) {
                     sBuiltinRecordingDevice = device;
@@ -650,5 +764,4 @@ public class BaikalSpoofer {
             }
         }
     }
-
 }
