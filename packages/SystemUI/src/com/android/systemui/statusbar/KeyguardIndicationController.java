@@ -112,6 +112,8 @@ import com.android.systemui.util.concurrency.DelayableExecutor;
 import com.android.systemui.util.wakelock.SettableWakeLock;
 import com.android.systemui.util.wakelock.WakeLock;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.PrintWriter;
 import java.text.NumberFormat;
 import java.util.HashSet;
@@ -207,6 +209,8 @@ public class KeyguardIndicationController {
     private boolean mInited;
 
     private int mCurrentDivider;
+
+    private String mChargerRealType;
 
     private boolean mFaceDetectionRunning;
 
@@ -354,6 +358,7 @@ public class KeyguardIndicationController {
         mStatusBarStateListener.onDozingChanged(mStatusBarStateController.isDozing());
 
         mCurrentDivider = mContext.getResources().getInteger(R.integer.config_currentInfoDivider);
+        mChargerRealType = mContext.getResources().getString(R.string.config_chargerRealType);
 
         mAlternateFastchargeInfoUpdate =
                     mContext.getResources().getBoolean(R.bool.config_alternateFastchargeInfoUpdate);
@@ -362,6 +367,7 @@ public class KeyguardIndicationController {
                     IBatteryPropertiesRegistrar.Stub.asInterface(
                     ServiceManager.getService("batteryproperties"));
         }
+
     }
 
     public void setIndicationArea(ViewGroup indicationArea) {
@@ -387,11 +393,20 @@ public class KeyguardIndicationController {
                 @Override
                 public void onReceive(Context context, Intent intent) {
                     updateOrganizedOwnedDevice();
+                    if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+                        int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+                        int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                        int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                        float batterylvl = (level / (float) scale) * 100;
+                        mBatteryLevel = (int) batterylvl;
+                        updateDeviceEntryIndication(false);
+                    }
                 }
             };
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(DevicePolicyManager.ACTION_DEVICE_POLICY_MANAGER_STATE_CHANGED);
             intentFilter.addAction(Intent.ACTION_USER_REMOVED);
+            intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
             mBroadcastDispatcher.registerReceiver(mBroadcastReceiver, intentFilter);
         }
     }
@@ -918,10 +933,10 @@ public class KeyguardIndicationController {
             mTopIndicationView.setVisibility(VISIBLE);
             // When dozing we ignore any text color and use white instead, because
             // colors can be hard to read in low brightness.
-            mTopIndicationView.setTextColor(Color.WHITE);
+            // mTopIndicationView.setTextColor(Color.WHITE);
 
             CharSequence newIndication;
-            boolean setWakelock = false;
+            boolean setWakelock = true;
 
             if (!TextUtils.isEmpty(mBiometricMessage)) {
                 newIndication = mBiometricMessage; // note: doesn't show mBiometricMessageFollowUp
@@ -936,14 +951,14 @@ public class KeyguardIndicationController {
             } else if (!TextUtils.isEmpty(mAlignmentIndication)) {
                 newIndication = mAlignmentIndication;
                 mTopIndicationView.setTextColor(mContext.getColor(R.color.misalignment_text_color));
-                setWakelock = false;
+                setWakelock = true;
             } else if (mPowerPluggedIn || mEnableBatteryDefender) {
                 newIndication = computePowerIndication();
-                setWakelock = animate;
+                setWakelock = true; // animate;
             } else {
                 newIndication = NumberFormat.getPercentInstance()
                         .format(mBatteryLevel / 100f);
-                setWakelock = false;
+                setWakelock = true;
             }
 
             if (!TextUtils.equals(mTopIndicationView.getText(), newIndication)) {
@@ -979,7 +994,7 @@ public class KeyguardIndicationController {
             return mContext.getResources().getString(R.string.keyguard_charged);
         }
 
-        final boolean hasChargingTime = mChargingTimeRemaining > 0;
+        final boolean hasChargingTime = false;// mChargingTimeRemaining > 0;
         if (mPowerPluggedInWired) {
             switch (mChargingSpeed) {
                 case BatteryStatus.CHARGING_FAST:
@@ -1035,22 +1050,58 @@ public class KeyguardIndicationController {
         String batteryInfo = "";
         boolean showbatteryInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
             Settings.System.LOCKSCREEN_BATTERY_INFO, 1, UserHandle.USER_CURRENT) == 1;
-         if (showbatteryInfo) {
-            if (mChargingCurrent > 0) {
-                batteryInfo = batteryInfo + (mChargingCurrent / mCurrentDivider) + "mA";
+
+        String bolt = "\u26A1"; // "\uFE0E";
+        String brick = "\u26D4"; // "\uFE0E";
+        String exclamation = "\u26A0"; // "\uFE0E";
+
+          
+        int mode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_CHARGING_MODE, 0);
+
+        if (showbatteryInfo) {
+
+            if( mPowerPluggedIn ) {
+                switch(mode) {
+                    case 0:
+                        batteryInfo = bolt + " ";
+                        break;
+                    case 1:
+                        batteryInfo = brick + " ";
+                        break;
+                    case 2:
+                        batteryInfo = exclamation + " ";
+                        break;
+                }
             }
-            if (mChargingWattage > 0) {
+
+            //if (mChargingCurrent != 0) {
+                batteryInfo = batteryInfo + (mChargingCurrent / mCurrentDivider) + "mA";
+            //}
+            //if (mChargingWattage != 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
                         String.format("%.1f" , (mChargingWattage / mCurrentDivider / 1000)) + "W";
-            }
-            if (mChargingVoltage > 0) {
+            //}
+            //if (mChargingVoltage != 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
                         String.format("%.1f", (float) (mChargingVoltage / 1000 / 1000)) + "V";
-            }
-            if (mTemperature > 0) {
+            //}
+            //if (mTemperature != 0) {
                 batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
                         mTemperature / 10 + "°C";
+
+            if( mChargerRealType != null && !"".equals(mChargerRealType) ) {
+                try  {
+                    BufferedReader br = new BufferedReader(new FileReader(mChargerRealType), 512);
+                    try {
+                        String line = br.readLine();
+                        batteryInfo = batteryInfo + " " + line;
+                    } finally {
+                        br.close();
+                    }
+                } catch(Exception fe) {
+                }
             }
+            //}
             if (batteryInfo != "") {
                 batteryInfo = "\n" + batteryInfo;
             }

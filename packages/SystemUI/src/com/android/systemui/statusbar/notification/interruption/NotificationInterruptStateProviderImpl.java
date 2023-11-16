@@ -24,16 +24,24 @@ import static com.android.systemui.statusbar.notification.interruption.Notificat
 
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.INotificationManager;
+import android.app.role.RoleManager;
 import android.content.ContentResolver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.database.ContentObserver;
 import android.hardware.display.AmbientDisplayConfiguration;
 import android.os.Handler;
 import android.os.PowerManager;
+import android.os.RemoteException;
+import android.os.ServiceManager;
+import android.os.UserHandle;
 import android.provider.Settings;
 import android.provider.Telephony.Sms;
 import android.service.notification.StatusBarNotification;
 import android.telecom.TelecomManager;
+import android.telecom.DefaultDialerManager;
+import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.logging.UiEvent;
@@ -49,6 +57,8 @@ import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.HeadsUpManager;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 
+import com.android.internal.telephony.SmsApplication;
+
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,6 +73,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     private static final String TAG = "InterruptionStateProvider";
     private static final boolean ENABLE_HEADS_UP = true;
     private static final String SETTING_HEADS_UP_TICKER = "ticker_gets_heads_up";
+    private static final boolean DEBUG_HEADS_UP = true;
 
     private final List<NotificationInterruptSuppressor> mSuppressors = new ArrayList<>();
     private final StatusBarStateController mStatusBarStateController;
@@ -85,6 +96,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     private boolean mReTicker = false;
     private TelecomManager mTm;
     private Context mContext;
+    private boolean mInCall = false;
 
     public enum NotificationInterruptEvent implements UiEventLogger.UiEventEnum {
         @UiEvent(doc = "FSI suppressed for suppressive GroupAlertBehavior")
@@ -168,6 +180,9 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                         mHeadsUpManager.releaseAllImmediately();
                     }
                 }
+                mInCall = Settings.Global.getInt(
+                        mContentResolver,
+                        Settings.Global.BAIKALOS_HEADSUP_INCALL,0) != 0;
             }
         };
 
@@ -176,9 +191,11 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                     Settings.Global.getUriFor(Settings.Global.HEADS_UP_NOTIFICATIONS_ENABLED),
                     true,
                     headsUpObserver);
+
             mContentResolver.registerContentObserver(
                     Settings.Global.getUriFor(SETTING_HEADS_UP_TICKER), true,
                     headsUpObserver);
+
             mContentResolver.registerContentObserver(
                     Settings.System.getUriFor(Settings.System.LESS_BORING_HEADS_UP),
                     true,
@@ -187,6 +204,12 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
                     Settings.System.getUriFor(Settings.System.RETICKER_STATUS),
                     true,
                     headsUpObserver);
+
+            mContentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HEADSUP_INCALL), true,
+                    headsUpObserver);
+
+            headsUpObserver.onChange(true); // set up
         }
         headsUpObserver.onChange(true); // set up
     }
@@ -269,11 +292,28 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
     @Override
     public FullScreenIntentDecision getFullScreenIntentDecision(NotificationEntry entry) {
-        if (mFlags.disableFsi()) {
+
+        /*if (mFlags.disableFsi()) {
             return FullScreenIntentDecision.NO_FSI_DISABLED;
-        }
+        }*/
+
         if (entry.getSbn().getNotification().fullScreenIntent == null) {
+            Log.d(TAG, "FSI: NO_FULL_SCREEN_INTENT " + entry.getSbn());
             return FullScreenIntentDecision.NO_FULL_SCREEN_INTENT;
+        }
+
+
+        INotificationManager iNm = INotificationManager.Stub.asInterface(
+            ServiceManager.getService(Context.NOTIFICATION_SERVICE));
+
+        try {
+            if( mInCall && iNm.isInCall(entry.getSbn().getPackageName(), entry.getSbn().getUid()) ) {
+                Log.d(TAG, "FSI: incoming call notification: " + entry.getSbn().getKey());
+                Log.d(TAG, "FSI: FSI_EXPECTED_NOT_TO_HUN " + entry.getSbn());
+                return getDecisionGivenSuppression(FullScreenIntentDecision.FSI_EXPECTED_NOT_TO_HUN, false);
+            }
+        } catch(RemoteException ex) {
+            Log.d(TAG, "FSI: incoming call check exception: " + ex);
         }
 
         // Boolean indicating whether this FSI would have been suppressed by DND. Because we
@@ -288,6 +328,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
         // Never show FSI if importance is not HIGH
         if (entry.getImportance() < NotificationManager.IMPORTANCE_HIGH) {
+            Log.d(TAG, "FSI: NO_FSI_NOT_IMPORTANT_ENOUGH " + entry.getSbn());
             return getDecisionGivenSuppression(FullScreenIntentDecision.NO_FSI_NOT_IMPORTANT_ENOUGH,
                     suppressedByDND);
         }
@@ -297,6 +338,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
         if (sbn.isGroup() && sbn.getNotification().suppressAlertingDueToGrouping()) {
             // b/231322873: Detect and report an event when a notification has both an FSI and a
             // suppressive groupAlertBehavior, and now correctly block the FSI from firing.
+            Log.d(TAG, "FSI: NO_FSI_SUPPRESSIVE_GROUP_ALERT_BEHAVIOR " + entry.getSbn());
             return getDecisionGivenSuppression(
                     FullScreenIntentDecision.NO_FSI_SUPPRESSIVE_GROUP_ALERT_BEHAVIOR,
                     suppressedByDND);
@@ -307,6 +349,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
         if (bubbleMetadata != null && bubbleMetadata.isNotificationSuppressed()) {
             // b/274759612: Detect and report an event when a notification has both an FSI and a
             // suppressive BubbleMetadata, and now correctly block the FSI from firing.
+            Log.d(TAG, "FSI: NO_FSI_SUPPRESSIVE_BUBBLE_METADATA " + entry.getSbn());
             return getDecisionGivenSuppression(
                     FullScreenIntentDecision.NO_FSI_SUPPRESSIVE_BUBBLE_METADATA,
                     suppressedByDND);
@@ -314,6 +357,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
         // If the screen is off, then launch the FullScreenIntent
         if (!mPowerManager.isInteractive()) {
+            Log.d(TAG, "FSI: FSI_DEVICE_NOT_INTERACTIVE " + entry.getSbn());
             return getDecisionGivenSuppression(FullScreenIntentDecision.FSI_DEVICE_NOT_INTERACTIVE,
                     suppressedByDND);
         }
@@ -322,12 +366,14 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
         // We avoid using IDreamManager#isDreaming here as that method will return false during
         // the dream's wake-up phase.
         if (mStatusBarStateController.isDreaming()) {
+            Log.d(TAG, "FSI: FSI_DEVICE_IS_DREAMING " + entry.getSbn());
             return getDecisionGivenSuppression(FullScreenIntentDecision.FSI_DEVICE_IS_DREAMING,
                     suppressedByDND);
         }
 
         // If the keyguard is showing, then launch the FullScreenIntent
         if (mStatusBarStateController.getState() == StatusBarState.KEYGUARD) {
+            Log.d(TAG, "FSI: FSI_KEYGUARD_SHOWING " + entry.getSbn());
             return getDecisionGivenSuppression(FullScreenIntentDecision.FSI_KEYGUARD_SHOWING,
                     suppressedByDND);
         }
@@ -336,6 +382,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
         // Because this is not the heads-up decision-making point, and checking whether it would
         // HUN, don't log this specific check.
         if (checkHeadsUp(entry, /* log= */ false)) {
+            Log.d(TAG, "FSI: NO_FSI_EXPECTED_TO_HUN " + entry.getSbn());
             return getDecisionGivenSuppression(FullScreenIntentDecision.NO_FSI_EXPECTED_TO_HUN,
                     suppressedByDND);
         }
@@ -346,11 +393,13 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             // If notification won't HUN and keyguard is showing, launch the FSI.
             if (mKeyguardStateController.isShowing()) {
                 if (mKeyguardStateController.isOccluded()) {
+                    Log.d(TAG, "FSI: FSI_KEYGUARD_OCCLUDED " + entry.getSbn());
                     return getDecisionGivenSuppression(
                             FullScreenIntentDecision.FSI_KEYGUARD_OCCLUDED,
                             suppressedByDND);
                 } else {
                     // Likely LOCKED_SHADE, but launch FSI anyway
+                    Log.d(TAG, "FSI: FSI_LOCKED_SHADE " + entry.getSbn());
                     return getDecisionGivenSuppression(FullScreenIntentDecision.FSI_LOCKED_SHADE,
                             suppressedByDND);
                 }
@@ -358,11 +407,15 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
             // Detect the case determined by b/231322873 to launch FSI while device is in use,
             // as blocked by the correct implementation, and report the event.
+            //if( !mInCall ) {
+            Log.d(TAG, "FSI: NO_FSI_NO_HUN_OR_KEYGUARD " + entry.getSbn());
             return getDecisionGivenSuppression(FullScreenIntentDecision.NO_FSI_NO_HUN_OR_KEYGUARD,
-                    suppressedByDND);
+                        suppressedByDND);
+            //}
         }
 
         // If the notification won't HUN for some other reason (DND/snooze/etc), launch FSI.
+        Log.d(TAG, "FSI: FSI_EXPECTED_NOT_TO_HUN " + entry.getSbn());
         return getDecisionGivenSuppression(FullScreenIntentDecision.FSI_EXPECTED_NOT_TO_HUN,
                 suppressedByDND);
     }
@@ -484,6 +537,34 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
             return false;
         }
 
+        if( sbn != null && sbn.getNotification() != null && sbn.getNotification().fullScreenIntent != null ) {
+            String notificationPackageName = sbn.getPackageName();
+
+            if( notificationPackageName != null ) {
+
+                INotificationManager iNm = INotificationManager.Stub.asInterface(
+                    ServiceManager.getService(Context.NOTIFICATION_SERVICE));
+                
+                try {
+                    if( mInCall && iNm.isInCall(sbn.getPackageName(), sbn.getUid()) ) {
+                        Log.d(TAG, "No heads up: incoming call notification: " + sbn.getKey());
+                        return false;
+                    }
+                } catch(RemoteException ex) {
+                    Log.d(TAG, "No heads up: incoming call check exception: " + ex);
+                }
+                /*if( mInCall && notificationPackageName.equals(getDefaultDialerPackage(mTm)) ) {
+                    if( sbn.getTag() == null ) {
+                            Log.d(TAG, "No heads up: incoming call notification: " + sbn.getKey());
+                        return false;
+                    } else {
+                            Log.d(TAG, "Heads up: incoming call notification: " + sbn.getKey() + ":" + sbn.getTag());
+                    } 
+                }*/
+            }
+        }
+
+
         boolean inUse = mPowerManager.isScreenOn() && !mStatusBarStateController.isDreaming();
 
         if (!inUse) {
@@ -575,7 +656,7 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
 
         // List of packages allowed to show headsup notification
         List<String> headsUpWhitelistPackages = Arrays.asList(
-            getDefaultDialerPackage(mTm).toLowerCase(),
+            getDefaultDialerPackage(mContext).toLowerCase(),
             getDefaultSmsPackage(mContext).toLowerCase(),
             "dialer",
             "messaging",
@@ -589,12 +670,16 @@ public class NotificationInterruptStateProviderImpl implements NotificationInter
     }
 
     private static String getDefaultSmsPackage(Context ctx) {
-        // for reference, there's also a new RoleManager api with getDefaultSmsPackage(context, userid)
-        return Sms.getDefaultSmsPackage(ctx);
+        int contextUserId = UserHandle.myUserId();
+        return ctx.getSystemService(RoleManager.class).getSmsRoleHolder(contextUserId);
     }
 
-    private static String getDefaultDialerPackage(TelecomManager tm) {
-        return tm != null ? tm.getDefaultDialerPackage() : "";
+    private static String getDefaultDialerPackage(Context ctx) {
+        //TelecomManager tm = (TelecomManager) ctx.getSystemService(Context.TELECOM_SERVICE);
+        //return tm != null ? tm.getDefaultDialerPackage() : "";
+
+        final String defaultDialer = DefaultDialerManager.getDefaultDialerApplication(ctx);
+        return defaultDialer;
     }
 
     /**

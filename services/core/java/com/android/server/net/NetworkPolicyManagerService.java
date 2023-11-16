@@ -171,6 +171,7 @@ import android.app.PendingIntent;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.app.usage.UsageStatsManagerInternal;
+import android.baikalos.AppProfile;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -264,6 +265,7 @@ import android.util.Xml;
 import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.messages.nano.SystemMessageProto.SystemMessage;
 import com.android.internal.notification.SystemNotificationChannels;
 import com.android.internal.os.SomeArgs;
@@ -757,7 +759,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
 
         public boolean isRestrictedModeEnabled() {
             return Settings.Global.getInt(mContext.getContentResolver(),
-                    Settings.Global.RESTRICTED_NETWORKING_MODE, 0) != 0;
+                    Settings.Global.RESTRICTED_NETWORKING_MODE, 1) != 0;
         }
 
         @Override
@@ -905,12 +907,14 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
     private void updatePowerSaveWhitelistUL() {
         int[] whitelist = mPowerWhitelistManager.getWhitelistedAppIds(/* includingIdle */ false);
         mPowerSaveWhitelistExceptIdleAppIds.clear();
+        mPowerSaveWhitelistExceptIdleAppIds.put(1000, true);
         for (int uid : whitelist) {
             mPowerSaveWhitelistExceptIdleAppIds.put(uid, true);
         }
 
         whitelist = mPowerWhitelistManager.getWhitelistedAppIds(/* includingIdle */ true);
         mPowerSaveWhitelistAppIds.clear();
+        mPowerSaveWhitelistAppIds.put(1000, true);
         for (int uid : whitelist) {
             mPowerSaveWhitelistAppIds.put(uid, true);
         }
@@ -4803,11 +4807,27 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
     @GuardedBy("mUidRulesFirstLock")
     private boolean isWhitelistedFromPowerSaveUL(int uid, boolean deviceIdleMode) {
         final int appId = UserHandle.getAppId(uid);
+
+        if( appId < Process.FIRST_APPLICATION_UID ) return true;
+
         boolean isWhitelisted = mPowerSaveTempWhitelistAppIds.get(appId)
                 || mPowerSaveWhitelistAppIds.get(appId);
-        if (!deviceIdleMode) {
+
+        if (!isWhitelisted && !deviceIdleMode) {
             isWhitelisted = isWhitelisted || isWhitelistedFromPowerSaveExceptIdleUL(uid);
         }
+
+        if( !isWhitelisted && appId >= Process.FIRST_APPLICATION_UID ) {
+            String[] pkgs = mContext.getPackageManager().getPackagesForUid(uid);
+            if( pkgs != null && pkgs.length > 0 ) {
+                AppProfile profile = AppProfileSettings.getProfileStatic(pkgs[0]);
+                if( profile != null ) {
+                    if( profile.mAllowIdleNetwork )  return true;
+                    if( profile.getBackground() < 0 )  return true;
+                }
+            }
+        }
+
         return isWhitelisted;
     }
 

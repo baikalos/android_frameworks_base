@@ -1223,12 +1223,12 @@ final class InstallPackageHelper {
                                         + " target SDK " + oldTargetSdk + " does.");
                     }
                     // Prevent persistent apps from being updated
-                    if (oldPackage.isPersistent()
+                    /*if (oldPackage.isPersistent()
                             && ((installFlags & PackageManager.INSTALL_STAGED) == 0)) {
                         throw new PrepareFailure(PackageManager.INSTALL_FAILED_INVALID_APK,
                                 "Package " + oldPackage.getPackageName() + " is a persistent app. "
                                         + "Persistent apps are not updateable.");
-                    }
+                    }*/
                 }
             }
 
@@ -1615,6 +1615,7 @@ final class InstallPackageHelper {
                         parsedPackage.setRestrictUpdateHash(oldPackage.getRestrictUpdateHash());
                     }
 
+                    /*
                     // APK should not change its sharedUserId declarations
                     final var oldSharedUid = oldPackage.getSharedUserId() != null
                             ? oldPackage.getSharedUserId() : "<nothing>";
@@ -1632,7 +1633,7 @@ final class InstallPackageHelper {
                         throw new PrepareFailure(INSTALL_FAILED_UID_CHANGED,
                                 "Package " + parsedPackage.getPackageName()
                                         + " attempting to rejoin " + newSharedUid);
-                    }
+                    }*/
 
                     // In case of rollback, remember per-user/profile install state
                     allUsers = mPm.mUserManager.getUserIds();

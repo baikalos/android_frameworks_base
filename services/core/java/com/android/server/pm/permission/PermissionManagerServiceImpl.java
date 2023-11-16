@@ -66,6 +66,7 @@ import android.annotation.UserIdInt;
 import android.app.ActivityManager;
 import android.app.IActivityManager;
 import android.app.admin.DevicePolicyManagerInternal;
+import android.baikalos.AppProfile;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledAfter;
 import android.content.Context;
@@ -140,8 +141,11 @@ import com.android.server.pm.pkg.component.ComponentMutateUtils;
 import com.android.server.pm.pkg.component.ParsedPermission;
 import com.android.server.pm.pkg.component.ParsedPermissionGroup;
 import com.android.server.pm.pkg.component.ParsedPermissionUtils;
+import com.android.server.pm.pkg.parsing.ParsingPackageImpl;
 import com.android.server.policy.PermissionPolicyInternal;
 import com.android.server.policy.SoftRestrictedPermissionPolicy;
+
+import com.android.internal.baikalos.AppProfileSettings;
 
 import libcore.util.EmptyArray;
 
@@ -174,6 +178,12 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
 
     private static final String SKIP_KILL_APP_REASON_NOTIFICATION_TEST = "skip permission revoke "
             + "app kill for notification test";
+
+
+    /** Define allowed permissions for Android Auto */
+    private ArrayList<String> androidAutoPerms = new ArrayList<String>(
+    Arrays.asList("android.permission.MODIFY_AUDIO_ROUTING", "android.permission.REAL_GET_TASKS", "android.permission.LOCAL_MAC_ADDRESS", "android.permission.MANAGE_USB", "android.permission.MANAGE_USERS", "android.permission.BLUETOOTH_PRIVILEGED", "android.permission.TOGGLE_AUTOMOTIVE_PROJECTION", "android.permission.READ_PHONE_NUMBERS", "android.permission.REQUEST_COMPANION_SELF_MANAGED", "android.permission.ACTIVITY_EMBEDDING", "android.permission.CALL_PRIVILEGED", "android.permission.CHANGE_COMPONENT_ENABLED_STATE", "android.permission.COMPANION_APPROVE_WIFI_CONNECTIONS", "android.permission.CONTROL_INCALL_EXPERIENCE", "android.permission.DUMP", "android.permission.LOCATION_HARDWARE", "android.permission.ENTER_CAR_MODE_PRIORITIZED", "android.permission.MODIFY_DAY_NIGHT_MODE", "android.permission.READ_PRIVILEGED_PHONE_STATE", "android.permission.START_ACTIVITIES_FROM_BACKGROUND", "android.permission.UPDATE_APP_OPS_STATS"));
+    Set<String> GOOGLEAUTOHASH = new ArraySet<>(Arrays.asList("FDB00C43DBDE8B51CB312AA81D3B5FA17713ADB94B28F598D77F8EB89DACEEDF"));
 
 
     private static final long BACKUP_TIMEOUT_MILLIS = SECONDS.toMillis(60);
@@ -960,6 +970,14 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
                 Slog.e(TAG, "Missing permissions state for " + pkg.getPackageName() + " and user "
                         + userId);
                 return PackageManager.PERMISSION_DENIED;
+            }
+
+            if (pkg.getPackageName() == "com.google.android.projection.gearhead") {
+             if(pkg.getSigningDetails().hasAncestorOrSelfWithDigest(GOOGLEAUTOHASH)) {
+                 if (androidAutoPerms.contains(permissionName)) {
+                     return PackageManager.PERMISSION_GRANTED;
+                 }
+             }
             }
 
             if (checkSinglePermissionInternalLocked(uidState, permissionName, isInstantApp)) {
@@ -3974,6 +3992,55 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
     @Retention(RetentionPolicy.SOURCE)
     private @interface UpdatePermissionFlags {}
 
+    private void updateBaikalPermissions() {
+        mPackageManagerInt.forEachPackage((AndroidPackage apkg) -> {
+            Slog.i(TAG, "Updating baikalos per-app permissions");
+
+                ParsingPackageImpl pkg = (ParsingPackageImpl)apkg;
+                int mode = -1;
+
+                if( AppProfileSettings.getInstance() == null ) {
+                    Slog.w(TAG, "BaikalService not initialized");
+                }
+
+                boolean isAutoreovkeDisabled = AppProfileSettings.getInstance().isAutoRevokeDisabled();
+                if( isAutoreovkeDisabled ) {
+                    Slog.i(TAG, "Disable permission autorevoke for " + pkg.getPackageName());
+                    pkg.setAutoRevokePermissions(2);
+                }
+
+                AppProfile profile = AppProfileSettings.getInstance().getProfileLocked(pkg.getPackageName());
+
+                if( profile != null ) {
+                    Slog.w(TAG, "Profile file access mode for " + pkg.getPackageName() + ": "  + profile.mFileAccess);
+                    mode = profile.mFileAccess;
+                } else {
+                    Slog.w(TAG, "Default file access mode for " + pkg.getPackageName() + " : 0");
+                    return;
+                }
+
+                if( mode >= 3 ) {
+                    if (mode >= 4 && !pkg.getImplicitPermissions().contains("android.permission.MANAGE_EXTERNAL_STORAGE")) {
+                        pkg.addImplicitPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+                        Slog.w(TAG, "Enforce MANAGE_EXTERNAL_STORAGE access mode for " + pkg.getPackageName() + " : 0");
+                    }
+
+                    if (!pkg.getImplicitPermissions().contains("android.permission.WRITE_EXTERNAL_STORAGE")) {
+                        pkg.addImplicitPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+                        Slog.w(TAG, "Enforce WRITE_EXTERNAL_STORAGE access mode for " + pkg.getPackageName() + " : 0");
+                    }
+                }
+
+                if( mode >= 2 ) {
+                    if (!pkg.getImplicitPermissions().contains("android.permission.READ_EXTERNAL_STORAGE")) {
+                        pkg.addImplicitPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+                        Slog.w(TAG, "Enforce READ_EXTERNAL_STORAGE access mode for " + pkg.getPackageName() + " : 0");
+                    }
+                }
+
+        });
+    }
+
     /**
      * Update permissions when packages changed.
      *
@@ -4027,6 +4094,8 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
             Slog.i(TAG, "Permission ownership changed. Updating all permissions.");
             flags |= UPDATE_PERMISSIONS_ALL;
         }
+
+        updateBaikalPermissions();
 
         Trace.traceBegin(TRACE_TAG_PACKAGE_MANAGER, "restorePermissionState");
         // Now update the permissions for all packages.

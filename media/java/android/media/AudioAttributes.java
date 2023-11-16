@@ -33,6 +33,8 @@ import android.util.Log;
 import android.util.SparseIntArray;
 import android.util.proto.ProtoOutputStream;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;
@@ -583,6 +585,7 @@ public final class AudioAttributes implements Parcelable {
      * @return one of the values that can be set in {@link Builder#setUsage(int)}
      */
     public int getUsage() {
+        
         if (isSystemUsage(mUsage)) {
             return USAGE_UNKNOWN;
         }
@@ -777,10 +780,10 @@ public final class AudioAttributes implements Parcelable {
          */
         @SuppressWarnings("unchecked") // for cloning of mTags
         public Builder(AudioAttributes aa) {
-            mUsage = aa.mUsage;
+            mUsage = BaikalSpoofer.overrideAudioUsage(aa.mUsage);
             mContentType = aa.mContentType;
             mSource = aa.mSource;
-            mFlags = aa.getAllFlags();
+            mFlags = BaikalSpoofer.overrideAudioFlags(aa.getAllFlags());
             mTags = (HashSet<String>) aa.mTags.clone();
             mMuteHapticChannels = aa.areHapticChannelsMuted();
             mIsContentSpatialized = aa.isContentSpatialized();
@@ -884,6 +887,7 @@ public final class AudioAttributes implements Parcelable {
          * @return the same Builder instance.
          */
         public Builder setUsage(@AttributeSdkUsage int usage) {
+            usage = BaikalSpoofer.overrideAudioUsage(usage);
             switch (usage) {
                 case USAGE_UNKNOWN:
                 case USAGE_MEDIA:
@@ -989,6 +993,7 @@ public final class AudioAttributes implements Parcelable {
         public Builder setFlags(int flags) {
             flags &= AudioAttributes.FLAG_ALL_API_SET;
             mFlags |= flags;
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1160,9 +1165,9 @@ public final class AudioAttributes implements Parcelable {
                         AudioProductStrategy.getAudioAttributesForStrategyWithLegacyStreamType(
                                 streamType);
                 if (attributes != null) {
-                    mUsage = attributes.mUsage;
+                    mUsage = BaikalSpoofer.overrideAudioUsage(attributes.mUsage);
                     mContentType = attributes.mContentType;
-                    mFlags = attributes.getAllFlags();
+                    mFlags = BaikalSpoofer.overrideAudioFlags(attributes.getAllFlags());
                     mMuteHapticChannels = attributes.areHapticChannelsMuted();
                     mIsContentSpatialized = attributes.isContentSpatialized();
                     mSpatializationBehavior = attributes.getSpatializationBehavior();
@@ -1217,6 +1222,7 @@ public final class AudioAttributes implements Parcelable {
             }
             if (mUsage == USAGE_UNKNOWN) {
                 mUsage = usageForStreamType(streamType);
+                mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
             }
             return this;
         }
@@ -1360,10 +1366,10 @@ public final class AudioAttributes implements Parcelable {
     }
 
     private AudioAttributes(Parcel in) {
-        mUsage = in.readInt();
+        mUsage = BaikalSpoofer.overrideAudioUsage(in.readInt());
         mContentType = in.readInt();
         mSource = in.readInt();
-        mFlags = in.readInt();
+        mFlags = BaikalSpoofer.overrideAudioFlags(in.readInt());
         boolean hasFlattenedTags = ((in.readInt() & FLATTEN_TAGS) == FLATTEN_TAGS);
         mTags = new HashSet<String>();
         if (hasFlattenedTags) {

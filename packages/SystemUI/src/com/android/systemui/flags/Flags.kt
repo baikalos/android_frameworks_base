@@ -59,7 +59,7 @@ object Flags {
         )
 
     // TODO(b/254512517): Tracking Bug
-    val FSI_REQUIRES_KEYGUARD = releasedFlag(110, "fsi_requires_keyguard")
+    val FSI_REQUIRES_KEYGUARD = unreleasedFlag(110, "fsi_requires_keyguard")
 
     // TODO(b/259130119): Tracking Bug
     val FSI_ON_DND_UPDATE = releasedFlag(259130119, "fsi_on_dnd_update")
@@ -543,7 +543,9 @@ object Flags {
         sysPropBooleanFlag(1202, "persist.wm.debug.predictive_back_always_enforce", default = false)
 
     // TODO(b/254512728): Tracking Bug
-    @JvmField val NEW_BACK_AFFORDANCE = unreleasedFlag(1203, "new_back_affordance", teamfood = true)
+    //@JvmField val NEW_BACK_AFFORDANCE = unreleasedFlag(1203, "new_back_affordance", teamfood = true)
+    @JvmField val NEW_BACK_AFFORDANCE = 
+        sysPropBooleanFlag(1202, "persist.flags.new_back_affordance", default = false)
 
     // TODO(b/255854141): Tracking Bug
     @JvmField

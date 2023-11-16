@@ -56,7 +56,7 @@ import java.util.HashMap;
 
 public class ImsConfigImplBase {
 
-    static final private String TAG = "ImsConfigImplBase";
+    static final private String TAG = "ImsConfigImplBaseStub";
 
     ImsConfigStub mImsConfigStub;
 

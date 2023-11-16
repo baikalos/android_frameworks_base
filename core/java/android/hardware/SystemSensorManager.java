@@ -293,6 +293,35 @@ public class SystemSensorManager extends SensorManager {
             }
         }
 
+        int sensortype = sensor.getType();
+
+        String pkgName = mContext.getPackageName();
+        String opPkgName = mContext.getOpPackageName();
+
+        if ( sensortype == Sensor.TYPE_PROXIMITY && Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_PROXIMITY_DISABLE, 0) == 1  ) {
+            Log.w(TAG, "Proximity sensor disabled for " + pkgName);
+            return true;
+        }
+
+        if (Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 /*||
+	        Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_EXTREME_IDLE, 0) == 1*/ ) {
+
+            if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION) {
+                    Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
+                            "significant motion sensor");
+                    return true;
+            } else if (sensortype == Sensor.TYPE_ACCELEROMETER || sensortype == Sensor.TYPE_LINEAR_ACCELERATION) {
+                if( opPkgName.startsWith("com.google.android.gms" ) || pkgName.startsWith("com.google.android.gms" ) ) {
+                    Log.w(TAG, "Preventing " + pkgName + "(" + opPkgName +") from draining battery using " +
+                           "accelerometer sensor");
+                    return true;
+                }
+            }
+        }
+
         // Invariants to preserve:
         // - one Looper per SensorEventListener
         // - one Looper per SensorEventQueue
@@ -356,6 +385,36 @@ public class SystemSensorManager extends SensorManager {
             throw new IllegalStateException("request failed, "
                     + "the trigger listeners size has exceeded the maximum limit "
                     + MAX_LISTENER_COUNT);
+        }
+
+        int sensortype = sensor.getType();
+
+        String pkgName = mContext.getPackageName();
+        String opPkgName = mContext.getOpPackageName();
+
+        if (Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_PROXIMITY_DISABLE, 0) == 1 && sensortype == Sensor.TYPE_PROXIMITY ) {
+            Log.w(TAG, "Proximity sensor disabled for " + pkgName);
+            return true;
+        }
+
+        if (Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 /*||
+	        Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_EXTREME_IDLE, 0) == 1 */ ) {
+
+            if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION) {
+                    Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
+                            "significant motion sensor");
+                    return true;
+            } else if (sensortype == Sensor.TYPE_ACCELEROMETER || sensortype == Sensor.TYPE_LINEAR_ACCELERATION) {
+                if( opPkgName.startsWith("com.google.android.gms" ) || pkgName.startsWith("com.google.android.gms" ) ) {
+                    Log.w(TAG, "Preventing " + pkgName + "(" + opPkgName +") from draining battery using " +
+                           "accelerometer sensor");
+                    return true;
+               
+                }
+            }
         }
 
         synchronized (mTriggerListeners) {

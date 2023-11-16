@@ -44,6 +44,8 @@ import android.view.Surface;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.IOException;
@@ -1668,6 +1670,7 @@ public class MediaRecorder implements AudioRouting,
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
+        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, true);
         if (deviceInfo != null && !deviceInfo.isSource()) {
             return false;
         }

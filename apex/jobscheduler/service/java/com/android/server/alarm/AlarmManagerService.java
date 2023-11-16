@@ -154,6 +154,15 @@ import com.android.server.tare.EconomyManagerInternal;
 import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.BaikalConstants;
+import com.android.server.baikalos.AppProfileManager;
+
+
+import com.android.server.baikalos.BaikalAlarmManager;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import libcore.util.EmptyArray;
@@ -228,6 +237,9 @@ public class AlarmManagerService extends SystemService {
 
     AppOpsManager mAppOps;
     DeviceIdleInternal mLocalDeviceIdleController;
+    AppProfileSettings mAppProfileSettings;
+    AppProfileManager mAppProfileManager;
+    BaikalAlarmManager mBaikalAlarmManager;
     private UsageStatsManagerInternal mUsageStatsManagerInternal;
     private ActivityManagerInternal mActivityManagerInternal;
     private final EconomyManagerInternal mEconomyManagerInternal;
@@ -743,7 +755,7 @@ public class AlarmManagerService extends SystemService {
         private static final long DEFAULT_ALLOW_WHILE_IDLE_WINDOW = 60 * 60 * 1000; // 1 hour.
         private static final long DEFAULT_ALLOW_WHILE_IDLE_COMPAT_WINDOW = 9 * 60 * 1000; // 9 mins.
 
-        private static final boolean DEFAULT_CRASH_NON_CLOCK_APPS = true;
+        private static final boolean DEFAULT_CRASH_NON_CLOCK_APPS = false;
 
         private static final long DEFAULT_PRIORITY_ALARM_DELAY = 9 * 60_000;
 
@@ -2048,6 +2060,10 @@ public class AlarmManagerService extends SystemService {
 
                 mClockReceiver.scheduleTimeTickEvent();
                 mClockReceiver.scheduleDateChangedEvent();
+
+                mAppProfileSettings = AppProfileSettings.getInstance(); 
+                mAppProfileManager = AppProfileManager.getInstance(); 
+                mBaikalAlarmManager = BaikalAlarmManager.getInstance();
             }
             IAppOpsService iAppOpsService = mInjector.getAppOpsService();
             try {
@@ -2220,7 +2236,7 @@ public class AlarmManagerService extends SystemService {
             int callingUid, String callingPackage, Bundle idleOptions, int exactAllowReason) {
         if ((operation == null && directReceiver == null)
                 || (operation != null && directReceiver != null)) {
-            Slog.w(TAG, "Alarms must either supply a PendingIntent or an AlarmReceiver");
+            Slog.w(TAG, "Alarms must either supply a PendingIntent or an AlarmReceiver", new Throwable());
             // NB: previous releases failed silently here, so we are continuing to do the same
             // rather than throw an IllegalArgumentException.
             return;
@@ -2377,6 +2393,8 @@ public class AlarmManagerService extends SystemService {
             return false;
         }
         final boolean changedBeforeFuzz = restoreRequestedTime(alarm);
+        return changedBeforeFuzz;
+        /*
         if (mNextWakeFromIdle == null) {
             // No need to change anything in the absence of a wake-from-idle request.
             return changedBeforeFuzz;
@@ -2401,6 +2419,7 @@ public class AlarmManagerService extends SystemService {
             alarm.setPolicyElapsed(REQUESTER_POLICY_INDEX, upcomingWakeFromIdle - fuzz);
         }
         return true;
+        */
     }
 
     /**
@@ -2865,13 +2884,34 @@ public class AlarmManagerService extends SystemService {
             } else if (workSource == null && (UserHandle.isCore(callingUid)
                     || UserHandle.isSameApp(callingUid, mSystemUiUid)
                     || ((mAppStateTracker != null)
-                    && mAppStateTracker.isUidPowerSaveIdleExempt(callingUid)))) {
+                    && mAppStateTracker.isUidPowerSaveExempt(callingUid)))) {
                 flags |= FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED;
                 flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE);
             }
 
-            final boolean allowWhileIdle = (flags & FLAG_ALLOW_WHILE_IDLE) != 0;
-            final boolean exact = (windowLength == 0);
+            boolean exact = (windowLength == 0);
+
+            if (alarmClock == null && (exact ||  
+	        	(flags & (FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
+        		|| type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP )  ) {
+                if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, listenerTag)) {
+                    if( exact ) {
+                        exact = false;
+                        windowLength = 3600000;
+                    }
+
+        		    if( type == ELAPSED_REALTIME_WAKEUP ) type = ELAPSED_REALTIME;
+		            if( type == RTC_WAKEUP ) type = RTC;
+
+                    flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED | FLAG_ALLOW_WHILE_IDLE_COMPAT);
+                    flags &= ~(FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE);
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm disabled:" + callingPackage + "/" + callingUid + ":" + listenerTag );
+                } else {
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm enabled:" + callingPackage + "/" + callingUid + ":" + listenerTag );
+                }
+            }
+
+            boolean allowWhileIdle = (flags & FLAG_ALLOW_WHILE_IDLE) != 0;
 
             // Make sure the caller is allowed to use the requested kind of alarm, and also
             // decide what quota and broadcast options to use.
@@ -4395,17 +4435,20 @@ public class AlarmManagerService extends SystemService {
     }
 
     long currentNonWakeupFuzzLocked(long nowELAPSED) {
+        
         long timeSinceOn = nowELAPSED - mNonInteractiveStartTime;
         if (timeSinceOn < 5 * 60 * 1000) {
             // If the screen has been off for 5 minutes, only delay by at most two minutes.
-            return 2 * 60 * 1000;
+            return 15 * 60 * 1000;
         } else if (timeSinceOn < 30 * 60 * 1000) {
             // If the screen has been off for 30 minutes, only delay by at most 15 minutes.
-            return 15 * 60 * 1000;
+            return 2 * 60 * 1000;
         } else {
             // Otherwise, we will delay by at most an hour.
-            return 60 * 60 * 1000;
+            return 6 * 60 * 60 * 1000;
         }
+
+        //return 6 * 60 * 60 * 1000;
     }
 
     boolean checkAllowNonWakeupDelayLocked(long nowELAPSED) {
@@ -4413,7 +4456,7 @@ public class AlarmManagerService extends SystemService {
             return false;
         }
         if (mLastAlarmDeliveryTime <= 0) {
-            return false;
+            //return false;
         }
         if (mPendingNonWakeupAlarms.size() > 0 && mNextNonWakeupDeliveryTime < nowELAPSED) {
             // This is just a little paranoia, if somehow we have pending non-wakeup alarms

@@ -102,7 +102,11 @@ public class CachingIconView extends ImageView {
         if (!testAndSetCache(icon)) {
             mInternalSetDrawable = true;
             // This calls back to setImageDrawable, make sure we don't clear the cache there.
-            Drawable drawable = loadSizeRestrictedIcon(icon);
+            Drawable drawable = null;
+            try {
+                loadSizeRestrictedIcon(icon);
+            } catch(Exception ex) {}
+
             if (drawable == null) {
                 super.setImageIcon(icon);
             } else {
