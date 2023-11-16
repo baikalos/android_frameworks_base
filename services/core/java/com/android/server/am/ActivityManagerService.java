@@ -7489,7 +7489,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 }
                 proc.setRenderThreadTid(tid);
                 if (DEBUG_OOM_ADJ) {
-                    Slog.d("UI_FIFO", "Set RenderThread tid " + tid + " for pid " + pid);
+                    Slog.d("setRenderThread", "Set RenderThread tid " + tid + " for pid " + pid);
                 }
                 // promote to FIFO now
                 if (proc.mState.getCurrentSchedulingGroup() == ProcessList.SCHED_GROUP_TOP_APP) {
@@ -7500,15 +7500,15 @@ public class ActivityManagerService extends IActivityManager.Stub
                     } else {
                         if( Process.getThreadPriority(proc.getRenderThreadTid()) > THREAD_PRIORITY_URGENT_DISPLAY ) {
                             setThreadPriority(proc.getRenderThreadTid(), THREAD_PRIORITY_URGENT_DISPLAY);
-                            Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY:" + proc.uid + "/" + proc.processName );
+                            Slog.d("setRenderThread", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY:" + proc.uid + "/" + proc.processName );
                         } else {
-                            Slog.d("UI_FIFO", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY left at " + Process.getThreadPriority(proc.getRenderThreadTid()) + " for "  + proc.uid + "/" + proc.processName);
+                            Slog.d("setRenderThread", "setThreadPriority THREAD_PRIORITY_URGENT_DISPLAY left at " + Process.getThreadPriority(proc.getRenderThreadTid()) + " for "  + proc.uid + "/" + proc.processName);
                         }
                     }
                 }
             } else {
                 if (DEBUG_OOM_ADJ) {
-                    Slog.d("UI_FIFO", "Didn't set thread from setRenderThread? "
+                    Slog.d("setRenderThread", "Didn't set thread from setRenderThread? "
                             + "PID: " + pid + ", TID: " + tid + " FIFO: " + mUseFifoUiScheduling);
                 }
             }
