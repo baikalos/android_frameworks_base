@@ -3993,15 +3993,15 @@ public final class DisplayManagerService extends SystemService {
                     mDisplayModeDirector.getDesiredDisplayModeSpecs(displayId);
             DisplayModeDirector.DesiredDisplayModeSpecs existingDesiredDisplayModeSpecs =
                     display.getDesiredDisplayModeSpecsLocked();
-            if (DEBUG) {
+            if (true) {
                 Slog.i(TAG,
                         "Comparing display specs: " + desiredDisplayModeSpecs
                                 + ", existing: " + existingDesiredDisplayModeSpecs);
             }
-            if (!desiredDisplayModeSpecs.equals(existingDesiredDisplayModeSpecs)) {
+            //if (!desiredDisplayModeSpecs.equals(existingDesiredDisplayModeSpecs)) {
                 display.setDesiredDisplayModeSpecsLocked(desiredDisplayModeSpecs);
                 mChanged = true;
-            }
+            //}
         };
 
         @GuardedBy("mSyncRoot")
