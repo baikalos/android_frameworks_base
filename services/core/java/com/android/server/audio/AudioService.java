@@ -6379,7 +6379,7 @@ public class AudioService extends IAudioService.Stub
                 REQUEST_CODE_CHECK_MUSIC_ACTIVE,
                 new Intent(ACTION_CHECK_MUSIC_ACTIVE),
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            mAlarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            mAlarmManager.set(AlarmManager.ELAPSED_REALTIME,
                     SystemClock.elapsedRealtime()
                     + MUSIC_ACTIVE_POLL_PERIOD_MS, mMusicActiveIntent);
         }
