@@ -1262,7 +1262,8 @@ public class DisplayModeDirector {
                     setDefaultPeakRefreshRate(mDefaultDisplayDeviceConfig,
                         /* attemptLoadingFromDeviceConfig= */ false);
                     updateRefreshRateSettingLocked();
-                } else if (mDefaultPeakRefreshRate != defaultPeakRefreshRate) {
+                } 
+                if (mDefaultPeakRefreshRate != defaultPeakRefreshRate) {
                     mDefaultPeakRefreshRate = defaultPeakRefreshRate;
                     updateRefreshRateSettingLocked();
                 }
@@ -1875,14 +1876,14 @@ public class DisplayModeDirector {
         }
 
         public void onRefreshRateSettingChangedLocked(float min, float max) {
-            boolean changeable = (max - min > 1f || max > 60f);
+            boolean changeable = (max - min > 1f && max > 60f);
             if (mRefreshRateChangeable != changeable) {
                 mRefreshRateChangeable = changeable;
                 updateSensorStatus();
                 if (!changeable) {
                     // Revoke previous vote from BrightnessObserver
-                    //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, null);
-                    //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, null);
+                    updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, null);
+                    updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, null);
                 }
             }
         }
