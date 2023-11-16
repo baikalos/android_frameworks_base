@@ -46,7 +46,7 @@ CommonPool::CommonPool() {
                     tids[i] = pthread_gettid_np(self);
                     tidConditionVars[i].notify_one();
                 }
-                setpriority(PRIO_PROCESS, 0, PRIORITY_FOREGROUND);
+                setpriority(PRIO_PROCESS, 0, PRIORITY_URGENT_DISPLAY);
                 auto startHook = renderthread::RenderThread::getOnStartHook();
                 if (startHook) {
                     startHook(name.data());
