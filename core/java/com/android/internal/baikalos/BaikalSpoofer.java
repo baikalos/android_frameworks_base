@@ -311,7 +311,7 @@ public class BaikalSpoofer {
             sOverrideSystemPropertiesId = OverrideSystemPropertiesId.OVERRIDE_COM_GOOGLE_GMS_UNSTABLE;
             Log.e(TAG, "Spoof Device for GMS SN check: " + Application.getProcessName());
 
-            setBuildField("BRAND", "Asus");
+            /*setBuildField("BRAND", "Asus");
             setBuildField("PRODUCT", "WW_Phone");
             setBuildField("MODEL", "ASUS_X00HD");
         	setBuildField("MANUFACTURER", "Asus");
@@ -321,7 +321,19 @@ public class BaikalSpoofer {
             setBuildField("TYPE", "user");
             setBuildField("TAGS", "release-keys");
             setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.N_MR1);
-            setVersionField("SECURITY_PATCH", "2018-01-05");
+            setVersionField("SECURITY_PATCH", "2018-01-05");*/
+
+            setBuildField("BRAND", "google");
+            setBuildField("PRODUCT", "bullhead");
+            setBuildField("MODEL", "Nexus 5X");
+        	setBuildField("MANUFACTURER", "google");
+            setBuildField("DEVICE", "bullhead");
+            setBuildField("FINGERPRINT", "google/bullhead/bullhead:8.0.0/OPR6.170623.013/4283548:user/release-keys");
+            //setBuildField("ID", "NJH47F");
+            setBuildField("TYPE", "user");
+            setBuildField("TAGS", "release-keys");
+            setVersionField("DEVICE_INITIAL_SDK_INT", Build.VERSION_CODES.N);
+            //setVersionField("SECURITY_PATCH", "2016-10-05");
 
         } else if( "com.android.vending".equals(packageName) ) {
             sIsFinsky = true;
@@ -333,15 +345,23 @@ public class BaikalSpoofer {
 
         sContext = context;
 
-        if( packageName == null ) return;
+        if( packageName == null || "".equals(packageName)) {
+            if( context.getPackageName() != null && !"".equals(context.getPackageName()) ){
+                packageName = context.getPackageName();
+                Log.e(TAG, "Empty application package name. Using context name=" + packageName);
+            } else {
+                Log.e(TAG, "Empty package name", new Throwable());
+                android.baikalos.AppProfile.setCurrentAppProfile(new AppProfile("unknown"), myUid());
+            }
+            return;
+        }
 
         setOverrideSharedPrefs(packageName);
 
         int device_id = -1;
 
         try {
-
-            if( AppProfile.isDebug() ) Log.i(TAG, "Loadins settings for :" + packageName + ", sBaikalSpooferActive=" + sBaikalSpooferActive );
+            Log.i(TAG, "Loading settings for :" + packageName);
 
             sDefaultBackgroundBlurRadius = -1; /*Settings.System.getInt(context.getContentResolver(),
                 Settings.System.BAIKALOS_BACKGROUND_BLUR_RADIUS, -1);*/
@@ -369,13 +389,12 @@ public class BaikalSpoofer {
                 if( packageName == null ) packageName = "android";
                 profile = new AppProfile(packageName);
                 if( "android".equals(packageName) ) {
-                    profile.mSystemWhitelisted = true;
-                    profile.mDoNotClose = true;
-                    profile.mUid = myUid();
-                    profile.mBackground = -2;
+                    //profile.mSystemWhitelisted = true;
+                    //profile.mDoNotClose = true;
+                    //profile.mUid = myUid();
+                    //profile.mBackground = -2;
                 }
             }
-
 
             android.baikalos.AppProfile.setCurrentAppProfile(profile, myUid());
            

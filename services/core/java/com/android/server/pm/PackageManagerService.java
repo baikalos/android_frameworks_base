@@ -2128,9 +2128,16 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
 
             // Disable components marked for disabling at build-time
             mDisabledComponentsList = new ArrayList<ComponentName>();
+
+            /* = android.provider.Settings.Global.getInt(
+                mContext.getContentResolver(),Global.BAIKALOS_ENABLE_OPTIONAL_COMPONENTS, 0) == 1;*/
+
+            boolean enableDeviceComponents = SystemProperties.getBoolean("persist.baikal.opt.srv", false);
+
             enableComponents(mContext.getResources().getStringArray(
                      org.lineageos.platform.internal.R.array.config_deviceDisabledComponents),
-                     false);
+                     enableDeviceComponents);
+
             enableComponents(mContext.getResources().getStringArray(
                     org.lineageos.platform.internal.R.array.config_globallyDisabledComponents),
                     false);
@@ -2293,6 +2300,9 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
 
     private void enableComponents(String[] components, boolean enable) {
         // Disable or enable components marked at build-time
+
+        Slog.v(TAG, "enableComponents size=" + components.length);
+
         for (String name : components) {
             ComponentName cn = ComponentName.unflattenFromString(name);
             if (!enable) {
@@ -2307,9 +2317,9 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                 continue;
             }
             if (enable) {
-                pkgSetting.enableComponentLPw(className, UserHandle.USER_OWNER);
+                pkgSetting.enableComponentLPw(className, 0);
             } else {
-                pkgSetting.disableComponentLPw(className, UserHandle.USER_OWNER);
+                pkgSetting.disableComponentLPw(className, 0);
             }
         }
     }
@@ -3776,7 +3786,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                 // Don't allow to enable components marked for disabling at build-time
                 if (mDisabledComponentsList.contains(settings.get(i).getComponentName())) {
                     Slog.d(TAG, "Ignoring attempt to set enabled state of disabled component "
-                        + settings.get(i).getComponentName().flattenToString());
+                        + settings.get(i).getComponentName().flattenToString(), new Throwable());
                     return;
                 }
             }

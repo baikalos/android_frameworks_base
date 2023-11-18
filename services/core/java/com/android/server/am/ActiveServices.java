@@ -117,6 +117,7 @@ import android.content.IIntentSender;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.IPackageManager;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManagerInternal;
 import android.content.pm.ParceledListSlice;
@@ -202,7 +203,7 @@ public final class ActiveServices {
     private static final boolean DEBUG_DELAYED_SERVICE = DEBUG_SERVICE;
     private static final boolean DEBUG_DELAYED_STARTS = DEBUG_DELAYED_SERVICE;
 
-    private static final boolean LOG_SERVICE_START_STOP = false;
+    private static final boolean LOG_SERVICE_START_STOP = true;
 
     private static final boolean SHOW_DUNGEON_NOTIFICATION = false;
 
@@ -2792,6 +2793,7 @@ public final class ActiveServices {
                     + ") when binding service " + service);
         }
 
+        
         ActivityServiceConnectionsHolder<ConnectionRecord> activity = null;
         if (token != null) {
             activity = mAm.mAtmInternal.getServiceConnectionsHolder(token);
@@ -2878,6 +2880,21 @@ public final class ActiveServices {
             return -1;
         }
         ServiceRecord s = res.record;
+
+        int enableState = PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
+        try {
+            IPackageManager pm = AppGlobals.getPackageManager();
+            enableState = pm.getComponentEnabledSetting(s.name, 0);
+            Slog.w(TAG, "Service component:" + s.name + ", state=" + enableState);
+        } catch (Exception e) {
+            Slog.w(TAG, "Exception checking component:" + s.name, e);
+        }
+
+        if( enableState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED && enableState != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT ) {
+            Slog.w(TAG, "Background service start disabled by baikal component name from:" + callerApp + " for: " + s);
+            Slog.w(TAG, "Background service start attempt from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
+            return 0;
+        }
 
         //if( !mAm.mAppProfileManager.isToppAppUid(callerApp.info.uid) ) {
 
@@ -4206,9 +4223,24 @@ public final class ActiveServices {
             return null;
         }
 
-        if (DEBUG_SERVICE) {
+        if (true /*DEBUG_SERVICE*/) {
             Slog.v(TAG_SERVICE, "Bringing up " + r + " " + r.intent + " fg=" + r.fgRequired);
         }
+
+        int enableState = PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
+        try {
+            IPackageManager pm = AppGlobals.getPackageManager();
+            enableState = pm.getComponentEnabledSetting(r.name, 0);
+            Slog.w(TAG, "Service component:" + r.name + ", state=" + enableState);
+        } catch (Exception e) {
+            Slog.w(TAG, "Exception checking component:" + r.name, e);
+        }
+
+        if( enableState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED && enableState != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT ) {
+            Slog.w(TAG, "Background service bringup disabled by baikal component name:" + r.name);
+            return null;
+        }
+
 
         // We are now bringing the service up, so no longer in the
         // restarting state.

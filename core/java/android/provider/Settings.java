@@ -17531,6 +17531,13 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_BLOCK_OVERLAYS = "baikalos_block_overlays";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_ENABLE_OPTIONAL_COMPONENTS = "baikalos_enable_optional_components";
+
         /* End of BaikalOS Global Settings */
 
         /**

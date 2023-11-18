@@ -639,7 +639,13 @@ public class ApplicationPackageManager extends PackageManager {
             throws NameNotFoundException {
         final int userId = getUserId();
         try {
-            ProviderInfo pi = mPM.getProviderInfo(className,
+            ComponentName _className = className;
+            if( className.getPackageName() == null || "".equals(className.getPackageName()) ) {
+                _className = new ComponentName(mContext.getPackageName(),className.getClassName());
+            }
+
+            Log.e(TAG, "getProviderInfo className:" + _className + ", pkg=" + _className.getPackageName() + ", class=" + _className.getClassName());
+            ProviderInfo pi = mPM.getProviderInfo(_className,
                     updateFlagsForComponent(flags.getValue(), userId, null), userId);
             if (pi != null) {
                 return pi;
