@@ -66,8 +66,11 @@ public class AppProfileSettings extends ContentObserver {
     private final TextUtils.StringSplitter mSplitter = new TextUtils.SimpleStringSplitter('|');
 
     private HashMap<String, AppProfile> _profilesByPackageName = new HashMap<String,AppProfile> ();
+    private HashMap<Integer, AppProfile> _profilesByUid = new HashMap<Integer,AppProfile> ();
 
     private static HashMap<String, AppProfile> _staticProfilesByPackageName = null; 
+    private static HashMap<Integer, AppProfile> _staticProfilesByUid = null; 
+
     private static HashSet<Integer> _mAppsForDebug = new HashSet<Integer>();
 
     private PowerWhitelistBackend mBackend;
@@ -78,8 +81,10 @@ public class AppProfileSettings extends ContentObserver {
     private boolean mAutorevokeDisabled;
 
     private static AppProfile sSystemProfile;
+    private static AppProfile sDefaultProfile;
 
     private static boolean mAwaitSystemBoot;
+    private static boolean mIsLoaded;
 
     static String [] config_performanceValues = {
         "default",
@@ -98,6 +103,10 @@ public class AppProfileSettings extends ContentObserver {
 
     public static HashMap<String, AppProfile> internalGetStaticProfilesByPackageName() {
         return _staticProfilesByPackageName;
+    }
+
+    public static HashMap<Integer, AppProfile> internalGetStaticProfilesByUid() {
+        return _staticProfilesByUid;
     }
 
     private static HashMap<String, Integer> _performanceToId = new HashMap<String, Integer>();
@@ -130,6 +139,13 @@ public class AppProfileSettings extends ContentObserver {
             sSystemProfile = new AppProfile("android");
             sSystemProfile.mSystemWhitelisted = true;
         }
+
+
+        if( sDefaultProfile == null ) {
+            sDefaultProfile = new AppProfile("default");
+        }
+
+
     }
 
     public void registerObserver(boolean systemBoot) {
@@ -155,6 +171,7 @@ public class AppProfileSettings extends ContentObserver {
                 mAwaitSystemBoot = true; 
                 updateProfilesOnBootLocked();
             }
+            mIsLoaded = true;
         }
     }
 
@@ -162,12 +179,17 @@ public class AppProfileSettings extends ContentObserver {
     public void onChange(boolean selfChange, Uri uri) {
         Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading");
         synchronized(this) {
+            Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading locked");
             mBackend.refreshList();
             updateConstantsLocked();
+            Slog.i(TAG, "Preferences changed. Reloading - done locked");
         }
         Slog.i(TAG, "Preferences changed. Reloading - done");
     }
 
+    public static boolean isLoaded() {
+        return mIsLoaded;
+    }
 
     private static AppProfile updateProfileFromSystemWhitelistStatic(AppProfile profile, Context context) {
 
@@ -459,6 +481,9 @@ public class AppProfileSettings extends ContentObserver {
             _profilesByPackageName = new HashMap<String,AppProfile> ();
             _profilesByPackageName.put(sSystemProfile.mPackageName,sSystemProfile);
 
+            _profilesByUid = new HashMap<Integer,AppProfile> ();
+
+
             for(String profileString:mSplitter) {
                 
                 AppProfile profile = AppProfile.deserializeProfile(profileString); 
@@ -484,6 +509,11 @@ public class AppProfileSettings extends ContentObserver {
                         updateSystemSettingsLocked(profile);
                         _profilesByPackageName.put(profile.mPackageName, profile);
                     }
+
+                    if( !_profilesByUid.containsKey(profile.mUid)  ) {
+                        _profilesByUid.put(profile.mUid, profile);
+                    }
+                
                 }
             }
 
@@ -496,6 +526,7 @@ public class AppProfileSettings extends ContentObserver {
             _oldProfiles.clear();
 
             _staticProfilesByPackageName =  _profilesByPackageName;
+            _staticProfilesByUid =  _profilesByUid;
 
         } catch (Exception e) {
             Slog.e(TAG, "Bad BaikalService settings", e);
@@ -647,7 +678,11 @@ public class AppProfileSettings extends ContentObserver {
         } 
 
         if( !val.equals(appProfiles) ) {
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Write profile data string " + val, new Throwable());
+            //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Write profile data string " + val);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) { 
+                Slog.i(TAG, "Write new profile data string :" + val);
+                Slog.i(TAG, "Old profile data string :" + val);
+            }
             Settings.Global.putString(mResolver,
                 Settings.Global.BAIKALOS_APP_PROFILES,val);
         }
@@ -691,6 +726,11 @@ public class AppProfileSettings extends ContentObserver {
 	        return _profilesByPackageName.get(packageName);
         }
         return null;
+    }
+
+    public AppProfile getProfileLocked(int uid) {
+        if( uid < 10000 ) return sSystemProfile;
+        return _profilesByUid.get(uid);
     }
 
     public void updateProfileLocked(AppProfile profile) {
@@ -752,9 +792,15 @@ public class AppProfileSettings extends ContentObserver {
 
     public static AppProfile getProfileStatic(String packageName) {
         if( "android".equals(packageName) || "system".equals(packageName) ) return sSystemProfile;
-        if( packageName == null ) return null;
-        if( _staticProfilesByPackageName == null ) return null;
+        if( packageName == null ) return sDefaultProfile;
+        if( _staticProfilesByPackageName == null ) return sDefaultProfile;
 	    return _staticProfilesByPackageName.get(packageName);
+    }
+
+    public static AppProfile getProfileStatic(int uid) {
+        if( uid < 10000 ) return sSystemProfile;
+        if( _staticProfilesByUid == null ) return sDefaultProfile;
+	    return _staticProfilesByUid.get(uid);
     }
 
     AppOpsManager getAppOpsManager() {

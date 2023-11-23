@@ -158,6 +158,15 @@ public class AppProfile {
     public boolean mBlockOverlays;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mHideHMS;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mHideGMS;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mHide3P;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     private static boolean sDebug;
@@ -216,6 +225,9 @@ public class AppProfile {
         mHeavyMemory = false;
         mHeavyCPU = false;
         mBlockOverlays = false;
+        mHideHMS = false;
+        mHideGMS = false;
+        mHide3P = false;
     }
 
     public AppProfile(@Nullable String packageName) {
@@ -242,51 +254,13 @@ public class AppProfile {
         mHeavyMemory = false;
         mHeavyCPU = false;
         mBlockOverlays = false;
+        mHideHMS = false;
+        mHideGMS = false;
+        mHide3P = false;
     }
 
     public AppProfile(@Nullable AppProfile profile) {
         update(profile);
-
-/*        this.mPackageName = profile.mPackageName;
-        this.mBrightness = profile.mBrightness;
-        this.mReader = profile.mReader;
-        this.mPinned = profile.mPinned;
-        this.mStamina = profile.mStamina;
-        this.mRequireGms = profile.mRequireGms;
-        this.mBootDisabled = profile.mBootDisabled;
-        this.mMaxFrameRate = profile.mMaxFrameRate;
-        this.mMinFrameRate = profile.mMinFrameRate;
-        this.mBackground = profile.mBackground;
-        this.mIgnoreAudioFocus = profile.mIgnoreAudioFocus;
-        this.mRotation = profile.mRotation;
-        this.mAudioMode = profile.mAudioMode;
-        this.mSpoofDevice = profile.mSpoofDevice;
-        this.mCamera = profile.mCamera;
-        this.mKeepOn = profile.mKeepOn;
-        this.mPreventHwKeyAttestation = profile.mPreventHwKeyAttestation;
-        this.mHideDevMode = profile.mHideDevMode;
-        this.mPerformanceLevel = profile.mPerformanceLevel;
-        this.mMicrophone = profile.mMicrophone;
-        this.mFreezerMode = profile.mFreezerMode;
-        this.mPerfProfile = profile.mPerfProfile;
-        this.mThermalProfile = profile.mThermalProfile;
-        this.mDisableWakeup = profile.mDisableWakeup;
-        this.mDisableJobs = profile.mDisableJobs;
-        this.mDisableFreezer = profile.mDisableFreezer;
-        this.mAllowIdleNetwork = profile.mAllowIdleNetwork;
-        this.mFileAccess = profile.mFileAccess;
-        this.mForcedScreenshot = profile.mForcedScreenshot;
-        this.mOverrideFonts = profile.mOverrideFonts;
-        this.mFullScreen = profile.mFullScreen;
-        this.mBAFRecv = profile.mBAFRecv;
-        this.mBAFSend = profile.mBAFSend;
-        this.mSonification = profile.mSonification;
-        this.mBypassCharging = profile.mBypassCharging;
-        this.mSystemWhitelisted = profile.mSystemWhitelisted;
-        this.mDebug = profile.mDebug;
-        this.mHeavyMemory = profile.mHeavyMemory;
-        this.mHeavyCPU = profile.mHeavyCPU;
-*/
     }
 
     public int getBackground() {
@@ -337,6 +311,9 @@ public class AppProfile {
             !mHeavyCPU &&
             !mSystemWhitelisted &&
             !mBlockOverlays &&
+            !mHideHMS &&
+            !mHideGMS &&
+            !mHide3P &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -390,6 +367,9 @@ public class AppProfile {
         this.mHeavyCPU = profile.mHeavyCPU;
         this.mSystemWhitelisted = profile.mSystemWhitelisted;
         this.mBlockOverlays = profile.mBlockOverlays;
+        this.mHideHMS = profile.mHideHMS;
+        this.mHideGMS = profile.mHideGMS;
+        this.mHide3P = profile.mHide3P;
 
     }
 
@@ -437,6 +417,9 @@ public class AppProfile {
         if( mHeavyCPU ) result +=  "," + "hc=" + mHeavyCPU;
         if( mSystemWhitelisted ) result +=  "," + "sw=" + mSystemWhitelisted;
         if( mBlockOverlays ) result +=  "," + "bo=" + mBlockOverlays;
+        if( mHideHMS ) result +=  "," + "hhms=" + mHideHMS;
+        if( mHideGMS ) result +=  "," + "hgms=" + mHideGMS;
+        if( mHide3P ) result +=  "," + "h3p=" + mHide3P;
         return result;
     }
 
@@ -494,6 +477,9 @@ public class AppProfile {
             mDoNotClose = parser.getBoolean("dnc",false);
             mReader = parser.getInt("rm",0);
             mBlockOverlays = parser.getBoolean("bo",false);
+            mHideHMS = parser.getBoolean("hhms",false);
+            mHideGMS = parser.getBoolean("hgms",false);
+            mHide3P = parser.getBoolean("h3p",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }

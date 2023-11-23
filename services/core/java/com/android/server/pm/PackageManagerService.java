@@ -3865,8 +3865,8 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                                         : ", component=" + setting.getComponentName()));
                     }
                     // Don't allow changing protected packages.
-                    if (mProtectedPackages.isPackageStateProtected(userId, packageName) &&
-                            !Arrays.asList(BaikalAppManagerService.GMS_PACKAGES).contains(packageName)) {
+                    if (mProtectedPackages.isPackageStateProtected(userId, packageName) /*&&
+                            !Arrays.asList(BaikalAppManagerService.GMS_PACKAGES).contains(packageName)*/) {
                         throw new SecurityException(
                                 "Cannot disable a protected package: " + packageName);
                     }

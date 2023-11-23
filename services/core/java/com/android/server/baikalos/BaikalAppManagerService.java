@@ -38,6 +38,8 @@ import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.provider.Settings;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import com.android.server.ServiceThread;
 import com.android.server.SystemService;
 
@@ -143,17 +145,22 @@ public final class BaikalAppManagerService extends SystemService {
             return false;
 
         BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
-        if( entries == null ) return false;
 
-        for(BaikalAppManagerEntry entry : entries) {
-            if(userId != 0 && entry.mRootOnly) continue;
-            if(Arrays.stream(entry.mPackages).anyMatch(packageName::equals)) {
-                if( userId != 0 && entry.mRootOnly ) return true;
-                return !entry.mEnabled;
+        boolean skip = false;
+
+        if( entries != null ) {
+            for(BaikalAppManagerEntry entry : entries) {
+                if(userId != 0 && entry.mRootOnly) continue;
+                if(Arrays.stream(entry.mPackages).anyMatch(packageName::equals)) {
+                    if( userId != 0 && entry.mRootOnly ) skip = true;
+                    skip = !entry.mEnabled;
+                }
             }
         }
+
+        skip |= BaikalSpoofer.shouldFilterApplication(packageName, userId);
        
-        return false;
+        return skip;
     }
 
     public static ParceledListSlice<PackageInfo> recreatePackageList(
@@ -181,6 +188,8 @@ public final class BaikalAppManagerService extends SystemService {
                 }
             }
 
+            skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
+
             if( skip ) continue;
             newList.add(info);
         }
@@ -206,6 +215,8 @@ public final class BaikalAppManagerService extends SystemService {
                     break;
                 }
             }
+
+            skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
 
             if( skip ) continue;
             newList.add(info);

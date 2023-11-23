@@ -88,6 +88,8 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.DataClass;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import com.nvidia.NvAppProfileService;
 
 import dalvik.system.VMRuntime;
@@ -136,6 +138,7 @@ public abstract class PackageManager {
 
         public NameNotFoundException(String name) {
             super(name);
+            BaikalSpoofer.newNameNotFoundExceptionTrace(name);
         }
     }
 
@@ -10527,7 +10530,9 @@ public abstract class PackageManager {
     /** @hide */
     public static PackageInfo getPackageInfoAsUserCached(
             String packageName, @PackageInfoFlagsBits long flags, int userId) {
-        return sPackageInfoCache.query(new PackageInfoQuery(packageName, flags, userId));
+        PackageInfo info = sPackageInfoCache.query(new PackageInfoQuery(packageName, flags, userId));
+        PackageInfo result = BaikalSpoofer.getPackageInfoAsUserCached(info, packageName, flags, userId);
+        return result;
     }
 
     /**

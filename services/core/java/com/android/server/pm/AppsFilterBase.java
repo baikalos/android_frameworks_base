@@ -328,6 +328,7 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
                 return !isForceQueryable(targetPkgSetting.getAppId())
                       && !isImplicitlyQueryable(callingUid, targetUid);
             }
+
             if (mCacheReady) { // use cache
                 if (!shouldFilterApplicationUsingCache(callingUid,
                         targetPkgSetting.getAppId(),

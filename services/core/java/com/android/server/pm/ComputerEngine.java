@@ -154,6 +154,7 @@ import com.android.server.utils.WatchedSparseIntArray;
 import com.android.server.wm.ActivityTaskManagerInternal;
 import com.android.server.baikalos.BaikalAppManagerService;
 import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import libcore.util.EmptyArray;
 
@@ -700,6 +701,11 @@ public class ComputerEngine implements Computer {
             int callingUid, String instantAppPkgName) {
         // reader
         String pkgName = intent.getPackage();
+        
+        if( BaikalSpoofer.shouldFilterApplication(pkgName,userId,callingUid) ) {
+            return Collections.emptyList();
+        }
+
         if (pkgName == null) {
             final List<ResolveInfo> resolveInfos = mComponentResolver.queryServices(this, intent,
                     resolvedType, flags, userId);
@@ -887,6 +893,10 @@ public class ComputerEngine implements Computer {
 
         if (DEBUG_PACKAGE_INFO) Log.v(TAG, "getActivityInfo " + component + ": " + a);
 
+        if( a != null && BaikalSpoofer.shouldFilterApplication(a.getPackageName(),0) ) {
+            return null;
+        }
+
         AndroidPackage pkg = a == null ? null : mPackages.get(a.getPackageName());
         if (pkg != null && mSettings.isEnabledAndMatch(pkg, a, flags, userId)) {
             PackageStateInternal ps = mSettings.getPackage(component.getPackageName());
@@ -908,6 +918,11 @@ public class ComputerEngine implements Computer {
     public AndroidPackage getPackage(String packageName) {
         packageName = resolveInternalPackageName(
                 packageName, PackageManager.VERSION_CODE_HIGHEST);
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,0) ) {
+            return null;
+        }
+
         return mPackages.get(packageName);
     }
 
@@ -916,6 +931,9 @@ public class ComputerEngine implements Computer {
         AndroidPackage pkg = null;
         final int numPackages = packageNames == null ? 0 : packageNames.length;
         for (int i = 0; pkg == null && i < numPackages; i++) {
+            if( BaikalSpoofer.shouldFilterApplication(packageNames[i],0) ) {
+                continue;
+            }
             pkg = mPackages.get(packageNames[i]);
         }
         return pkg;
@@ -924,6 +942,11 @@ public class ComputerEngine implements Computer {
     public final ApplicationInfo generateApplicationInfoFromSettings(String packageName,
             long flags, int filterCallingUid, int userId) {
         if (!mUserManager.exists(userId)) return null;
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,userId,filterCallingUid) ) {
+            return null;
+        }
+
         PackageStateInternal ps = mSettings.getPackage(packageName);
         if (ps != null) {
             if (filterSharedLibPackage(ps, filterCallingUid, userId, flags)) {
@@ -986,6 +1009,10 @@ public class ComputerEngine implements Computer {
         // Normalize package name to handle renamed packages and static libs
         packageName = resolveInternalPackageName(packageName,
                 PackageManager.VERSION_CODE_HIGHEST);
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,userId,filterCallingUid) ) {
+            return null;
+        }
 
         AndroidPackage p = mPackages.get(packageName);
         if (DEBUG_PACKAGE_INFO) {
@@ -1745,6 +1772,12 @@ public class ComputerEngine implements Computer {
 
     protected PackageInfo getPackageInfoInternalBody(String packageName, long versionCode,
             long flags, int filterCallingUid, int userId) {
+
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,userId,filterCallingUid) ) {
+            return null;
+        }
+
         // reader
         // Normalize package name to handle renamed packages and static libs
         packageName = resolveInternalPackageName(packageName, versionCode);
@@ -1810,11 +1843,18 @@ public class ComputerEngine implements Computer {
 
     @Nullable
     public final PackageStateInternal getPackageStateInternal(String packageName) {
+
+
         return getPackageStateInternal(packageName, Binder.getCallingUid());
     }
 
     public PackageStateInternal getPackageStateInternal(String packageName,
             int callingUid) {
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,0,callingUid) ) {
+            return null;
+        }
+
         packageName = resolveInternalPackageNameInternalLocked(
                 packageName, PackageManager.VERSION_CODE_HIGHEST, callingUid);
         return mSettings.getPackage(packageName);
@@ -1872,6 +1912,11 @@ public class ComputerEngine implements Computer {
         } else {
             list = new ArrayList<>(mPackages.size());
             for (AndroidPackage p : mPackages.values()) {
+
+                if( p != null && BaikalSpoofer.shouldFilterApplication(p.getPackageName(),userId,callingUid) ) {
+                    continue;
+                }
+
                 PackageStateInternal ps = getPackageStateInternal(p.getPackageName());
                 if (listFactory) {
                     if (!p.isSystem()) {
@@ -2096,6 +2141,10 @@ public class ComputerEngine implements Computer {
                     TAG, "getServiceInfo " + component + ": " + s);
         }
         if (s == null) {
+            return null;
+        }
+
+        if( s != null && BaikalSpoofer.shouldFilterApplication(s.getPackageName(),userId,callingUid) ) {
             return null;
         }
 
@@ -2756,10 +2805,16 @@ public class ComputerEngine implements Computer {
             // pretend the application exists, but, needs to be filtered
             return callerIsInstantApp || Process.isSdkSandboxUid(callingUid);
         }
+
         // if the target and caller are the same application, don't filter
         if (isCallerSameApp(ps.getPackageName(), callingUid)) {
             return false;
         }
+
+        if( ps != null && BaikalSpoofer.shouldFilterApplication(ps.getPackageName(),userId,callingUid) ) {
+            return true;
+        }
+
         if (callerIsInstantApp) {
             // both caller and target are both instant, but, different applications, filter
             if (ps.getUserStateOrDefault(userId).isInstantApp()) {
@@ -2843,6 +2898,11 @@ public class ComputerEngine implements Computer {
     public int getPackageUidInternal(String packageName,
             @PackageManager.PackageInfoFlagsBits long flags, int userId, int callingUid) {
         // reader
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,userId,callingUid) ) {
+            return -1;
+        }
+
         final AndroidPackage p = mPackages.get(packageName);
         if (p != null && AndroidPackageUtils.isMatchForSystemOnly(p, flags)) {
             final PackageStateInternal ps = getPackageStateInternal(p.getPackageName(), callingUid);
@@ -3111,6 +3171,12 @@ public class ComputerEngine implements Computer {
     }
 
     public SigningDetails getSigningDetails(@NonNull String packageName) {
+
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,0) ) {
+            return null;
+        }
+
         AndroidPackage p = mPackages.get(packageName);
         if (p == null) {
             return null;
@@ -3133,12 +3199,22 @@ public class ComputerEngine implements Computer {
     }
 
     public boolean filterAppAccess(AndroidPackage pkg, int callingUid, int userId) {
+
+        if( pkg != null && BaikalSpoofer.shouldFilterApplication(pkg.getPackageName(),userId,callingUid) ) {
+            return true;
+        }
+
         PackageStateInternal ps = getPackageStateInternal(pkg.getPackageName());
         return shouldFilterApplication(ps, callingUid,
                 userId);
     }
 
     public boolean filterAppAccess(String packageName, int callingUid, int userId) {
+
+        if( BaikalSpoofer.shouldFilterApplication(packageName,userId,callingUid) ) {
+            return true;
+        }
+
         PackageStateInternal ps = getPackageStateInternal(packageName);
         return shouldFilterApplication(ps, callingUid,
                 userId);
@@ -3718,6 +3794,10 @@ public class ComputerEngine implements Computer {
         enforceCrossUserPermission(callingUid, userId, false /*requireFullPermission*/,
                 false /*checkShell*/, "is package available");
 
+        if( BaikalSpoofer.shouldFilterApplication(packageName,userId,callingUid) ) {
+            return false;
+        }
+
         final PackageStateInternal ps = getPackageStateInternal(packageName);
         if (ps != null && ps.getPkg() != null) {
             if (shouldFilterApplication(ps, callingUid, userId)) {
@@ -3979,6 +4059,8 @@ public class ComputerEngine implements Computer {
         if (isInstantAppInternal(packageName, userId, Process.SYSTEM_UID)) {
             return false;
         }
+
+
         final AndroidPackage pkg =  mPackages.get(packageName);
         if (pkg == null) {
             return false;

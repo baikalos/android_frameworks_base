@@ -26,10 +26,12 @@ import android.app.ActivityThread;
 import android.app.Application;
 import android.audio.policy.configuration.V7_0.AudioUsage;
 import android.content.Context;
+import android.content.pm.PackageInfo;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.AudioRouting;
+import android.os.Binder;
 import android.os.Build;
 import android.os.LocaleList;
 import android.os.SystemProperties;
@@ -293,8 +295,10 @@ public class BaikalSpoofer {
 
     private static void maybeSpoofBuild(String packageName, String processName, Context context) {
 
-        sProcessName = processName;
-        sPackageName = packageName;
+        if( sProcessName == null )
+            sProcessName = processName;
+        if( sPackageName == null )
+            sPackageName = packageName;
 
         //boolean needsWASpoof = List.of("pixelmigrate", "restore", "snapchat", "instrumentation").stream().anyMatch(packageName::contains);
 
@@ -782,5 +786,64 @@ public class BaikalSpoofer {
                 }
             }
         }
+    }
+
+    public static void newNameNotFoundExceptionTrace(String name) {
+        if( "com.huawei.hwid".equals(name) || "com.google.android.gms".equals(name) ) {
+            Log.i(TAG,"Lookup for " + name + " failed at:" /*, new Throwable()*/);
+        }
+    }
+
+    public static PackageInfo getPackageInfoAsUserCached(
+            PackageInfo info, String packageName, long flags, int userId) {
+
+        if( shouldFilterApplication(packageName,userId) ) return null;
+        return info;
+    }
+
+    public static boolean shouldFilterApplication(String packageName, int userId) {
+        int callingUid = Binder.getCallingUid();
+        return shouldFilterApplication(packageName,userId,callingUid);
+    }
+
+
+    public static boolean shouldFilterApplication(String packageName, int userId, int callingUid) {
+        
+        if( packageName != null ) {
+
+            AppProfile profile = null; 
+            if( myUid() == callingUid ) {
+                profile = AppProfile.getCurrentAppProfile();
+            } else {
+                if( AppProfileSettings.isLoaded() ) {
+                    profile = AppProfileSettings.getProfileStatic(callingUid);
+                } else {
+                    Log.i(TAG,"Can't load profile for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid() + ", callingUid=" + callingUid);
+                    return false;
+                }  
+            }
+
+            if( profile == null ) return false;
+
+            if( profile.mHideHMS && (packageName.startsWith("com.huawei.hwid") || packageName.startsWith("com.huawei.hms")) ) { 
+                if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
+                    Log.i(TAG,"Hide(2) !!! disable by self call !!!! HMS for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
+                    return false;
+                }
+                Log.i(TAG,"Hide(2) HMS for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid() + ", callingUid=" + callingUid);
+                return true;
+            }
+
+            if( profile.mHideGMS && packageName.startsWith("com.google.android.gms") ) { 
+                if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
+                    Log.i(TAG,"Hide(2) !!! disable by self call !!!! GMS for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
+                    return false;
+                }
+                Log.i(TAG,"Hide(2) GMS for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid() + ", callingUid=" + callingUid);
+                return true;
+            }
+
+        }
+        return false;
     }
 }
