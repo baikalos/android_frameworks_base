@@ -1317,6 +1317,16 @@ public class AppProfileManager {
    
     public boolean updateBypassChargingLocked() {
 
+        if( BaikalConstants.BAIKAL_DEBUG_POWER ) {
+            Slog.i(TAG,"mBypassChargingAvailable=" + mBypassChargingAvailable +
+                    ", mSmartBypassChargingEnabled=" + mSmartBypassChargingEnabled +
+                    ", mBypassChargingForced=" + mBypassChargingForced +
+                    ", mBypassChargingScreenOn=" + mBypassChargingScreenOn +
+                    ", mCurrentProfile.mBypassCharging=" + mCurrentProfile.mBypassCharging +
+                    ", mLimitedChargingScreenOn=" + mLimitedChargingScreenOn +
+                    ", mScreenMode=" + mScreenMode);
+        }
+
         if( !mBypassChargingAvailable ) {
             return false;
         }

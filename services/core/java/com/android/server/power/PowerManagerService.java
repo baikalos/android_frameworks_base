@@ -2914,7 +2914,7 @@ public final class PowerManagerService extends SystemService
 
     private void updateBypassChargingStatus() {
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_POWER) {
             Slog.i(TAG, "Bypass charging mBypassChargingAvailable=" + mBypassChargingAvailable +
                     ", mBypassChargingEnabled=" + mBypassChargingEnabled +
                     ", mPowerInputSuspended=" + mPowerInputSuspended +
