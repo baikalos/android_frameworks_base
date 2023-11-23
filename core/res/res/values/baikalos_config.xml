@@ -25,4 +25,5 @@
     <string name="config_bypassChargingLimitValue" translatable="false">none</string>
 
     <bool name="config_superSaverAvailable">false</bool>
+    <bool name="config_validLayoutRequesters">true</bool>
 </resources>

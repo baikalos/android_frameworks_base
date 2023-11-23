@@ -876,6 +876,8 @@ public final class ViewRootImpl implements ViewParent,
 
     private boolean mRelayoutRequested;
 
+    private boolean mValidLayoutRequesters;
+
     /**
      * Whether sandboxing of {@link android.view.View#getBoundsOnScreen},
      * {@link android.view.View#getLocationOnScreen(int[])},
@@ -973,6 +975,10 @@ public final class ViewRootImpl implements ViewParent,
                 mContext.getSystemService(InputMethodManager.class));
 
         mViewBoundsSandboxingEnabled = getViewBoundsSandboxingEnabled();
+
+         
+        mValidLayoutRequesters = context.getResources().getBoolean(
+                                    R.bool.config_validLayoutRequesters);
 
         String processorOverrideName = context.getResources().getString(
                                     R.string.config_inputEventCompatProcessorOverrideClassName);
@@ -4160,7 +4166,7 @@ public final class ViewRootImpl implements ViewParent,
                     // Check the valid requests again, this time without checking/clearing the
                     // layout flags, since requests happening during the second pass get noop'd
                     validLayoutRequesters = getValidLayoutRequesters(mLayoutRequesters, true);
-                    if (validLayoutRequesters != null) {
+                    if (validLayoutRequesters != null && mValidLayoutRequesters) {
                         final ArrayList<View> finalRequesters = validLayoutRequesters;
                         // Post second-pass requests to the next frame
                         getRunQueue().post(new Runnable() {
