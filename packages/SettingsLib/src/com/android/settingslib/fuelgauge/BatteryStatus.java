@@ -110,18 +110,18 @@ public class BatteryStatus {
         if (maxChargingMicroVolt <= 0) {
             maxChargingMicroVolt = DEFAULT_CHARGING_VOLTAGE_MICRO_VOLT;
         }
-        if (maxChargingMicroAmp > 0) {
+        //if (maxChargingMicroAmp > 0) {
             // Calculating muW = muA * muV / (10^6 mu^2 / mu); splitting up the divisor
             // to maintain precision equally on both factors.
             maxChargingWattage = (maxChargingMicroAmp / 1000)
                     * (maxChargingMicroVolt / 1000);
             maxChargingCurrent = maxChargingMicroAmp;
             maxChargingVoltage = maxChargingMicroVolt;
-        } else {
-            maxChargingWattage = -1;
-            maxChargingCurrent = -1;
-            maxChargingVoltage = -1;
-        }
+        //} else {
+        //    maxChargingWattage = -1;
+        //    maxChargingCurrent = -1;
+        //    maxChargingVoltage = -1;
+        //}
     }
 
     /**
