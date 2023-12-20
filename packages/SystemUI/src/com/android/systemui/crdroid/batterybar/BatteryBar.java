@@ -27,6 +27,7 @@ import android.os.BatteryManager;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.DisplayUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.animation.AccelerateInterpolator;
@@ -135,9 +136,12 @@ public class BatteryBar extends RelativeLayout implements Animatable, TunerServi
         mBatteryBarLayout.addView(mBatteryBar, new LinearLayout.LayoutParams(
                 LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
-        DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
+        //DisplayMetrics metrics = getContext().getResources().getDisplayMetrics();
         float dp = 4f;
-        int pixels = (int) (metrics.density * dp + 0.5f);
+        //int pixels_old = (int) (metrics.density * dp + 0.5f);
+
+        final float scaleFactor = DisplayUtils.getScaleFactor(mContext);
+        int pixels = (int) (scaleFactor * ((float) dp + 0.5f));
 
         // charger
         mChargerLayout = new LinearLayout(mContext);

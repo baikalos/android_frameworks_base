@@ -136,7 +136,7 @@ public class BatteryBarController extends LinearLayout implements TunerService.T
 
     public void configThickness() {
         final float scaleFactor = DisplayUtils.getScaleFactor(mContext);
-        int pixels = (int) (scaleFactor * ((float) mThickness + 0.5));
+        int pixels = (int) (scaleFactor * ((float) mThickness + 0.5f));
 
         ViewGroup.LayoutParams params = (ViewGroup.LayoutParams) getLayoutParams();
 
