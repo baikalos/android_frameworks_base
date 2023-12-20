@@ -1426,13 +1426,13 @@ public class AppStandbyController
 
             AppProfile profile = AppProfileManager.getProfile(packageName);
 
-            if( AppProfileManager.getInstance().isStamina() && !profile.mStamina && profile.getBackground() >= 0 ) {
+            if( AppProfileManager.getInstance().isStamina() && !profile.getStamina() && profile.getBackgroundMode() >= 0 ) {
                 return STANDBY_BUCKET_NEVER;
             }
-            if( profile.getBackground() > 0 ) {
+            if( profile.getBackgroundMode() > 0 ) {
                 return STANDBY_BUCKET_NEVER;
             }
-            if( profile.getBackground() < 0 ) {
+            if( profile.getBackgroundMode() < 0 ) {
                 return STANDBY_BUCKET_EXEMPTED;
             }
             // We allow all whitelisted apps, including those that don't want to be whitelisted

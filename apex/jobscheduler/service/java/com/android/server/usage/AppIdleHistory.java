@@ -438,10 +438,10 @@ public class AppIdleHistory {
         
         if( bucket >= STANDBY_BUCKET_ACTIVE && bucket < IDLE_BUCKET_CUTOFF ) {
             AppProfile profile = AppProfileManager.getProfile(packageName);
-            if( profile.getBackground() > 0 ) {
+            if( profile.getBackgroundMode() > 0 ) {
                 bucket = STANDBY_BUCKET_RESTRICTED;
             }
-            if( AppProfileManager.getInstance().isStamina() && !profile.mStamina && profile.getBackground() >= 0 ) {
+            if( AppProfileManager.getInstance().isStamina() && !profile.getStamina() && profile.getBackgroundMode() >= 0 ) {
                 bucket = STANDBY_BUCKET_RESTRICTED;
             }
         } 

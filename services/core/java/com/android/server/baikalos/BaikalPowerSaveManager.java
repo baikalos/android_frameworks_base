@@ -172,7 +172,7 @@ public class BaikalPowerSaveManager {
             mLevelLow = new BatterySaverPolicyConfig.Builder()
                 .setAdjustBrightnessFactor(1.0F)
                 .setAdvertiseIsEnabled(false)
-                .setDeferFullBackup(true)
+                .setDeferFullBackup(false)
                 .setDeferKeyValueBackup(false)
                 .setDisableAnimation(false)
                 .setDisableAod(false)
@@ -186,7 +186,7 @@ public class BaikalPowerSaveManager {
                 .setEnableNightMode(false)
                 .setEnableQuickDoze(false)
                 .setForceAllAppsStandby(false)
-                .setForceBackgroundCheck(true)
+                .setForceBackgroundCheck(false)
                 .setLocationMode(PowerManager.LOCATION_MODE_NO_CHANGE)
                 .build();
 
@@ -206,9 +206,9 @@ public class BaikalPowerSaveManager {
                 .setEnableFirewall(false)
                 .setEnableNightMode(false)
                 .setEnableQuickDoze(false)
-                .setForceAllAppsStandby(true)
-                .setForceBackgroundCheck(true)
-                .setLocationMode(PowerManager.LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF)
+                .setForceAllAppsStandby(false)
+                .setForceBackgroundCheck(false)
+                .setLocationMode(PowerManager.LOCATION_MODE_NO_CHANGE)
                 .build();
 
             mLevelArgessive = new BatterySaverPolicyConfig.Builder()
@@ -224,11 +224,11 @@ public class BaikalPowerSaveManager {
                 .setDisableVibration(false)
                 .setEnableAdjustBrightness(true)
                 .setEnableDataSaver(false)
-                .setEnableFirewall(true)
+                .setEnableFirewall(false)
                 .setEnableNightMode(false)
                 .setEnableQuickDoze(true)
                 .setForceAllAppsStandby(true)                    
-                .setForceBackgroundCheck(true)
+                .setForceBackgroundCheck(false)
                 .setLocationMode(PowerManager.LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF)
                 .build();
 
@@ -246,10 +246,10 @@ public class BaikalPowerSaveManager {
                 .setEnableAdjustBrightness(true)
                 .setEnableDataSaver(false)
                 .setEnableFirewall(true)
-                .setEnableNightMode(true)
+                .setEnableNightMode(false)
                 .setEnableQuickDoze(true)
                 .setForceAllAppsStandby(true)
-                .setForceBackgroundCheck(true)
+                .setForceBackgroundCheck(false)
                 .setLocationMode(PowerManager.LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF)
                 .build();
 
@@ -347,10 +347,11 @@ public class BaikalPowerSaveManager {
                         break;
                 }
                 mPowerManager.setAdaptivePowerSavePolicy(policy);
-                if( mCurrentPowerSaverLevel == 0 ) mPowerManager.setAdaptivePowerSaveEnabled(true);
+                /*if( mCurrentPowerSaverLevel == 0 )*/ mPowerManager.setAdaptivePowerSaveEnabled(true);
             }
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
             mCurrentPowerSaverLevel = powerSaverLevel;
+            AppProfile.setPowerMode(mCurrentPowerSaverLevel);
         }
     }
 

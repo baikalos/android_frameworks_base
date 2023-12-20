@@ -159,8 +159,11 @@ public class AppProfileManager {
     private int mActiveMinFrameRate = -1;
     private int mActiveMaxFrameRate = -1;
                                    
-    private int mDefaultMinFps = -1;
-    private int mDefaultMaxFps = -1;
+    private float mDefaultMinFps = 0.0f;
+    private float mDefaultMaxFps = 0.0f;
+
+    private float mSystemDefaultMinFps = 0.0f;
+    private float mSystemDefaultMaxFps = 960.0f;
 
     private int mDefaultPerformanceProfile;
     private int mDefaultThermalProfile;
@@ -397,6 +400,23 @@ public class AppProfileManager {
             mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             mTelephonyManager.listen(mPhoneStateListener, 0xFFFFFFF);
 
+            Display.Mode mode = mContext.getDisplay().getMode();
+            Display.Mode[] modes = mContext.getDisplay().getSupportedModes();
+
+            float minFps = 960.0f, maxFps = 0.0f;
+
+            for (Display.Mode m : modes) {
+                if (m.getPhysicalWidth() == mode.getPhysicalWidth() &&
+                        m.getPhysicalHeight() == mode.getPhysicalHeight()) {
+                    if( m.getRefreshRate() > maxFps ) maxFps = m.getRefreshRate();
+                    if( m.getRefreshRate() < minFps ) minFps = m.getRefreshRate();
+                }
+            }
+
+            
+            mSystemDefaultMinFps = minFps;
+            mSystemDefaultMaxFps = maxFps;
+
             mResolver = mContext.getContentResolver();
             mObserver = new AppProfileContentObserver(mHandler);
 
@@ -470,19 +490,20 @@ public class AppProfileManager {
         boolean staminaEnabled = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_STAMINA_ENABLED, 0) != 0;
         if( mStaminaEnabled != staminaEnabled ) {
             mStaminaEnabled = staminaEnabled;
+            AppProfile.setStaminaActive(mStaminaEnabled);
             changed = true;
         }
 
-        int defaultMinFps = (int) Settings.System.getFloat(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MINFPS, 0);
+        float defaultMinFps = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MINFPS, mSystemDefaultMinFps);
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading BAIKALOS_DEFAULT_MINFPS=" + defaultMinFps);
-        if( mDefaultMinFps != defaultMinFps ) {
+        if( Math.abs(mDefaultMinFps - defaultMinFps) > 0.001 ) {
             mDefaultMinFps = defaultMinFps;
             changed = true;
         }
 
-        int defaultMaxFps = (int) Settings.System.getFloat(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MAXFPS, 0);
+        float defaultMaxFps = Settings.System.getFloat(mContext.getContentResolver(), Settings.System.BAIKALOS_DEFAULT_MAXFPS, mSystemDefaultMaxFps);
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading BAIKALOS_DEFAULT_MAXFPS=" + defaultMaxFps);
-        if( mDefaultMaxFps != defaultMaxFps ) {
+        if( Math.abs(mDefaultMaxFps - defaultMaxFps) > 0.001 ) {
             mDefaultMaxFps = defaultMaxFps;
             changed = true;
         }
@@ -636,12 +657,27 @@ public class AppProfileManager {
         }
     }
 
+    protected void activateBalancedProfileLocked(boolean force) {
+
+        int thermMode = mDefaultIdleThermalProfile <= 0 ?  1 : mDefaultIdleThermalProfile;
+        if( force || thermMode != mActiveThermProfile ) activateThermalProfile(thermMode);
+
+        int perfMode = MODE_INTERACTIVE;
+
+        try {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", idle=" + mDeviceIdleMode + ", screen=" + mScreenMode);
+            if( force || perfMode != mActivePerfProfile ) activatePowerMode(perfMode, true);
+        } catch(Exception e) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate balanced perfromance profile failed profile=" + perfMode, e);
+        }
+    }
+
     @GuardedBy("mLock")
     protected void activateCurrentProfileLocked(boolean force, boolean wakeup) {
 
         //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
 
-        if( !mPhoneCall && !mScreenMode && /*!isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE )  {
+        if( !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE )  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mScreenMode=" + mScreenMode +
@@ -649,7 +685,14 @@ public class AppProfileManager {
                                                                       ", mWakefulness=" + mWakefulness);
             activateIdleProfileLocked(force);
             return;
-        }
+        } else if( mPhoneCall ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate balanced profile " + 
+                                                                      "mPhoneCall=" + mPhoneCall +
+                                                                      ", mScreenMode=" + mScreenMode +
+                                                                      ", mDeviceIdleMode=" + mDeviceIdleMode +
+                                                                      ", mWakefulness=" + mWakefulness);
+            activateBalancedProfileLocked(force);
+        } 
 
         AppProfile profile = mCurrentProfile;
 
@@ -750,6 +793,8 @@ public class AppProfileManager {
     }
 
     protected void setTopAppLocked(int uid, String packageName) {
+
+        if( mAppSettings == null ) return;
 
         if( packageName != null )  packageName = packageName.split(":")[0];
 
@@ -856,8 +901,8 @@ public class AppProfileManager {
     private boolean setHwFrameRateLocked(int minFps, int maxFps, boolean override) {
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
 
-        if( minFps == 0 ) minFps = mDefaultMinFps;
-        if( maxFps == 0 ) maxFps = mDefaultMaxFps;
+        if( minFps == 0 ) minFps = (int)mDefaultMinFps;
+        if( maxFps == 0 ) maxFps = (int)mDefaultMaxFps;
         
         try {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setHwFrameRateLocked 2 minFps=" + minFps + ", maxFps=" + maxFps + ", override=" + override);
@@ -1180,31 +1225,30 @@ public class AppProfileManager {
         }
         AppProfile profile = mAppSettings.getProfile(packageName);
         if( profile == null ) return false;
-        if( isStamina() && !profile.mStamina ) {
-            if( profile.getBackground() >= 0 ) {
+        if( isStamina() && !profile.getStamina() ) {
+            if( profile.getBackgroundMode() >= 0 ) {
                 if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos stamina ("
-                    + profile.getBackground() + "," 
-                    + profile.mStamina + ") : " 
+                    + profile.getBackgroundMode() + "," 
+                    + profile.getStamina() + ") : " 
                     + profile.mPackageName);
                 return true;
             }
         }
         if( !mAggressiveMode ) return false;
         if( mAwake ) {
-            int mode = mExtremeMode ? 0 : 1;
-            if( profile.getBackground() > mode ) {
+            if( profile.getBackgroundMode() > 0 ) {
                 if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos (" 
-                    + profile.getBackground() + "," 
-                    + profile.mStamina + ") : " 
+                    + profile.getBackgroundMode() + "," 
+                    + profile.getStamina() + ") : " 
                     + profile.mPackageName);
                 return true;
             
             }
         } else {
-            if( profile.getBackground() > 0 ) {
+            if( profile.getBackgroundMode() > 0 ) {
                 if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos ("
-                    + profile.getBackground() + "," 
-                    + profile.mStamina + ") : " 
+                    + profile.getBackgroundMode() + "," 
+                    + profile.getStamina() + ") : " 
                     + profile.mPackageName);
                 return true;
             }
@@ -1219,8 +1263,7 @@ public class AppProfileManager {
             if( packageName == null ) {
                 packageName = BaikalConstants.getPackageByUid(mContext, uid);
                 if( packageName == null ) {
-                    if( !mAggressiveMode ) return false;
-                    return true;
+                    return false;
                 }
             }
             profile = mAppSettings.getProfile(packageName);
@@ -1231,31 +1274,30 @@ public class AppProfileManager {
     public boolean isBlocked(AppProfile profile) {
         if( profile == null ) return false;
         if( profile.mUid < Process.FIRST_APPLICATION_UID ) return false;
-        if( isStamina() && !profile.mStamina ) {
-            if( profile.getBackground() >= 0 ) {
-                if( profile.mDebug ) Slog.w(TAG, "Background execution disabled by baikalos stamina (" + 
-                    + profile.getBackground() + "," 
-                    + profile.mStamina + ") : " 
+        if( isStamina() && !profile.getStamina() ) {
+            if( profile.getBackgroundMode() > 0 ) {
+                Slog.w(TAG, "Background execution disabled by baikalos stamina (" + 
+                    + profile.getBackgroundMode() + "," 
+                    + profile.getStamina() + ") : " 
                     + profile.mPackageName);
                 return true;
             }
         }
         if( !mAggressiveMode ) return false;
         if( mAwake ) {
-            int mode = mExtremeMode ? 0 : 1;
-            if( profile.getBackground() > mode ) {
-                if( profile.mDebug ) Slog.w(TAG, "Background execution disabled by baikalos ("
-                    + profile.getBackground() + "," 
-                    + profile.mStamina + ") : " 
+            if( profile.getBackgroundMode() > 1 ) {
+                Slog.w(TAG, "Background execution disabled by baikalos ("
+                    + profile.getBackgroundMode() + "," 
+                    + profile.getStamina() + ") : " 
                     + profile.mPackageName);
                 return true;
             
             }
         } else {
-            if( profile.getBackground() > 0 ) {
-                if( profile.mDebug ) Slog.w(TAG, "Background execution limited by baikalos ("
-                    + profile.getBackground() + "," 
-                    + profile.mStamina + ") : " 
+            if( profile.getBackgroundMode() > 0 ) {
+                Slog.w(TAG, "Background execution limited by baikalos ("
+                    + profile.getBackgroundMode() + "," 
+                    + profile.getStamina() + ") : " 
                     + profile.mPackageName);
                 return true;
             }
@@ -1266,6 +1308,7 @@ public class AppProfileManager {
     boolean mAwake;
     public void setAwake(boolean awake) {
         mAwake = awake;
+        AppProfile.setScreenMode(awake);
     }
 
     public boolean isAwake() {
@@ -1286,7 +1329,7 @@ public class AppProfileManager {
     }
 
     public boolean isExtreme() {
-        if( mBaikalPowerSaveManager != null ) return mBaikalPowerSaveManager.getCurrentPowerSaverLevel() > 2;
+        if( mBaikalPowerSaveManager != null ) return mBaikalPowerSaveManager.getCurrentPowerSaverLevel() > 3;
         return false;
     }
 

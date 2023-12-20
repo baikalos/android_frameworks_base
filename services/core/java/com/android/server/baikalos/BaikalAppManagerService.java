@@ -98,10 +98,16 @@ public final class BaikalAppManagerService extends SystemService {
         "com.aurora.services"
     };
 
-    public static final String[] DOLBY_PACKAGES = 
+/*  public static final String[] DOLBY_PACKAGES = 
     {
         "com.dolby.daxservice",
         "com.motorola.dolby.dolbyui"
+    };*/
+
+    public static final String[] DOLBY_PACKAGES = 
+    {
+        "com.oplus.audio.effectcenter",
+        "com.oplus.audio.effectcenterui"
     };
 
     public static final String[] JDSP_PACKAGES = 

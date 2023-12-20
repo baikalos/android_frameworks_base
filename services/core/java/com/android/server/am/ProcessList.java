@@ -3077,8 +3077,10 @@ public final class ProcessList {
             Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
         }
 
-        if( r.mAppProfile.mBackground > 0 ) {
+        if( r.mAppProfile.mBackgroundMode > 0 ) {
             Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for restricted app " + info.packageName + ", profile=" + r.mAppProfile, new Throwable());
+        } else if ( r.mAppProfile.mDebug ) {
+            Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for debugging app " + info.packageName + ", profile=" + r.mAppProfile, new Throwable());
         } else {
             Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.mAppProfile);
         }

@@ -269,7 +269,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     }
                     mForcedAppStandbyEnabled = enabled;
                     updateBackgroundRestrictedUidPackagesLocked();
-                    if (DEBUG) {
+                    if (true /*DEBUG*/) {
                         Slog.d(TAG, "Forced app standby feature flag changed: "
                                 + mForcedAppStandbyEnabled);
                     }
@@ -492,6 +492,23 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     }
                     updateForceAllAppStandbyState();
                     break;
+
+                case Intent.ACTION_SCREEN_ON:
+                case Intent.ACTION_SCREEN_OFF:
+                case Intent.ACTION_USER_UNLOCKED:
+                case Actions.ACTION_IDLE_MODE_CHANGED:
+                case Actions.ACTION_STAMINA_CHANGED:
+                    Slog.w(TAG, "Action: " + intent.getAction());
+                    synchronized (mLock) {
+                        updateBackgroundRestrictedUidPackagesLocked();
+                    }
+                    break;
+                case Intent.ACTION_PACKAGE_ADDED:
+                    Slog.w(TAG, "Action: " + intent.getAction());
+                    synchronized (mLock) {
+                        updateBackgroundRestrictedUidPackagesLocked();
+                    }
+                    break;
                 case Intent.ACTION_PACKAGE_REMOVED:
                     if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
                         final String pkgName = intent.getData().getSchemeSpecificPart();
@@ -551,7 +568,13 @@ public class AppStateTrackerImpl implements AppStateTracker {
 
             IntentFilter filter = new IntentFilter();
             filter.addAction(Intent.ACTION_USER_REMOVED);
+            filter.addAction(Intent.ACTION_USER_UNLOCKED);
             filter.addAction(Intent.ACTION_BATTERY_CHANGED);
+            filter.addAction(Intent.ACTION_SCREEN_ON);
+            filter.addAction(Intent.ACTION_SCREEN_OFF);
+            filter.addAction(Intent.ACTION_PACKAGE_ADDED);
+            filter.addAction(Actions.ACTION_STAMINA_CHANGED);
+            filter.addAction(Actions.ACTION_IDLE_MODE_CHANGED);
             mContext.registerReceiver(mReceiver, filter);
 
             filter = new IntentFilter(Intent.ACTION_PACKAGE_REMOVED);
@@ -658,12 +681,14 @@ public class AppStateTrackerImpl implements AppStateTracker {
     private void updateBackgroundRestrictedUidPackagesLocked() {
         if (!mForcedAppStandbyEnabled) {
             mBackgroundRestrictedUidPackages = Collections.emptySet();
+            AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(mBackgroundRestrictedUidPackages, mForceAllAppsStandby);
             return;
         }
         Set<Pair<Integer, String>> fasUidPkgs = new ArraySet<>();
         for (int i = 0, size = mRunAnyRestrictedPackages.size(); i < size; i++) {
             fasUidPkgs.add(mRunAnyRestrictedPackages.valueAt(i));
         }
+        AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(fasUidPkgs, mForceAllAppsStandby);
         mBackgroundRestrictedUidPackages = Collections.unmodifiableSet(fasUidPkgs);
     }
 
@@ -1208,6 +1233,11 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     && mExemptedBucketPackages.contains(userId, packageName)) {
                 return false;
             }
+
+            AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName) : null;
+            if( isForceAllAppsStandbyEnabledLocked() && (profile != null && profile.getBackgroundMode() <= 0) ) {
+                return false;
+            }
             return isForceAllAppsStandbyEnabledLocked(); //mForceAllAppsStandby;
         }
     }
@@ -1226,6 +1256,11 @@ public class AppStateTrackerImpl implements AppStateTracker {
             if (isAppRestricted(uid, packageName)) {
                 return true;
             }
+            AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName) : null;
+            if( profile != null && profile.getBackgroundMode() < 0 ) {
+                return false;
+            }
+
             final int appId = UserHandle.getAppId(uid);
             if (ArrayUtils.contains(mPowerExemptAllAppIds, appId)
                     || ArrayUtils.contains(mTempExemptAppIds, appId)) {
@@ -1245,6 +1280,9 @@ public class AppStateTrackerImpl implements AppStateTracker {
             final int userId = UserHandle.getUserId(uid);
             if (mAppStandbyInternal.isAppIdleEnabled() && !mAppStandbyInternal.isInParole()
                     && mExemptedBucketPackages.contains(userId, packageName)) {
+                return false;
+            }
+            if( isForceAllAppsStandbyEnabledLocked() && (profile != null && profile.getBackgroundMode() <= 0) ) {
                 return false;
             }
             return isForceAllAppsStandbyEnabledLocked(); // mForceAllAppsStandby;

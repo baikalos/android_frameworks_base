@@ -4000,7 +4000,8 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
                 int mode = -1;
 
                 if( AppProfileSettings.getInstance() == null ) {
-                    Slog.w(TAG, "BaikalService not initialized");
+                    Slog.w(TAG, "BaikalService not initialized!!!!!!!!!!!!!", new Throwable());
+                    return;
                 }
 
                 boolean isAutoreovkeDisabled = AppProfileSettings.getInstance().isAutoRevokeDisabled();

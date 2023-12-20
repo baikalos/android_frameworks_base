@@ -961,7 +961,7 @@ public final class BroadcastQueue {
             }
         }
 
-        if (!skip && filter.receiverList.app != null && filter.receiverList.app.mAppProfile.getBackground() > 0 ) {
+        if (!skip && filter.receiverList.app != null && filter.receiverList.app.mAppProfile.getBackgroundMode() > 0 ) {
             if( "background".equals(mQueueName) &&
                 !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid) ) { 
                 Slog.w(TAG, "Restricted App Denial: receiving "
@@ -1770,7 +1770,7 @@ public final class BroadcastQueue {
         AppProfile appProfile = null;
        
         if( app != null ) appProfile = app.mAppProfile;
-        else appProfile = AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+        else appProfile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
 
         if( appProfile == null ) appProfile = new AppProfile(info.activityInfo.packageName);
 
@@ -1779,7 +1779,7 @@ public final class BroadcastQueue {
             Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(r.intent.getAction()) ||
             Intent.ACTION_MEDIA_MOUNTED.equals(r.intent.getAction()) ||
             Intent.ACTION_PRE_BOOT_COMPLETED.equals(r.intent.getAction()) )  {
-            if( appProfile.mBootDisabled || appProfile.getBackground() > 0 ) {
+            if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) {
                 Slog.i(TAG,"Autostart disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
                 skip = true;
             }
@@ -1832,7 +1832,7 @@ public final class BroadcastQueue {
 
         if( !skip && callerBackground ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
-                if( appProfile.getBackground() > 1 ) {
+                if( appProfile.getBackgroundMode() > 1 ) {
                     Slog.w(TAG, "Background execution limited by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
@@ -1851,7 +1851,7 @@ public final class BroadcastQueue {
                     skip = true;
                 }
             } else {
-                if( appProfile.getBackground() > 0 ) {
+                if( appProfile.getBackgroundMode() > 0 ) {
                     Slog.w(TAG, "Background execution disabled by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
@@ -1872,11 +1872,11 @@ public final class BroadcastQueue {
             }
         }
 
-        if( !skip && appProfile.getBackground() > 0 ) {
+        if( !skip && appProfile.getBackgroundMode() > 0 ) {
             if( "io.chaldeaprjkt.gamespace".equals(appProfile.mPackageName) ) {
 
-                    if( appProfile.getBackground() > 1 || 
-                        (appProfile.getBackground() > 0 && 
+                    if( appProfile.getBackgroundMode() > 1 || 
+                        (appProfile.getBackgroundMode() > 0 && 
                         mService.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE) ) {
 
                         Slog.w(TAG, "Background execution of gamespace disabled by baikalos: "

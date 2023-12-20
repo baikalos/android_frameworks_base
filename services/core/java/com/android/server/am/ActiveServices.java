@@ -2893,12 +2893,14 @@ public final class ActiveServices {
         if( enableState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED && enableState != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT ) {
             Slog.w(TAG, "Background service start disabled by baikal component name from:" + callerApp + " for: " + s);
             Slog.w(TAG, "Background service start attempt from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
-            return 0;
+            //return 0;
         }
 
         //if( !mAm.mAppProfileManager.isToppAppUid(callerApp.info.uid) ) {
 
-        if( callerApp.info.uid == 1000 || ( callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
+        if( callerApp.info.uid == 1000 || ( 
+            enableState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED && enableState != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT &&
+            callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
             !mAm.mAppProfileManager.isTopAppUid(callerApp.info.uid) &&
             !mAm.mAppProfileManager.isTopAppUid(s.definingUid) ) ) {
             if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
@@ -2909,7 +2911,7 @@ public final class ActiveServices {
         } else {
             if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
                 Slog.w(TAG, "Background service start disabled by baikal settings, but requested from foreground app: " + s);
-                Slog.w(TAG, "Background service start from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
+                Slog.w(TAG, "Background service start forced from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
             }
         }
 

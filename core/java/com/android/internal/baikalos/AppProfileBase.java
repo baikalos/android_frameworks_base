@@ -1,0 +1,716 @@
+/*
+ * Copyright (C) 2019 BaikalOS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.android.internal.baikalos;
+
+import android.util.Slog;
+
+import android.text.TextUtils;
+
+import android.os.UserHandle;
+import android.os.Handler;
+import android.os.Message;
+import android.os.PowerManager;
+import android.os.Process;
+import android.os.SystemProperties;
+
+import android.content.Context;
+import android.content.ContentResolver;
+import android.content.pm.PackageManager;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.content.res.Resources.Theme;
+
+import android.app.AppOpsManager;
+import android.baikalos.AppProfile;
+
+import android.net.Uri;
+
+import android.database.ContentObserver;
+
+import android.provider.Settings;
+
+import android.util.ArraySet;
+import android.util.Pair;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+public class AppProfileBase extends ContentObserver {
+
+    private static final String TAG = "BaikalSettingsBase";
+
+    boolean mIsReady;
+
+    Context mContext;
+    ContentResolver mResolver;
+    PackageManager mPackageManager;
+    AppOpsManager mAppOpsManager;
+
+    PowerWhitelistBackend mBackend;
+
+    private final TextUtils.StringSplitter mSplitter = new TextUtils.SimpleStringSplitter('|');
+
+    HashMap<String, AppProfile> _profilesByPackageName = new HashMap<String,AppProfile> ();
+    HashMap<Integer, AppProfile> _profilesByUid = new HashMap<Integer,AppProfile> ();
+
+    static HashSet<Integer> _mAppsForDebug = new HashSet<Integer>();
+
+    static HashSet<String> _systemAppsByPackageName = new HashSet<String>(); 
+    static HashSet<String> _systemWhitelistedByPackageName = new HashSet<String>(); 
+    static HashSet<String> _systemImportantByPackageName = new HashSet<String>(); 
+
+    AppProfile mSystemProfile;
+    AppProfile mAndroidProfile;
+
+    boolean isChanged = false;
+
+    static boolean sIsLoaded;
+
+    public interface IAppProfileSettingsNotifier {
+        void onAppProfileSettingsChanged();
+    }
+
+    IAppProfileSettingsNotifier mNotifier = null;
+
+    AppProfileBase(Handler handler,Context context) {
+        super(handler);
+
+        mAndroidProfile = new AppProfile("android");
+        mAndroidProfile.mBackgroundMode = -2;
+        mAndroidProfile.mSystemApp = true;
+        mAndroidProfile.mImportantApp = true;
+        mAndroidProfile.mSystemWhitelisted = true;
+
+        mSystemProfile = new AppProfile("system");
+        mSystemProfile.mBackgroundMode = -2;
+        mSystemProfile.mSystemApp = true;
+        mSystemProfile.mImportantApp = true;
+        mSystemProfile.mSystemWhitelisted = true;
+
+        mContext = context;
+        mIsReady = true;
+    }
+
+    public void registerObserver(boolean systemBoot) {
+        mAppOpsManager = mContext.getSystemService(AppOpsManager.class);
+        mPackageManager = mContext.getPackageManager();
+        mResolver = mContext.getContentResolver();
+        mBackend = PowerWhitelistBackend.getInstance(mContext);
+        mBackend.refreshList();
+        updateSystemAppsLocked();
+        updateSystemWhitelistedAppsLocked();
+        updateImportantAppsLocked();
+    }
+
+    boolean isSysWhitelistedLocked(String packageName) {
+        if( _systemWhitelistedByPackageName.contains(packageName) ) return true;     
+        return false;
+    }
+
+    boolean isSystemAppLocked(String packageName) {
+        if( _systemAppsByPackageName.contains(packageName) ) return true;     
+        return false;
+    }
+
+    boolean isImportantAppLocked(String packageName) {
+        if( _systemImportantByPackageName.contains(packageName) ) return true;     
+        return false;
+    }
+
+    boolean isWhitelistedLocked(String packageName) {
+        if( mBackend != null && mBackend.isWhitelisted(packageName) ) return true;     
+        return false;
+    }
+
+    HashMap<String, AppProfile> getProfilesByPackageName() { 
+        return _profilesByPackageName;
+    }
+
+    HashMap<Integer, AppProfile> getProfilesByUid() { 
+        return _profilesByUid;
+    }
+
+    void updateSystemWhitelistedAppsLocked() {
+        _systemWhitelistedByPackageName.clear();
+
+        Slog.e(TAG, "Updating system whitelisted app list");
+
+        ArraySet<String> sysWhitelistedAppInfo = mBackend.getSystemWhitelistedApps();
+        for (String packageName : sysWhitelistedAppInfo) {
+            if( !_systemWhitelistedByPackageName.contains(packageName) ) {
+                Slog.e(TAG, "Added system whitelisted app " + packageName);
+                _systemWhitelistedByPackageName.add(packageName);
+            }
+        }
+    }
+
+    void updateImportantAppsLocked() {
+        _systemImportantByPackageName.clear();
+
+        Slog.e(TAG, "Updating system important app list");
+
+        ArraySet<String> sysWhitelistedAppInfo = mBackend.getDefaultActiveApps();
+        for (String packageName : sysWhitelistedAppInfo) {
+            if( !_systemImportantByPackageName.contains(packageName) ) {
+                Slog.e(TAG, "Added system important app " + packageName);
+                _systemImportantByPackageName.add(packageName);
+            }
+        }
+    }
+
+    void updateSystemAppsLocked() {
+
+        _systemAppsByPackageName.clear();
+
+        Slog.e(TAG, "Updating system app list");
+
+        List<PackageInfo> installedAppInfo = mPackageManager.getInstalledPackages(/*PackageManager.GET_PERMISSIONS*/0);
+        for (PackageInfo info : installedAppInfo) {
+            boolean isSystem = (info.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+
+            if( isSystem || info.packageName.startsWith("com.android.") ) {
+                if( !_systemAppsByPackageName.contains(info.packageName) ) {
+                    Slog.e(TAG, "Added system app " + info.packageName);
+                    _systemAppsByPackageName.add(info.packageName);
+                }
+            }
+        }
+    }
+
+    private static boolean selfUpdate;
+    void loadProfiles() {
+        mBackend.refreshList();
+
+        synchronized(this) {
+            loadProfilesLocked();
+        }
+    }
+    
+    void loadProfilesLocked() {
+
+        updateImportantAppsLocked();
+
+        Slog.e(TAG, "Loading AppProfiles selfUpdate:" + selfUpdate);
+        if( selfUpdate ) return;
+        selfUpdate = true;
+
+        HashSet<Integer> newAppsForDebug = new HashSet<Integer>();
+
+        HashMap<String,AppProfile> newProfilesByPackageName = new HashMap<String,AppProfile> ();
+        newProfilesByPackageName.put(mSystemProfile.mPackageName,mSystemProfile);
+        newProfilesByPackageName.put(mAndroidProfile.mPackageName,mAndroidProfile);
+
+        HashMap<Integer,AppProfile> newProfilesByUid = new HashMap<Integer,AppProfile> ();
+
+        HashMap<String,AppProfile> oldProfiles = _profilesByPackageName;
+
+        try {
+            String appProfiles = Settings.Global.getString(mResolver,
+                    Settings.Global.BAIKALOS_APP_PROFILES);
+
+            if( appProfiles == null ) {
+                Slog.e(TAG, "Empty profiles settings");
+                appProfiles = "";
+            }
+
+            try {
+                mSplitter.setString(appProfiles);
+
+                for(String profileString:mSplitter) {
+                
+                    AppProfile profile = AppProfile.deserializeProfile(profileString); 
+                    if( profile != null  ) {
+
+                        int uid = getAppUidLocked(profile.mPackageName);
+                        if( uid == -1 ) continue;
+
+                        profile.mUid = uid;
+ 
+                        if( profile.mDebug && !newAppsForDebug.contains(uid)  ) {
+                            newAppsForDebug.add(uid);
+                        }
+
+                        if( oldProfiles.containsKey(profile.mPackageName) ) {
+                            AppProfile old_profile = oldProfiles.get(profile.mPackageName);
+                            old_profile.update(profile);
+                            profile = old_profile;
+                        } 
+
+                        if( !newProfilesByPackageName.containsKey(profile.mPackageName)  ) {
+                            newProfilesByPackageName.put(profile.mPackageName, profile);
+                        }
+    
+                        if( !newProfilesByUid.containsKey(profile.mUid)  ) {
+                            newProfilesByUid.put(profile.mUid, profile);
+                        }
+    
+                        if(!profile.mStamina && isStaminaWl(uid,profile.mPackageName)) {
+                            profile.mStamina = true;
+                        }
+                    }
+                }
+            } catch (IllegalArgumentException e) {
+                Slog.e(TAG, "Bad profiles settings", e);
+                selfUpdate = false;
+                //return ;
+            }
+        } catch (Exception e) {
+            Slog.e(TAG, "Bad BaikalService settings", e);
+            selfUpdate = false;
+            //return;
+        }
+
+        try {
+            for(String pkgName : _systemAppsByPackageName) {
+                int uid = getAppUidLocked(pkgName);
+                if( uid == -1 ) continue;
+
+                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+                profile.mSystemApp = true;
+                if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                    profile.mStamina = true;
+                }
+            }
+
+            for(String pkgName : _systemWhitelistedByPackageName) {
+                int uid = getAppUidLocked(pkgName);
+                if( uid == -1 ) continue;
+                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+                profile.mSystemWhitelisted = true;
+                if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                    profile.mStamina = true;
+                }
+            }
+
+            for(String pkgName : _systemImportantByPackageName) {
+                int uid = getAppUidLocked(pkgName);
+                if( uid == -1 ) continue;
+                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+                profile.mImportantApp = true;
+                if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                    profile.mStamina = true;
+                }
+            }
+
+            for(Map.Entry<String, AppProfile> entry : oldProfiles.entrySet()) {
+                entry.getValue().isInvalidated = true;
+            }
+        } catch (Exception e) {
+            Slog.e(TAG, "Bad BaikalService settings", e);
+            selfUpdate = false;
+            //return;
+        }
+
+        oldProfiles.clear();
+
+        _profilesByPackageName = newProfilesByPackageName;
+        _profilesByUid = newProfilesByUid;
+        _mAppsForDebug = newAppsForDebug;
+
+        Slog.e(TAG, "Loaded " + _profilesByPackageName.size() + " AppProfiles");
+        //saveLocked();
+
+        sIsLoaded = true;
+        selfUpdate = false;
+    }
+
+    private AppProfile findOrAddDefaultProfile(String pkgName, 
+                                HashMap<String,AppProfile> newProfiles, 
+                                HashMap<Integer, AppProfile> newProfilesByUid,
+                                HashMap<String,AppProfile> oldProfiles ) {
+
+        Slog.e(TAG, "Add system or important app:" + pkgName);
+
+        AppProfile profile = null;
+
+        if( newProfiles.containsKey(pkgName)  ) {
+            profile = newProfiles.get(pkgName);
+        }
+
+        if( profile == null && oldProfiles.containsKey(pkgName) ) {
+            AppProfile old_profile = oldProfiles.get(pkgName);
+            profile = old_profile;
+        } 
+
+        if( profile == null ) {
+            profile = new AppProfile(pkgName);
+            int uid = getAppUidLocked(pkgName);
+            profile.mUid = uid;
+        }
+               
+        if( !newProfiles.containsKey(profile.mPackageName)  ) {
+            newProfiles.put(profile.mPackageName, profile);
+        }
+
+        if( !newProfilesByUid.containsKey(profile.mUid)  ) {
+            newProfilesByUid.put(profile.mUid, profile);
+        }
+        return profile;
+    }
+
+    void saveLocked() {
+
+        Slog.e(TAG, "saveLocked()");
+
+        String val = "";
+
+        String appProfiles = Settings.Global.getString(mResolver,
+            Settings.Global.BAIKALOS_APP_PROFILES);
+
+        if( appProfiles == null ) {
+            appProfiles = "";
+        }
+
+        for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
+            if( entry.getValue().isDefault() ) { 
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Skip saving default profile for packageName=" + entry.getValue().mPackageName);
+                continue;
+            }
+            int uid = getAppUidLocked(entry.getValue().mPackageName);
+            if( uid == -1 ) { 
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Skip saving profile for packageName=" + entry.getValue().mPackageName + ". Seems app deleted");
+                continue;
+            }
+
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Save profile for packageName=" + entry.getValue().mPackageName);
+            String entryString = entry.getValue().serialize();
+            if( entryString != null ) val += entryString + "|";
+        } 
+
+        if( !val.equals(appProfiles) ) {
+            //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) { 
+                Slog.i(TAG, "Write new profile data string :" + val);
+                Slog.i(TAG, "Old profile data string :" + val);
+            //}
+            Settings.Global.putString(mResolver,
+                Settings.Global.BAIKALOS_APP_PROFILES,val);
+        } else {
+                Slog.i(TAG, "Skip writing new profile data string :" + val);
+        }
+    }
+
+    public AppProfile updateSystemSettings(AppProfile profile) {
+        synchronized(this) {
+            return updateSystemSettingsLocked(profile);
+        }
+    }
+
+    AppProfile updateSystemSettingsLocked(AppProfile profile) {
+
+        boolean changed = false;
+
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateSystemSettingsLocked packageName=" + profile.mPackageName);
+
+        int uid = getAppUidLocked(profile.mPackageName);
+        if( uid == -1 )  {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Can't get uid for " + profile.mPackageName);
+            return null;
+        }
+
+        boolean isSystemWhitelisted = mBackend.isSysWhitelisted(profile.mPackageName);
+        boolean isWhitelisted = mBackend.isWhitelisted(profile.mPackageName);
+
+        //boolean isDefaultDialer = profile.mPackageName.equals(BaikalSettings.getDefaultDialer()) ? true : false;
+        //boolean isDefaultSMS = profile.mPackageName.equals(BaikalSettings.getDefaultSMS()) ? true : false;
+        //boolean isDefaultCallScreening = profile.mPackageName.equals(BaikalSettings.getDefaultCallScreening()) ? true : false;
+
+        if( isSystemWhitelisted ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "System Whitelisted " + profile.mPackageName);
+        }
+
+        if( isWhitelisted ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Whitelisted " + profile.mPackageName);
+        }
+
+        if( isSystemWhitelisted ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "System Whitelisted " + profile.mPackageName);
+            if( profile.mBackgroundMode > 0 ) { 
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "System Whitelisted for profile.mBackground > 0. Fix it " + profile.mPackageName);
+                profile.mBackgroundMode = 0;
+            }
+            profile.mSystemWhitelisted = true;
+        }
+
+
+        boolean runInBackground = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_IN_BACKGROUND,
+                    uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;        
+
+        boolean runAnyInBackground = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
+                    uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;
+
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateSystemSettingsLocked packageName=" + profile.mPackageName 
+            + ", uid=" + uid
+            + ", runInBackground=" + runInBackground
+            + ", runAnyInBackground=" + runAnyInBackground
+            + ", profile.mBackground=" + profile.mBackgroundMode
+            + ", profile.mSystemWhitelisted=" + profile.mSystemWhitelisted
+            );
+
+        switch(profile.mBackgroundMode) {
+            case -2:
+                if( !isSystemWhitelisted && !isWhitelisted ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Add to whitelist packageName=" + profile.mPackageName + ", uid=" + uid);
+                    mBackend.addApp(profile.mPackageName);
+                }
+                if( !runAnyInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                if( !runInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+            case -1:
+                if( !isSystemWhitelisted && !isWhitelisted ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Add to whitelist packageName=" + profile.mPackageName + ", uid=" + uid);
+                    mBackend.addApp(profile.mPackageName);
+                }
+                if( !runAnyInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                if( !runInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+            break;
+
+            case 0:
+                if( !runAnyInBackground ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Drop OP_RUN_ANY_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
+                    setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                }
+                if( !runInBackground ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Drop OP_RUN_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
+                    setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                }
+                if( isWhitelisted ) mBackend.removeApp(profile.mPackageName);
+            break;
+
+            case 1:
+                if( runAnyInBackground ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Drop OP_RUN_ANY_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
+                    setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_IGNORED); 
+                }
+                if( !runInBackground ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
+                    setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                }
+                if( isWhitelisted ) mBackend.removeApp(profile.mPackageName);
+            break;
+
+            case 2:
+                if( runAnyInBackground  ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_ANY_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
+                    setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_IGNORED); 
+                }
+                if( runInBackground ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
+                    setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_IGNORED); 
+                }
+                if( isWhitelisted ) mBackend.removeApp(profile.mPackageName);
+            break;
+    
+        }
+        return profile;
+    }
+
+
+    public AppProfile getProfileLocked(String packageName) {
+        if( packageName != null ) {
+            if( "android".equals(packageName) ) return mAndroidProfile; 
+            if( "system".equals(packageName) ) return mSystemProfile;
+	        return _profilesByPackageName.get(packageName);
+        }
+        return null;
+    }
+
+    public AppProfile getProfileLocked(int uid) {
+        if( uid < 5000 ) return mAndroidProfile;
+        if( uid < 10000 ) return mSystemProfile;
+        return _profilesByUid.get(uid);
+    }
+
+    int getAppUidLocked(String packageName) {
+	    int uid = -1;
+
+        final PackageManager pm = mContext.getPackageManager();
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(packageName,
+                    PackageManager.MATCH_ALL);
+            if( ai != null ) {
+                return ai.uid;
+            }
+        } catch(Exception e) {
+            Slog.i(TAG,"Package " + packageName + " not found on this device");
+        }
+        return uid;
+    }
+
+    public void save() {
+        isChanged = true;
+        Slog.e(TAG, "save()");
+    }
+
+    public void commit() {
+        synchronized(this) {
+            Slog.e(TAG, "commit(isChanged=" + isChanged + ")");
+            if( isChanged ) saveLocked();
+            isChanged = false;
+        }
+    }
+
+    public AppProfile getProfile(String packageName) {
+        //synchronized(this) {
+            return getProfileLocked(packageName);
+        //}
+    }
+
+    public AppProfile getProfile(int uid) {
+        //synchronized(this) {
+            return getProfileLocked(uid);
+        //}
+    }
+
+    public static AppProfile loadSingleProfile(String packageName, Context context) {
+
+        Slog.e(TAG, "loadSingleProfile:" + packageName);
+
+        if( packageName == null ) {
+            return null;
+        }
+
+        try {
+            String appProfiles = Settings.Global.getString(context.getContentResolver(),
+                    Settings.Global.BAIKALOS_APP_PROFILES);
+
+            if( appProfiles == null ) {
+                Slog.e(TAG, "Empty profiles settings");
+                return null;
+            }
+
+            TextUtils.StringSplitter splitter = new TextUtils.SimpleStringSplitter('|');
+
+            try {
+                splitter.setString(appProfiles);
+            } catch (IllegalArgumentException e) {
+                Slog.e(TAG, "Bad profiles settings", e);
+                return null;
+            }
+
+            for(String profileString:splitter) {
+                AppProfile profile = AppProfile.deserializeProfile(profileString);
+                if( profile != null  ) {
+                    if( profile.mPackageName.equals(packageName) ) 
+                        return updateProfileFromSystemApplist(profile,context);
+                    
+                }
+            }
+        } catch (Exception e) {
+            Slog.e(TAG, "Bad BaikalService settings", e);
+        } 
+
+        AppProfile default_profile = new AppProfile(packageName);
+        
+        return updateProfileFromSystemApplist(default_profile,context); 
+    }
+
+    static AppProfile updateProfileFromSystemApplist(AppProfile profile, Context context) {
+        return profile;
+    }
+
+    public static void resetAll(ContentResolver resolver) {
+        Settings.Global.putString(resolver,
+            Settings.Global.BAIKALOS_APP_PROFILES,"");
+
+    }
+
+    public static void saveBackup(ContentResolver resolver) {
+               
+        String appProfiles = Settings.Global.getString(resolver,
+                Settings.Global.BAIKALOS_APP_PROFILES);
+
+        if( appProfiles == null ) appProfiles = "";
+
+        Settings.Global.putString(resolver,
+            Settings.Global.BAIKALOS_APP_PROFILES_BACKUP,appProfiles);
+        
+    }
+
+    public static void restoreBackup(ContentResolver resolver) {
+        
+        String appProfiles = Settings.Global.getString(resolver,
+                Settings.Global.BAIKALOS_APP_PROFILES_BACKUP);
+
+        if( appProfiles == null ) appProfiles = "";
+
+        Settings.Global.putString(resolver,
+            Settings.Global.BAIKALOS_APP_PROFILES,appProfiles);
+        
+    }
+
+    static void setZygoteSettings(String propPrefix, String packageName, String value) {
+        try {
+            SystemProperties.set(propPrefix + packageName,value);
+        } catch(Exception e) {
+            Slog.e(TAG, "BaikalService: Can't set Zygote settings:" + packageName, e);
+        }
+    }
+
+    void setBackgroundMode(int op, int uid, String packageName, int mode) {
+        BaikalConstants.Logi(BaikalConstants.BAIKAL_DEBUG_APP_PROFILE, uid, TAG, "Set AppOp " + op + " for packageName=" + packageName + ", uid=" + uid + " to " + mode);
+        if( uid != -1 ) {
+            getAppOpsManager().setMode(op, uid, packageName, mode);
+        }
+    }
+
+    AppOpsManager getAppOpsManager() {
+        
+        if (mAppOpsManager == null) {
+            mAppOpsManager = mContext.getSystemService(AppOpsManager.class);
+        }
+        return mAppOpsManager;
+    }
+
+    public static boolean isDebugUid(int uid) {
+        return _mAppsForDebug.contains(uid);
+    }
+
+    public static boolean isLoaded() {
+        return sIsLoaded;
+    }
+
+    public boolean isStaminaWl(int uid, String packageName) {
+        if( uid < Process.FIRST_APPLICATION_UID ) return true;
+        if( packageName == null ) return false;
+        if( packageName.startsWith("com.android.service.ims") ) return true;
+        if( packageName.startsWith("com.android.launcher3") ) return true;
+        if( packageName.startsWith("com.android.systemui") ) return true;
+        if( packageName.startsWith("com.android.nfc") ) return true;
+        if( packageName.startsWith("com.android.providers") ) return true;
+        if( packageName.startsWith("com.android.inputmethod") ) return true;
+        if( packageName.startsWith("com.qualcomm.qti.telephonyservice") ) return true;
+        if( packageName.startsWith("com.android.phone") ) return true;
+        if( packageName.startsWith("com.android.server.telecom") ) return true;
+        if( packageName.startsWith("com.android.dialer") ) return true;
+        if( packageName.startsWith("com.google.android.dialer") ) return true;
+        if( packageName.startsWith("com.google.android.gsf") ) return true;
+        if( packageName.startsWith("com.google.android.gms") ) return true;
+        if( packageName.startsWith("com.google.android.contacts") ) return true;
+        if( packageName.startsWith("com.google.android.calendar") ) return true;
+        if( packageName.startsWith("com.google.android.ims") ) return true;
+        if( packageName.startsWith("com.google.android.ext.shared") ) return true;
+        return false;
+    }
+
+}

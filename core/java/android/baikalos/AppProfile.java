@@ -59,7 +59,7 @@ public class AppProfile {
     public boolean mDoNotClose;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public int mBackground;
+    public int mBackgroundMode;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mDisableWakeup;
@@ -167,11 +167,35 @@ public class AppProfile {
     public boolean mHide3P;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mSystemApp;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mImportantApp;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mAllowWhileIdle;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     private static boolean sDebug;
     private static @Nullable String sPackageName;
     private static int sUid;
+    private static int mPowerMode;
+    private static boolean mStaminaActive;
+    private static boolean mScreenOn = true;
+
+    public static void setScreenMode(boolean on) {
+        mScreenOn = on;
+    }
+
+    public static void setPowerMode(int mode) {
+        mPowerMode = mode;
+    }
+
+    public static void setStaminaActive(boolean enable) {
+        mStaminaActive = enable;
+    }
 
     public static boolean isDebug() {
         return sDebug;
@@ -228,6 +252,9 @@ public class AppProfile {
         mHideHMS = false;
         mHideGMS = false;
         mHide3P = false;
+        mSystemApp = false;
+        mImportantApp = false;
+        mAllowWhileIdle = false;
     }
 
     public AppProfile(@Nullable String packageName) {
@@ -257,15 +284,54 @@ public class AppProfile {
         mHideHMS = false;
         mHideGMS = false;
         mHide3P = false;
+        mSystemApp = false;
+        mImportantApp = false;
+        mAllowWhileIdle = false;
     }
 
     public AppProfile(@Nullable AppProfile profile) {
         update(profile);
     }
 
-    public int getBackground() {
-        if( mSystemWhitelisted && mBackground >=0 ) return -1;
-        return mBackground;
+    public int getBackgroundMode() {
+
+        if( mBackgroundMode < 0 ) return mBackgroundMode;
+
+        if( mSystemWhitelisted ) {
+            if( mBackgroundMode >= 0 ) return -1;
+            return mBackgroundMode;
+        }
+
+        if( mSystemApp ) {
+            return mBackgroundMode;
+        }
+
+        if( mImportantApp ) {
+            if( mBackgroundMode > 0 ) return 0;
+            return mBackgroundMode;
+        }
+
+        if( mAllowWhileIdle ) {
+            return mBackgroundMode;
+        }
+
+        if( mStamina ) {
+            return mBackgroundMode;
+        }
+
+        // make it a bit more complex
+        if( mStaminaActive && mBackgroundMode >= 0 && !mStamina ) return 2;
+        if( mPowerMode == 4 && mBackgroundMode == 0 ) return 2;
+        if( mPowerMode == 3 && mBackgroundMode == 0 ) {
+            if( !mScreenOn ) return 2;
+            else return 1;
+        }
+
+        return mBackgroundMode;
+    }
+
+    public boolean getStamina() {
+        return mStamina || mImportantApp || mSystemWhitelisted;
     }
 
     public boolean isHeavy() {
@@ -282,7 +348,7 @@ public class AppProfile {
             !mBootDisabled &&
             mMaxFrameRate == 0 &&
             mMinFrameRate == 0 &&
-            mBackground == 0 &&
+            mBackgroundMode == 0 &&
             !mIgnoreAudioFocus &&
             mRotation == 0 &&
             mAudioMode == 0 &&
@@ -314,6 +380,7 @@ public class AppProfile {
             !mHideHMS &&
             !mHideGMS &&
             !mHide3P &&
+            !mAllowWhileIdle &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -335,7 +402,7 @@ public class AppProfile {
         this.mBootDisabled = profile.mBootDisabled;
         this.mMaxFrameRate = profile.mMaxFrameRate;
         this.mMinFrameRate = profile.mMinFrameRate;
-        this.mBackground = profile.mBackground;
+        this.mBackgroundMode = profile.mBackgroundMode;
         this.mIgnoreAudioFocus = profile.mIgnoreAudioFocus;
         this.mRotation = profile.mRotation;
         this.mAudioMode = profile.mAudioMode;
@@ -370,6 +437,9 @@ public class AppProfile {
         this.mHideHMS = profile.mHideHMS;
         this.mHideGMS = profile.mHideGMS;
         this.mHide3P = profile.mHide3P;
+        this.mSystemApp = profile.mSystemApp;
+        this.mImportantApp = profile.mImportantApp;
+        this.mAllowWhileIdle = profile.mAllowWhileIdle;
 
     }
 
@@ -386,7 +456,7 @@ public class AppProfile {
         if( mMaxFrameRate != 0 ) result +=  "," + "fr=" + mMaxFrameRate;
         if( mMinFrameRate != 0 ) result +=  "," + "mfr=" + mMinFrameRate;
         if( mStamina ) result +=  "," + "as=" + mStamina;
-        if( mBackground != 0 ) result +=  "," + "bk=" + mBackground;
+        if( mBackgroundMode != 0 ) result +=  "," + "bk=" + mBackgroundMode;
         if( mRequireGms ) result +=  "," + "gms=" + mRequireGms;
         if( mBootDisabled ) result +=  "," + "bt=" + mBootDisabled;
         if( mIgnoreAudioFocus ) result +=  "," + "af=" + mIgnoreAudioFocus;
@@ -420,6 +490,7 @@ public class AppProfile {
         if( mHideHMS ) result +=  "," + "hhms=" + mHideHMS;
         if( mHideGMS ) result +=  "," + "hgms=" + mHideGMS;
         if( mHide3P ) result +=  "," + "h3p=" + mHide3P;
+        if( mAllowWhileIdle ) result +=  "," + "aidl=" + mAllowWhileIdle;
         return result;
     }
 
@@ -443,7 +514,7 @@ public class AppProfile {
             mPinned = parser.getBoolean("pd",false);
             mStamina = parser.getBoolean("as",false);
             mMaxFrameRate = parser.getInt("fr",0);
-            mBackground = parser.getInt("bk",0);
+            mBackgroundMode = parser.getInt("bk",0);
             mRequireGms = parser.getBoolean("gms",false);
             mBootDisabled = parser.getBoolean("bt",false);
             mIgnoreAudioFocus = parser.getBoolean("af",false);
@@ -480,6 +551,7 @@ public class AppProfile {
             mHideHMS = parser.getBoolean("hhms",false);
             mHideGMS = parser.getBoolean("hgms",false);
             mHide3P = parser.getBoolean("h3p",false);
+            mAllowWhileIdle = parser.getBoolean("aidl",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }

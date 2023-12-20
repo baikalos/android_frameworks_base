@@ -998,7 +998,7 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
                 .record();
 
 
-        AppProfile profile = AppProfileSettings.getInstance().getProfile(callingPackageName);
+        AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(callingPackageName);
         if( profile != null &&  profile.mBAFSend ) {
             if (DEBUG) {
                 Log.v(TAG, "requestAudioFocus() blocked from uid/pid " + Binder.getCallingUid()

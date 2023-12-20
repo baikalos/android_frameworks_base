@@ -6045,11 +6045,11 @@ public final class PowerManagerService extends SystemService
 
             if( opPackageName != null ) {
                 AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName);
-                if( profile.getBackground() < 0 ) {
+                if( profile.getBackgroundMode() < 0 ) {
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName + ", wl=" + this);
                     //return true;
                 }
-                return profile.getBackground();
+                return profile.getBackgroundMode();
             }
             return 0;
         }
@@ -6456,12 +6456,12 @@ public final class PowerManagerService extends SystemService
          */
         public void wakeUp(long eventTime, @WakeReason int reason, String details,
                 String opPackageName, boolean checkProximity) {
-            if (eventTime > mClock.uptimeMillis()) {
-                throw new IllegalArgumentException("event time must not be in the future");
-            }
+            //if (eventTime > mClock.uptimeMillis()) {
+            //    throw new IllegalArgumentException("event time must not be in the future");
+            //}
 
-            mContext.enforceCallingOrSelfPermission(
-                    android.Manifest.permission.DEVICE_POWER, null);
+            //mContext.enforceCallingOrSelfPermission(
+            //        android.Manifest.permission.DEVICE_POWER, null);
 
 
             final int uid = Binder.getCallingUid();

@@ -142,6 +142,9 @@ public class PowerWhitelistBackend {
         return mSysWhitelistedAppsExceptIdle;
     }
 
+    public ArraySet<String> getDefaultActiveApps() {
+        return mDefaultActiveApps;
+    }
 
     public void refreshList() {
         refreshList(true);

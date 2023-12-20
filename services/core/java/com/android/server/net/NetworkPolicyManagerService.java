@@ -4819,11 +4819,13 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
 
         if( !isWhitelisted && appId >= Process.FIRST_APPLICATION_UID ) {
             String[] pkgs = mContext.getPackageManager().getPackagesForUid(uid);
-            if( pkgs != null && pkgs.length > 0 ) {
-                AppProfile profile = AppProfileSettings.getProfileStatic(pkgs[0]);
-                if( profile != null ) {
-                    if( profile.mAllowIdleNetwork )  return true;
-                    if( profile.getBackground() < 0 )  return true;
+            if( pkgs != null ) {
+                for( String pkg : pkgs) {
+                    AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(pkg);
+                    if( profile != null ) {
+                        if( profile.mAllowIdleNetwork )  return true;
+                        if( profile.getBackgroundMode() < 0 )  return true;
+                    }
                 }
             }
         }

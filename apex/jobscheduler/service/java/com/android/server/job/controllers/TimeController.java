@@ -409,12 +409,12 @@ public final class TimeController extends StateController {
                 return 1;
             }
 
-            if( profile.getBackground() < 0 ) {
+            if( profile.getBackgroundMode() < 0 ) {
                 if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName);
             } else {
-                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: regular opPackageName=" + opPackageName + ", bg=" + profile.getBackground());
+                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: regular opPackageName=" + opPackageName + ", bg=" + profile.getBackgroundMode());
             }
-            return profile.getBackground();
+            return profile.getBackgroundMode();
         }
 
         if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: default opPackageName=" + opPackageName + ", bg=0");

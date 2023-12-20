@@ -6820,7 +6820,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             }
         }
 
-        if ((info.flags & PERSISTENT_MASK) == PERSISTENT_MASK && app.mAppProfile.mBackground <= 0 ) {
+        if ((info.flags & PERSISTENT_MASK) == PERSISTENT_MASK && app.mAppProfile.mBackgroundMode <= 0 ) {
             app.setPersistent(true);
             app.mState.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
         }
@@ -18756,7 +18756,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         appProfile = AppProfileSettings.getInstance().getProfileLocked(info.packageName);
 
         if( appProfile == null ) return false;
-        if( appProfile.mBootDisabled || appProfile.getBackground() > 0 ) return true;
+        if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) return true;
         return false;
 
     }

@@ -2811,7 +2811,7 @@ public class ComputerEngine implements Computer {
             return false;
         }
 
-        if( ps != null && BaikalSpoofer.shouldFilterApplication(ps.getPackageName(),userId,callingUid) ) {
+        if( ps != null && BaikalSpoofer.shouldFilterApplication(ps.getPackageName(),userId,callingUid, ps.isSystem()) ) {
             return true;
         }
 

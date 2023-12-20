@@ -394,7 +394,7 @@ public class FocusRequester {
                     return;
                 }
 
-                AppProfile profile = AppProfileSettings.getInstance().getProfile(mPackageName);
+                AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(mPackageName);
                 if( (mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS || 
                     mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK )
                     && profile != null && profile.mBAFRecv ) {

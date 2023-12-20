@@ -139,7 +139,7 @@ public class BaikalAlarmManager {
             return true;
         }
 
-        if( mAppProfileManager == null || !mAppProfileManager.isAggressive() ) {
+        if( mAppProfileManager == null /*|| !mAppProfileManager.isAggressive()*/ ) {
             if( BaikalConstants.BAIKAL_DEBUG_ALARM ) { 
                 Slog.i(TAG,"Baikal PowerSave disabled.");
                 Slog.i(TAG,"Wakeup alarm:" + tag + ". set to TRUE for " + packageName);
@@ -180,11 +180,11 @@ public class BaikalAlarmManager {
                 if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". disabled for " + packageName);
                 return false;
             }
-            if( profile.getBackground() < 0 ) {
+            if( profile.mBackgroundMode < 0 ) {
                 if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". enabled for " + packageName);
                 return true;
             }
-            if( profile.getBackground() > 0 ) {
+            if( !profile.mSystemWhitelisted && profile.mBackgroundMode > 0 ) {
                 if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". restricted for " + packageName);
                 return false;
             }

@@ -517,9 +517,11 @@ class ProcessRecord implements WindowProcessListener {
             mAppProfile = appSettings.getProfile(_info.packageName);
             if( mAppProfile == null ) mAppProfile = new AppProfile(_info.packageName);
             Slog.d(TAG,"Baikal.AppProfile: Loaded ProcessRecord AppProfile:" + mAppProfile.toString());
-            if( mAppProfile.getBackground() > 0 ) {
-                Slog.d(TAG,"Baikal.AppProfile: Started ProcessRecord for background restricted app from:" + mAppProfile.toString(), new Throwable());
-            }
+            if( mAppProfile.mBackgroundMode > 0 ) {
+                Slog.d(TAG,"Baikal.AppProfile: Started ProcessRecord for background restricted app for:" + mAppProfile.toString(), new Throwable());
+            } else if( mAppProfile.mDebug ) {
+                Slog.d(TAG,"Baikal.AppProfile: Started ProcessRecord for debug app for:" + mAppProfile.toString(), new Throwable());
+            } 
         } else {
             Slog.w(TAG,"Baikal.AppProfile: Not ready for package:" + _info.packageName);
             mAppProfile = new AppProfile(_info.packageName);
