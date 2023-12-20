@@ -1410,6 +1410,8 @@ public class Typeface {
     public static void updateDefaultFont(Resources res) {
         synchronized (SYSTEM_FONT_MAP_LOCK) {
             String familyName = res.getString(com.android.internal.R.string.config_bodyFontFamily);
+            String familyNameMedium = res.getString(com.android.internal.R.string.config_bodyFontFamilyMedium);
+            String familyNameHeadlineMedium = res.getString(com.android.internal.R.string.config_headlineFontFamilyMedium);
 
             sFallbackName = familyName;
 
@@ -1425,10 +1427,22 @@ public class Typeface {
 
             setFinalField("DEFAULT", create(typeface /*getSystemOverrideTypeface(familyName)*/, 0) );
             setFinalField("DEFAULT_BOLD", create(typeface, 700, false));
-            setFinalField("SANS_SERIF", DEFAULT);
+            setFinalField("SANS_SERIF", create(typeface, 0));
+            setFinalField("SERIF", create(typeface, 0));
 
             sSystemFontOverrides.put("", typeface);
             sSystemFontOverrides.put(null, typeface);
+
+            Typeface tfMedium = sSystemFontMap.get(familyNameMedium);
+            Typeface tfHeadlineMedium = sSystemFontMap.get(familyNameHeadlineMedium);
+
+            if (tfMedium == null) {
+                tfMedium = typeface;
+            }
+
+            if (tfHeadlineMedium == null) {
+                tfHeadlineMedium = typeface;
+            }
 
             // For default aliases used in framework styles
             sSystemFontOverrides.put("sans-serif", typeface);
@@ -1436,7 +1450,7 @@ public class Typeface {
             sSystemFontOverrides.put("sans-serif-thin", create(typeface, 100, false));
             sSystemFontOverrides.put("sans-serif-condensed", create(typeface, 200, false));
             sSystemFontOverrides.put("sans-serif-light", create(typeface, 300, false));
-            sSystemFontOverrides.put("sans-serif-medium", create(typeface, 500, false));
+            sSystemFontOverrides.put("sans-serif-medium", create(tfHeadlineMedium, 500, false));
             sSystemFontOverrides.put("sans-serif-semi-bold", create(typeface, 600, false));
             sSystemFontOverrides.put("sans-serif-bold", create(typeface, 700, false));
             sSystemFontOverrides.put("sans-serif-black", create(typeface, 900, false));
@@ -1447,7 +1461,8 @@ public class Typeface {
             sSystemFontOverrides.put("serif-thin", create(typeface, 100, false));
             sSystemFontOverrides.put("serif-condensed", create(typeface, 200, false));
             sSystemFontOverrides.put("serif-light", create(typeface, 300, false));
-            sSystemFontOverrides.put("serif-medium", create(typeface, 500, false));
+            sSystemFontOverrides.put("serif-medium", create(tfHeadlineMedium, 500, false));
+            sSystemFontOverrides.put("serif-text-medium", create(tfMedium, 500, false));
             sSystemFontOverrides.put("serif-semi-bold", create(typeface, 600, false));
             sSystemFontOverrides.put("serif-bold", create(typeface, 700, false));
             sSystemFontOverrides.put("serif-black", create(typeface, 900, false));
@@ -1459,7 +1474,8 @@ public class Typeface {
             sSystemFontOverrides.put("sans-serif-condensed-thin", create(typeface, 100, false));
             sSystemFontOverrides.put("sans-serif-condensed-condensed", create(typeface, 200, false));
             sSystemFontOverrides.put("sans-serif-condensed-light", create(typeface, 300, false));
-            sSystemFontOverrides.put("sans-serif-condensed-medium", create(typeface, 500, false));
+            sSystemFontOverrides.put("sans-serif-condensed-medium", create(tfHeadlineMedium, 500, false));
+            sSystemFontOverrides.put("sans-serif-condensed-text-medium", create(tfMedium, 500, false));
             sSystemFontOverrides.put("sans-serif-condensed-semi-bold", create(typeface, 600, false));
             sSystemFontOverrides.put("sans-serif-condensed-bold", create(typeface, 700, false));
             sSystemFontOverrides.put("sans-serif-condensed-black", create(typeface, 900, false));
@@ -1469,7 +1485,8 @@ public class Typeface {
             sSystemFontOverrides.put("serif-condensed-condensed", create(typeface, 100, false));
             sSystemFontOverrides.put("serif-condensed-thin", create(typeface, 100, false));
             sSystemFontOverrides.put("serif-condensed-light", create(typeface, 300, false));
-            sSystemFontOverrides.put("serif-condensed-medium", create(typeface, 500, false));
+            sSystemFontOverrides.put("serif-condensed-medium", create(tfHeadlineMedium, 500, false));
+            sSystemFontOverrides.put("serif-condensed-text-medium", create(tfMedium, 500, false));
             sSystemFontOverrides.put("serif-condensed-semi-bold", create(typeface, 600, false));
             sSystemFontOverrides.put("serif-condensed-bold", create(typeface, 700, false));
             sSystemFontOverrides.put("serif-condensed-black", create(typeface, 900, false));
@@ -1478,7 +1495,8 @@ public class Typeface {
             sSystemFontOverrides.put("roboto-regular", typeface);
             sSystemFontOverrides.put("roboto-thin", create(typeface, 100, false));
             sSystemFontOverrides.put("roboto-light", create(typeface, 300, false));
-            sSystemFontOverrides.put("roboto-medium", create(typeface, 500, false));
+            sSystemFontOverrides.put("roboto-medium", create(tfHeadlineMedium, 500, false));
+            sSystemFontOverrides.put("roboto-text-medium", create(tfMedium, 500, false));
             sSystemFontOverrides.put("roboto-semi-bold", create(typeface, 600, false));
             sSystemFontOverrides.put("roboto-bold", create(typeface, 700, false));
             sSystemFontOverrides.put("roboto-black", create(typeface, 900, false));
@@ -1488,7 +1506,8 @@ public class Typeface {
             sSystemFontOverrides.put("google-sans-thin", create(typeface, 100, false));
             sSystemFontOverrides.put("google-sans-condensed", create(typeface, 200, false));
             sSystemFontOverrides.put("google-sans-light", create(typeface, 300, false));
-            sSystemFontOverrides.put("google-sans-medium", create(typeface, 500, false));
+            sSystemFontOverrides.put("google-sans-medium", create(tfHeadlineMedium, 500, false));
+            sSystemFontOverrides.put("google-sans-text-medium", create(tfMedium, 500, false));
             sSystemFontOverrides.put("google-sans-semi-bold", create(typeface, 600, false));
             sSystemFontOverrides.put("google-sans-bold", create(typeface, 700, false));
             sSystemFontOverrides.put("google-sans-black", create(typeface, 900, false));
