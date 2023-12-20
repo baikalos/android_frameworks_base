@@ -1353,7 +1353,7 @@ public class DisplayModeDirector {
             updateVoteLocked(Vote.PRIORITY_USER_SETTING_MIN_REFRESH_RATE,
                     Vote.forRefreshRates(minRefreshRate, Float.POSITIVE_INFINITY));
             Vote defaultVote =
-                    defaultRefreshRate == 0f ? null : Vote.forRefreshRates(0f, defaultRefreshRate);
+                    defaultRefreshRate == 0f ? null : Vote.forRefreshRates(0f, Math.max(defaultRefreshRate, peakRefreshRate));
             updateVoteLocked(Vote.PRIORITY_DEFAULT_REFRESH_RATE, defaultVote);
 
             float maxRefreshRate;
@@ -2205,8 +2205,8 @@ public class DisplayModeDirector {
                 Slog.d(TAG, "Display brightness " + mBrightness + ", ambient lux " +  mAmbientLux
                         + ", Vote " + refreshRateVote);
             }
-            //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, refreshRateVote);
-            //updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, refreshRateSwitchingVote);
+            updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE, refreshRateVote);
+            updateVoteLocked(Vote.PRIORITY_FLICKER_REFRESH_RATE_SWITCH, refreshRateSwitchingVote);
         }
 
         private boolean hasValidLowZone() {
