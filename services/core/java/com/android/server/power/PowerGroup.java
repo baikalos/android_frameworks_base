@@ -418,6 +418,8 @@ public class PowerGroup {
                     || !suspendWhenScreenOffDueToProximityConfig) {
                 if( !AppProfileSettings.isSuperSaverActive() || mDisplayPowerRequest.useProximitySensor ) {
                     return true;
+                } else {
+                    return false;
                 }
             }
         }
