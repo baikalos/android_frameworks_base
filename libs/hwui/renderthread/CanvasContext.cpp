@@ -374,13 +374,13 @@ void CanvasContext::prepareTree(TreeInfo& info, int64_t* uiFrameInfo, int64_t sy
         // node(s) are non client / filler nodes.
         info.mode = (node.get() == target ? TreeInfo::MODE_FULL : TreeInfo::MODE_RT_ONLY);
         node->prepareTree(info);
-        GL_CHECKPOINT(MODERATE);
+        GL_CHECKPOINT(NONE);
     }
     mAnimationContext->runRemainingAnimations(info);
-    GL_CHECKPOINT(MODERATE);
+    GL_CHECKPOINT(NONE);
 
     freePrefetchedLayers();
-    GL_CHECKPOINT(MODERATE);
+    GL_CHECKPOINT(NONE);
 
     mIsDirty = true;
 
@@ -398,10 +398,10 @@ void CanvasContext::prepareTree(TreeInfo& info, int64_t* uiFrameInfo, int64_t sy
         // the vsync was estimated due to being slow handling the signal.
         // See the logic in TimeLord#computeFrameTimeNanos or in
         // Choreographer.java for details on when this happens
-        if (vsyncDelta < 2_ms) {
+        if (vsyncDelta < 1_ms) {
             // Already drew for this vsync pulse, UI draw request missed
             // the deadline for RT animations
-            info.out.canDrawThisFrame = false;
+            //info.out.canDrawThisFrame = false;
         }
     } else {
         info.out.canDrawThisFrame = true;
