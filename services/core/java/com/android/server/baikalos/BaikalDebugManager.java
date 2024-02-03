@@ -100,6 +100,13 @@ import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.server.LocalServices;
+import com.android.server.NetworkManagementService;
+
+import com.android.server.net.NetworkPolicyLogger;
+import com.android.server.net.NetworkPolicyManagerService;
+import com.android.server.am.ActivityManagerDebugConfig;
+
+//import com.android.server.job.JobSchedulerService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -218,6 +225,7 @@ public class BaikalDebugManager {
         BaikalConstants.BAIKAL_DEBUG_JOBS = false;
         BaikalConstants.BAIKAL_DEBUG_WAKELOCKS = false;
         BaikalConstants.BAIKAL_DEBUG_IDLE = false;
+        BaikalConstants.BAIKAL_DEBUG_NETWORK = false;
 
         int debugMask = 0;
 
@@ -255,5 +263,34 @@ public class BaikalDebugManager {
         if( (debugMask&BaikalConstants.DEBUG_MASK_JOBS) !=0 ) BaikalConstants.BAIKAL_DEBUG_JOBS = true;
         if( (debugMask&BaikalConstants.DEBUG_MASK_WAKELOCKS) !=0 ) BaikalConstants.BAIKAL_DEBUG_WAKELOCKS = true;
         if( (debugMask&BaikalConstants.DEBUG_MASK_IDLE) !=0 ) BaikalConstants.BAIKAL_DEBUG_IDLE = true;
+        if( (debugMask&BaikalConstants.DEBUG_MASK_NETWORK) !=0 ) BaikalConstants.BAIKAL_DEBUG_NETWORK = true;
+
+
+        AppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+        AppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_OOM_RAW && BaikalConstants.BAIKAL_DEBUG_RAW;
+        NetworkManagementService.DBG = BaikalConstants.BAIKAL_DEBUG_NETWORK;
+
+        NetworkPolicyLogger.LOGD = BaikalConstants.BAIKAL_DEBUG_NETWORK;
+        NetworkPolicyLogger.LOGV = BaikalConstants.BAIKAL_DEBUG_NETWORK && BaikalConstants.BAIKAL_DEBUG_RAW;
+
+        NetworkPolicyManagerService.LOGD = BaikalConstants.BAIKAL_DEBUG_NETWORK;
+        NetworkPolicyManagerService.LOGV = BaikalConstants.BAIKAL_DEBUG_NETWORK && BaikalConstants.BAIKAL_DEBUG_RAW;
+
+        ActivityManagerDebugConfig.DEBUG_BACKGROUND_CHECK = BaikalConstants.BAIKAL_DEBUG_IDLE;
+        ActivityManagerDebugConfig.DEBUG_BROADCAST = BaikalConstants.BAIKAL_DEBUG_BROADCAST;
+        ActivityManagerDebugConfig.DEBUG_BROADCAST_BACKGROUND = ActivityManagerDebugConfig.DEBUG_BROADCAST;
+        ActivityManagerDebugConfig.DEBUG_BROADCAST_LIGHT = ActivityManagerDebugConfig.DEBUG_BROADCAST;
+        ActivityManagerDebugConfig.DEBUG_BROADCAST_DEFERRAL = ActivityManagerDebugConfig.DEBUG_BROADCAST;
+        ActivityManagerDebugConfig.DEBUG_FREEZER = BaikalConstants.BAIKAL_DEBUG_FREEZER;
+        ActivityManagerDebugConfig.DEBUG_NETWORK = BaikalConstants.BAIKAL_DEBUG_NETWORK;    
+        ActivityManagerDebugConfig.DEBUG_OOM_ADJ = BaikalConstants.BAIKAL_DEBUG_OOM;
+        ActivityManagerDebugConfig.DEBUG_OOM_ADJ_REASON = ActivityManagerDebugConfig.DEBUG_OOM_ADJ;
+        ActivityManagerDebugConfig.DEBUG_POWER = BaikalConstants.BAIKAL_DEBUG_POWER;
+        ActivityManagerDebugConfig.DEBUG_POWER_QUICK = ActivityManagerDebugConfig.DEBUG_POWER;
+        ActivityManagerDebugConfig.DEBUG_SERVICE = BaikalConstants.BAIKAL_DEBUG_SERVICES;
+        ActivityManagerDebugConfig.DEBUG_FOREGROUND_SERVICE = ActivityManagerDebugConfig.DEBUG_SERVICE;
+        ActivityManagerDebugConfig.DEBUG_SERVICE_EXECUTING = ActivityManagerDebugConfig.DEBUG_SERVICE;
+        ActivityManagerDebugConfig.DEBUG_UID_OBSERVERS = BaikalConstants.BAIKAL_DEBUG_IDLE;
+        ActivityManagerDebugConfig.DEBUG_ALLOWLISTS = BaikalConstants.BAIKAL_DEBUG_IDLE;
     }
 }

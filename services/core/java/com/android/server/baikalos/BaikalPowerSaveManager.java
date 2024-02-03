@@ -77,6 +77,7 @@ import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.server.LocalServices;
+import com.android.server.am.ActivityManagerConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -96,6 +97,8 @@ public class BaikalPowerSaveManager {
     private int mPowerLevelStandby = -1;
     private int mPowerLevelIdle = -1;
 
+    private boolean mUnrestrictedNetwork;
+
     static BaikalPowerSaveManager mInstance;
     static PowerManager mPowerManager;
 
@@ -104,9 +107,12 @@ public class BaikalPowerSaveManager {
     static BatterySaverPolicyConfig mLevelArgessive;
     static BatterySaverPolicyConfig mLevelExtreme;
 
+    ActivityManagerConstants mAmConstants;
+
     private boolean mScreenOn;
     private boolean mIsPowered;
     private boolean mDeviceIdle;
+    private boolean mStamina;
 
     private int mCurrentPowerSaverLevel = -1;
 
@@ -114,9 +120,9 @@ public class BaikalPowerSaveManager {
         return mInstance;
     }
 
-    public static BaikalPowerSaveManager getInstance(Looper looper, Context context) {
+    public static BaikalPowerSaveManager getInstance(Looper looper, Context context, ActivityManagerConstants amConstants) {
         if( mInstance == null ) {
-            mInstance = new BaikalPowerSaveManager(looper,context);
+            mInstance = new BaikalPowerSaveManager(looper,context,amConstants);
         }
         return mInstance;
     }
@@ -136,6 +142,11 @@ public class BaikalPowerSaveManager {
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_POWER_LEVEL_IDLE),
                     false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_UNRESTRICTED_NET),
+                    false, this);
+
             } catch( Exception e ) {
             }
         
@@ -152,12 +163,12 @@ public class BaikalPowerSaveManager {
         }
     }
 
-    private BaikalPowerSaveManager(Looper looper, Context context) {
-
+    private BaikalPowerSaveManager(Looper looper, Context context, ActivityManagerConstants amConstants) {
         mPowerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         mContext = context;
         mLooper = looper;
         mHandler = new Handler(mLooper);
+        mAmConstants = amConstants;
     }
 
     public void initialize() {
@@ -198,7 +209,7 @@ public class BaikalPowerSaveManager {
                 .setDisableAnimation(false)
                 .setDisableAod(false)
                 .setDisableLaunchBoost(false)
-                .setDisableOptionalSensors(true)
+                .setDisableOptionalSensors(false)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_CRITICAL_ONLY)
                 .setDisableVibration(false)
                 .setEnableAdjustBrightness(true)
@@ -220,14 +231,14 @@ public class BaikalPowerSaveManager {
                 .setDisableAod(false)
                 .setDisableLaunchBoost(false)
                 .setDisableOptionalSensors(true)
-                .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_ALL_DISABLED)
+                .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_CRITICAL_ONLY)
                 .setDisableVibration(false)
                 .setEnableAdjustBrightness(true)
                 .setEnableDataSaver(false)
                 .setEnableFirewall(false)
                 .setEnableNightMode(false)
                 .setEnableQuickDoze(true)
-                .setForceAllAppsStandby(true)                    
+                .setForceAllAppsStandby(false)                    
                 .setForceBackgroundCheck(false)
                 .setLocationMode(PowerManager.LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF)
                 .build();
@@ -248,11 +259,10 @@ public class BaikalPowerSaveManager {
                 .setEnableFirewall(true)
                 .setEnableNightMode(false)
                 .setEnableQuickDoze(true)
-                .setForceAllAppsStandby(true)
+                .setForceAllAppsStandby(false)
                 .setForceBackgroundCheck(false)
                 .setLocationMode(PowerManager.LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF)
                 .build();
-
         }
     }
 
@@ -278,11 +288,24 @@ public class BaikalPowerSaveManager {
         }
     }
 
+    public void setStamina(boolean enable) {
+        if( enable != mStamina ) {
+           mStamina = enable;
+           updatePowerSaveLevel();  
+        }
+    }
+
     protected void updateConstantsLocked() {
         
         boolean changed = true;
 
         //mPowerManager.setAdaptivePowerSaveEnabled(false);
+
+        boolean unrestrictedNetwork = Settings.Global.getInt(mResolver,
+                    Settings.Global.BAIKALOS_UNRESTRICTED_NET,0) == 1;
+        if( unrestrictedNetwork != mUnrestrictedNetwork ) {
+            mUnrestrictedNetwork = unrestrictedNetwork;
+        }
 
         int powerLevelOn = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_ON, 0);
         int powerLevelStandby = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_STANDBY, 0);
@@ -317,7 +340,9 @@ public class BaikalPowerSaveManager {
         
         int powerSaverLevel = 0;
 
-        if( mScreenOn ) {
+        if( mStamina ) {
+            powerSaverLevel = 4;
+        } else if( mScreenOn ) {
             powerSaverLevel = mPowerLevelOn;
         } else if( mDeviceIdle ) {
             powerSaverLevel = mPowerLevelIdle;
@@ -325,34 +350,45 @@ public class BaikalPowerSaveManager {
             powerSaverLevel = mPowerLevelStandby;
         }
 
+        AppProfile.setPowerMode(powerSaverLevel);
 
         if( powerSaverLevel != mCurrentPowerSaverLevel ) {
 
-            if( powerSaverLevel == 0 ) mPowerManager.setAdaptivePowerSaveEnabled(false);
-            if( powerSaverLevel > 0 ) {
+            if( powerSaverLevel == 0 ) {
+                mPowerManager.setAdaptivePowerSaveEnabled(false);
+                mPowerManager.setAdaptivePowerSavePolicy(mLevelLow);
+                mAmConstants.updateKillBgRestrictedCachedIdleSettleTime(600 * 1000);
+            } else if( powerSaverLevel > 0 ) {
                 BatterySaverPolicyConfig policy = mLevelLow;
                 switch(powerSaverLevel) {
                     case 2:
                         policy = mLevelModerate;
+                        mAmConstants.updateKillBgRestrictedCachedIdleSettleTime(180 * 1000);
                         break;
                     case 3:
                         policy = mLevelArgessive;
+                        mAmConstants.updateKillBgRestrictedCachedIdleSettleTime(60 * 1000);
                         break;
                     case 4:
                         policy = mLevelExtreme;
+                        mAmConstants.updateKillBgRestrictedCachedIdleSettleTime(15 * 1000);
                         break;
                     case 1:
                     default:
                         policy = mLevelLow;
+                        mAmConstants.updateKillBgRestrictedCachedIdleSettleTime(600 * 1000);
                         break;
                 }
                 mPowerManager.setAdaptivePowerSavePolicy(policy);
-                /*if( mCurrentPowerSaverLevel == 0 )*/ mPowerManager.setAdaptivePowerSaveEnabled(true);
+                mPowerManager.setAdaptivePowerSaveEnabled(true);
             }
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
             mCurrentPowerSaverLevel = powerSaverLevel;
-            AppProfile.setPowerMode(mCurrentPowerSaverLevel);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
         }
+    }
+
+    public boolean getUnrestrictedNetwork() {
+        return mUnrestrictedNetwork;
     }
 
     public int getCurrentPowerSaverLevel() {

@@ -98,17 +98,17 @@ public final class BaikalAppManagerService extends SystemService {
         "com.aurora.services"
     };
 
-/*  public static final String[] DOLBY_PACKAGES = 
+    public static final String[] DOLBY_PACKAGES = 
     {
         "com.dolby.daxservice",
         "com.motorola.dolby.dolbyui"
-    };*/
+    };
 
-    public static final String[] DOLBY_PACKAGES = 
+    /*public static final String[] DOLBY_PACKAGES = 
     {
         "com.oplus.audio.effectcenter",
         "com.oplus.audio.effectcenterui"
-    };
+    };*/
 
     public static final String[] JDSP_PACKAGES = 
     {
@@ -120,7 +120,10 @@ public final class BaikalAppManagerService extends SystemService {
         "org.lineageos.audiofx"
     };
 
-
+    public static final String[] FU_PACKAGES = 
+    {
+        "com.crdroid.faceunlock"
+    };
 
     private BaikalAppManagerEntry[] initAppList(int userId) {
         return new BaikalAppManagerEntry[] {
@@ -129,6 +132,7 @@ public final class BaikalAppManagerService extends SystemService {
             new BaikalAppManagerEntry("dolby", "dolby_enabled", "persist.baikal.srv.dolby", DOLBY_PACKAGES, false, true, true),
             new BaikalAppManagerEntry("jdsp", "jdsp_enabled", "persist.baikal.srv.jdsp", JDSP_PACKAGES, false, false, true),
             new BaikalAppManagerEntry("afx", "afx_enabled", "persist.baikal.srv.afx", AFX_PACKAGES, false, false, true),
+            new BaikalAppManagerEntry("fu", "fu_enabled", "persist.face_unlock_service.enabled", FU_PACKAGES, false, true, true),
         };
     }
 

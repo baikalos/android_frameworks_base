@@ -111,6 +111,7 @@ import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.server.LocalServices;
+import com.android.server.am.ActivityManagerConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -154,7 +155,7 @@ public class AppProfileManager {
     private int mRequestedPowerMode = -1;
 
     private static Object mCurrentProfileSync = new Object();
-    private static AppProfile mCurrentProfile = new AppProfile("system");
+    private static AppProfile mCurrentProfile = new AppProfile("system", -1);
 
     private int mActiveMinFrameRate = -1;
     private int mActiveMaxFrameRate = -1;
@@ -182,7 +183,7 @@ public class AppProfileManager {
     private boolean mThermAvailable = false;
 
     private boolean mAggressiveMode = false;
-    private boolean mExtremeMode = false;
+    //private boolean mExtremeMode = false;
     private boolean mAggressiveIdleMode = false;
     private boolean mKillInBackground = false;
     private boolean mAllowDowngrade = false;
@@ -202,6 +203,7 @@ public class AppProfileManager {
     static BaikalPowerSaveManager mBaikalPowerSaveManager;
 
     private PowerManagerInternal mPowerManagerInternal;
+    private ActivityManagerConstants mAmConstants;
 
     public static AppProfile getCurrentProfile() {
         return mCurrentProfile;
@@ -211,9 +213,9 @@ public class AppProfileManager {
         return mInstance;
     }
 
-    public static AppProfileManager getInstance(Looper looper, Context context) {
+    public static AppProfileManager getInstance(Looper looper, Context context, ActivityManagerConstants amConstants) {
         if( mInstance == null ) {
-            mInstance = new AppProfileManager(looper,context);
+            mInstance = new AppProfileManager(looper,context,amConstants);
         }
         return mInstance;
     }
@@ -263,9 +265,9 @@ public class AppProfileManager {
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_AGGRESSIVE_IDLE),
                     false, this);
 
-                mResolver.registerContentObserver(
+                /*mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_EXTREME_IDLE),
-                    false, this);
+                    false, this);*/
 
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE),
@@ -327,10 +329,11 @@ public class AppProfileManager {
         }
     }
 
-    private AppProfileManager(Looper looper, Context context) {
+    private AppProfileManager(Looper looper, Context context, ActivityManagerConstants amConstants) {
         mContext = context;
         mLooper = looper;
         mHandler = new AppProfileManagerHandler(mLooper);
+        mAmConstants = amConstants;
 
         final Resources resources = mContext.getResources();
 
@@ -425,7 +428,7 @@ public class AppProfileManager {
             mBoostManager = BaikalBoostManager.getInstance(mLooper,mContext); 
             mBoostManager.initialize();
 
-            mBaikalPowerSaveManager = BaikalPowerSaveManager.getInstance(mLooper,mContext); 
+            mBaikalPowerSaveManager = BaikalPowerSaveManager.getInstance(mLooper,mContext,mAmConstants); 
             mBaikalPowerSaveManager.initialize();
 
         }
@@ -437,7 +440,7 @@ public class AppProfileManager {
         boolean changed = false;
 
         mAggressiveMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) != 0;
-        mExtremeMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
+        //mExtremeMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
         mAggressiveIdleMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) != 0;
         mKillInBackground = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_KILL_IN_BACKGROUND, 0) != 0;
 
@@ -534,6 +537,7 @@ public class AppProfileManager {
     }
 
     protected void updateStaminaIfNeededLocked() {
+        if( mBaikalPowerSaveManager != null ) mBaikalPowerSaveManager.setStamina(mStaminaEnabled);
     }
 
     protected void setActiveFrameRateLocked(int minFps, int maxFps) {
@@ -677,21 +681,24 @@ public class AppProfileManager {
 
         //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
 
-        if( !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE )  {
+        if( !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE  && !mScreenMode)  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mScreenMode=" + mScreenMode +
                                                                       ", mDeviceIdleMode=" + mDeviceIdleMode +
                                                                       ", mWakefulness=" + mWakefulness);
             activateIdleProfileLocked(force);
+            updateBypassChargingIfNeededLocked();
+            updateStaminaIfNeededLocked();
             return;
-        } else if( mPhoneCall ) {
+        } else if( mPhoneCall || mScreenMode ) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate balanced profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mScreenMode=" + mScreenMode +
                                                                       ", mDeviceIdleMode=" + mDeviceIdleMode +
                                                                       ", mWakefulness=" + mWakefulness);
-            activateBalancedProfileLocked(force);
+            //activateBalancedProfileLocked(force);
+            //return;
         } 
 
         AppProfile profile = mCurrentProfile;
@@ -808,7 +815,7 @@ public class AppProfileManager {
 
             AppProfile profile = mAppSettings.getProfile(packageName);
             if( profile == null ) {
-                profile = new AppProfile(mTopPackageName);   
+                profile = new AppProfile(mTopPackageName, uid);   
             }
 
             mCurrentProfile = profile;
@@ -1211,9 +1218,14 @@ public class AppProfileManager {
     }
 
 
-    public AppProfile getAppProfile(String packageName) {
+    public AppProfile getAppProfile(String packageName, int uid) {
         AppProfile profile = mAppSettings != null ? mAppSettings.getProfile(packageName) : null;
-        return profile != null ? profile : new AppProfile(packageName);
+        return profile != null ? profile : new AppProfile(packageName, uid);
+    }
+
+    public AppProfile getAppProfile(int uid) {
+        AppProfile profile = mAppSettings != null ? mAppSettings.getProfile(uid) : null;
+        return profile;
     }
 
     public boolean isAppRestricted(int uid, String packageName) {
@@ -1329,7 +1341,7 @@ public class AppProfileManager {
     }
 
     public boolean isExtreme() {
-        if( mBaikalPowerSaveManager != null ) return mBaikalPowerSaveManager.getCurrentPowerSaverLevel() > 3;
+        if( mBaikalPowerSaveManager != null ) return mBaikalPowerSaveManager.getCurrentPowerSaverLevel() >= 3;
         return false;
     }
 
@@ -1345,8 +1357,9 @@ public class AppProfileManager {
         return mScreenMode;
     }
 
-    public boolean isTopAppUid(int uid) {
-        return mTopUid == uid;
+    public boolean isTopAppUid(int uid, String callerPackage) {
+        if( mTopUid != 1000 ) return mTopUid == uid;
+        return mTopPackageName.equals(callerPackage);
     }
 
     public boolean isTopApp(String packageName) {
@@ -1409,14 +1422,16 @@ public class AppProfileManager {
     }
 
 
-    public static AppProfile getProfile(String packageName) {
+    public static AppProfile getProfile(String packageName, int uid) {
         AppProfile profile = null;
         if( mInstance != null ) { 
-            profile =  mInstance.getAppProfile(packageName);
-            return profile != null ? profile : new AppProfile(packageName);
+            profile =  mInstance.getAppProfile(packageName, uid);
+            if( uid == -1 ) return profile;
+            return profile != null ? profile : new AppProfile(packageName,uid);
         }
         Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
-        return new AppProfile(packageName);
+    
+        return null; // new AppProfile(packageName,uid);
     }
 
     public static boolean isAppBlocked(AppProfile profile, String packageName, int uid) {

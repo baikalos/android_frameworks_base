@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.internal.baikalos;
+package com.android.server.baikalos;
 
 
 import android.app.ActivityThread;
@@ -30,6 +30,11 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 
+import android.telephony.PhoneStateListener;
+import android.telephony.ServiceState;
+import android.telephony.PreciseCallState;
+import android.telephony.TelephonyManager;
+
 import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Binder;
@@ -44,6 +49,8 @@ import android.util.KeyValueListParser;
 import android.util.Slog;
 import android.view.IWindowManager;
 
+import com.android.server.trust.TrustManagerService;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -52,52 +59,63 @@ public class BaikalTrust extends ContentObserver {
 
     private static final String TAG = "Baikal.Trust";
 
-    private static ContentResolver mResolver;
-    private static Handler mHandler;
-    private static Context mContext;
-    private static Object _staticLock = new Object();
+    private ContentResolver mResolver;
+    private Handler mHandler;
+    private Context mContext;
+    private Object _staticLock = new Object();
 
-    private static boolean mTrustEnabled;
-    private static boolean mTrustAlways;
-    private static boolean mTrustedBTDevice;
-    private static boolean mTrustedWiFiDevice;
+    private TelephonyManager mTelephonyManager;
+    private TrustManagerService mTm;
 
-    private static String mTrustedBluetoothDevices = "";
-    private static String mTrustedBluetoothLEDevices = "";
-    private static String mTrustedWiFiNetworks = "";
+    private boolean mTrustEnabled;
+    private boolean mTrustAlways;
+    private boolean mTrustInCall;
+    private boolean mTrustedBTDevice;
+    private boolean mTrustedWiFiDevice;
 
-    private static HashSet<String> mTrusedBluetoothDevicesSet = new HashSet<String>();
-    private static HashSet<String> mTrusedBluetoothLEDevicesSet = new HashSet<String>();
-    private static HashSet<String> mTrusedWiFiNetworksSet = new HashSet<String>();
+    private String mTrustedBluetoothDevices = "";
+    private String mTrustedBluetoothLEDevices = "";
+    private String mTrustedWiFiNetworks = "";
 
-    private static HashSet<String> mConnectedBluetoothDevices = new HashSet<String>();
-    private static HashSet<String> mConnectedWiFiNetworks = new HashSet<String>();
+    private HashSet<String> mTrusedBluetoothDevicesSet = new HashSet<String>();
+    private HashSet<String> mTrusedBluetoothLEDevicesSet = new HashSet<String>();
+    private HashSet<String> mTrusedWiFiNetworksSet = new HashSet<String>();
 
-    public static boolean isTrustEnabled() {
+    private HashSet<String> mConnectedBluetoothDevices = new HashSet<String>();
+    private HashSet<String> mConnectedWiFiNetworks = new HashSet<String>();
+
+    private boolean mIsInCall;
+
+    public boolean isTrustEnabled() {
         return mTrustEnabled;
     }
 
-    public static boolean isTrustAlways() {
+    public boolean isTrustAlways() {
         return mTrustAlways;
     }
 
-    public static String getTrustedBluetoothDevices() {
+    public boolean isTrustInCall() {
+        return mTrustInCall;
+    }
+
+    public String getTrustedBluetoothDevices() {
         return mTrustedBluetoothDevices;
     }
 
-    public static String getTrustedBluetoothLEDevices() {
+    public String getTrustedBluetoothLEDevices() {
         return mTrustedBluetoothLEDevices;
     }
 
-    public static String getTrustedWiFiNetworks() {
+    public String getTrustedWiFiNetworks() {
         return mTrustedWiFiNetworks;
     }
 
-    public BaikalTrust(Handler handler, Context context) {
+    public BaikalTrust(TrustManagerService tm, Handler handler, Context context) {
         super(handler);
 	    mHandler = handler;
         mContext = context;
         mResolver = context.getContentResolver();
+        mTm = tm;
 
         try {
                 mResolver.registerContentObserver(
@@ -106,6 +124,10 @@ public class BaikalTrust extends ContentObserver {
 
                 mResolver.registerContentObserver(
                     Settings.Secure.getUriFor(Settings.Secure.BAIKALOS_TRUST_ALWAYS),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Secure.getUriFor(Settings.Secure.BAIKALOS_TRUST_INCALL),
                     false, this);
 
                 mResolver.registerContentObserver(
@@ -140,6 +162,8 @@ public class BaikalTrust extends ContentObserver {
         //btAdapterFilter.addAction(BluetoothAdapter.ACTION_BLE_ACL_DISCONNECTED);
         mContext.registerReceiver(mBluetoothAdapterReceiver, btAdapterFilter);
 
+        mTelephonyManager = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
+        mTelephonyManager.listen(mPhoneStateListener, 0xFFFFFFF);
     }
 
     @Override
@@ -154,7 +178,7 @@ public class BaikalTrust extends ContentObserver {
         }
     }
 
-    public static void loadConstants(Context context) {
+    public void loadConstants(Context context) {
         synchronized (_staticLock) {
             try {
                 boolean trustEnabled = Settings.Secure.getInt(context.getContentResolver(),
@@ -162,6 +186,9 @@ public class BaikalTrust extends ContentObserver {
 
                 boolean trustAlways = Settings.Secure.getInt(context.getContentResolver(),
                         Settings.Secure.BAIKALOS_TRUST_ALWAYS,0) == 1;
+
+                boolean trustInCall = Settings.Secure.getInt(context.getContentResolver(),
+                        Settings.Secure.BAIKALOS_TRUST_INCALL,0) == 1;
 
                 String trustedBluetoothDevices = Settings.Secure.getString(context.getContentResolver(),
                         Settings.Secure.BAIKALOS_TRUST_BT_DEV);
@@ -172,7 +199,8 @@ public class BaikalTrust extends ContentObserver {
                 String trustedWiFiNetworks = Settings.Secure.getString(context.getContentResolver(),
                         Settings.Secure.BAIKALOS_TRUST_WIFI_DEV);
 
-                boolean trustChanged = trustEnabled != mTrustEnabled ||
+                boolean trustChanged =  trustInCall != mTrustInCall ||
+                                        trustEnabled != mTrustEnabled ||
                                         trustAlways != mTrustAlways ||
                                         !mTrustedBluetoothDevices.equals(trustedBluetoothDevices) ||
                                         !mTrustedBluetoothLEDevices.equals(trustedBluetoothLEDevices) ||
@@ -181,6 +209,7 @@ public class BaikalTrust extends ContentObserver {
                 if( trustChanged ) {
                     mTrustEnabled = trustEnabled;
                     mTrustAlways = trustAlways;
+                    mTrustInCall = trustInCall;
                     mTrustedBluetoothDevices = trustedBluetoothDevices == null ? "" : trustedBluetoothDevices;
                     mTrustedBluetoothLEDevices = trustedBluetoothLEDevices == null ? "" : trustedBluetoothLEDevices;
                     mTrustedWiFiNetworks = trustedWiFiNetworks == null ? "" : trustedWiFiNetworks;
@@ -193,7 +222,7 @@ public class BaikalTrust extends ContentObserver {
         }
     }
 
-    private static void updateConstantsLocked() {
+    private void updateConstantsLocked() {
         //updateFilters();
         
     }
@@ -226,18 +255,23 @@ public class BaikalTrust extends ContentObserver {
         }
     };
 
-    private static Object _trustDevicesLock = new Object();
+    private Object _trustDevicesLock = new Object();
 
-    private static void updateTrust() {
+    private void updateTrust() {
         synchronized(_trustDevicesLock) {
             mTrusedBluetoothDevicesSet = setBlockedList(mTrustedBluetoothDevices);
             mTrusedBluetoothLEDevicesSet = setBlockedList(mTrustedBluetoothLEDevices);
             mTrusedWiFiNetworksSet = setBlockedList(mTrustedWiFiNetworks);
         }
         updateTrustedDevices();
+        updateTrustService();
     }
 
-    public static boolean isTrustable() {
+    private void updateTrustService() {
+        mTm.requestUpdateTrustAll();
+    }
+
+    public boolean isTrustable() {
         if( !mTrustEnabled ) {
             Slog.d(TAG, "isTrustable: disabled");
             return false;
@@ -245,7 +279,7 @@ public class BaikalTrust extends ContentObserver {
         return true;
     }
 
-    public static boolean isTrusted() {
+    public boolean isTrusted() {
         if( !mTrustEnabled ) {
             Slog.i(TAG, "isTrusted: disabled");
             return false;
@@ -268,7 +302,14 @@ public class BaikalTrust extends ContentObserver {
         return false;
     }
 
-    private static void updateTrustedDevices() {
+    public boolean isKeepUnlocked() {
+        boolean keep = (mIsInCall && mTrustInCall) || isTrusted();
+        Slog.i(TAG, "isKeepUnlocked: " + keep);
+        return keep;
+    }
+
+    private boolean updateTrustedDevices() {
+        boolean trustedBTDevice = false;
         synchronized(_trustDevicesLock) {
             Iterator<String> nextItem = mTrusedBluetoothDevicesSet.iterator();
 
@@ -276,42 +317,48 @@ public class BaikalTrust extends ContentObserver {
                 String sAddress = nextItem.next();
                 
                 if(mConnectedBluetoothDevices.contains(sAddress) ) {
-                    Slog.e(TAG, "Trusted bluetooth device connected " + sAddress);
-                    mTrustedBTDevice = true;
-                    return;
+                    Slog.d(TAG, "Trusted bluetooth device connected " + sAddress);
+                    trustedBTDevice = true;
                 } 
             }
 
-            nextItem = mTrusedBluetoothLEDevicesSet.iterator();
+            if( !trustedBTDevice ) {
+                nextItem = mTrusedBluetoothLEDevicesSet.iterator();
 
-            while (nextItem.hasNext()) {
-                String sAddress = nextItem.next();
-                if(mConnectedBluetoothDevices.contains(sAddress) ) {
-                    Slog.e(TAG, "Trusted bluetooth LE device connected " + sAddress);
-                    mTrustedBTDevice = true;
-                    return;
-                } 
+                while (nextItem.hasNext()) {
+                    String sAddress = nextItem.next();
+                    if(mConnectedBluetoothDevices.contains(sAddress) ) {
+                        Slog.d(TAG, "Trusted bluetooth LE device connected " + sAddress);
+                        trustedBTDevice = true;
+                    } 
+                }
             }
 
         }
-        Slog.e(TAG, "No Trusted bluetooth devices connected ");
-        mTrustedBTDevice = false;
+        if( trustedBTDevice != mTrustedBTDevice ) {
+            if( !trustedBTDevice ) Slog.d(TAG, "No Trusted bluetooth devices connected ");
+            mTrustedBTDevice = trustedBTDevice;
+            return true;
+        }
+        return false;
     }
 
-    public static void updateBluetoothDeviceState(int state) {
+    public void updateBluetoothDeviceState(int state) {
         switch(state) { 
             case BluetoothAdapter.STATE_ON:
-                Slog.e(TAG, "Bluetooth ready");
+                Slog.d(TAG, "Bluetooth ready");
                 break;
             default:
-                Slog.e(TAG, "Bluetooth not ready. Disable device trust");
+                Slog.d(TAG, "Bluetooth not ready. Disable device trust");
                 mConnectedBluetoothDevices.clear();
                 updateTrustedDevices();
         }
+        updateTrustService();
     }
 
 
-    public static void updateBluetoothDeviceState(int state,String device_address) {
+    public void updateBluetoothDeviceState(int state,String device_address) {
+        Slog.d(TAG, "Bluetooth device state changed:" + device_address + ", state=" + state);
         if( state == 0 ) {
             if( !mConnectedBluetoothDevices.contains(device_address) ) {
                 mConnectedBluetoothDevices.add(device_address);
@@ -323,9 +370,10 @@ public class BaikalTrust extends ContentObserver {
                 updateTrustedDevices();
             }
         }
+        updateTrustService();
     }
 
-    private static HashSet<String> setBlockedList(String tagsString) {
+    private HashSet<String> setBlockedList(String tagsString) {
         HashSet<String> mBlockedList = new HashSet<String>();
         if (tagsString != null && tagsString.length() != 0) {
             String[] parts = tagsString.split("\\|");
@@ -335,4 +383,40 @@ public class BaikalTrust extends ContentObserver {
         }
         return mBlockedList;
     }
+
+
+    PhoneStateListener mPhoneStateListener = new PhoneStateListener() {
+        /**
+         * Callback invoked when device call state changes.
+         * @param state call state
+         * @param incomingNumber incoming call phone number. If application does not have
+         * {@link android.Manifest.permission#READ_PHONE_STATE READ_PHONE_STATE} permission, an empty
+         * string will be passed as an argument.
+         *
+         * @see TelephonyManager#CALL_STATE_IDLE
+         * @see TelephonyManager#CALL_STATE_RINGING
+         * @see TelephonyManager#CALL_STATE_OFFHOOK
+         */
+        @Override
+        public void onCallStateChanged(int state, String incomingNumber) {
+            Slog.i(TAG,"PhoneStateListener: onCallStateChanged(" + state + "," + incomingNumber + ")");
+        }
+
+        /**
+         * Callback invoked when precise device call state changes.
+         *
+         * @hide
+         */
+        @Override
+        public void onPreciseCallStateChanged(PreciseCallState callState) {
+            Slog.i(TAG,"PhoneStateListener: onPreciseCallStateChanged(" + callState + ")");
+            boolean state =  callState.getRingingCallState() > 0 ||
+                         callState.getForegroundCallState() > 0 ||
+                         callState.getBackgroundCallState() > 0;
+            if( mIsInCall != state ) {
+                mIsInCall = state;
+                updateTrustService();
+            }
+       }
+    };
 }
