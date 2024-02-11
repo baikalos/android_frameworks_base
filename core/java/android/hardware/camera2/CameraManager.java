@@ -66,6 +66,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.ArrayUtils;
 
 import com.android.internal.baikalos.BaikalSpoofer;
+import com.android.internal.baikalos.AppProfileSettings;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -2643,6 +2644,7 @@ public final class CameraManager {
 
         private void onCameraOpenedLocked(String cameraId, String clientPackageId) {
             String oldApk = mOpenedDevices.put(cameraId, clientPackageId);
+            if( mOpenedDevices.size() > 0 ) AppProfileSettings.setCameraActive(true);
 
             if (oldApk != null) {
                 if (oldApk.equals(clientPackageId)) {
@@ -2677,6 +2679,8 @@ public final class CameraManager {
 
         private void onCameraClosedLocked(String cameraId) {
             mOpenedDevices.remove(cameraId);
+            if( mOpenedDevices.size() == 0 ) AppProfileSettings.setCameraActive(false);
+
 
             final int callbackCount = mCallbackMap.size();
             for (int i = 0; i < callbackCount; i++) {

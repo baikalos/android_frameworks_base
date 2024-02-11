@@ -405,7 +405,6 @@ final class DisplayRotationCompatPolicy {
                 return;
             }
             mCameraIdPackageBiMap.put(packageName, cameraId);
-            AppProfileSettings.setCameraActive(true);
         }
         synchronized (mWmService.mGlobalLock) {
             ActivityRecord topActivity = mDisplayContent.topRunningActivity(
@@ -443,7 +442,6 @@ final class DisplayRotationCompatPolicy {
         // No need to update orientation for this camera if it's already closed.
         mScheduledOrientationUpdateCameraIdSet.remove(cameraId);
         scheduleRemoveCameraId(cameraId);
-        AppProfileSettings.setCameraActive(false);
     }
 
     // Delay is needed to avoid rotation flickering when an app is flipping between front and
@@ -470,7 +468,6 @@ final class DisplayRotationCompatPolicy {
                 return;
             }
             mCameraIdPackageBiMap.removeCameraId(cameraId);
-            AppProfileSettings.setCameraActive(!mCameraIdPackageBiMap.isEmpty());
         }
         ProtoLog.v(WM_DEBUG_ORIENTATION,
                 "Display id=%d is notified that Camera %s is closed, updating rotation.",
