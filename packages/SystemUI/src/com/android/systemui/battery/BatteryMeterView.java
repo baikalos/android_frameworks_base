@@ -33,6 +33,7 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -63,6 +64,8 @@ import java.text.NumberFormat;
 import java.util.ArrayList;
 
 public class BatteryMeterView extends LinearLayout implements DarkReceiver {
+
+    private static final String TAG = "BatteryMeterView";
 
     protected static final int BATTERY_STYLE_PORTRAIT = 0;
     protected static final int BATTERY_STYLE_CIRCLE = 1;
@@ -200,6 +203,9 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     private void setupLayoutTransition() {
+        Log.v(TAG, "setupLayoutTransition()");
+        if( true ) return;
+
         LayoutTransition transition = new LayoutTransition();
         transition.setDuration(200);
 
@@ -231,6 +237,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     protected void updateBatteryStyle() {
+        Log.v(TAG, "updateBatteryStyle()");
         updateDrawable();
         scaleBatteryMeterViews();
         updatePercentView();
@@ -296,6 +303,8 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
      * @param pluggedIn whether the device is plugged in or not
      */
     public void onBatteryLevelChanged(@IntRange(from = 0, to = 100) int level, boolean pluggedIn) {
+        Log.v(TAG, "onBatteryLevelChanged()");
+
         if (mLevel != level) {
             mLevel = level;
             mAccessorizedDrawable.setBatteryLevel(mLevel);
@@ -345,6 +354,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
      * Updates percent view by removing old one and reinflating if necessary
      */
     public void updatePercentView() {
+        Log.v(TAG, "updatePercentView()");
         if (mBatteryPercentView != null) {
             removeView(mBatteryPercentView);
             mBatteryPercentView = null;
@@ -460,6 +470,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     void updateShowPercent() {
+        Log.v(TAG, "updateShowPercent()");
         boolean drawPercentInside = mShowBatteryPercent == 1
                                     && !mCharging && !mBatteryStateUnknown;
         boolean showPercent = mShowBatteryPercent >= 2
