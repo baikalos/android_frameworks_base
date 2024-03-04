@@ -305,21 +305,13 @@ public class SystemSensorManager extends SensorManager {
         }
 
         if (Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 /*||
-	        Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.BAIKALOS_EXTREME_IDLE, 0) == 1*/ ) {
+                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 ) {
 
             if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION) {
                     Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
                             "significant motion sensor");
                     return true;
-            } else if (sensortype == Sensor.TYPE_ACCELEROMETER || sensortype == Sensor.TYPE_LINEAR_ACCELERATION) {
-                if( opPkgName.startsWith("com.google.android.gms" ) || pkgName.startsWith("com.google.android.gms" ) ) {
-                    Log.w(TAG, "Preventing " + pkgName + "(" + opPkgName +") from draining battery using " +
-                           "accelerometer sensor");
-                    return true;
-                }
-            }
+            } 
         }
 
         // Invariants to preserve:
@@ -399,22 +391,13 @@ public class SystemSensorManager extends SensorManager {
         }
 
         if (Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 /*||
-	        Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.BAIKALOS_EXTREME_IDLE, 0) == 1 */ ) {
+                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 ) {
 
             if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION) {
                     Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
                             "significant motion sensor");
                     return true;
-            } else if (sensortype == Sensor.TYPE_ACCELEROMETER || sensortype == Sensor.TYPE_LINEAR_ACCELERATION) {
-                if( opPkgName.startsWith("com.google.android.gms" ) || pkgName.startsWith("com.google.android.gms" ) ) {
-                    Log.w(TAG, "Preventing " + pkgName + "(" + opPkgName +") from draining battery using " +
-                           "accelerometer sensor");
-                    return true;
-               
-                }
-            }
+            } 
         }
 
         synchronized (mTriggerListeners) {
