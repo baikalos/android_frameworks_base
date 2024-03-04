@@ -121,6 +121,8 @@ import com.android.server.utils.quota.Categorizer;
 import com.android.server.utils.quota.Category;
 import com.android.server.utils.quota.CountQuotaTracker;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import libcore.util.EmptyArray;
@@ -156,8 +158,8 @@ import java.util.function.Predicate;
 public class JobSchedulerService extends com.android.server.SystemService
         implements StateChangedListener, JobCompletedListener {
     public static final String TAG = "JobScheduler";
-    public static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
-    public static final boolean DEBUG_STANDBY = DEBUG || false;
+    public static boolean DEBUG = true; // Log.isLoggable(TAG, Log.DEBUG);
+    public static boolean DEBUG_STANDBY = DEBUG || false;
 
     /** The maximum number of jobs that we allow an app to schedule */
     private static final int MAX_JOBS_PER_APP = 150;
@@ -832,7 +834,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
-            if (DEBUG) {
+            if( BaikalConstants.BAIKAL_DEBUG_JOBS ) {
                 Slog.d(TAG, "Receieved: " + action);
             }
             final String pkgName = getPackageName(intent);
@@ -847,7 +849,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                     if (changedComponents != null) {
                         for (String component : changedComponents) {
                             if (component.equals(pkgName)) {
-                                if (DEBUG) {
+                                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                     Slog.d(TAG, "Package state change: " + pkgName);
                                 }
                                 try {
@@ -857,7 +859,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                                             pm.getApplicationEnabledSetting(pkgName, userId);
                                     if (state == COMPONENT_ENABLED_STATE_DISABLED
                                             || state == COMPONENT_ENABLED_STATE_DISABLED_USER) {
-                                        if (DEBUG) {
+                                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                             Slog.d(TAG, "Removing jobs for package " + pkgName
                                                     + " in user " + userId);
                                         }
@@ -887,7 +889,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                                 break;
                             }
                         }
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Something in " + pkgName
                                     + " changed. Reevaluating controller states.");
                         }
@@ -912,7 +914,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                     }
                 }
             } else if (Intent.ACTION_PACKAGE_FULLY_REMOVED.equals(action)) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Removing jobs for " + pkgName + " (uid=" + pkgUid + ")");
                 }
                 synchronized (mLock) {
@@ -938,7 +940,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                 }
             } else if (Intent.ACTION_USER_REMOVED.equals(action)) {
                 final int userId = intent.getIntExtra(Intent.EXTRA_USER_HANDLE, 0);
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Removing jobs for user: " + userId);
                 }
                 synchronized (mLock) {
@@ -959,7 +961,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                     }
                     for (int i = jobsForUid.size() - 1; i >= 0; i--) {
                         if (jobsForUid.get(i).getSourcePackageName().equals(pkgName)) {
-                            if (DEBUG) {
+                            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                 Slog.d(TAG, "Restart query: package " + pkgName + " at uid "
                                         + pkgUid + " has jobs");
                             }
@@ -971,7 +973,7 @@ public class JobSchedulerService extends com.android.server.SystemService
             } else if (Intent.ACTION_PACKAGE_RESTARTED.equals(action)) {
                 // possible force-stop
                 if (pkgUid != -1) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Removing jobs for pkg " + pkgName + " at uid " + pkgUid);
                     }
                     synchronized (mLock) {
@@ -1199,7 +1201,7 @@ public class JobSchedulerService extends com.android.server.SystemService
             // 1 minute foreground grace period.
             jobStatus.maybeAddForegroundExemption(mIsUidActivePredicate);
 
-            if (DEBUG) Slog.d(TAG, "SCHEDULE: " + jobStatus.toShortString());
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "SCHEDULE: " + jobStatus.toShortString());
             // Jobs on behalf of others don't apply to the per-app job cap
             if (packageName == null) {
                 if (mJobs.countJobsForUid(uId) > MAX_JOBS_PER_APP) {
@@ -1384,7 +1386,7 @@ public class JobSchedulerService extends com.android.server.SystemService
      */
     private void cancelJobImplLocked(JobStatus cancelled, JobStatus incomingJob,
             @JobParameters.StopReason int reason, int internalReasonCode, String debugReason) {
-        if (DEBUG) Slog.d(TAG, "CANCEL: " + cancelled.toShortString());
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "CANCEL: " + cancelled.toShortString());
         cancelled.unprepareLocked();
         stopTrackingJobLocked(cancelled, incomingJob, true /* writeBack */);
         // Remove from pending queue.
@@ -1397,7 +1399,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                 cancelled, reason, internalReasonCode, debugReason);
         // If this is a replacement, bring in the new version of the job
         if (incomingJob != null) {
-            if (DEBUG) Slog.i(TAG, "Tracking replacement job " + incomingJob.toShortString());
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.i(TAG, "Tracking replacement job " + incomingJob.toShortString());
             startTrackingJobLocked(incomingJob, cancelled);
         }
         reportActiveLocked();
@@ -1420,7 +1422,7 @@ public class JobSchedulerService extends com.android.server.SystemService
             }
             final int newBias = mUidBiasOverride.get(uid, JobInfo.BIAS_DEFAULT);
             if (prevBias != newBias) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "UID " + uid + " bias changed from " + prevBias + " to " + newBias);
                 }
                 for (int c = 0; c < mControllers.size(); ++c) {
@@ -1441,7 +1443,7 @@ public class JobSchedulerService extends com.android.server.SystemService
     @Override
     public void onDeviceIdleStateChanged(boolean deviceIdle) {
         synchronized (mLock) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Doze state changed: " + deviceIdle);
             }
             if (!deviceIdle) {
@@ -1637,7 +1639,7 @@ public class JobSchedulerService extends com.android.server.SystemService
             for (int i = 0; i < N; i++) {
                 final JobStatus oldJob = toRemove.get(i);
                 final JobStatus newJob = toAdd.get(i);
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.v(TAG, "  replacing " + oldJob + " with " + newJob);
                 }
                 cancelJobImplLocked(oldJob, newJob, JobParameters.STOP_REASON_SYSTEM_PROCESSING,
@@ -1828,7 +1830,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                 delayMillis = backoff * backoffAttempts;
             } break;
             default:
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.v(TAG, "Unrecognised back-off policy, defaulting to exponential.");
                 }
             case JobInfo.BACKOFF_POLICY_EXPONENTIAL: {
@@ -1903,7 +1905,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         if (elapsedNow > latestRunTimeElapsed) {
             // The job ran past its expected run window. Have it count towards the current window
             // and schedule a new job for the next window.
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "Periodic job ran after its intended window by " + diffMs + " ms");
             }
             long numSkippedWindows = (diffMs / period) + 1; // +1 to include original window
@@ -1912,7 +1914,7 @@ public class JobSchedulerService extends com.android.server.SystemService
             // window and the previous execution time inside of the period is less than the
             // threshold, then we say that the job ran too close to the next period.
             if (period != flex && (period - flex - (diffMs % period)) <= flex / 6) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Custom flex job ran too close to next window.");
                 }
                 // For custom flex periods, if the job was run too close to the next window,
@@ -1942,7 +1944,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         final long newEarliestRunTimeElapsed = newLatestRuntimeElapsed
                 - Math.min(flex, period - rescheduleBuffer);
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "Rescheduling executed periodic. New execution window [" +
                     newEarliestRunTimeElapsed / 1000 + ", " + newLatestRuntimeElapsed / 1000
                     + "]s");
@@ -1967,7 +1969,7 @@ public class JobSchedulerService extends com.android.server.SystemService
     @Override
     public void onJobCompletedLocked(JobStatus jobStatus, int debugStopReason,
             boolean needsReschedule) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Completed " + jobStatus + ", reason=" + debugStopReason
                     + ", reschedule=" + needsReschedule);
         }
@@ -2003,7 +2005,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         // Do not write back immediately if this is a periodic job. The job may get lost if system
         // shuts down before it is added back.
         if (!stopTrackingJobLocked(jobStatus, rescheduledJob, !jobStatus.getJob().isPeriodic())) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Could not find job to remove. Was job removed while executing?");
             }
             JobStatus newJs = mJobs.getJobByUidAndJobId(jobStatus.getUid(), jobStatus.getJobId());
@@ -2088,7 +2090,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                         }
                     } break;
                     case MSG_CHECK_JOB:
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "MSG_CHECK_JOB");
                         }
                         if (mReportedActive) {
@@ -2100,13 +2102,13 @@ public class JobSchedulerService extends com.android.server.SystemService
                         }
                         break;
                     case MSG_CHECK_JOB_GREEDY:
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "MSG_CHECK_JOB_GREEDY");
                         }
                         queueReadyJobsForExecutionLocked();
                         break;
                     case MSG_CHECK_CHANGED_JOB_LIST:
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "MSG_CHECK_CHANGED_JOB_LIST");
                         }
                         checkChangedJobListLocked();
@@ -2223,7 +2225,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         // queue.
         mHandler.removeMessages(MSG_CHECK_CHANGED_JOB_LIST);
         mChangedJobList.clear();
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "queuing all ready jobs for execution:");
         }
         clearPendingJobQueue();
@@ -2231,7 +2233,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         mJobs.forEachJob(mReadyQueueFunctor);
         mReadyQueueFunctor.postProcessLocked();
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             final int queuedJobs = mPendingJobQueue.size();
             if (queuedJobs == 0) {
                 Slog.d(TAG, "No jobs pending.");
@@ -2247,7 +2249,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         @Override
         public void accept(JobStatus job) {
             if (isReadyToBeExecutedLocked(job)) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "    queued " + job.toShortString());
                 }
                 newReadyJobs.add(job);
@@ -2381,13 +2383,13 @@ public class JobSchedulerService extends com.android.server.SystemService
         void postProcessLocked() {
             if (unbatchedCount > 0
                     || forceBatchedCount >= mConstants.MIN_READY_NON_ACTIVE_JOBS_COUNT) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "maybeQueueReadyJobsForExecutionLocked: Running jobs.");
                 }
                 noteJobsPending(runnableJobs);
                 mPendingJobQueue.addAll(runnableJobs);
             } else {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "maybeQueueReadyJobsForExecutionLocked: Not running anything.");
                 }
             }
@@ -2413,7 +2415,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         // of jobs in the queue.
         mHandler.removeMessages(MSG_CHECK_CHANGED_JOB_LIST);
         mChangedJobList.clear();
-        if (DEBUG) Slog.d(TAG, "Maybe queuing ready jobs...");
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "Maybe queuing ready jobs...");
 
         clearPendingJobQueue();
         stopNonReadyActiveJobsLocked();
@@ -2424,7 +2426,7 @@ public class JobSchedulerService extends com.android.server.SystemService
     @GuardedBy("mLock")
     private void checkChangedJobListLocked() {
         mHandler.removeMessages(MSG_CHECK_CHANGED_JOB_LIST);
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Check changed jobs...");
         }
         if (mChangedJobList.size() == 0) {
@@ -2481,7 +2483,7 @@ public class JobSchedulerService extends com.android.server.SystemService
     boolean isReadyToBeExecutedLocked(JobStatus job, boolean rejectActive) {
         final boolean jobReady = job.isReady();
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "isReadyToBeExecutedLocked: " + job.toShortString()
                     + " ready=" + jobReady);
         }
@@ -2500,7 +2502,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         final boolean userStarted = areUsersStartedLocked(job);
         final boolean backingUp = mBackingUpUids.get(job.getSourceUid());
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "isReadyToBeExecutedLocked: " + job.toShortString()
                     + " exists=" + jobExists + " userStarted=" + userStarted
                     + " backingUp=" + backingUp);
@@ -2519,7 +2521,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         final boolean jobPending = mPendingJobQueue.contains(job);
         final boolean jobActive = rejectActive && mConcurrencyManager.isJobRunningLocked(job);
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "isReadyToBeExecutedLocked: " + job.toShortString()
                     + " pending=" + jobPending + " active=" + jobActive);
         }
@@ -2539,7 +2541,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         final ServiceInfo service = job.serviceInfo;
 
         if (service == null) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "isComponentUsable: " + job.toShortString()
                         + " component not present");
             }
@@ -2549,7 +2551,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         // Everything else checked out so far, so this is the final yes/no check
         final boolean appIsBad = mActivityManagerInternal.isAppBad(
                 service.processName, service.applicationInfo.uid);
-        if (DEBUG && appIsBad) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS && appIsBad) {
             Slog.i(TAG, "App is bad for " + job.toShortString() + " so not runnable");
         }
         return !appIsBad;
@@ -2575,7 +2577,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         final boolean userStarted = areUsersStartedLocked(job);
         final boolean backingUp = mBackingUpUids.get(job.getSourceUid());
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "areComponentsInPlaceLocked: " + job.toShortString()
                     + " exists=" + jobExists + " userStarted=" + userStarted
                     + " backingUp=" + backingUp);
@@ -2589,7 +2591,7 @@ public class JobSchedulerService extends com.android.server.SystemService
 
         final JobRestriction restriction = checkIfRestricted(job);
         if (restriction != null) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "areComponentsInPlaceLocked: " + job.toShortString()
                         + " restricted due to " + restriction.getInternalReason());
             }
@@ -2635,7 +2637,7 @@ public class JobSchedulerService extends com.android.server.SystemService
      * here is where we decide whether to actually execute it.
      */
     void maybeRunPendingJobsLocked() {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "pending queue: " + mPendingJobQueue.size() + " jobs.");
         }
         mConcurrencyManager.assignJobsToContextsLocked();
@@ -2746,7 +2748,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                 final String action = intent.getAction();
                 boolean changed = false;
                 if (Intent.ACTION_BATTERY_LOW.equals(action)) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Battery life too low @ " + sElapsedRealtimeClock.millis());
                     }
                     if (mBatteryNotLow) {
@@ -2754,7 +2756,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                         changed = true;
                     }
                 } else if (Intent.ACTION_BATTERY_OKAY.equals(action)) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Battery high enough @ " + sElapsedRealtimeClock.millis());
                     }
                     if (!mBatteryNotLow) {
@@ -2762,7 +2764,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                         changed = true;
                     }
                 } else if (BatteryManager.ACTION_CHARGING.equals(action)) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Battery charging @ " + sElapsedRealtimeClock.millis());
                     }
                     if (!mCharging) {
@@ -2770,7 +2772,7 @@ public class JobSchedulerService extends com.android.server.SystemService
                         changed = true;
                     }
                 } else if (BatteryManager.ACTION_DISCHARGING.equals(action)) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Battery discharging @ " + sElapsedRealtimeClock.millis());
                     }
                     if (mCharging) {
@@ -2950,8 +2952,8 @@ public class JobSchedulerService extends com.android.server.SystemService
 
         bucket = standbyBucketToBucketIndex(bucket);
 
-        if (DEBUG_STANDBY) {
-            Slog.v(TAG, packageName + "/" + userId + " standby bucket index: " + bucket);
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
+            Slog.v(TAG, packageName + "-" + userId + " standby bucket index: " + bucket);
         }
         return bucket;
     }
@@ -2970,7 +2972,7 @@ public class JobSchedulerService extends com.android.server.SystemService
             synchronized (mLock) {
                 final String oldPkg = mCloudMediaProviderPackages.get(userId);
                 if (!Objects.equals(oldPkg, newPkg)) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Cloud provider of user " + userId + " changed from " + oldPkg
                                 + " to " + newPkg);
                     }
@@ -3067,7 +3069,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         // IJobScheduler implementation
         @Override
         public int schedule(JobInfo job) throws RemoteException {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Scheduling job: " + job.toString());
             }
             final int pid = Binder.getCallingPid();
@@ -3096,7 +3098,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         // IJobScheduler implementation
         @Override
         public int enqueue(JobInfo job, JobWorkItem work) throws RemoteException {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Enqueueing job: " + job.toString() + " work: " + work);
             }
             final int uid = Binder.getCallingUid();
@@ -3126,7 +3128,7 @@ public class JobSchedulerService extends com.android.server.SystemService
         public int scheduleAsPackage(JobInfo job, String packageName, int userId, String tag)
                 throws RemoteException {
             final int callerUid = Binder.getCallingUid();
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Caller uid " + callerUid + " scheduling job: " + job.toString()
                         + " on behalf of " + packageName + "/");
             }
@@ -3360,7 +3362,7 @@ public class JobSchedulerService extends com.android.server.SystemService
     // Shell command infrastructure: immediately timeout currently executing jobs
     int executeTimeoutCommand(PrintWriter pw, String pkgName, int userId,
             boolean hasJobId, int jobId) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "executeTimeoutCommand(): " + pkgName + "/" + userId + " " + jobId);
         }
 
@@ -3377,7 +3379,7 @@ public class JobSchedulerService extends com.android.server.SystemService
     // Shell command infrastructure: cancel a scheduled job
     int executeCancelCommand(PrintWriter pw, String pkgName, int userId,
             boolean hasJobId, int jobId) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "executeCancelCommand(): " + pkgName + "/" + userId + " " + jobId);
         }
 
@@ -3460,7 +3462,7 @@ public class JobSchedulerService extends com.android.server.SystemService
 
             synchronized (mLock) {
                 final JobStatus js = mJobs.getJobByUidAndJobId(uid, jobId);
-                if (DEBUG) Slog.d(TAG, "get-job-state " + uid + "/" + jobId + ": " + js);
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "get-job-state " + uid + "/" + jobId + ": " + js);
                 if (js == null) {
                     pw.print("unknown("); UserHandle.formatUid(pw, uid);
                     pw.print("/jid"); pw.print(jobId); pw.println(")");

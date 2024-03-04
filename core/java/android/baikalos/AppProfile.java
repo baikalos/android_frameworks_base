@@ -20,6 +20,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SuppressLint;
+import android.os.Process;
 
 import android.util.Slog;
 import android.util.KeyValueListParser;
@@ -27,6 +28,15 @@ import android.util.KeyValueListParser;
 public class AppProfile {
 
     private static final String TAG = "Baikal.AppProfile";
+
+    @SuppressLint({"MutableBareField","InternalField","AllUpper"})
+    public static boolean DEBUG = true;
+
+    @SuppressLint({"MutableBareField","InternalField","AllUpper"})
+    public static boolean VERBOSE = false;
+
+    @SuppressLint({"MutableBareField","InternalField","AllUpper"})
+    public static boolean TRACE = false;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public @Nullable String mPackageName;
@@ -176,29 +186,72 @@ public class AppProfile {
     public boolean mAllowWhileIdle;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mHideIdle;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public int mInstaller;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public int mScaleFactor;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mIsInitialized;
+
+    private int mCurAdj = 0;
+
     private static boolean sDebug;
-    private static @Nullable String sPackageName;
-    private static int sUid;
-    private static int mPowerMode;
-    private static boolean mStaminaActive;
-    private static boolean mScreenOn = true;
+    private static @Nullable String sPackageName = "unknown";
+    private static int sUid = -1;
+    private static int sPowerMode;
+    private static boolean sStaminaActive;
+    private static boolean sScreenOn = true;
+    private static int sHomeUid = -1;
+
+    private static boolean sAutoLimit = false;
+
+    private static int sTopUid = -1;
+    private static @Nullable String  sTopPackageName = "unknown";
+    private static AppProfile sTopAppProfile = new AppProfile("top",-1);
+
+    public static void updateHomeProcess(int uid) {
+        if( uid == 1000 ) sHomeUid = -1;
+        else sHomeUid = uid;
+        if( DEBUG ) Slog.d(TAG, "Home app set to :" + sHomeUid);
+    }
 
     public static void setScreenMode(boolean on) {
-        mScreenOn = on;
+        sScreenOn = on;
+        if( DEBUG ) Slog.d(TAG, "Screen mode set to :" + on);
+    }
+
+    public static boolean isScreenOn() {
+        return sScreenOn;
     }
 
     public static void setPowerMode(int mode) {
-        mPowerMode = mode;
+        sPowerMode = mode;
+        if( DEBUG ) Slog.d(TAG, "PowerMode mode set to :" + mode);
     }
 
     public static void setStaminaActive(boolean enable) {
-        mStaminaActive = enable;
+        sStaminaActive = enable;
+        if( DEBUG ) Slog.d(TAG, "StaminaActive mode set to :" + enable);
     }
 
     public static boolean isDebug() {
         return sDebug;
+    }
+
+    public static boolean setAutoLimit(boolean limit) {
+        if( limit != sAutoLimit ) {
+            sAutoLimit = limit;
+            if( DEBUG ) Slog.d(TAG, "AutoLimit mode set to :" + sAutoLimit);
+            return true;
+        }
+        return false;
     }
 
     public static int uid() {
@@ -209,26 +262,40 @@ public class AppProfile {
         return sPackageName;
     }
 
-    private static AppProfile mCurrentAppProfile = new AppProfile("current");
+    private static AppProfile sCurrentAppProfile = new AppProfile("current",-1);
 
     public static @Nullable AppProfile getCurrentAppProfile() {
-        return mCurrentAppProfile;
+        return sCurrentAppProfile;
     }
 
-    public static void setCurrentAppProfile(@Nullable AppProfile profile, int uid) {
-        sPackageName = profile.mPackageName;
+    public static void setCurrentAppProfile(@Nullable AppProfile profile,@Nullable String packageName, int uid) {
+        sPackageName = packageName;
         sUid = uid;
-        mCurrentAppProfile = profile;
+        sCurrentAppProfile = profile;
         sDebug = profile.mDebug;
+        if( profile.mUid <= 0 ) profile.mUid = uid;
+        profile.mPackageName = packageName;
+        if( DEBUG ) Slog.d(TAG, "CurrentAppProfile set to :" + sPackageName + "/" + sUid);
     }
 
-    private static AppProfile mDefaultProfile = new AppProfile("default");
-
-    public static @Nullable AppProfile getDefaultProfile() {
-        return mDefaultProfile;
+    public static @Nullable AppProfile getTopAppProfile() {
+        return sTopAppProfile;
     }
 
-    public AppProfile() {
+    public static void setTopAppProfile(@Nullable AppProfile profile,@Nullable String packageName, int uid) {
+        sTopPackageName = packageName;
+        sTopUid = uid;
+        sTopAppProfile = profile;
+        if( DEBUG ) Slog.d(TAG, "CurrentAppProfile set to :" + sPackageName + "/" + sUid);
+    }
+
+    //private static AppProfile sDefaultProfile = new AppProfile("default");
+
+    /*public static @Nullable AppProfile getDefaultProfile() {
+        return sDefaultProfile;
+    }*/
+
+    private AppProfile() {
         mPerfProfile = 0;
         mThermalProfile = 0;
         mPackageName = "";
@@ -255,13 +322,17 @@ public class AppProfile {
         mSystemApp = false;
         mImportantApp = false;
         mAllowWhileIdle = false;
+        mHideIdle = false;
+        mInstaller = 0;
+        mScaleFactor = 0;
     }
 
-    public AppProfile(@Nullable String packageName) {
+    public AppProfile(@Nullable String packageName, int uid) {
 
         if( packageName == null ) mPackageName = "";
         else mPackageName = packageName;
 
+        mUid = uid;
         mPerfProfile = 0;
         mThermalProfile = 0;
         mMaxFrameRate = 0;
@@ -287,55 +358,164 @@ public class AppProfile {
         mSystemApp = false;
         mImportantApp = false;
         mAllowWhileIdle = false;
+        mHideIdle = false;
+        mInstaller = 0;
+        mScaleFactor = 0;
     }
 
     public AppProfile(@Nullable AppProfile profile) {
         update(profile);
     }
 
-    public int getBackgroundMode() {
 
-        if( mBackgroundMode < 0 ) return mBackgroundMode;
+    public void setCurAdj(int adj) {
+        mCurAdj = adj;
+    }
+
+    public int getCurAdj() {
+        return mCurAdj;
+    }
+
+
+    public int getBackgroundMode() {
+        return getBackgroundMode(true);
+    }
+
+    public int getBackgroundMode(boolean disableOnPowerSaver) {
+        if( !DEBUG ) return getBackgroundModeInternal(disableOnPowerSaver);
+        int result = getBackgroundModeInternal(disableOnPowerSaver);
+        if( result > 0 ) {
+            if( mDebug ) {
+                Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid + " result=" + result, new Throwable());
+            } else {
+                Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid + " result=" + result);
+            }
+        }
+        return result;
+    }
+
+    public int getBackgroundModeInternal(boolean disableOnPowerSaver) {
+
+        if( (isInvalidated ||
+            !mIsInitialized) &&
+            mPackageName != null &&
+            (  mPackageName.startsWith("com.google.android.gms") 
+            || mPackageName.startsWith("com.huawei.hms") 
+            || mPackageName.startsWith("com.huawei.hwid")
+            && ! ( mPackageName.contains("auto_generated_rro_") ) ) ) {
+            mSystemWhitelisted = true;
+            mImportantApp = true;
+            //mAllowWhileIdle = true;
+            mAllowIdleNetwork = true;
+            mIsInitialized = true;
+        }
+
+        if( TRACE && mDebug ) Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid, new Throwable());
 
         if( mSystemWhitelisted ) {
-            if( mBackgroundMode >= 0 ) return -1;
+            if( mBackgroundMode >= 0 ) { 
+                if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(1) mSystemWhitelisted:-1");
+                return -1;
+            }
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(2) mSystemWhitelisted:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
+        if( sTopUid == mUid ) {
+            int mode = mBackgroundMode > 0 ? 0 : mBackgroundMode;
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(0) mTopUid:" + mode);
+            return mode;
+        }
+
         if( mSystemApp ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(3) mSystemApp:" + mBackgroundMode);
+            return mBackgroundMode;
+        }
+
+        if( mBackgroundMode < 0 ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(4) mWhitelisted:" + mBackgroundMode);
+            return mBackgroundMode;
+        }
+
+        if( sHomeUid == mUid ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(5) mHomeUid:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mImportantApp ) {
-            if( mBackgroundMode > 0 ) return 0;
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(6) mImportantApp:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mAllowWhileIdle ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(7) mAllowWhileIdle:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mStamina ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(8) mStamina:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
-        // make it a bit more complex
-        if( mStaminaActive && mBackgroundMode >= 0 && !mStamina ) return 2;
-        if( mPowerMode == 4 && mBackgroundMode == 0 ) return 2;
-        if( mPowerMode == 3 && mBackgroundMode == 0 ) {
-            if( !mScreenOn ) return 2;
-            else return 1;
+        if( mBackgroundMode > 1 )  {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9) mBackgroundMode:" + mBackgroundMode);
+            return mBackgroundMode;
         }
 
+        if( mCurAdj < 500 )  {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9.1) mCurAdj:" + mBackgroundMode);
+            return mBackgroundMode;
+        }
+
+        if( mBackgroundMode > 0 && !sScreenOn )  {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(10) mBackgroundMode:2");
+            return 2;
+        }
+
+        // make it a bit more complex
+        if( sStaminaActive && mBackgroundMode >= 0 && !mStamina ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(11) stamina:2");
+            return 2;
+        }
+
+        if( !sAutoLimit || disableOnPowerSaver ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(12.1) no limit:" + mBackgroundMode);
+            return mBackgroundMode;
+        }
+
+        if( sPowerMode >= 4 && mBackgroundMode >= 0 ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(12.2) extreme:2");
+            return 2;
+        }
+        
+        if( sPowerMode >= 3 && mBackgroundMode >= 0 ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(12.3) aggressive:2");
+            return 2;
+        }
+
+        if( sPowerMode >= 2 && mBackgroundMode >= 0 ) {
+            if( !sScreenOn ) {
+                if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(13) moderate/screenoff:2");
+                return 2;
+            }
+        }
+
+        if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) default:" + mBackgroundMode);
         return mBackgroundMode;
     }
 
     public boolean getStamina() {
+        //if( VERBOSE || mDebug ) Slog.d(TAG, "AppProfile getStamina " + mPackageName + "/" + mUid + ":" + (mStamina || mImportantApp || mSystemWhitelisted));
         return mStamina || mImportantApp || mSystemWhitelisted;
     }
 
     public boolean isHeavy() {
+        //if( VERBOSE || mDebug ) Slog.d(TAG, "AppProfile isHeavy " + mPackageName + "/" + mUid + ":" + (mHeavyCPU | mHeavyMemory));
         return mHeavyCPU | mHeavyMemory;
+    }
+
+    public boolean isHome() {
+        return sHomeUid == mUid;
     }
 
     public boolean isDefault() {
@@ -375,12 +555,14 @@ public class AppProfile {
             !mDebug &&
             !mHeavyMemory &&
             !mHeavyCPU &&
-            !mSystemWhitelisted &&
             !mBlockOverlays &&
             !mHideHMS &&
             !mHideGMS &&
             !mHide3P &&
             !mAllowWhileIdle &&
+            !mHideIdle &&
+            mInstaller == 0 &&
+            mScaleFactor == 0 &&
             mPerfProfile == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -393,6 +575,7 @@ public class AppProfile {
         }
 
         this.mPackageName = profile.mPackageName;
+        this.mUid = profile.mUid;
         this.mBrightness = profile.mBrightness;
         this.mReader = profile.mReader;
         this.mPinned = profile.mPinned;
@@ -440,7 +623,10 @@ public class AppProfile {
         this.mSystemApp = profile.mSystemApp;
         this.mImportantApp = profile.mImportantApp;
         this.mAllowWhileIdle = profile.mAllowWhileIdle;
-
+        this.mHideIdle = profile.mHideIdle;
+        this.mInstaller = profile.mInstaller;
+        this.mScaleFactor = profile.mScaleFactor;
+        if( TRACE || mDebug ) Slog.d(TAG, "AppProfile updated :" + profile.serialize());
     }
 
 
@@ -485,12 +671,15 @@ public class AppProfile {
         if( mDisableFreezer ) result +=  "," + "dfr=" + mDisableFreezer;
         if( mHeavyMemory ) result +=  "," + "hm=" + mHeavyMemory;
         if( mHeavyCPU ) result +=  "," + "hc=" + mHeavyCPU;
-        if( mSystemWhitelisted ) result +=  "," + "sw=" + mSystemWhitelisted;
         if( mBlockOverlays ) result +=  "," + "bo=" + mBlockOverlays;
         if( mHideHMS ) result +=  "," + "hhms=" + mHideHMS;
         if( mHideGMS ) result +=  "," + "hgms=" + mHideGMS;
         if( mHide3P ) result +=  "," + "h3p=" + mHide3P;
         if( mAllowWhileIdle ) result +=  "," + "aidl=" + mAllowWhileIdle;
+        if( mHideIdle ) result +=  "," + "hidl=" + mHideIdle;
+        if( mInstaller != 0 ) result +=  "," + "ins=" + mInstaller;
+        if( mScaleFactor != 0 ) result +=  "," + "dsf=" + mScaleFactor;
+
         return result;
     }
 
@@ -544,7 +733,6 @@ public class AppProfile {
             mDisableFreezer = parser.getBoolean("dfr",false);
             mHeavyMemory = parser.getBoolean("hm",false);
             mHeavyCPU = parser.getBoolean("hc",false);
-            mSystemWhitelisted = parser.getBoolean("sw",false);
             mDoNotClose = parser.getBoolean("dnc",false);
             mReader = parser.getInt("rm",0);
             mBlockOverlays = parser.getBoolean("bo",false);
@@ -552,6 +740,9 @@ public class AppProfile {
             mHideGMS = parser.getBoolean("hgms",false);
             mHide3P = parser.getBoolean("h3p",false);
             mAllowWhileIdle = parser.getBoolean("aidl",false);
+            mHideIdle = parser.getBoolean("hidl",false);
+            mInstaller = parser.getInt("ins",0);
+            mScaleFactor = parser.getInt("dsf",0);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
@@ -569,10 +760,10 @@ public class AppProfile {
         }
     }
 
-    public static @Nullable AppProfile get(@Nullable AppProfile profile) {
+    /*public static @Nullable AppProfile get(@Nullable AppProfile profile) {
         if( profile != null ) return profile;
-        return mDefaultProfile;
-    }
+        return sDefaultProfile;
+    }*/
 
     public String toString() {
         return this.serialize();

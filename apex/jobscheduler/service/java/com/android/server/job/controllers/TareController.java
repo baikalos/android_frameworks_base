@@ -38,6 +38,8 @@ import com.android.server.tare.EconomyManagerInternal;
 import com.android.server.tare.EconomyManagerInternal.ActionBill;
 import com.android.server.tare.JobSchedulerEconomicPolicy;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -49,8 +51,8 @@ import java.util.function.Predicate;
  */
 public class TareController extends StateController {
     private static final String TAG = "JobScheduler.TARE";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     /**
      * Bill to use while we're waiting to start a min priority job. If a job isn't running yet,
@@ -245,7 +247,7 @@ public class TareController extends StateController {
     private final EconomyManagerInternal.AffordabilityChangeListener mAffordabilityChangeListener =
             (userId, pkgName, bill, canAfford) -> {
                 final long nowElapsed = sElapsedRealtimeClock.millis();
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG,
                             userId + ":" + pkgName + " affordability for " + getBillName(bill)
                                     + " changed to " + canAfford);
@@ -341,7 +343,7 @@ public class TareController extends StateController {
 
         final int uid = jobStatus.getSourceUid();
         if (mService.getUidBias(uid) == JobInfo.BIAS_TOP_APP) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, jobStatus.toShortString() + " is top started job");
             }
             mTopStartedJobs.add(jobStatus);

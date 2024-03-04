@@ -18,6 +18,7 @@ package com.android.server.am;
 
 import android.Manifest;
 import android.app.ActivityManager;
+import android.baikalos.AppProfile;
 import android.content.pm.PackageManager;
 import android.os.SystemClock;
 import android.os.UserHandle;
@@ -82,6 +83,9 @@ public final class UidRecord {
 
     @CompositeRWLock({"mService", "mProcLock"})
     private ArraySet<ProcessRecord> mProcRecords = new ArraySet<>();
+
+    @CompositeRWLock({"mService", "mProcLock"})
+    private AppProfile mAppProfile;
 
     /**
      * Sequence number associated with the {@link #mCurProcState}. This is incremented using
@@ -151,11 +155,12 @@ public final class UidRecord {
     @GuardedBy("mService")
     private int mLastReportedChange;
 
-    public UidRecord(int uid, ActivityManagerService service) {
+    public UidRecord(int uid, AppProfile appProfile, ActivityManagerService service) {
         mUid = uid;
         mService = service;
         mProcLock = service != null ? service.mProcLock : null;
         mIdle = true;
+        mAppProfile = appProfile;
         reset();
     }
 
@@ -291,6 +296,11 @@ public final class UidRecord {
     @GuardedBy(anyOf = {"mService", "mProcLock"})
     int getNumOfProcs() {
         return mProcRecords.size();
+    }
+
+    @GuardedBy(anyOf = {"mService", "mProcLock"})
+    AppProfile getAppProfile() {
+        return mAppProfile;
     }
 
     @GuardedBy(anyOf = {"mService", "mProcLock"})

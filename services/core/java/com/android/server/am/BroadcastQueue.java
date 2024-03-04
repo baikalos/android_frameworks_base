@@ -73,6 +73,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.PowerExemptionManager.ReasonCode;
 import android.os.PowerExemptionManager.TempAllowListType;
+import android.os.PowerManager;
 import android.os.PowerManagerInternal;
 import android.os.Process;
 import android.os.RemoteException;
@@ -949,7 +950,7 @@ public final class BroadcastQueue {
 
         if (!skip && filter.receiverList.app != null && filter.receiverList.app.processName.endsWith(":Metrica") ) {
             if( "background".equals(mQueueName) && 
-                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid) ) { 
+                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid,filter.packageName) ) { 
                 Slog.w(TAG, "Metrica App Denial: receiving "
                     + r.intent.toString()
                     + " to " + filter.receiverList.app
@@ -961,9 +962,12 @@ public final class BroadcastQueue {
             }
         }
 
-        if (!skip && filter.receiverList.app != null && filter.receiverList.app.mAppProfile.getBackgroundMode() > 0 ) {
+        AppProfile appProfile = AppProfileSettings.getInstance() == null ? new AppProfile(filter.packageName, filter.receiverList.uid) : AppProfileSettings.getInstance().getProfileLocked(filter.packageName);
+        if( appProfile == null ) appProfile = new AppProfile(filter.packageName, filter.receiverList.uid);
+
+        if (!skip && filter.receiverList.app != null && appProfile.getBackgroundMode() > 0 ) {
             if( "background".equals(mQueueName) &&
-                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid) ) { 
+                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid,filter.packageName) ) { 
                 Slog.w(TAG, "Restricted App Denial: receiving "
                     + r.intent.toString()
                     + " to " + filter.receiverList.app
@@ -1009,6 +1013,8 @@ public final class BroadcastQueue {
                 r.curApp = filter.receiverList.app;
                 filter.receiverList.app.mReceivers.addCurReceiver(r);
                 mService.enqueueOomAdjTargetLocked(r.curApp);
+                mService.mOomAdjuster.mCachedAppOptimizer.unfreezeTemporarily(filter.receiverList.app,
+                    OOM_ADJ_REASON_START_RECEIVER);
                 mService.updateOomAdjPendingTargetsLocked(
                         OOM_ADJ_REASON_START_RECEIVER);
             }
@@ -1029,7 +1035,7 @@ public final class BroadcastQueue {
             } else {
                 r.receiverTime = SystemClock.uptimeMillis();
                 maybeAddAllowBackgroundActivityStartsToken(filter.receiverList.app, r);
-                maybeScheduleTempAllowlistLocked(filter.owningUid, r, r.options);
+                maybeScheduleTempAllowlistLocked(filter.owningUid, r, r.options, filter.receiverList.app.mAppProfile);
                 maybeReportBroadcastDispatchedEventLocked(r, filter.owningUid);
                 performReceiveLocked(filter.receiverList.app, filter.receiverList.receiver,
                         new Intent(r.intent), r.resultCode, r.resultData,
@@ -1117,13 +1123,20 @@ public final class BroadcastQueue {
         return false;
     }
 
-    void maybeScheduleTempAllowlistLocked(int uid, BroadcastRecord r,
-            @Nullable BroadcastOptions brOptions) {
+    boolean maybeScheduleTempAllowlistLocked(int uid, BroadcastRecord r,
+            @Nullable BroadcastOptions brOptions,@Nullable AppProfile appProfile) {
 
         long baikalDuration = BaikalSystemService.getTemporaryAppWhitelistDuration(uid, r.intent.getPackage(), r.intent.getAction()); 
 
+        if( baikalDuration <= 0 && r.intent.getPackage() != null ) {
+            if( appProfile != null && appProfile.mAllowWhileIdle )  {
+            Slog.i(TAG,"maybeScheduleTempAllowlistLocked: allow while idle " + appProfile.mPackageName + "/" + uid);
+                baikalDuration = 10000;
+            }
+        }
+
         if (baikalDuration <= 0 && (brOptions == null || brOptions.getTemporaryAppAllowlistDuration() <= 0)) {
-            return;
+            return false;
         }
         long brDuration = brOptions == null ? 0 : brOptions.getTemporaryAppAllowlistDuration();
         long duration = baikalDuration >= brDuration ? baikalDuration : brDuration;
@@ -1166,6 +1179,8 @@ public final class BroadcastQueue {
         }
         mService.tempAllowlistUidLocked(uid, duration, reasonCode, b.toString(), type,
                 r.callingUid);
+
+        return true;
     }
 
     /**
@@ -1605,7 +1620,7 @@ public final class BroadcastQueue {
         if (isBootCompletedIntent(r.intent) &&
                 mService.shouldSkipBootCompletedBroadcastForPackage(
                         info.activityInfo.applicationInfo)) {
-            Slog.i(TAG, "Boot broadcast skipped because of strict standby for "
+            Slog.i(TAG, "Skipping delivery: Boot broadcast skipped because of strict standby for "
                     + info.activityInfo.applicationInfo.packageName);
             skip = true;
         }
@@ -1614,7 +1629,7 @@ public final class BroadcastQueue {
                         < brOptions.getMinManifestReceiverApiLevel() ||
                 info.activityInfo.applicationInfo.targetSdkVersion
                         > brOptions.getMaxManifestReceiverApiLevel())) {
-            Slog.w(TAG, "Target SDK mismatch: receiver " + info.activityInfo
+            Slog.w(TAG, "Skipping delivery: Target SDK mismatch: receiver " + info.activityInfo
                     + " targets " + info.activityInfo.applicationInfo.targetSdkVersion
                     + " but delivery restricted to ["
                     + brOptions.getMinManifestReceiverApiLevel() + ", "
@@ -1624,14 +1639,14 @@ public final class BroadcastQueue {
         }
         if (brOptions != null &&
                 !brOptions.testRequireCompatChange(info.activityInfo.applicationInfo.uid)) {
-            Slog.w(TAG, "Compat change filtered: broadcasting " + broadcastDescription(r, component)
+            Slog.w(TAG, "Skipping delivery: Compat change filtered: broadcasting " + broadcastDescription(r, component)
                     + " to uid " + info.activityInfo.applicationInfo.uid + " due to compat change "
                     + r.options.getRequireCompatChangeId());
             skip = true;
         }
         if (!skip && !mService.validateAssociationAllowedLocked(r.callerPackage, r.callingUid,
                 component.getPackageName(), info.activityInfo.applicationInfo.uid)) {
-            Slog.w(TAG, "Association not allowed: broadcasting "
+            Slog.w(TAG, "Skipping delivery: Association not allowed: broadcasting "
                     + broadcastDescription(r, component));
             skip = true;
         }
@@ -1639,7 +1654,7 @@ public final class BroadcastQueue {
             skip = !mService.mIntentFirewall.checkBroadcast(r.intent, r.callingUid,
                     r.callingPid, r.resolvedType, info.activityInfo.applicationInfo.uid);
             if (skip) {
-                Slog.w(TAG, "Firewall blocked: broadcasting "
+                Slog.w(TAG, "Skipping delivery: Firewall blocked: broadcasting "
                         + broadcastDescription(r, component));
             }
         }
@@ -1647,23 +1662,25 @@ public final class BroadcastQueue {
                 r.callingPid, r.callingUid, info.activityInfo.applicationInfo.uid,
                 info.activityInfo.exported);
         if (!skip && perm != PackageManager.PERMISSION_GRANTED) {
-            if (!info.activityInfo.exported) {
-                Slog.w(TAG, "Permission Denial: broadcasting "
-                        + broadcastDescription(r, component)
-                        + " is not exported from uid " + info.activityInfo.applicationInfo.uid);
-            } else {
-                Slog.w(TAG, "Permission Denial: broadcasting "
-                        + broadcastDescription(r, component)
-                        + " requires " + info.activityInfo.permission);
+            if( r.intent.getAction() == null || !r.intent.getAction().startsWith("com.pushserver.android")) {
+                if (!info.activityInfo.exported) {
+                    Slog.w(TAG, "Skipping delivery: Permission Denial: broadcasting "
+                            + broadcastDescription(r, component)
+                            + " is not exported from uid " + info.activityInfo.applicationInfo.uid);
+                } else {
+                    Slog.w(TAG, "Skipping delivery: Permission Denial: broadcasting "
+                            + broadcastDescription(r, component)
+                            + " requires " + info.activityInfo.permission);
+                }
+                skip = true;
             }
-            skip = true;
         } else if (!skip && info.activityInfo.permission != null) {
             final int opCode = AppOpsManager.permissionToOpCode(info.activityInfo.permission);
             if (opCode != AppOpsManager.OP_NONE && mService.getAppOpsManager().noteOpNoThrow(opCode,
                     r.callingUid, r.callerPackage, r.callerFeatureId,
                     "Broadcast delivered to " + info.activityInfo.name)
                     != AppOpsManager.MODE_ALLOWED) {
-                Slog.w(TAG, "Appop Denial: broadcasting "
+                Slog.w(TAG, "Skipping delivery: Appop Denial: broadcasting "
                         + broadcastDescription(r, component)
                         + " requires appop " + AppOpsManager.permissionToOp(
                                 info.activityInfo.permission));
@@ -1685,7 +1702,7 @@ public final class BroadcastQueue {
                     android.Manifest.permission.INTERACT_ACROSS_USERS,
                     info.activityInfo.applicationInfo.uid)
                             != PackageManager.PERMISSION_GRANTED) {
-                Slog.w(TAG, "Permission Denial: Receiver " + component.flattenToShortString()
+                Slog.w(TAG, "Skipping delivery: Permission Denial: Receiver " + component.flattenToShortString()
                         + " requests FLAG_SINGLE_USER, but app does not hold "
                         + android.Manifest.permission.INTERACT_ACROSS_USERS);
                 skip = true;
@@ -1693,7 +1710,7 @@ public final class BroadcastQueue {
         }
         if (!skip && info.activityInfo.applicationInfo.isInstantApp()
                 && r.callingUid != info.activityInfo.applicationInfo.uid) {
-            Slog.w(TAG, "Instant App Denial: receiving "
+            Slog.w(TAG, "Skipping delivery: Instant App Denial: receiving "
                     + r.intent
                     + " to " + component.flattenToShortString()
                     + " due to sender " + r.callerPackage
@@ -1704,7 +1721,7 @@ public final class BroadcastQueue {
         if (!skip && r.callerInstantApp
                 && (info.activityInfo.flags & ActivityInfo.FLAG_VISIBLE_TO_INSTANT_APP) == 0
                 && r.callingUid != info.activityInfo.applicationInfo.uid) {
-            Slog.w(TAG, "Instant App Denial: receiving "
+            Slog.w(TAG, "Skipping delivery: Instant App Denial: receiving "
                     + r.intent
                     + " to " + component.flattenToShortString()
                     + " requires receiver have visibleToInstantApps set"
@@ -1714,7 +1731,7 @@ public final class BroadcastQueue {
         }
         if (r.curApp != null && r.curApp.mErrorState.isCrashing()) {
             // If the target process is crashing, just skip it.
-            Slog.w(TAG, "Skipping deliver ordered [" + mQueueName + "] " + r
+            Slog.w(TAG, "Skipping delivery: ordered [" + mQueueName + "] " + r
                     + " to " + r.curApp + ": process crashing");
             skip = true;
         }
@@ -1726,8 +1743,9 @@ public final class BroadcastQueue {
                         UserHandle.getUserId(info.activityInfo.applicationInfo.uid));
             } catch (Exception e) {
                 // all such failures mean we skip this receiver
-                Slog.w(TAG, "Exception getting recipient info for "
+                Slog.w(TAG, "Skipping delivery: Exception getting recipient info for "
                         + info.activityInfo.packageName, e);
+                skip = true;
             }
             if (!isAvailable) {
                 Slog.w(TAG_BROADCAST,
@@ -1767,23 +1785,28 @@ public final class BroadcastQueue {
 
         boolean background = mQueueName.equals("background") || mQueueName.equals("offload_bg");
 
-        AppProfile appProfile = null;
-       
-        if( app != null ) appProfile = app.mAppProfile;
-        else appProfile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
-
-        if( appProfile == null ) appProfile = new AppProfile(info.activityInfo.packageName);
-
+        AppProfile appProfile = AppProfileSettings.getInstance() == null ? new AppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid) : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+        if( appProfile == null ) appProfile = new AppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid);
 
         if( Intent.ACTION_BOOT_COMPLETED.equals(r.intent.getAction()) || 
             Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(r.intent.getAction()) ||
             Intent.ACTION_MEDIA_MOUNTED.equals(r.intent.getAction()) ||
             Intent.ACTION_PRE_BOOT_COMPLETED.equals(r.intent.getAction()) )  {
-            if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) {
-                Slog.i(TAG,"Autostart disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
+            if( !(appProfile.getBackgroundMode() < 0) && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
+                Slog.i(TAG,"Skipping delivery: Autostart disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
                 skip = true;
             }
         }
+
+        if( !skip &&
+            (PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED.equals(r.intent.getAction()) ||
+            PowerManager.ACTION_LIGHT_DEVICE_IDLE_MODE_CHANGED.equals(r.intent.getAction())) ) {
+            if( appProfile.mHideIdle ) {
+                Slog.i(TAG,"Skipping delivery: Idle mode status broadcast disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
+                skip = true;
+            }
+        }
+
 
         boolean callerBackground = background; // false;
 
@@ -1801,8 +1824,8 @@ public final class BroadcastQueue {
         }
 
         //if( r.callerApp != null ) {
-            if( mService.mAppProfileManager.isTopAppUid(r.callingUid) || 
-                mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid) ) {
+            if( mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) || 
+                mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid,info.activityInfo.applicationInfo.packageName) ) {
                 callerBackground = false;
             }
         //}
@@ -1833,13 +1856,13 @@ public final class BroadcastQueue {
         if( !skip && callerBackground ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
                 if( appProfile.getBackgroundMode() > 1 ) {
-                    Slog.w(TAG, "Background execution limited by baikalos: "
+                    Slog.w(TAG, "Skipping delivery: Background execution disabled by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -1852,13 +1875,13 @@ public final class BroadcastQueue {
                 }
             } else {
                 if( appProfile.getBackgroundMode() > 0 ) {
-                    Slog.w(TAG, "Background execution disabled by baikalos: "
+                    Slog.w(TAG, "Skipping delivery: Background execution limited by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -1872,20 +1895,20 @@ public final class BroadcastQueue {
             }
         }
 
-        if( !skip && appProfile.getBackgroundMode() > 0 ) {
+        if( !skip && callerBackground && appProfile.getBackgroundMode() > 0 ) {
             if( "io.chaldeaprjkt.gamespace".equals(appProfile.mPackageName) ) {
 
                     if( appProfile.getBackgroundMode() > 1 || 
                         (appProfile.getBackgroundMode() > 0 && 
                         mService.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE) ) {
 
-                        Slog.w(TAG, "Background execution of gamespace disabled by baikalos: "
+                        Slog.w(TAG, "Skipping delivery: Background execution of gamespace disabled by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -1898,14 +1921,13 @@ public final class BroadcastQueue {
                     skip = true;
                 }
             } else {
-        
-                Slog.w(TAG, "Background execution enabled for restricted app: "
+                Slog.w(TAG, "Skipping delivery: Background execution enabled for restricted app: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid) 
+                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -1927,19 +1949,21 @@ public final class BroadcastQueue {
                 // to it and the app is in a state that should not receive it
                 // (depending on how getAppStartModeLOSP has determined that).
                 if (allowed == ActivityManager.APP_START_MODE_DISABLED) {
-                    Slog.w(TAG, "Background execution disabled: receiving "
+                    Slog.w(TAG, "Skipping delivery: Background execution disabled: receiving "
                             + r.intent + " to "
                             + component.flattenToShortString());
                     skip = true;
-                } else if (((r.intent.getFlags()&Intent.FLAG_RECEIVER_EXCLUDE_BACKGROUND) != 0)
+                } else if ((((r.intent.getFlags()&Intent.FLAG_RECEIVER_EXCLUDE_BACKGROUND) != 0) 
+                        || (appProfile.getBackgroundMode() > 0) ) 
                         || (r.intent.getComponent() == null
                             && r.intent.getPackage() == null
                             && ((r.intent.getFlags()
                                     & Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND) == 0)
-                            && !isSignaturePerm(r.requiredPermissions))) {
+                            && !isSignaturePerm(r.requiredPermissions)
+                            && !appProfile.mAllowWhileIdle)) {
                     mService.addBackgroundCheckViolationLocked(r.intent.getAction(),
                             component.getPackageName());
-                    Slog.w(TAG, "Background execution not allowed: receiving "
+                    Slog.w(TAG, "Skipping delivery: Background execution not allowed: receiving "
                             + r.intent + " to "
                             + component.flattenToShortString());
                     skip = true;
@@ -2021,7 +2045,7 @@ public final class BroadcastQueue {
                     perm = PackageManager.PERMISSION_DENIED;
                 }
                 if (perm != PackageManager.PERMISSION_GRANTED) {
-                    Slog.w(TAG, "Permission Denial: receiving "
+                    Slog.w(TAG, "Skipping delivery: Permission Denial: receiving "
                             + r.intent + " to "
                             + component.flattenToShortString()
                             + " requires " + requiredPermission
@@ -2045,8 +2069,30 @@ public final class BroadcastQueue {
             }
         }
 
+        if (!skip && /*callerBackground &&*/ (app == null || app.getThread() == null || app.isKilled()) && !(appProfile.getBackgroundMode() < 0) ) {
+            if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) {
+                Slog.w(TAG, "Skipping delivery for not running and autostart disabled package "
+                    + "appProfile=" + appProfile.toString() 
+                    + ", mQueueName=" + mQueueName
+                    + ", background=" + background
+                    + ", callerBackground=" + callerBackground
+                    + ", callingUid=" + r.callingUid
+                    + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                    + ", Wakefulness=" + mService.mWakefulness.get()
+                    + ", callerApp=" + r.callerApp
+                    + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                    + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                    + " receiving " 
+                    + r.intent + " to "
+                    + component.flattenToShortString()
+                    );
+
+                skip = true;
+            }
+        }
+
         if (skip) {
-            if (DEBUG_BROADCAST)  Slog.v(TAG_BROADCAST,
+            if (/*DEBUG_BROADCAST*/ true)  Slog.v(TAG_BROADCAST,
                     "Skipping delivery of ordered [" + mQueueName + "] "
                     + r + " for reason described above");
             r.delivery[recIdx] = BroadcastRecord.DELIVERY_SKIPPED;
@@ -2071,10 +2117,7 @@ public final class BroadcastQueue {
 
         long baikalDuration = BaikalSystemService.getTemporaryAppWhitelistDuration(receiverUid, r.intent.getPackage(), r.intent.getAction()); 
 
-        boolean isActivityCapable =
-                (baikalDuration > 0 || (brOptions != null && brOptions.getTemporaryAppAllowlistDuration() > 0));
-
-        maybeScheduleTempAllowlistLocked(receiverUid, r, brOptions);
+        boolean isActivityCapable = maybeScheduleTempAllowlistLocked(receiverUid, r, brOptions, appProfile);
 
         // Report that a component is used for explicit broadcasts.
         if (r.intent.getComponent() != null && r.curComponent != null

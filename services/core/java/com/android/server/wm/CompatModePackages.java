@@ -48,6 +48,8 @@ import android.util.Xml;
 
 import com.android.internal.protolog.common.ProtoLog;
 
+import com.android.server.baikalos.BaikalSpooferService;
+
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -386,6 +388,12 @@ public final class CompatModePackages {
 
     private int getPackageFlags(String packageName) {
         Integer flags = mPackages.get(packageName);
+        int baikalDownScale = BaikalSpooferService.getScalingFactor(packageName,-1);
+        if( baikalDownScale != 0 ) {
+            Slog.w(TAG, "getPackageFlags: force COMPAT_FLAG_ENABLED for package " + packageName, new Throwable());
+            if( flags == null ) return COMPAT_FLAG_DONT_ASK & COMPAT_FLAG_ENABLED;
+            flags |= COMPAT_FLAG_DONT_ASK & COMPAT_FLAG_ENABLED;
+        }
         return flags != null ? flags : 0;
     }
 
@@ -437,14 +445,27 @@ public final class CompatModePackages {
     }
 
     public CompatibilityInfo compatibilityInfoForPackageLocked(ApplicationInfo ai) {
-        final boolean forceCompat = getPackageCompatModeEnabledLocked(ai);
+        boolean forceCompat = getPackageCompatModeEnabledLocked(ai);
         final float compatScale = getCompatScale(ai.packageName, ai.uid);
         final Configuration config = mService.getGlobalConfiguration();
-        return new CompatibilityInfo(ai, config.screenLayout, config.smallestScreenWidthDp,
+        int screenLayout = config.screenLayout;
+        if( compatScale > 1f || compatScale < 1f ) {
+            Slog.w(TAG, "computeCompatModeLocked: forceCompat package " + ai.packageName);
+            forceCompat = true;
+            screenLayout |= Configuration.SCREENLAYOUT_COMPAT_NEEDED;
+        }
+        return new CompatibilityInfo(ai, screenLayout, config.smallestScreenWidthDp,
                 forceCompat, compatScale);
     }
 
     float getCompatScale(String packageName, int uid) {
+
+        int baikalDownScale = BaikalSpooferService.getScalingFactor(packageName,uid);
+        if( baikalDownScale != 0 ) {
+            Slog.w(TAG, "getCompatScale: baikalDownScale=" + baikalDownScale + ", " + ((float) baikalDownScale) / 100f);
+            return ((float) baikalDownScale) / 100f;
+        }
+
         final UserHandle userHandle = UserHandle.getUserHandleForUid(uid);
         final boolean isDownscaledEnabled = CompatChanges.isChangeEnabled(
                 DOWNSCALED, packageName, userHandle);
@@ -518,9 +539,11 @@ public final class CompatModePackages {
     public int computeCompatModeLocked(ApplicationInfo ai) {
         final CompatibilityInfo info = compatibilityInfoForPackageLocked(ai);
         if (info.alwaysSupportsScreen()) {
+            Slog.w(TAG, "computeCompatModeLocked: COMPAT_MODE_NEVER package " + ai.packageName);
             return ActivityManager.COMPAT_MODE_NEVER;
         }
         if (info.neverSupportsScreen()) {
+            Slog.w(TAG, "computeCompatModeLocked: COMPAT_MODE_ALWAYS package " + ai.packageName);
             return ActivityManager.COMPAT_MODE_ALWAYS;
         }
         return getPackageCompatModeEnabledLocked(ai) ? ActivityManager.COMPAT_MODE_ENABLED
@@ -585,13 +608,16 @@ public final class CompatModePackages {
         boolean enable;
         switch (mode) {
             case ActivityManager.COMPAT_MODE_DISABLED:
+                Slog.w(TAG, "setPackageScreenCompatModeLocked: disabled " + packageName);
                 enable = false;
                 break;
             case ActivityManager.COMPAT_MODE_ENABLED:
+                Slog.w(TAG, "setPackageScreenCompatModeLocked: enabled " + packageName);
                 enable = true;
                 break;
             case ActivityManager.COMPAT_MODE_TOGGLE:
                 enable = (curFlags&COMPAT_FLAG_ENABLED) == 0;
+                Slog.w(TAG, "setPackageScreenCompatModeLocked: toggle " + packageName);
                 break;
             default:
                 Slog.w(TAG, "Unknown screen compat mode req #" + mode + "; ignoring");

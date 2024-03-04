@@ -515,7 +515,7 @@ class ProcessRecord implements WindowProcessListener {
         AppProfileSettings appSettings = AppProfileSettings.getInstance();
         if( appSettings != null ) { 
             mAppProfile = appSettings.getProfile(_info.packageName);
-            if( mAppProfile == null ) mAppProfile = new AppProfile(_info.packageName);
+            if( mAppProfile == null ) mAppProfile = new AppProfile(_info.packageName, _uid);
             Slog.d(TAG,"Baikal.AppProfile: Loaded ProcessRecord AppProfile:" + mAppProfile.toString());
             if( mAppProfile.mBackgroundMode > 0 ) {
                 Slog.d(TAG,"Baikal.AppProfile: Started ProcessRecord for background restricted app for:" + mAppProfile.toString(), new Throwable());
@@ -524,7 +524,7 @@ class ProcessRecord implements WindowProcessListener {
             } 
         } else {
             Slog.w(TAG,"Baikal.AppProfile: Not ready for package:" + _info.packageName);
-            mAppProfile = new AppProfile(_info.packageName);
+            mAppProfile = new AppProfile(_info.packageName, _uid);
         }
 
         ProcessInfo procInfo = null;
@@ -1412,5 +1412,9 @@ class ProcessRecord implements WindowProcessListener {
     @VisibleForTesting
     List<ProcessRecord> getLruProcessList() {
         return mService.mProcessList.getLruProcessesLOSP();
+    }
+
+    public boolean isBackgroundRestricted() {
+        return mAppProfile.getBackgroundMode(true) > 0;
     }
 }

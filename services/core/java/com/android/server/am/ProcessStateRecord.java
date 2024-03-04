@@ -577,7 +577,6 @@ final class ProcessStateRecord {
     @GuardedBy({"mService", "mProcLock"})
     void setCurrentProcSchedGroup(int curProcSchedGroup) {
         mCurProcSchedGroup = curProcSchedGroup;
-        //mApp.getWindowProcessController().setCurrentSchedulingGroup(curSchedGroup);
     }
 
     @GuardedBy(anyOf = {"mService", "mProcLock"})

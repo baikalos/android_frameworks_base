@@ -129,7 +129,8 @@ public class NetworkManagementService extends INetworkManagementService.Stub {
     }
 
     private static final String TAG = "NetworkManagement";
-    private static final boolean DBG = false;
+    public static boolean DBG = false;
+    public static boolean DBGB = true;
 
     private static final int MAX_UID_RANGES_PER_COMMAND = 10;
 
@@ -1757,36 +1758,36 @@ public class NetworkManagementService extends INetworkManagementService.Stub {
         synchronized (mRulesLock) {
             if (getFirewallChainState(FIREWALL_CHAIN_STANDBY)
                     && mUidFirewallStandbyRules.get(uid) == FIREWALL_RULE_DENY) {
-                if (DBG) Slog.d(TAG, "Uid " + uid + " restricted because of app standby mode");
+                if (DBGB) Slog.d(TAG, "Uid " + uid + " restricted because of app standby mode");
                 return true;
             }
             if (getFirewallChainState(FIREWALL_CHAIN_DOZABLE)
                     && mUidFirewallDozableRules.get(uid) != FIREWALL_RULE_ALLOW) {
-                if (DBG) Slog.d(TAG, "Uid " + uid + " restricted because of device idle mode");
+                if (DBGB) Slog.d(TAG, "Uid " + uid + " restricted because of device idle mode");
                 return true;
             }
             if (getFirewallChainState(FIREWALL_CHAIN_POWERSAVE)
                     && mUidFirewallPowerSaveRules.get(uid) != FIREWALL_RULE_ALLOW) {
-                if (DBG) Slog.d(TAG, "Uid " + uid + " restricted because of power saver mode");
+                if (DBGB) Slog.d(TAG, "Uid " + uid + " restricted because of power saver mode");
                 return true;
             }
             if (getFirewallChainState(FIREWALL_CHAIN_RESTRICTED)
                     && mUidFirewallRestrictedRules.get(uid) != FIREWALL_RULE_ALLOW) {
-                if (DBG) Slog.d(TAG, "Uid " + uid + " restricted because of restricted mode");
+                if (DBGB) Slog.d(TAG, "Uid " + uid + " restricted because of restricted mode");
                 return true;
             }
             if (getFirewallChainState(FIREWALL_CHAIN_LOW_POWER_STANDBY)
                     && mUidFirewallLowPowerStandbyRules.get(uid) != FIREWALL_RULE_ALLOW) {
-                if (DBG) Slog.d(TAG, "Uid " + uid + " restricted because of low power standby");
+                if (DBGB) Slog.d(TAG, "Uid " + uid + " restricted because of low power standby");
                 return true;
             }
             if (mUidRejectOnMetered.get(uid)) {
-                if (DBG) Slog.d(TAG, "Uid " + uid + " restricted because of no metered data"
+                if (DBGB) Slog.d(TAG, "Uid " + uid + " restricted because of no metered data"
                         + " in the background");
                 return true;
             }
             if (mDataSaverMode && !mUidAllowOnMetered.get(uid)) {
-                if (DBG) Slog.d(TAG, "Uid " + uid + " restricted because of data saver mode");
+                if (DBGB) Slog.d(TAG, "Uid " + uid + " restricted because of data saver mode");
                 return true;
             }
             return false;

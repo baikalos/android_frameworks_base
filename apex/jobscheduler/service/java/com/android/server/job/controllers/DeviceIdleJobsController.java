@@ -35,6 +35,12 @@ import android.util.Slog;
 import android.util.SparseBooleanArray;
 import android.util.proto.ProtoOutputStream;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.BaikalConstants;
+import com.android.server.baikalos.AppProfileManager;
+
 import com.android.internal.util.ArrayUtils;
 import com.android.server.DeviceIdleInternal;
 import com.android.server.LocalServices;
@@ -52,8 +58,8 @@ import java.util.function.Predicate;
  */
 public final class DeviceIdleJobsController extends StateController {
     private static final String TAG = "JobScheduler.DeviceIdle";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     private static final long BACKGROUND_JOBS_DELAY = 3000;
 
@@ -91,7 +97,7 @@ public final class DeviceIdleJobsController extends StateController {
                     synchronized (mLock) {
                         mDeviceIdleWhitelistAppIds =
                                 mLocalDeviceIdleController.getPowerSaveWhitelistUserAppIds();
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Got whitelist "
                                     + Arrays.toString(mDeviceIdleWhitelistAppIds));
                         }
@@ -101,7 +107,7 @@ public final class DeviceIdleJobsController extends StateController {
                     synchronized (mLock) {
                         mPowerSaveTempWhitelistAppIds =
                                 mLocalDeviceIdleController.getPowerSaveTempWhitelistAppIds();
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Got temp whitelist "
                                     + Arrays.toString(mPowerSaveTempWhitelistAppIds));
                         }
@@ -158,7 +164,7 @@ public final class DeviceIdleJobsController extends StateController {
             mDeviceIdleMode = enabled;
             logDeviceWideConstraintStateToStatsd(JobStatus.CONSTRAINT_DEVICE_NOT_DOZING,
                     !mDeviceIdleMode);
-            if (DEBUG) Slog.d(TAG, "mDeviceIdleMode=" + mDeviceIdleMode);
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "mDeviceIdleMode=" + mDeviceIdleMode);
             mDeviceIdleUpdateFunctor.prepare();
             if (enabled) {
                 mHandler.removeMessages(PROCESS_BACKGROUND_JOBS);
@@ -184,9 +190,10 @@ public final class DeviceIdleJobsController extends StateController {
         if (!changed) {
             return;
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "uid " + uid + " going " + (active ? "active" : "inactive"));
         }
+
         mForegroundUids.put(uid, active);
         mDeviceIdleUpdateFunctor.prepare();
         mService.getJobStore().forEachJobForSourceUid(uid, mDeviceIdleUpdateFunctor);
@@ -199,9 +206,27 @@ public final class DeviceIdleJobsController extends StateController {
      * Checks if the given job's scheduling app id exists in the device idle user whitelist.
      */
     boolean isWhitelistedLocked(JobStatus job) {
+        //AppProfile dstProfile = AppProfileManager.getInstance().getProfile(job.getPackageName());
+        //if( dstProfile.getBackgroundMode() < 0 ) return true;
+
+        AppProfile srcProfile = AppProfileManager.getInstance().getAppProfile(job.getSourcePackageName(),job.getSourceUid());
+        if( srcProfile.getBackgroundMode(false) < 0 ) return true;
+
         final int appId = UserHandle.getAppId(job.getSourceUid());
         return Arrays.binarySearch(mDeviceIdleWhitelistAppIds, appId) >= 0
                 || Arrays.binarySearch(mPowerSaveWhitelistSystemAppIds, appId) >= 0;
+    }
+
+    /**
+     * Checks if the given job's scheduling app id exists in the device idle user whitelist.
+     */
+    boolean isAllowedWhileIdleLocked(JobStatus job) {
+
+        AppProfile srcProfile = AppProfileManager.getInstance().getProfile(job.getSourcePackageName(),job.getSourceUid());
+        if( srcProfile.getBackgroundMode(false) < 0 ) return true;
+        if( srcProfile.mAllowWhileIdle ) return true;
+
+        return false;
     }
 
     /**
@@ -213,11 +238,12 @@ public final class DeviceIdleJobsController extends StateController {
     }
 
     private boolean updateTaskStateLocked(JobStatus task, final long nowElapsed) {
-        final boolean allowInIdle = ((task.getFlags()&JobInfo.FLAG_IMPORTANT_WHILE_FOREGROUND) != 0)
-                && (mForegroundUids.get(task.getSourceUid()) || isTempWhitelistedLocked(task));
         final boolean whitelisted = isWhitelistedLocked(task);
-        final boolean enableTask = !mDeviceIdleMode || whitelisted || allowInIdle;
-        return task.setDeviceNotDozingConstraintSatisfied(nowElapsed, enableTask, whitelisted);
+        final boolean allowInIdle = ((task.getFlags()&JobInfo.FLAG_IMPORTANT_WHILE_FOREGROUND) != 0)
+                                        && (mForegroundUids.get(task.getSourceUid()) || isTempWhitelistedLocked(task));
+        final boolean allowInBatterySaver = isAllowedWhileIdleLocked(task);
+        final boolean enableTask = !mDeviceIdleMode || whitelisted || allowInIdle || allowInBatterySaver;
+        return task.setDeviceNotDozingConstraintSatisfied(nowElapsed, enableTask, whitelisted, allowInBatterySaver);
     }
 
     @Override

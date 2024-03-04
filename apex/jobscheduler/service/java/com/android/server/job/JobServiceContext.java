@@ -61,6 +61,8 @@ import com.android.server.tare.EconomicPolicy;
 import com.android.server.tare.EconomyManagerInternal;
 import com.android.server.tare.JobSchedulerEconomicPolicy;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 /**
  * Handles client binding and lifecycle of a job. Jobs execute one at a time on an instance of this
  * class.
@@ -78,8 +80,8 @@ import com.android.server.tare.JobSchedulerEconomicPolicy;
  * calls to the client after they've specified jobFinished().
  */
 public final class JobServiceContext implements ServiceConnection {
-    private static final boolean DEBUG = JobSchedulerService.DEBUG;
-    private static final boolean DEBUG_STANDBY = JobSchedulerService.DEBUG_STANDBY;
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG;
+    //private static final boolean DEBUG_STANDBY = JobSchedulerService.DEBUG_STANDBY;
 
     private static final String TAG = "JobServiceContext";
     /** Amount of time the JobScheduler waits for the initial service launch+bind. */
@@ -276,7 +278,7 @@ public final class JobServiceContext implements ServiceConnection {
             if (whenDeferred > 0) {
                 final long deferral = mExecutionStartTimeElapsed - whenDeferred;
                 EventLog.writeEvent(EventLogTags.JOB_DEFERRED_EXECUTION, deferral);
-                if (DEBUG_STANDBY) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     StringBuilder sb = new StringBuilder(128);
                     sb.append("Starting job deferred for standby by ");
                     TimeUtils.formatDuration(deferral, sb);
@@ -328,7 +330,7 @@ public final class JobServiceContext implements ServiceConnection {
                 binding = false;
             }
             if (!binding) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, job.getServiceComponent().getShortClassName() + " unavailable.");
                 }
                 mContext.unbindService(this);
@@ -380,6 +382,8 @@ public final class JobServiceContext implements ServiceConnection {
             mStoppedReason = null;
             mStoppedTime = 0;
             job.startedAsExpeditedJob = job.shouldTreatAsExpeditedJob();
+            //mWakeLock.release();
+            //mWakeLock = null;
             return true;
         }
     }
@@ -618,7 +622,7 @@ public final class JobServiceContext implements ServiceConnection {
      */
     private boolean verifyCallerLocked(JobCallback cb) {
         if (mRunningCallback != cb) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Stale callback received, ignoring.");
             }
             return false;
@@ -714,7 +718,7 @@ public final class JobServiceContext implements ServiceConnection {
 
     @GuardedBy("mLock")
     void doCallbackLocked(boolean reschedule, String reason) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "doCallback of : " + mRunningJob
                     + " v:" + VERB_STRINGS[mVerb]);
         }
@@ -726,7 +730,7 @@ public final class JobServiceContext implements ServiceConnection {
                 mVerb == VERB_STOPPING) {
             handleFinishedLocked(reschedule, reason);
         } else {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Unrecognised callback: " + mRunningJob);
             }
         }
@@ -736,7 +740,7 @@ public final class JobServiceContext implements ServiceConnection {
     private void doCancelLocked(@JobParameters.StopReason int stopReasonCode,
             int internalStopReasonCode, @Nullable String debugReason) {
         if (mVerb == VERB_FINISHED) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG,
                         "Trying to process cancel for torn-down context, ignoring.");
             }
@@ -766,7 +770,7 @@ public final class JobServiceContext implements ServiceConnection {
     /** Start the job on the service. */
     @GuardedBy("mLock")
     private void handleServiceBoundLocked() {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "handleServiceBound for " + getRunningJobNameLocked());
         }
         if (mVerb != VERB_BINDING) {
@@ -776,7 +780,7 @@ public final class JobServiceContext implements ServiceConnection {
             return;
         }
         if (mCancelled) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Job cancelled while waiting for bind to complete. "
                         + mRunningJob);
             }
@@ -814,7 +818,7 @@ public final class JobServiceContext implements ServiceConnection {
                     return;
                 }
                 if (mCancelled) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Job cancelled while waiting for onStartJob to complete.");
                     }
                     // Cancelled *while* waiting for acknowledgeStartMessage from client.
@@ -861,7 +865,7 @@ public final class JobServiceContext implements ServiceConnection {
      */
     @GuardedBy("mLock")
     private void handleCancelLocked(@Nullable String reason) {
-        if (JobSchedulerService.DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Handling cancel for: " + mRunningJob.getJobId() + " "
                     + VERB_STRINGS[mVerb]);
         }
@@ -997,7 +1001,7 @@ public final class JobServiceContext implements ServiceConnection {
         if (mVerb == VERB_FINISHED) {
             return;
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Cleaning up " + mRunningJob.toShortString()
                     + " reschedule=" + reschedule + " reason=" + reason);
         }
@@ -1106,7 +1110,7 @@ public final class JobServiceContext implements ServiceConnection {
                 timeoutMillis = OP_TIMEOUT_MILLIS;
                 break;
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Scheduling time out for '" +
                     mRunningJob.getServiceComponent().getShortClassName() + "' jId: " +
                     mParams.getJobId() + ", in " + (timeoutMillis / 1000) + " s");
@@ -1159,3 +1163,4 @@ public final class JobServiceContext implements ServiceConnection {
         }
     }
 }
+

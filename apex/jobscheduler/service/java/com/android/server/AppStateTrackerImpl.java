@@ -60,8 +60,9 @@ import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
 import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.server.baikalos.AppProfileManager;
 import com.android.server.baikalos.BaikalAlarmManager;
@@ -270,7 +271,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     mForcedAppStandbyEnabled = enabled;
                     updateBackgroundRestrictedUidPackagesLocked();
                     if (true /*DEBUG*/) {
-                        Slog.d(TAG, "Forced app standby feature flag changed: "
+                        Slog.d(TAG, "ForcedAppStandby feature flag changed: "
                                 + mForcedAppStandbyEnabled);
                     }
                 }
@@ -680,16 +681,29 @@ public class AppStateTrackerImpl implements AppStateTracker {
     @GuardedBy("mLock")
     private void updateBackgroundRestrictedUidPackagesLocked() {
         if (!mForcedAppStandbyEnabled) {
-            mBackgroundRestrictedUidPackages = Collections.emptySet();
-            AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(mBackgroundRestrictedUidPackages, mForceAllAppsStandby);
+            Set<Pair<Integer, String>> emptyUidPkgs = new ArraySet<>();
+            AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(emptyUidPkgs, mForceAllAppsStandby);
+            mBackgroundRestrictedUidPackages = Collections.unmodifiableSet(emptyUidPkgs);
+            for (Pair<Integer, String> entry : mBackgroundRestrictedUidPackages) {
+                Slog.d(TAG, "mBackgroundRestrictedUidPackages: (1) " 
+                    + entry.second + "/" + entry.first);
+            }
             return;
         }
         Set<Pair<Integer, String>> fasUidPkgs = new ArraySet<>();
         for (int i = 0, size = mRunAnyRestrictedPackages.size(); i < size; i++) {
             fasUidPkgs.add(mRunAnyRestrictedPackages.valueAt(i));
+            Slog.d(TAG, "mBackgroundRestrictedUidPackages: (2) " 
+                + mRunAnyRestrictedPackages.valueAt(i).second + "/" + mRunAnyRestrictedPackages.valueAt(i).first);
         }
         AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(fasUidPkgs, mForceAllAppsStandby);
         mBackgroundRestrictedUidPackages = Collections.unmodifiableSet(fasUidPkgs);
+
+        for (Pair<Integer, String> entry:mBackgroundRestrictedUidPackages) {
+            Slog.d(TAG, "mBackgroundRestrictedUidPackages: (3) " 
+                + entry.second + "/" + entry.first);
+        }
+
     }
 
     private void updateForceAllAppStandbyState() {
@@ -710,9 +724,34 @@ public class AppStateTrackerImpl implements AppStateTracker {
         if (enable == mForceAllAppsStandby) {
             return;
         }
-        mForceAllAppsStandby = enable;
 
+        if( enable ) {
+            Slog.d(TAG, "toggleForceAllAppsStandbyLocked: " + enable, new Throwable());
+        } else {
+            Slog.d(TAG, "toggleForceAllAppsStandbyLocked: " + enable);
+        }
+
+        mForceAllAppsStandby = enable;
         mHandler.notifyForceAllAppsStandbyChanged();
+    }
+
+
+    @GuardedBy("mLock")
+    private boolean containsForcedAppStandbyUidPackageLocked(int uid, @NonNull String packageName) {
+        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName,uid) : null;
+        int backgroundMode = profile != null ? profile.getBackgroundMode(true) : 0;
+
+        if( backgroundMode > 0 ) { 
+            if( (profile != null && profile.mDebug) || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) 
+                Slog.d(TAG, "containsForcedAppStandbyUidPackageLocked: " + packageName + "/" + uid + " result=forced true");
+            return true;
+        }
+
+        boolean result = mBackgroundRestrictedUidPackages.contains(Pair.create(uid, packageName)); 
+        if( result && ((profile != null && profile.mDebug) || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) )
+                Slog.d(TAG, "containsForcedAppStandbyUidPackageLocked: " + packageName + "/" + uid + " result=" + result);
+
+        return result; 
     }
 
     @GuardedBy("mLock")
@@ -723,7 +762,6 @@ public class AppStateTrackerImpl implements AppStateTracker {
         }
         for (int i = 0; i < size; i++) {
             final Pair<Integer, String> pair = mRunAnyRestrictedPackages.valueAt(i);
-
             if ((pair.first == uid) && packageName.equals(pair.second)) {
                 return i;
             }
@@ -736,7 +774,8 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     @GuardedBy("mLock")
     boolean isRunAnyRestrictedLocked(int uid, @NonNull String packageName) {
-        return findForcedAppStandbyUidPackageIndexLocked(uid, packageName) >= 0;
+        //return findForcedAppStandbyUidPackageIndexLocked(uid, packageName) >= 0;
+        return containsForcedAppStandbyUidPackageLocked(uid, packageName);
     }
 
     /**
@@ -750,6 +789,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
         if (wasRestricted == restricted) {
             return false;
         }
+
         if (restricted) {
             mRunAnyRestrictedPackages.add(Pair.create(uid, packageName));
         } else {
@@ -1220,9 +1260,25 @@ public class AppStateTrackerImpl implements AppStateTracker {
      * @return whether alarms should be restricted when due to battery saver.
      */
     public boolean areAlarmsRestrictedByBatterySaver(int uid, @NonNull String packageName) {
+
+        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName, uid) : null;
+        boolean stamina = mAppProfileManager != null ? mAppProfileManager.isStamina() : false;
+
+
+        if( profile != null ) {
+            if( profile.mDisableWakeup ) {
+                return true;
+            } else if( profile.getBackgroundMode(false) < 0 ) {
+                return false;
+            } else if( profile.getBackgroundMode(false) > 0 ) {
+                return true;
+            } 
+        }
+        
         if (isUidActive(uid)) {
             return false;
         }
+
         synchronized (mLock) {
             final int appId = UserHandle.getAppId(uid);
             if (ArrayUtils.contains(mPowerExemptAllAppIds, appId)) {
@@ -1233,13 +1289,8 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     && mExemptedBucketPackages.contains(userId, packageName)) {
                 return false;
             }
-
-            AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName) : null;
-            if( isForceAllAppsStandbyEnabledLocked() && (profile != null && profile.getBackgroundMode() <= 0) ) {
-                return false;
-            }
-            return isForceAllAppsStandbyEnabledLocked(); //mForceAllAppsStandby;
         }
+        return true;
     }
 
 
@@ -1249,16 +1300,21 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     public boolean areJobsRestricted(int uid, @NonNull String packageName,
             boolean hasForegroundExemption) {
+
+        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName,uid) : null;
+        boolean stamina = mAppProfileManager != null ? mAppProfileManager.isStamina() : false;
+
+        int backgroundMode = profile != null ? profile.getBackgroundMode(true) : 0;
+        if( backgroundMode < 0 ) {
+            return false;
+        } 
+
         if (isUidActive(uid)) {
             return false;
         }
         synchronized (mLock) {
             if (isAppRestricted(uid, packageName)) {
                 return true;
-            }
-            AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName) : null;
-            if( profile != null && profile.getBackgroundMode() < 0 ) {
-                return false;
             }
 
             final int appId = UserHandle.getAppId(uid);
@@ -1274,6 +1330,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     && isRunAnyRestrictedLocked(uid, packageName)) {
                 return true;
             }
+
             if (hasForegroundExemption) {
                 return false;
             }
@@ -1282,10 +1339,15 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     && mExemptedBucketPackages.contains(userId, packageName)) {
                 return false;
             }
-            if( isForceAllAppsStandbyEnabledLocked() && (profile != null && profile.getBackgroundMode() <= 0) ) {
+
+            if( backgroundMode < 0 ) {
                 return false;
             }
-            return isForceAllAppsStandbyEnabledLocked(); // mForceAllAppsStandby;
+
+            if( backgroundMode > 0 ) {
+            	return true;
+           	} 
+           	return isForceAllAppsStandbyEnabledLocked(); 
         }
     }
 
@@ -1323,7 +1385,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
     }
 
     private boolean isForceAllAppsStandbyEnabledLocked() {
-        return mForceAllAppsStandby || mAppProfileManager.isStamina();
+        return mForceAllAppsStandby;
     }
 
     /**
@@ -1331,7 +1393,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     public boolean isForceAllAppsStandbyEnabled() {
         synchronized (mLock) {
-            return mForceAllAppsStandby || mAppProfileManager.isStamina();
+            return mForceAllAppsStandby;// || mAppProfileManager.isStamina();
         }
     }
 
@@ -1352,6 +1414,14 @@ public class AppStateTrackerImpl implements AppStateTracker {
      * Note clients normally shouldn't need to access it. It's only for dumpsys.
      */
     public boolean isUidPowerSaveExempt(int uid) {
+
+        AppProfile profile = mAppProfileManager.getAppProfile(uid);
+        if( profile != null ) {
+        	if( profile.mBackgroundMode < 0 ) return true;
+        	if( profile.mAllowWhileIdle ) return true;
+        	if( profile.getBackgroundMode(false) < 0 ) return true;
+        }
+
         synchronized (mLock) {
             return ArrayUtils.contains(mPowerExemptAllAppIds, UserHandle.getAppId(uid));
         }
@@ -1362,6 +1432,14 @@ public class AppStateTrackerImpl implements AppStateTracker {
      * @return whether a UID is in the user defined power-save exemption list or not.
      */
     public boolean isUidPowerSaveUserExempt(int uid) {
+
+        AppProfile profile = mAppProfileManager.getAppProfile(uid);
+        if( profile != null ) {
+        	if( profile.mBackgroundMode < 0 ) return true;
+        	if( profile.mAllowWhileIdle ) return true;
+        	if( profile.getBackgroundMode(false) < 0 ) return true;
+        }
+
         synchronized (mLock) {
             return ArrayUtils.contains(mPowerExemptUserAppIds, UserHandle.getAppId(uid));
         }
@@ -1372,7 +1450,16 @@ public class AppStateTrackerImpl implements AppStateTracker {
                system full exemption list (not including except-idle)
      */
     public boolean isUidPowerSaveIdleExempt(int uid) {
+
+        AppProfile profile = mAppProfileManager.getAppProfile(uid);
+        if( profile != null ) {
+        	if( profile.mBackgroundMode < 0 ) return true;
+        	if( profile.mAllowWhileIdle ) return true;
+        	if( profile.getBackgroundMode(false) < 0 ) return true;
+        }
+
         final int appId = UserHandle.getAppId(uid);
+
         synchronized (mLock) {
             return ArrayUtils.contains(mPowerExemptUserAppIds, appId)
                     || ArrayUtils.contains(mPowerExemptSystemAppIds, appId);
@@ -1458,7 +1545,8 @@ public class AppStateTrackerImpl implements AppStateTracker {
 
             pw.println("Restricted packages:");
             pw.increaseIndent();
-            for (Pair<Integer, String> uidAndPackage : mRunAnyRestrictedPackages) {
+            //for (Pair<Integer, String> uidAndPackage : mRunAnyRestrictedPackages) {
+            for (Pair<Integer, String> uidAndPackage : mBackgroundRestrictedUidPackages) {
                 pw.print(UserHandle.formatUid(uidAndPackage.first));
                 pw.print(" ");
                 pw.print(uidAndPackage.second);
@@ -1535,7 +1623,8 @@ public class AppStateTrackerImpl implements AppStateTracker {
                 }
             }
 
-            for (Pair<Integer, String> uidAndPackage : mRunAnyRestrictedPackages) {
+            //for (Pair<Integer, String> uidAndPackage : mRunAnyRestrictedPackages) {
+            for (Pair<Integer, String> uidAndPackage : mBackgroundRestrictedUidPackages) {
                 final long token2 = proto.start(
                         AppStateTrackerProto.RUN_ANY_IN_BACKGROUND_RESTRICTED_PACKAGES);
                 proto.write(RunAnyInBackgroundRestrictedPackages.UID, uidAndPackage.first);

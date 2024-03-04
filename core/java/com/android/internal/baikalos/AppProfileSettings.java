@@ -48,6 +48,7 @@ import android.provider.Settings;
 
 import android.util.ArraySet;
 import android.util.Pair;
+import android.util.SparseIntArray;
 
 import java.util.List;
 import java.util.Locale;
@@ -61,11 +62,21 @@ public class AppProfileSettings extends AppProfileBase {
     private static final String TAG = "BaikalSettings";
 
     private static AppProfileSettings sInstance;
+    private static boolean sScreenMode = true;
+    private static boolean sSuperSaverAvailable = false;
 
     private boolean mAutorevokeDisabled;
+    private String mLoadedProfilesString;
+
 
     private AppProfileSettings(Handler handler,Context context) {
         super(handler,context);
+
+        final Resources resources = mContext.getResources();
+
+        sSuperSaverAvailable = resources.getBoolean(
+                com.android.internal.R.bool.config_superSaverAvailable);
+
     }
 
     public void registerObserver(boolean systemBoot) {
@@ -96,13 +107,22 @@ public class AppProfileSettings extends AppProfileBase {
     public void onChange(boolean selfChange, Uri uri) {
         if( !mIsReady ) return;
         Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading");
-        mBackend.refreshList();
         synchronized(this) {
             Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading locked");
             updateConstantsLocked();
             Slog.i(TAG, "Preferences changed. Reloading - done locked");
+
+            String appProfileString = Settings.Global.getString(mResolver,
+                    Settings.Global.BAIKALOS_APP_PROFILES);
+
+            if( mLoadedProfilesString != null && mLoadedProfilesString.equals(appProfileString) ) {
+                Slog.i(TAG,"updateConstantsLocked: Not changed. Ignore");
+                return;
+            }
+            mLoadedProfilesString = appProfileString;
         }
-        loadProfiles();
+        mBackend.refreshList();
+        loadProfiles(mLoadedProfilesString);
 
         Slog.i(TAG, "Preferences changed. Reloading - done");
     }
@@ -115,6 +135,71 @@ public class AppProfileSettings extends AppProfileBase {
         if( !mIsReady ) return;
         mAutorevokeDisabled = Settings.Global.getInt(mResolver,
             Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
+
+    }
+
+
+    public static void updateRulesForWhitelistedAppIdsBaikal(final SparseIntArray uidRules, int userId, int chain) {
+    
+        AppProfileSettings _settings = AppProfileSettings.getInstance();
+        if( _settings == null ) {
+            Slog.e(TAG,"updateRulesForWhitelistedAppIdsBaikal: Not ready yet");
+            return;
+        }
+        
+        PackageManager packageManager = _settings.mContext.getPackageManager();
+
+        if( packageManager == null ) {
+            Slog.e(TAG,"updateRulesForWhitelistedAppIdsBaikal: Not ready!");
+            return;
+        }
+
+        final HashMap<String, AppProfile> profilesByPackageName =  _settings._profilesByPackageName;
+        final HashMap<Integer, AppProfile> profilesByUid =  _settings._profilesByUid;
+
+        final int minlevel = chain != 2 /*FIREWALL_CHAIN_DOZABLE*/ ? 0 : 1;
+
+        List<PackageInfo> installedAppInfo = packageManager.getInstalledPackages(0);
+        for (PackageInfo info : installedAppInfo) {
+            AppProfile profile = null ; 
+            if( profilesByPackageName.containsKey(info.packageName) ) {
+                profile = profilesByPackageName.get(info.packageName);
+            } else if( profilesByUid.containsKey(info.applicationInfo.uid) ) {
+                profile = profilesByUid.get(info.applicationInfo.uid);
+            } else {
+                profile = new AppProfile(info.packageName, info.applicationInfo.uid);
+            }
+
+            if( /*profile.mAllowWhileIdle ||*/
+                profile.mImportantApp ||
+                profile.mAllowIdleNetwork || 
+                profile.mStamina || 
+                profile.getBackgroundMode(false) < minlevel ) {
+
+                /*if( chain != 2  ) { */ /*FIREWALL_CHAIN_STANDBY*/
+                    final int uid = UserHandle.getUid(userId, UserHandle.getAppId(info.applicationInfo.uid));
+                    if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"updateRulesForWhitelistedAppIdsBaikal:" + info.packageName + "/" + uid + " " + chainToString(chain));
+                    uidRules.put(uid, 1);
+                /* } */
+            }
+        }
+    }
+
+    static String sChainNames[] = {
+        "FIREWALL_CHAIN_NONE",
+        "FIREWALL_CHAIN_DOZABLE",
+        "FIREWALL_CHAIN_STANDBY",
+        "FIREWALL_CHAIN_POWERSAVE",
+        "FIREWALL_CHAIN_RESTRICTED",
+        "FIREWALL_CHAIN_LOW_POWER_STANDBY",
+        "FIREWALL_CHAIN_LOCKDOWN_VPN",
+        "FIREWALL_CHAIN_OEM_DENY_1",
+        "FIREWALL_CHAIN_OEM_DENY_2",
+        "FIREWALL_CHAIN_OEM_DENY_3" };
+
+    private static String chainToString(int chain) {
+        if( chain >= 0  && chain < 10 ) return sChainNames[chain];
+        return " FIREWALL_CHAIN_INVALID(" + chain + ")";
     }
 
     public static void updateBackgroundRestrictedUidPackagesLocked(Set<Pair<Integer, String>> backgroundRestrictedUidPackages, boolean forceAllAppsStandby) {
@@ -126,70 +211,100 @@ public class AppProfileSettings extends AppProfileBase {
         }
         
         final HashMap<String, AppProfile> profilesByPackageName =  _settings._profilesByPackageName;
+        final HashMap<Integer, AppProfile> profilesByUid =  _settings._profilesByUid;
         
         Slog.i(TAG,"updateBackgroundRestrictedUidPackagesLocked:" + forceAllAppsStandby);
 
         PackageManager packageManager = _settings.mContext.getPackageManager();
 
         if( packageManager == null ) {
-            Slog.i(TAG,"updateBackgroundRestrictedUidPackagesLocked:not ready!");
+            Slog.i(TAG,"updateBackgroundRestrictedUidPackagesLocked: Not ready!");
             return;
         }
+
+        Slog.i(TAG,"updateBackgroundRestrictedUidPackagesLocked: profilesByPackageName=" + profilesByPackageName.size());
 
         List<PackageInfo> installedAppInfo = packageManager.getInstalledPackages(0);
         for (PackageInfo info : installedAppInfo) {
             AppProfile profile = null ; 
-            if( !profilesByPackageName.containsKey(info.packageName) ) {
-                profile = new AppProfile(info.packageName);
-            } else {
+            if( profilesByPackageName.containsKey(info.packageName) ) {
                 profile = profilesByPackageName.get(info.packageName);
+                if( profile == null ) {
+                    Slog.w(TAG, "updateBackgroundRestrictedUidPackagesLocked: WTF profile(package)=null packageName=" + info.packageName + "/" + info.applicationInfo.uid);
+                    continue;
+                }
+            } else if( profilesByUid.containsKey(info.applicationInfo.uid) ) {
+                profile = profilesByUid.get(info.applicationInfo.uid);
+                if( profile == null ) {
+                    Slog.w(TAG, "updateBackgroundRestrictedUidPackagesLocked: WTF profile(uid)=null packageName=" + info.packageName + "/" + info.applicationInfo.uid);
+                    continue;
+                }
+            } else {
+                profile = new AppProfile(info.packageName, info.applicationInfo.uid);
             }
 
-            boolean isSystem = (info.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
 
-            Pair<Integer,String> pair = Pair.create(info.applicationInfo.uid, profile.mPackageName);
+            boolean isSystem = (info.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+            if( profile.mPackageName == null ) {
+                Slog.w(TAG, "updateBackgroundRestrictedUidPackagesLocked: WTF profile packageName=null packageName=" + info.packageName + "/" + info.applicationInfo.uid);
+                continue;
+            }
+
+            Pair<Integer,String> pair = Pair.create(info.applicationInfo.uid, info.packageName);
             final int uid = info.applicationInfo.uid;
 
             boolean restricted = backgroundRestrictedUidPackages.contains(pair);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && restricted) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: system restricted app packageName=" + profile.mPackageName + "/" + info.applicationInfo.uid);
 
             boolean runInBackground = _settings.getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_IN_BACKGROUND,
-                    uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;        
+                    uid, info.packageName) == AppOpsManager.MODE_ALLOWED;        
 
             boolean runAnyInBackground = _settings.getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
-                    uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;
+                    uid, info.packageName) == AppOpsManager.MODE_ALLOWED;
 
-            if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
-            if( !runInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+            //if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
+            //if( !runInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
 
-            if( isSystem || profile.mAllowWhileIdle ) {
+            if( /*isSystem ||*/ profile.mAllowWhileIdle || profile.isHome() || profile.mImportantApp ) {
                 if( restricted ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: unrestrict system or allowed packageName=" + profile.mPackageName);
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: unrestrict system or allowed packageName=" + info.packageName + "/" + info.applicationInfo.uid);
                     backgroundRestrictedUidPackages.remove(pair);
                 }
                 continue;
             }
 
-            if( profile.getBackgroundMode() == 2 ) {
+            if( profile.getBackgroundMode(false) >= 2 ) {
+                if( runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_IGNORED); 
                 if( restricted ) continue;
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Restrict 2 packageName=" + profile.mPackageName);
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Restrict 2 packageName=" + info.packageName + "/" + info.applicationInfo.uid);
                 backgroundRestrictedUidPackages.add(pair);
-            } else if( profile.getBackgroundMode() == 1 && forceAllAppsStandby ) {
+            } else if( profile.getBackgroundMode() == 1 && !sScreenMode ) {
+                if( runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_IGNORED); 
                 if( restricted ) continue;
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Restrict 1 packageName=" + profile.mPackageName);
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Restrict 1 packageName=" + info.packageName + "/" + info.applicationInfo.uid);
                 backgroundRestrictedUidPackages.add(pair);
-            } else if( profile.getBackgroundMode() == 1 && !forceAllAppsStandby ) {
+            } else if( profile.getBackgroundMode() == 1 && sScreenMode ) {
+                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
                 if( restricted ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict 1 packageName=" + profile.mPackageName);
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict 1 packageName=" + info.packageName + "/" + info.applicationInfo.uid);
                     backgroundRestrictedUidPackages.remove(pair);
                 }
             } else if( profile.getBackgroundMode() == 0 )  {
+                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
                 if( restricted ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict 0 packageName=" + profile.mPackageName);
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict 0 packageName=" + info.packageName + "/" + info.applicationInfo.uid);
                     backgroundRestrictedUidPackages.remove(pair);
                 }
             } else if( profile.getBackgroundMode() < 0 )  {
+                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
                 if( restricted ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict whitelisted packageName=" + profile.mPackageName);
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict whitelisted packageName=" + info.packageName + "/" + info.applicationInfo.uid);
+                    backgroundRestrictedUidPackages.remove(pair);
+                }
+            } else {
+                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
+                if( restricted ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: WTF? Unrestrict whitelisted packageName=" + info.packageName + "/" + info.applicationInfo.uid);
                     backgroundRestrictedUidPackages.remove(pair);
                 }
             }
@@ -238,7 +353,7 @@ public class AppProfileSettings extends AppProfileBase {
     }
 
     public static boolean isSuperSaverActive() {
-        return (sReaderMode != -1) && ( (sSuperSaver || sReaderMode == 1)  && !sSuperSaverOverride && !sCameraActive );
+        return sSuperSaverAvailable && (sReaderMode != -1) && ( (sSuperSaver || sReaderMode == 1)  && !sSuperSaverOverride && !sCameraActive );
     }
 
 
@@ -275,10 +390,17 @@ public class AppProfileSettings extends AppProfileBase {
     }
 
     public static boolean setCameraActive(boolean active) {
+        Slog.i(TAG, "setCameraActive: active=" + active);
         if( active != sCameraActive ) {
             sCameraActive = active;
             return true;
         }
         return false;
     }
+
+    public static void setScreenMode(boolean on) {
+        sScreenMode = on;
+    }
+
+
 }

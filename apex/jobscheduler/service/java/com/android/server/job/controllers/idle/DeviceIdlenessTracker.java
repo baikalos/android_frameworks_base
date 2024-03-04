@@ -35,14 +35,16 @@ import com.android.server.am.ActivityManagerService;
 import com.android.server.job.JobSchedulerService;
 import com.android.server.job.StateControllerProto;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.io.PrintWriter;
 import java.util.Set;
 
 /** Class to track device idle state. */
 public final class DeviceIdlenessTracker extends BroadcastReceiver implements IdlenessTracker {
     private static final String TAG = "JobScheduler.DeviceIdlenessTracker";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     private AlarmManager mAlarm;
     private PowerManager mPowerManager;
@@ -116,7 +118,7 @@ public final class DeviceIdlenessTracker extends BroadcastReceiver implements Id
         if (mProjectionActive == projectionActive) {
             return;
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "Projection state changed: " + projectionActive);
         }
         mProjectionActive = projectionActive;
@@ -165,7 +167,7 @@ public final class DeviceIdlenessTracker extends BroadcastReceiver implements Id
     @Override
     public void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "Received action: " + action);
         }
         switch (action) {
@@ -184,7 +186,7 @@ public final class DeviceIdlenessTracker extends BroadcastReceiver implements Id
             case Intent.ACTION_SCREEN_ON:
                 mScreenOn = true;
                 mDockIdle = false;
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.v(TAG, "exiting idle");
                 }
                 cancelIdlenessCheck();
@@ -222,7 +224,7 @@ public final class DeviceIdlenessTracker extends BroadcastReceiver implements Id
         if ((!mScreenOn || mDockIdle) && !mProjectionActive) {
             final long nowElapsed = sElapsedRealtimeClock.millis();
             final long when = nowElapsed + mInactivityIdleThreshold;
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "Scheduling idle : " + reason + " now:" + nowElapsed + " when=" + when);
             }
             mAlarm.setWindow(AlarmManager.ELAPSED_REALTIME_WAKEUP,
@@ -237,13 +239,13 @@ public final class DeviceIdlenessTracker extends BroadcastReceiver implements Id
     private void handleIdleTrigger() {
         // idle time starts now. Do not set mIdle if screen is on.
         if (!mIdle && (!mScreenOn || mDockIdle) && !mProjectionActive) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "Idle trigger fired @ " + sElapsedRealtimeClock.millis());
             }
             mIdle = true;
             mIdleListener.reportNewIdleState(mIdle);
         } else {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "TRIGGER_IDLE received but not changing state; idle="
                         + mIdle + " screen=" + mScreenOn + " projection=" + mProjectionActive);
             }

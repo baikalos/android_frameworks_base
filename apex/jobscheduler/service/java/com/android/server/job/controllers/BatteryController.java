@@ -40,6 +40,8 @@ import com.android.server.LocalServices;
 import com.android.server.job.JobSchedulerService;
 import com.android.server.job.StateControllerProto;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.function.Predicate;
 
 /**
@@ -49,8 +51,8 @@ import java.util.function.Predicate;
  */
 public final class BatteryController extends RestrictingController {
     private static final String TAG = "JobScheduler.Battery";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     @GuardedBy("mLock")
     private final ArraySet<JobStatus> mTrackedTasks = new ArraySet<>();
@@ -110,13 +112,13 @@ public final class BatteryController extends RestrictingController {
             // Ignore all jobs the controller wouldn't be tracking.
             return;
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Prepping for " + jobStatus.toShortString());
         }
 
         final int uid = jobStatus.getSourceUid();
         if (mService.getUidBias(uid) == JobInfo.BIAS_TOP_APP) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, jobStatus.toShortString() + " is top started job");
             }
             mTopStartedJobs.add(jobStatus);
@@ -174,7 +176,7 @@ public final class BatteryController extends RestrictingController {
         final boolean powerConnected = mPowerTracker.isPowerConnected();
         final boolean stablePower = mService.isBatteryCharging() && mService.isBatteryNotLow();
         final boolean batteryNotLow = mService.isBatteryNotLow();
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "maybeReportNewChargingStateLocked: "
                     + powerConnected + "/" + stablePower + "/" + batteryNotLow);
         }
@@ -260,7 +262,7 @@ public final class BatteryController extends RestrictingController {
                 final String action = intent.getAction();
 
                 if (Intent.ACTION_POWER_CONNECTED.equals(action)) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Power connected @ " + sElapsedRealtimeClock.millis());
                     }
                     if (mPowerConnected) {
@@ -268,7 +270,7 @@ public final class BatteryController extends RestrictingController {
                     }
                     mPowerConnected = true;
                 } else if (Intent.ACTION_POWER_DISCONNECTED.equals(action)) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Power disconnected @ " + sElapsedRealtimeClock.millis());
                     }
                     if (!mPowerConnected) {

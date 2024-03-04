@@ -115,6 +115,7 @@ import com.android.server.am.PlatformCompatCache.CachedCompatChangeId;
 import com.android.server.wm.ActivityServiceConnectionsHolder;
 import com.android.server.wm.WindowProcessController;
 
+import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.baikalos.AppProfileManager;
 
 import java.io.File;
@@ -1068,8 +1069,12 @@ public class OomAdjuster {
         ArrayList<ProcessRecord> lruList = mProcessList.getLruProcessesLOSP();
         final int numLru = lruList.size();
 
-        final long oldTimeExtreme = mService.mAppProfileManager.isStamina() ? now - 30 * 1000 : now - 5 * 60 * 1000;
+        final long oldTimeActive = mService.mAppProfileManager.isStamina() ? now - 30 * 1000 : now - 120 * 1000;
+        final long oldTimeLimited = mService.mAppProfileManager.isStamina() ? now - 30 * 1000 : now - 60 * 1000;
+        final long oldTimeExtreme = mService.mAppProfileManager.isStamina() ? now - 30 * 1000 : now - 60 * 1000;
         final long oldTimeStamina = now - 30 * 1000;
+        final long oldTimeStartup = now - 10 * 1000;
+
 
         final boolean awake = mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE;
 
@@ -1111,15 +1116,27 @@ public class OomAdjuster {
                     final boolean appLimited = app.mAppProfile.getBackgroundMode() > (awake ? 1 : 0);
                     boolean killed = false;
 
-                    if( app.mAppProfile.mDebug ) {
-                            long timeout = oldTimeExtreme - app.getLastActivityTime();
-                            Slog.d(TAG_OOM_ADJ, "OOM app check packageName=" + app.mAppProfile.mPackageName +
-                                                ", getBackgroundMode=" + app.mAppProfile.getBackgroundMode() +
-                                                ", timeout=" + timeout + 
-                                                ", state=" + state.getCurProcState() + 
-                                                ", adj=" + (state != null ? state.getCurAdj() : -1) );
-                                                
+                    if( app.mAppProfile.mDebug || BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) {
+                        if( state.getCurProcState() > ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {
+                            long timeoutExtreme = app.getLastActivityTime() - oldTimeExtreme;
+                            long timeoutActive = app.getLastActivityTime() - oldTimeActive;
+                            long timeoutStamina = app.getLastActivityTime() - oldTimeStamina;
+                            long timeoutLimited = app.getLastActivityTime() - oldTimeLimited;
+                            long timeoutStartup = app.getLastActivityTime() - oldTimeStartup;
 
+                            Slog.d(TAG_OOM_ADJ, "OOM app check packageName=" + app.mAppProfile.mPackageName + "/" + app.mAppProfile.mUid +
+                                                ", getBackgroundMode=" + app.mAppProfile.getBackgroundMode() +
+                                                ", state=" + state.getCurProcState() + 
+                                                ", dnc=" + app.mAppProfile.mDoNotClose +
+                                                ", awi=" + app.mAppProfile.mAllowWhileIdle +
+                                                ", lim=" + appLimited +
+                                                ", adj=" + state.getCurAdj() +
+                                                ", timeoutActive=" + timeoutActive + 
+                                                ", timeoutLimited=" + timeoutLimited + 
+                                                ", timeoutExtreme=" + timeoutExtreme + 
+                                                ", timeoutStamina=" + timeoutStamina + 
+                                                ", timeoutStartup=" + timeoutStartup );
+                        }
                     }
 
                     if( mService.mAppProfileManager.isStamina() 
@@ -1140,7 +1157,7 @@ public class OomAdjuster {
                         && !app.mAppProfile.mDoNotClose
                         && appLimited
                         && state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_BACKGROUND
-                        && app.getLastActivityTime() < oldTimeExtreme ) {
+                        && app.getLastActivityTime() < oldTimeLimited ) {
                             app.killLocked("baikalos - disabled background process",
                             "baikalos - disabled background process",
                             ApplicationExitInfo.REASON_OTHER,
@@ -1151,24 +1168,45 @@ public class OomAdjuster {
 
                     if( !killed 
                         && !app.mAppProfile.mDoNotClose
+                        && !app.mAppProfile.mAllowWhileIdle
                         && mService.mAppProfileManager.isKillInBackground()
                         && app.mAppProfile.getBackgroundMode() >= -1 ) {
 
                         if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
-                            && ( (state != null && state.getCurAdj() > (ProcessList.CACHED_APP_MIN_ADJ + 45))
-                            && app.getLastActivityTime() < oldTimeExtreme ) )  {
+                            && ( state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 0))
+                            && app.getLastActivityTime() < oldTimeActive )   {
                                 app.killLocked("baikalos - expired background process",
                                 "baikalos - expired background process",
                                 ApplicationExitInfo.REASON_OTHER,
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                                 true);
                                 killed = true;
+                        } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+                            && ( state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 45))
+                            && app.getLastActivityTime() < oldTimeExtreme )   {
+                                app.killLocked("baikalos - expired background process",
+                                "baikalos - expired background process",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
+                        } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+                            && (state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 65))
+                            && (app.getLastActivityTime() > now 
+                                || app.getLastActivityTime() < oldTimeStartup) )  {
+                                app.killLocked("baikalos - expired startup process",
+                                "baikalos - expired startup process",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
                         } else if( mService.mAppProfileManager.isExtreme()
+                            && awake
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
-                            && ( (state != null && state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 25))
-                            && app.getLastActivityTime() < oldTimeExtreme ) ) {
-                                app.killLocked("baikalos - cached background process",
-                                "baikalos - cached background process",
+                            && (state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 25))
+                            && app.getLastActivityTime() < oldTimeExtreme )  {
+                                app.killLocked("baikalos - cached background process - extreme awake",
+                                "baikalos - cached background process - extreme awake",
                                 ApplicationExitInfo.REASON_OTHER,
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                                 true);
@@ -1176,8 +1214,8 @@ public class OomAdjuster {
                         } else if( mService.mAppProfileManager.isExtreme() 
                             && !awake
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY 
-                            && ( (state != null && state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 15))
-                            && app.getLastActivityTime() < oldTimeExtreme ) ) {
+                            && (state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ))
+                            && app.getLastActivityTime() < oldTimeExtreme )  {
                                 app.killLocked("baikalos - extreme cached background process",
                                 "baikalos - extreme cached background process",
                                 ApplicationExitInfo.REASON_OTHER,
@@ -1188,6 +1226,7 @@ public class OomAdjuster {
                     } 
                     if( !killed 
                         && !app.mAppProfile.mDoNotClose
+                        && !app.mAppProfile.mAllowWhileIdle
                         && mService.mAppProfileManager.getCurrentProfile().isHeavy() ) {
                         if( app.mAppProfile.getBackgroundMode() >= 0
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {
@@ -1647,7 +1686,12 @@ public class OomAdjuster {
         int prevCapability = state.getCurCapability();
         final ProcessServiceRecord psr = app.mServices;
 
+        if( app.mAppProfile.mDoNotClose ) {
+            state.setNoKillOnBgRestrictedAndIdle(true);
+        }
+
         if( app.mAppProfile.mPinned ) {
+            state.setNoKillOnBgRestrictedAndIdle(true);
             app.mOptRecord.setShouldNotFreeze(true);
 
             // Pinned app, so it is not worth doing work for it.
@@ -1655,7 +1699,7 @@ public class OomAdjuster {
                 reportOomAdjMessageLocked(TAG_OOM_ADJ, "Making fixed: " + app);
             }
 
-            state.setAdjType("pinned");
+            state.setAdjType("fixed");
             state.setAdjSeq(mAdjSeq);
             state.setCurRawAdj(state.getMaxAdj());
             state.setHasForegroundActivities(false);
@@ -1985,29 +2029,41 @@ public class OomAdjuster {
         }
 
         if (state.getCachedIsPreviousProcess() && state.getCachedHasActivities()) {
-            if (adj > ProcessList.PREVIOUS_APP_ADJ) {
-                // This was the previous process that showed UI to the user.
-                // We want to try to keep it around more aggressively, to give
-                // a good experience around switching between two apps.
-                adj = ProcessList.PREVIOUS_APP_ADJ;
+            if (procState >= ActivityManager.PROCESS_STATE_LAST_ACTIVITY
+                    && state.getSetProcState() == ActivityManager.PROCESS_STATE_LAST_ACTIVITY
+                    && (state.getLastStateTime() + /*mConstants.MAX_PREVIOUS_TIME*/ 120 * 1000) < now) {
+                procState = ActivityManager.PROCESS_STATE_LAST_ACTIVITY;
                 schedGroup = ProcessList.SCHED_GROUP_BACKGROUND;
-                state.setCached(false);
-                state.setAdjType("previous");
+                state.setAdjType("previous-expired");
+                adj = ProcessList.CACHED_APP_MIN_ADJ;
                 if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
-                    reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise adj to prev: " + app);
+                    reportOomAdjMessageLocked(TAG_OOM_ADJ, "Expire prev adj: " + app);
                 }
-            }
-            if (procState > PROCESS_STATE_LAST_ACTIVITY) {
-                procState = PROCESS_STATE_LAST_ACTIVITY;
-                state.setAdjType("previous");
-                if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
-                    reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise procstate to prev: " + app);
+            } else {
+                if (adj > ProcessList.PREVIOUS_APP_ADJ) {
+                    // This was the previous process that showed UI to the user.
+                    // We want to try to keep it around more aggressively, to give
+                    // a good experience around switching between two apps.
+                    adj = ProcessList.PREVIOUS_APP_ADJ;
+                    schedGroup = ProcessList.SCHED_GROUP_BACKGROUND;
+                    state.setCached(false);
+                    state.setAdjType("previous");
+                    if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
+                        reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise adj to prev: " + app);
+                    }
+                }
+                if (procState > PROCESS_STATE_LAST_ACTIVITY) {
+                    procState = PROCESS_STATE_LAST_ACTIVITY;
+                    state.setAdjType("previous");
+                    if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
+                        reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise procstate to prev: " + app);
+                    }
                 }
             }
         }
 
-        if (false) Slog.i(TAG, "OOM " + app + ": initial adj=" + adj
-                + " reason=" + state.getAdjType());
+        //if (true) Slog.i(TAG, "OOM " + app + ": initial adj=" + adj
+        //        + " reason=" + state.getAdjType() + " home=" + state.getCachedIsHomeProcess());
 
         // By default, we use the computed adjustment.  It may be changed if
         // there are applications dependent on our services or providers, but
@@ -2075,6 +2131,9 @@ public class OomAdjuster {
                     // debug and understand what is going on.
                     if (adj > ProcessList.SERVICE_ADJ) {
                         state.setAdjType("cch-started-ui-services");
+                        if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
+                            reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise adj to cch-started-ui-services: " + app);
+                        }
                     }
                 } else {
                     if (s.mKeepWarming
@@ -2097,6 +2156,9 @@ public class OomAdjuster {
                     // even though the service no longer has an impact.
                     if (adj > ProcessList.SERVICE_ADJ) {
                         state.setAdjType("cch-started-services");
+                        if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
+                            reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise adj to cch-started-services: " + app);
+                        }
                     }
                 }
             }
@@ -2164,7 +2226,7 @@ public class OomAdjuster {
                     boundByNonBgRestricted |= cstate.isCurBoundByNonBgRestrictedApp()
                             || clientProcState <= PROCESS_STATE_BOUND_TOP
                             || (clientProcState == PROCESS_STATE_FOREGROUND_SERVICE
-                                    && !cstate.isBackgroundRestricted());
+                                    && !client.isBackgroundRestricted());
 
                     if (client.mOptRecord.shouldNotFreeze()) {
                         // Propagate the shouldNotFreeze flag down the bindings.
@@ -2292,10 +2354,13 @@ public class OomAdjuster {
                                 if (!cstate.isCached()) {
                                     state.setCached(false);
                                 }
-                                if (adj >  newAdj) {
+                                if (adj > newAdj) {
                                     adj = newAdj;
                                     state.setCurRawAdj(adj);
                                     adjType = "service";
+                                    if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
+                                        reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise adj to service : " + app);
+                                    }
                                 }
                             }
                         }
@@ -2378,6 +2443,9 @@ public class OomAdjuster {
                             state.setCurRawProcState(procState);
                             if (adjType == null) {
                                 adjType = "service";
+                            }
+                            if (DEBUG_OOM_ADJ_REASON || logUid == appUid) {
+                                reportOomAdjMessageLocked(TAG_OOM_ADJ, "Raise procstate to service : " + app);
                             }
                         }
                         if (procState < PROCESS_STATE_IMPORTANT_BACKGROUND
@@ -2491,7 +2559,7 @@ public class OomAdjuster {
                 boundByNonBgRestricted |= cstate.isCurBoundByNonBgRestrictedApp()
                         || clientProcState <= PROCESS_STATE_BOUND_TOP
                         || (clientProcState == PROCESS_STATE_FOREGROUND_SERVICE
-                                && !cstate.isBackgroundRestricted());
+                                && !client.isBackgroundRestricted());
 
                 String adjType = null;
                 if (adj > clientAdj) {
@@ -2656,6 +2724,12 @@ public class OomAdjuster {
         }
 
         capability |= getDefaultCapability(psr, procState);
+
+        app.mAppProfile.setCurAdj(adj);
+
+        if( app.mAppProfile.mAllowIdleNetwork || app.mAppProfile.getBackgroundMode() < 0  ) {
+            capability |= PROCESS_CAPABILITY_NETWORK;
+        }
 
         // Do final modification to adj.  Everything we do between here and applying
         // the final setAdj must be done in this function, because we will also use
@@ -3049,7 +3123,7 @@ public class OomAdjuster {
         final boolean curBoundByNonBgRestrictedApp = state.isCurBoundByNonBgRestrictedApp();
         if (curBoundByNonBgRestrictedApp != state.isSetBoundByNonBgRestrictedApp()) {
             state.setSetBoundByNonBgRestrictedApp(curBoundByNonBgRestrictedApp);
-            if (!curBoundByNonBgRestrictedApp && state.isBackgroundRestricted()) {
+            if (!curBoundByNonBgRestrictedApp && app.isBackgroundRestricted()) {
                 mService.mHandler.post(() -> {
                     synchronized (mService) {
                         mService.mServices.stopAllForegroundServicesLocked(
@@ -3214,6 +3288,13 @@ public class OomAdjuster {
         }
         for (int i = N - 1; i >= 0; i--) {
             final UidRecord uidRec = mActiveUids.valueAt(i);
+
+            if( uidRec.getAppProfile().mPinned ) continue;
+            if( uidRec.getAppProfile().mAllowWhileIdle ) continue;
+            if( uidRec.getAppProfile().mBackgroundMode < 0 ) continue;
+            if( uidRec.getAppProfile().mBackgroundMode <= 0 &&  
+                uidRec.getAppProfile().mSystemWhitelisted ) continue;
+
             final long bgTime = uidRec.getLastBackgroundTime();
             if (bgTime > 0 && !uidRec.isIdle()) {
                 if (bgTime <= maxBgTime) {
@@ -3348,21 +3429,8 @@ public class OomAdjuster {
 
         if (mService.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE ) {
             if( state.getCurAdj() >= ProcessList.HOME_APP_ADJ ) shouldFreeze = true;
-            /*if( !shouldFreeze 
-                && mService.mAppProfileManager.isExtreme()
-                && state.getCurAdj() >= ProcessList.PERCEPTIBLE_LOW_APP_ADJ
-                && state.getCurrentSchedulingGroup() == ProcessList.SCHED_GROUP_BACKGROUND ) {
-                    Slog.d(TAG, "Extreme freeze " + app + ", state=" + state.getCurAdj() + ", sched=" + state.getCurrentSchedulingGroup());
-                    shouldFreeze = true;
-            }*/
         } else {
             if( state.getCurAdj() >= ProcessList.CACHED_APP_MIN_ADJ ) shouldFreeze = true;
-            /*if( !shouldFreeze 
-                && mService.mAppProfileManager.isExtreme()
-                && state.getCurAdj() > ProcessList.HOME_APP_ADJ ) {
-                    Slog.d(TAG, "Extreme freeze screenon " + app + ", state=" + state.getCurAdj() + ", sched=" + state.getCurrentSchedulingGroup());
-                    shouldFreeze = true;
-            }*/
         }
 
         if (shouldFreeze && !opt.shouldNotFreeze()) {

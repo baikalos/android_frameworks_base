@@ -60,6 +60,8 @@ import com.android.server.job.JobSchedulerService.Constants;
 import com.android.server.job.StateControllerProto;
 import com.android.server.net.NetworkPolicyManagerInternal;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -79,8 +81,8 @@ import java.util.function.Predicate;
 public final class ConnectivityController extends RestrictingController implements
         ConnectivityManager.OnNetworkActiveListener {
     private static final String TAG = "JobScheduler.Connectivity";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     // The networking stack has a hard limit so we can't make this configurable.
     private static final int MAX_NETWORK_CALLBACKS = 125;
@@ -352,7 +354,7 @@ public final class ConnectivityController extends RestrictingController implemen
                 final Network network = mAvailableNetworks.keyAt(i);
                 final NetworkCapabilities capabilities = mAvailableNetworks.valueAt(i);
                 final boolean satisfied = isSatisfied(job, network, capabilities, mConstants);
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.v(TAG, "isNetworkAvailable(" + job + ") with network " + network
                             + " and capabilities " + capabilities + ". Satisfied=" + satisfied);
                 }
@@ -380,12 +382,12 @@ public final class ConnectivityController extends RestrictingController implemen
             mRequestedWhitelistJobs.put(uid, jobs);
         }
         if (!jobs.add(job) || isExceptionRequested) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "requestStandbyExceptionLocked found exception already requested.");
             }
             return;
         }
-        if (DEBUG) Slog.i(TAG, "Requesting standby exception for UID: " + uid);
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.i(TAG, "Requesting standby exception for UID: " + uid);
         mNetPolicyManagerInternal.setAppIdleWhitelist(uid, true);
     }
 
@@ -431,13 +433,13 @@ public final class ConnectivityController extends RestrictingController implemen
         // Always check the full job readiness stat in case the component has been disabled.
         if (wouldBeReadyWithConstraintLocked(jobStatus, JobStatus.CONSTRAINT_CONNECTIVITY)
                 && isNetworkAvailable(jobStatus)) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "evaluateStateLocked finds job " + jobStatus + " would be ready.");
             }
             uidStats.numReadyWithConnectivity++;
             requestStandbyExceptionLocked(jobStatus);
         } else {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "evaluateStateLocked finds job " + jobStatus + " would not be ready.");
             }
             // Don't decrement numReadyWithConnectivity here because we don't know if it was
@@ -476,7 +478,7 @@ public final class ConnectivityController extends RestrictingController implemen
             return;
         }
         if (!jobs.remove(job) || jobs.size() > 0) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG,
                         "maybeRevokeStandbyExceptionLocked not revoking because there are still "
                                 + jobs.size() + " jobs left.");
@@ -493,7 +495,7 @@ public final class ConnectivityController extends RestrictingController implemen
      */
     @GuardedBy("mLock")
     private void revokeStandbyExceptionLocked(final int uid) {
-        if (DEBUG) Slog.i(TAG, "Revoking standby exception for UID: " + uid);
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.i(TAG, "Revoking standby exception for UID: " + uid);
         mNetPolicyManagerInternal.setAppIdleWhitelist(uid, false);
         mRequestedWhitelistJobs.remove(uid);
     }
@@ -699,7 +701,7 @@ public final class ConnectivityController extends RestrictingController implemen
                         "Subscription ID " + subId + " doesn't have a registered callback");
             }
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Cell signal strength for job=" + signalStrength);
         }
         // Treat "NONE_OR_UNKNOWN" as "NONE".
@@ -761,11 +763,13 @@ public final class ConnectivityController extends RestrictingController implemen
             NetworkCapabilities capabilities, Constants constants) {
         // Only consider doing this for unrestricted prefetching jobs
         if (!jobStatus.getJob().isPrefetch() || jobStatus.getStandbyBucket() == RESTRICTED_INDEX) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "isRelaxedSatisfied: Not prefetech or restricted, " + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
             return false;
         }
         final long estDownloadBytes = jobStatus.getEstimatedNetworkDownloadBytes();
         if (estDownloadBytes <= 0) {
             // Need to at least know the estimated download bytes for a prefetch job.
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "isRelaxedSatisfied: estDownloadBytes = 0, " + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
             return false;
         }
 
@@ -784,6 +788,7 @@ public final class ConnectivityController extends RestrictingController implemen
             return opportunisticQuotaBytes >= estimatedBytes;
         }
 
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "isRelaxedSatisfied: not satisfiedByNetworkCapabilities:" + capabilities + ", " + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
         return false;
     }
 
@@ -791,24 +796,46 @@ public final class ConnectivityController extends RestrictingController implemen
     boolean isSatisfied(JobStatus jobStatus, Network network,
             NetworkCapabilities capabilities, Constants constants) {
         // Zeroth, we gotta have a network to think about being satisfied
-        if (network == null || capabilities == null) return false;
+        if (network == null || capabilities == null) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS)  Slog.d(TAG, "Network = " + network + ", capabilities=" + capabilities + " :" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
+            return false;
+        }
 
-        if (!isUsable(capabilities)) return false;
+        if (!isUsable(capabilities)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS)  Slog.d(TAG, "Not usable:" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
+            return false;
+        }
 
         // First, are we insane?
-        if (isInsane(jobStatus, network, capabilities, constants)) return false;
+        if (isInsane(jobStatus, network, capabilities, constants)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS)  Slog.d(TAG, "Insane:" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
+            return false;
+        }
 
         // Second, is the network congested?
-        if (isCongestionDelayed(jobStatus, network, capabilities, constants)) return false;
+        if (isCongestionDelayed(jobStatus, network, capabilities, constants)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS)  Slog.d(TAG, "CongestionDelayed:" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
+            return false;
+        }
 
-        if (!isStrongEnough(jobStatus, capabilities, constants)) return false;
+        if (!isStrongEnough(jobStatus, capabilities, constants)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS)  Slog.d(TAG, "Not strong enough:" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
+            return false;
+        }
 
         // Is the network a strict match?
-        if (isStrictSatisfied(jobStatus, network, capabilities, constants)) return true;
+        if (isStrictSatisfied(jobStatus, network, capabilities, constants)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS)  Slog.d(TAG, "Strict Satisfied:" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
+            return true;
+        }
 
         // Is the network a relaxed match?
-        if (isRelaxedSatisfied(jobStatus, network, capabilities, constants)) return true;
+        if (isRelaxedSatisfied(jobStatus, network, capabilities, constants)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS)  Slog.d(TAG, "Relaxed Satisfied:" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
+            return true;
+        }
 
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, "Not satisfied:" + jobStatus.getSourceUid() + "/" + jobStatus.getSourcePackageName());
         return false;
     }
 
@@ -1017,17 +1044,17 @@ public final class ConnectivityController extends RestrictingController implemen
         // BG_BLOCKED for a TOP app. However, better safe than sorry.
         if (uidStats.baseBias >= JobInfo.BIAS_BOUND_FOREGROUND_SERVICE
                 || (jobStatus.getFlags() & JobInfo.FLAG_WILL_BE_FOREGROUND) != 0) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Using FG bypass for " + jobStatus.getSourceUid());
             }
             unbypassableBlockedReasons = UNBYPASSABLE_FOREGROUND_BLOCKED_REASONS;
         } else if (jobStatus.shouldTreatAsExpeditedJob() || jobStatus.startedAsExpeditedJob) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Using EJ bypass for " + jobStatus.getSourceUid());
             }
             unbypassableBlockedReasons = UNBYPASSABLE_EJ_BLOCKED_REASONS;
         } else {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Using BG bypass for " + jobStatus.getSourceUid());
             }
             unbypassableBlockedReasons = UNBYPASSABLE_BG_BLOCKED_REASONS;
@@ -1063,7 +1090,7 @@ public final class ConnectivityController extends RestrictingController implemen
         // using non-default routes.
         jobStatus.network = network;
 
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.i(TAG, "Connectivity " + (changed ? "CHANGED" : "unchanged")
                     + " for " + jobStatus + ": usable=" + isUsable(capabilities)
                     + " satisfied=" + satisfied);
@@ -1167,7 +1194,7 @@ public final class ConnectivityController extends RestrictingController implemen
                 for (int j = jobs.size() - 1; j >= 0; j--) {
                     final JobStatus js = jobs.valueAt(j);
                     if (js.isReady()) {
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Running " + js + " due to network activity.");
                         }
                         mStateChangedListener.onRunJobNow(js);
@@ -1180,7 +1207,7 @@ public final class ConnectivityController extends RestrictingController implemen
     private final NetworkCallback mNetworkCallback = new NetworkCallback() {
         @Override
         public void onAvailable(Network network) {
-            if (DEBUG) Slog.v(TAG, "onAvailable: " + network);
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.v(TAG, "onAvailable: " + network);
             // Documentation says not to call getNetworkCapabilities here but wait for
             // onCapabilitiesChanged instead.  onCapabilitiesChanged should be called immediately
             // after this, so no need to update mAvailableNetworks here.
@@ -1188,7 +1215,7 @@ public final class ConnectivityController extends RestrictingController implemen
 
         @Override
         public void onCapabilitiesChanged(Network network, NetworkCapabilities capabilities) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "onCapabilitiesChanged: " + network);
             }
             synchronized (mLock) {
@@ -1204,7 +1231,7 @@ public final class ConnectivityController extends RestrictingController implemen
 
         @Override
         public void onLost(Network network) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "onLost: " + network);
             }
             synchronized (mLock) {
@@ -1261,7 +1288,7 @@ public final class ConnectivityController extends RestrictingController implemen
                     activeIds.addAll(nc.getSubscriptionIds());
                 }
             }
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Active subscription IDs: " + activeIds);
             }
             TelephonyManager telephonyManager = mContext.getSystemService(TelephonyManager.class);
@@ -1325,12 +1352,12 @@ public final class ConnectivityController extends RestrictingController implemen
 
         @Override
         public void onAvailable(Network network) {
-            if (DEBUG) Slog.v(TAG, "default-onAvailable(" + mUid + "): " + network);
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.v(TAG, "default-onAvailable(" + mUid + "): " + network);
         }
 
         @Override
         public void onBlockedStatusChanged(Network network, int blockedReasons) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "default-onBlockedStatusChanged(" + mUid + "): "
                         + network + " -> " + blockedReasons);
             }
@@ -1374,7 +1401,7 @@ public final class ConnectivityController extends RestrictingController implemen
 
         @Override
         public void onLost(Network network) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "default-onLost(" + mUid + "): " + network);
             }
             if (mUid == UserHandle.USER_NULL) {
@@ -1452,7 +1479,7 @@ public final class ConnectivityController extends RestrictingController implemen
         public void onSignalStrengthsChanged(@NonNull SignalStrength signalStrength) {
             synchronized (mLock) {
                 final int newSignalStrength = signalStrength.getLevel();
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Signal strength changing from "
                             + this.signalStrength + " to " + newSignalStrength);
                     for (CellSignalStrength css : signalStrength.getCellSignalStrengths()) {

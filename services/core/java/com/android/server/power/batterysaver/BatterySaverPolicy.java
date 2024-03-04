@@ -63,7 +63,7 @@ public class BatterySaverPolicy extends ContentObserver implements
         DeviceConfig.OnPropertiesChangedListener {
     private static final String TAG = "BatterySaverPolicy";
 
-    static final boolean DEBUG = false; // DO NOT SUBMIT WITH TRUE.
+    static final boolean DEBUG = true; // DO NOT SUBMIT WITH TRUE.
 
     @VisibleForTesting
     static final String KEY_LOCATION_MODE = "location_mode";
@@ -336,7 +336,7 @@ public class BatterySaverPolicy extends ContentObserver implements
         synchronized (mLock) {
             if (mPolicyLevel == POLICY_LEVEL_OFF) {
                 // Current policy is OFF, so there's no change to notify listeners of.
-                return;
+                // return;
             }
             // Don't call out to listeners with the lock held.
             listeners = mListeners.toArray(new BatterySaverPolicyListener[mListeners.size()]);
@@ -385,14 +385,14 @@ public class BatterySaverPolicy extends ContentObserver implements
                 changed |= maybeUpdateDefaultFullPolicy(newFullPolicy);
             }
 
-            if (newAdaptivePolicy != null && !mAdaptivePolicy.equals(newAdaptivePolicy)) {
+            /*if (newAdaptivePolicy != null && !mAdaptivePolicy.equals(newAdaptivePolicy)) {
                 mDefaultAdaptivePolicy = newAdaptivePolicy;
                 // This will override any config set by an external source. This should be fine
                 // for now.
                 // TODO(119261320): make sure it doesn't override what's set externally
                 mAdaptivePolicy = mDefaultAdaptivePolicy;
                 changed |= (mPolicyLevel == POLICY_LEVEL_ADAPTIVE);
-            }
+            }*/
 
             updatePolicyDependenciesLocked();
         }
@@ -454,6 +454,7 @@ public class BatterySaverPolicy extends ContentObserver implements
                 Policy.fromSettings(setting, deviceSpecificSetting,
                         mLastDeviceConfigProperties, null, DEFAULT_FULL_POLICY));
 
+        /*
         mDefaultAdaptivePolicy = Policy.fromSettings("", "",
                 mLastDeviceConfigProperties, KEY_SUFFIX_ADAPTIVE, DEFAULT_ADAPTIVE_POLICY);
         if (mPolicyLevel == POLICY_LEVEL_ADAPTIVE
@@ -463,6 +464,7 @@ public class BatterySaverPolicy extends ContentObserver implements
         // This will override any config set by an external source. This should be fine for now.
         // TODO: make sure it doesn't override what's set externally
         mAdaptivePolicy = mDefaultAdaptivePolicy;
+        */
 
         updatePolicyDependenciesLocked();
 
@@ -941,6 +943,15 @@ public class BatterySaverPolicy extends ContentObserver implements
      * @return State data that contains battery saver data
      */
     public PowerSaveState getBatterySaverPolicy(@ServiceType int type) {
+        PowerSaveState state = getBatterySaverPolicyBaikal(type);
+        if( DEBUG && type != ServiceType.SCREEN_BRIGHTNESS) {
+            Slog.d(TAG, "getBatterySaverPolicy(" + type + "): " + state.globalBatterySaverEnabled + "," + state.batterySaverEnabled, new Throwable());
+        }
+        return state;
+    }
+
+
+    public PowerSaveState getBatterySaverPolicyBaikal(@ServiceType int type) {
         synchronized (mLock) {
             final Policy currPolicy = getCurrentPolicyLocked();
             final PowerSaveState.Builder builder = new PowerSaveState.Builder()
@@ -1122,7 +1133,7 @@ public class BatterySaverPolicy extends ContentObserver implements
     private Policy getCurrentRawPolicyLocked() {
         switch (mPolicyLevel) {
             case POLICY_LEVEL_FULL:
-                return mFullPolicy;
+                return mAdaptivePolicy != null ? mAdaptivePolicy : OFF_POLICY; //mFullPolicy;
             case POLICY_LEVEL_ADAPTIVE:
                 return mAdaptivePolicy;
             case POLICY_LEVEL_OFF:

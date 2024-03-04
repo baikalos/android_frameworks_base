@@ -34,6 +34,8 @@ import com.android.server.job.JobSchedulerService;
 import com.android.server.job.StateControllerProto;
 import com.android.server.storage.DeviceStorageMonitorService;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.function.Predicate;
 
 /**
@@ -41,8 +43,8 @@ import java.util.function.Predicate;
  */
 public final class StorageController extends StateController {
     private static final String TAG = "JobScheduler.Storage";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     private final ArraySet<JobStatus> mTrackedTasks = new ArraySet<JobStatus>();
     private final StorageTracker mStorageTracker;
@@ -137,14 +139,14 @@ public final class StorageController extends StateController {
             mLastStorageSeq = intent.getIntExtra(DeviceStorageMonitorService.EXTRA_SEQUENCE,
                     mLastStorageSeq);
             if (Intent.ACTION_DEVICE_STORAGE_LOW.equals(action)) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Available storage too low to do work. @ "
                             + sElapsedRealtimeClock.millis());
                 }
                 mStorageLow = true;
                 maybeReportNewStorageState();
             } else if (Intent.ACTION_DEVICE_STORAGE_OK.equals(action)) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Available storage high enough to do work. @ "
                             + sElapsedRealtimeClock.millis());
                 }

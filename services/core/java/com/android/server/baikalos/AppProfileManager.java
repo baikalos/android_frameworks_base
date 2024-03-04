@@ -23,6 +23,8 @@ import static com.android.server.am.ProcessList.SCHED_GROUP_DEFAULT;
 import static com.android.server.am.ProcessList.SCHED_GROUP_TOP_APP;
 import static com.android.server.am.ProcessList.SCHED_GROUP_TOP_APP_BOUND;
 
+import static com.android.server.pm.verify.domain.DomainVerificationCollector.RESTRICT_DOMAINS;
+
 import static android.os.Process.THREAD_GROUP_DEFAULT;
 import static android.os.Process.THREAD_GROUP_BACKGROUND;
 import static android.os.Process.THREAD_GROUP_TOP_APP;
@@ -68,6 +70,7 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.BroadcastReceiver;
+import android.content.pm.ApplicationInfo;
 import android.content.res.Resources;
 import android.net.Uri;
 
@@ -313,6 +316,10 @@ public class AppProfileManager {
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_SUPER_SAVER_DRAW),
                     false, this);
 
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_AUTO_LIMIT),
+                    false, this);
+
             } catch( Exception e ) {
             }
         
@@ -526,6 +533,9 @@ public class AppProfileManager {
 
         boolean superSaverForDraw = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_SUPER_SAVER_DRAW, 0) != 0;
         AppProfileSettings.setSuperSaverActiveForDraw(superSaverForDraw);
+
+        boolean autoLimit = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AUTO_LIMIT, 0) != 0;
+        changed |= AppProfile.setAutoLimit(autoLimit);
 
         if( changed ) {
             activateCurrentProfileLocked(false,false);
@@ -817,6 +827,8 @@ public class AppProfileManager {
             if( profile == null ) {
                 profile = new AppProfile(mTopPackageName, uid);   
             }
+
+            AppProfile.setTopAppProfile(profile,packageName,uid);
 
             mCurrentProfile = profile;
             activateCurrentProfileLocked(true,false);
@@ -1239,7 +1251,7 @@ public class AppProfileManager {
         if( profile == null ) return false;
         if( isStamina() && !profile.getStamina() ) {
             if( profile.getBackgroundMode() >= 0 ) {
-                if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos stamina ("
+                if( profile.mDebug || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "Background execution restricted by baikalos stamina ("
                     + profile.getBackgroundMode() + "," 
                     + profile.getStamina() + ") : " 
                     + profile.mPackageName);
@@ -1248,8 +1260,8 @@ public class AppProfileManager {
         }
         if( !mAggressiveMode ) return false;
         if( mAwake ) {
-            if( profile.getBackgroundMode() > 0 ) {
-                if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos (" 
+            if( profile.getBackgroundMode() > 1 ) {
+                if( profile.mDebug || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "Background execution restricted by baikalos (" 
                     + profile.getBackgroundMode() + "," 
                     + profile.getStamina() + ") : " 
                     + profile.mPackageName);
@@ -1258,7 +1270,7 @@ public class AppProfileManager {
             }
         } else {
             if( profile.getBackgroundMode() > 0 ) {
-                if( profile.mDebug ) Slog.w(TAG, "Background execution restricted by baikalos ("
+                if( profile.mDebug || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "Background execution restricted by baikalos ("
                     + profile.getBackgroundMode() + "," 
                     + profile.getStamina() + ") : " 
                     + profile.mPackageName);
@@ -1316,6 +1328,34 @@ public class AppProfileManager {
         }
         return false;
     }
+
+    public boolean isCompatChangeEnabled(long changeId, ApplicationInfo app, boolean def) {
+        String packageName = app.packageName;
+        if( mAppSettings == null ) return def;
+        if( packageName == null ) return def;
+        AppProfile profile = mAppSettings.getProfile(packageName);
+        if( profile == null ) {
+            //Slog.w(TAG, "isCompatChangeEnabled pkg=" + packageName + ", chanId=" + changeId + ", def=" + def + ", result=" + def);
+            return def;
+        }
+        boolean result = spoofCompatChangeInternal(changeId,profile,def);
+        //if( profile.mDebug ) {
+            //Slog.w(TAG, "isCompatChangeEnabled pkg=" + packageName + ", chanId=" + changeId + ", def=" + def + ", result=" + result);
+        //}
+        return result;
+    }
+
+	private boolean spoofCompatChangeInternal(long chanId, AppProfile profile, boolean def) {
+        if( chanId == RESTRICT_DOMAINS ) {
+            /*if( profile.mPackageName.equals("psyberia.alpinequest.free") ) {
+                Slog.w(TAG, "isCompatChangeEnabled pkg=" + profile.mPackageName + ", chanId=" + chanId + ", def=" + def + ", result=" + false);
+                return false;
+            }*/
+                //if( profile.mUnrestrict ) return true;
+        }
+        return def;
+    }
+
 
     boolean mAwake;
     public void setAwake(boolean awake) {

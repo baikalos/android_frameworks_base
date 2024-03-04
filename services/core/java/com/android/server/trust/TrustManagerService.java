@@ -86,7 +86,7 @@ import com.android.server.SystemService;
 import com.android.server.app.AppLockManagerServiceInternal;
 import com.android.server.companion.virtual.VirtualDeviceManagerInternal;
 
-import com.android.internal.baikalos.BaikalTrust;
+import com.android.server.baikalos.BaikalTrust;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -137,6 +137,7 @@ public class TrustManagerService extends SystemService {
     private static final int MSG_USER_REQUESTED_UNLOCK = 16;
     private static final int MSG_REFRESH_TRUSTABLE_TIMERS_AFTER_AUTH = 17;
     private static final int MSG_USER_MAY_REQUEST_UNLOCK = 18;
+    private static final int MSG_UPDATE_TRUST_ALL = 19;
 
     private static final String REFRESH_DEVICE_LOCKED_EXCEPT_USER = "except";
 
@@ -243,7 +244,7 @@ public class TrustManagerService extends SystemService {
         mStrongAuthTracker = new StrongAuthTracker(context);
         mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         mSettingsObserver = new SettingsObserver(mHandler);
-	    mBaikalTrust = new BaikalTrust(mHandler,context);
+	    mBaikalTrust = new BaikalTrust(this,mHandler,context);
     }
 
     @Override
@@ -514,7 +515,11 @@ public class TrustManagerService extends SystemService {
         }
     }
 
-    private void updateTrustAll() {
+    public void requestUpdateTrustAll() {
+        mHandler.obtainMessage(MSG_UPDATE_TRUST_ALL, 0, 0, null).sendToTarget();
+    }
+
+    void updateTrustAll() {
         List<UserInfo> userInfos = mUserManager.getAliveUsers();
         for (UserInfo userInfo : userInfos) {
             updateTrust(userInfo.id, 0);
@@ -1220,10 +1225,9 @@ public class TrustManagerService extends SystemService {
 
 	    if( mBaikalTrust != null ) {
             // BaikalOS Smart Trust hook
-            boolean baikalTrusted = mBaikalTrust.isTrusted();
+            boolean baikalTrusted = mBaikalTrust.isKeepUnlocked();
 	        if( baikalTrusted != mBaikalTrusted ) {
 	            mBaikalTrusted = baikalTrusted;
-	            updateTrustAll();
 	        }
 
             if( mBaikalTrusted ) {
@@ -1898,6 +1902,9 @@ public class TrustManagerService extends SystemService {
                     if (trustableAlarm != null && trustableAlarm.isQueued()) {
                         refreshTrustableTimers(msg.arg1);
                     }
+                    break;
+                case MSG_UPDATE_TRUST_ALL:
+                    updateTrustAll();
                     break;
             }
         }

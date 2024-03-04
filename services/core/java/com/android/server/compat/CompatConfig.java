@@ -48,6 +48,8 @@ import com.android.server.compat.overrides.Overrides;
 import com.android.server.compat.overrides.XmlWriter;
 import com.android.server.pm.ApexManager;
 
+import com.android.server.baikalos.AppProfileManager;
+
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.BufferedInputStream;
@@ -173,11 +175,15 @@ final class CompatConfig {
      */
     boolean isChangeEnabled(long changeId, ApplicationInfo app) {
         CompatChange c = mChanges.get(changeId);
+        AppProfileManager manager = AppProfileManager.getInstance();
         if (c == null) {
-            // we know nothing about this change: default behaviour is enabled.
+            if( manager != null ) return manager.isCompatChangeEnabled(changeId,app,true);
             return true;
         }
-        return c.isEnabled(app, mAndroidBuildClassifier);
+        //return c.isEnabled(app, mAndroidBuildClassifier);
+        boolean result = c.isEnabled(app, mAndroidBuildClassifier);
+        if( manager != null ) result = manager.isCompatChangeEnabled(changeId,app,result);
+        return result;
     }
 
     /**

@@ -56,7 +56,7 @@ import java.util.stream.Collectors;
 /**
  * Settings constants that can modify the activity manager's behavior.
  */
-final class ActivityManagerConstants extends ContentObserver {
+final public class ActivityManagerConstants extends ContentObserver {
     private static final String TAG = "ActivityManagerConstants";
 
     // Key names stored in the settings value.
@@ -145,7 +145,7 @@ final class ActivityManagerConstants extends ContentObserver {
      */
     static final String KEY_NETWORK_ACCESS_TIMEOUT_MS = "network_access_timeout_ms";
 
-    private static final int DEFAULT_MAX_CACHED_PROCESSES = 32;
+    private static final int DEFAULT_MAX_CACHED_PROCESSES = 1024;
     private static final long DEFAULT_FGSERVICE_MIN_SHOWN_TIME = 2*1000;
     private static final long DEFAULT_FGSERVICE_MIN_REPORT_TIME = 3*1000;
     private static final long DEFAULT_FGSERVICE_SCREEN_ON_BEFORE_TIME = 1*1000;
@@ -192,8 +192,8 @@ final class ActivityManagerConstants extends ContentObserver {
     private static final long DEFAULT_PROCESS_KILL_TIMEOUT_MS = 10 * 1000;
     private static final long DEFAULT_NETWORK_ACCESS_TIMEOUT_MS = 200; // 0.2 sec
 
-    static final long DEFAULT_BACKGROUND_SETTLE_TIME = 60 * 1000;
-    static final long DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS = 60 * 1000;
+    static final long DEFAULT_BACKGROUND_SETTLE_TIME = 90 * 1000;
+    static final long DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS = 300 * 1000;
     static final boolean DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE = true;
 
     /**
@@ -970,7 +970,7 @@ final class ActivityManagerConstants extends ContentObserver {
                                 updateKillBgRestrictedCachedIdle();
                                 break;
                             case KEY_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME:
-                                updateKillBgRestrictedCachedIdleSettleTime();
+                                //updateKillBgRestrictedCachedIdleSettleTime();
                                 break;
                             case KEY_FGS_ALLOW_OPT_OUT:
                                 updateFgsAllowOptOut();
@@ -1414,6 +1414,18 @@ final class ActivityManagerConstants extends ContentObserver {
                 DeviceConfig.NAMESPACE_ACTIVITY_MANAGER,
                 KEY_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME,
                 DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS);
+        if (mKillBgRestrictedAndCachedIdleSettleTimeMs != currentSettleTime) {
+            mService.mHandler.removeMessages(
+                    ActivityManagerService.IDLE_UIDS_MSG);
+            mService.mHandler.sendEmptyMessageDelayed(
+                    ActivityManagerService.IDLE_UIDS_MSG,
+                    mKillBgRestrictedAndCachedIdleSettleTimeMs);
+        }
+    }
+
+    public void updateKillBgRestrictedCachedIdleSettleTime(int settleTimeMs) {
+        final long currentSettleTime = mKillBgRestrictedAndCachedIdleSettleTimeMs;
+        mKillBgRestrictedAndCachedIdleSettleTimeMs = settleTimeMs;
         if (mKillBgRestrictedAndCachedIdleSettleTimeMs != currentSettleTime) {
             mService.mHandler.removeMessages(
                     ActivityManagerService.IDLE_UIDS_MSG);

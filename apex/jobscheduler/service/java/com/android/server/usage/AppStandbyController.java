@@ -1424,15 +1424,15 @@ public class AppStandbyController
         }
         if (mSystemServicesReady) {
 
-            AppProfile profile = AppProfileManager.getProfile(packageName);
+            AppProfile profile = AppProfileManager.getProfile(packageName,appId);
 
-            if( AppProfileManager.getInstance().isStamina() && !profile.getStamina() && profile.getBackgroundMode() >= 0 ) {
-                return STANDBY_BUCKET_NEVER;
+            //if( AppProfileManager.getInstance().isStamina() && !profile.getStamina() && profile.getBackgroundMode() >= 0 ) {
+            //    return STANDBY_BUCKET_RARE;
+            //}
+            if( profile.mBackgroundMode > 0 ) {
+                return STANDBY_BUCKET_RESTRICTED;
             }
-            if( profile.getBackgroundMode() > 0 ) {
-                return STANDBY_BUCKET_NEVER;
-            }
-            if( profile.getBackgroundMode() < 0 ) {
+            if( profile.getBackgroundMode(false) < 0 ) {
                 return STANDBY_BUCKET_EXEMPTED;
             }
             // We allow all whitelisted apps, including those that don't want to be whitelisted
@@ -1627,7 +1627,7 @@ public class AppStandbyController
             @ForcedReasons int restrictReason) {
         if (mainReason != REASON_MAIN_FORCED_BY_SYSTEM
                 && mainReason != REASON_MAIN_FORCED_BY_USER) {
-            Slog.e(TAG, "Tried to restrict app " + packageName + " for an unsupported reason");
+            Slog.e(TAG, "Tried to restrict app " + packageName + " for an unsupported reason :" + mainReason, new Throwable());
             return;
         }
         // If the package is not installed, don't allow the bucket to be set.

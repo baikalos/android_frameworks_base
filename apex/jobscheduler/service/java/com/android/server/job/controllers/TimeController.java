@@ -53,8 +53,8 @@ import java.util.function.Predicate;
  */
 public final class TimeController extends StateController {
     private static final String TAG = "JobScheduler.Time";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     @VisibleForTesting
     static final long DELAY_COALESCE_TIME_MS = 30_000L;
@@ -239,7 +239,7 @@ public final class TimeController extends StateController {
                     it.remove();
                 } else {  // Sorted by expiry time, so take the next one and stop.
                     if (!wouldBeReadyWithConstraintLocked(job, JobStatus.CONSTRAINT_DEADLINE)) {
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.i(TAG,
                                     "Skipping " + job + " because deadline won't make it ready.");
                         }
@@ -295,7 +295,7 @@ public final class TimeController extends StateController {
                     changedJobs.add(job);
                 } else {
                     if (!wouldBeReadyWithConstraintLocked(job, JobStatus.CONSTRAINT_TIMING_DELAY)) {
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.i(TAG, "Skipping " + job + " because delay won't make it ready.");
                         }
                         continue;
@@ -374,7 +374,7 @@ public final class TimeController extends StateController {
         return null;
     }
 
-    public int getBackgroundMode(WorkSource workSource, boolean ignoreGms) {
+    public int getBackgroundMode(WorkSource workSource) {
         String opPackageName = null;
         int  opUid = -1;
 
@@ -386,19 +386,26 @@ public final class TimeController extends StateController {
             opUid = workChain.getAttributionUid();
             if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted ws: opPackageName=" + opPackageName);
         } else {
-            opPackageName = workSource.getPackageName(0) != null
-                    ? workSource.getPackageName(0) : "android";
+            opPackageName = workSource.getPackageName(0);
             opUid = workSource.getUid(0);
             if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted wc: opPackageName=" + opPackageName);
         }
 
-        if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) {
+        if( opPackageName == null ) {
+            if( opUid < 10000 ) opPackageName = "android";
+            else {
+                String[] pkgs = mContext.getPackageManager().getPackagesForUid(opUid);
+                if( pkgs != null ) opPackageName = pkgs[0];
+            }
+        } 
+
+        /*if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) {
             if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted gms: opPackageName=" + opPackageName);
             return 0;
-        }
+        }*/
 
         if( opPackageName != null ) {
-            AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName);
+            AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName,opUid);
 
             if( profile.mDisableWakeup ) {
                 if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: alarms disabled opPackageName=" + opPackageName);
@@ -409,12 +416,18 @@ public final class TimeController extends StateController {
                 return 1;
             }
 
-            if( profile.getBackgroundMode() < 0 ) {
+            if( profile.mAllowWhileIdle ) {
+                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: allow while idle opPackageName=" + opPackageName);
+                return -1;
+            }
+
+            int backgroundMode = profile.getBackgroundMode(false);
+            if( backgroundMode < 0 ) {
                 if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName);
             } else {
-                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: regular opPackageName=" + opPackageName + ", bg=" + profile.getBackgroundMode());
+                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: regular opPackageName=" + opPackageName + ", bg=" + backgroundMode);
             }
-            return profile.getBackgroundMode();
+            return backgroundMode;
         }
 
         if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: default opPackageName=" + opPackageName + ", bg=0");
@@ -433,7 +446,7 @@ public final class TimeController extends StateController {
         }
         mNextJobExpiredElapsedMillis = alarmTimeElapsedMillis;
 
-        if( getBackgroundMode(ws,false) < 0 ) {
+        if( getBackgroundMode(ws) < 0 ) {
             updateAlarmWithListenerLocked(DEADLINE_TAG, AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 mDeadlineExpiredListener, mNextJobExpiredElapsedMillis, ws);
         } else {
@@ -452,7 +465,7 @@ public final class TimeController extends StateController {
         if (alarmTimeElapsed == Long.MAX_VALUE) {
             mAlarmService.cancel(listener);
         } else {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Setting " + tag + " for: " + alarmTimeElapsed);
             }
             mAlarmService.set(alarmType, alarmTimeElapsed,
@@ -465,7 +478,7 @@ public final class TimeController extends StateController {
     private final OnAlarmListener mDeadlineExpiredListener = new OnAlarmListener() {
         @Override
         public void onAlarm() {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Deadline-expired alarm fired");
             }
             checkExpiredDeadlinesAndResetAlarm();
@@ -475,7 +488,7 @@ public final class TimeController extends StateController {
     private final OnAlarmListener mNextDelayExpiredListener = new OnAlarmListener() {
         @Override
         public void onAlarm() {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Delay-expired alarm fired");
             }
             mLastFiredDelayExpiredElapsedMillis = sElapsedRealtimeClock.millis();

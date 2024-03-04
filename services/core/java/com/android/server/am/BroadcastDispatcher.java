@@ -349,20 +349,22 @@ public class BroadcastDispatcher {
                 if (isAllUidReady || uidReadyForReceiver.get(uid)) {
                     final BroadcastRecord br = uid2br.valueAt(i);
                     if (DEBUG_BROADCAST_DEFERRAL) {
-                        final Object receiver = br.receivers.get(0);
-                        if (receiver instanceof BroadcastFilter) {
-                            if (DEBUG_BROADCAST_DEFERRAL) {
-                                Slog.i(TAG, "getDeferredBootCompletedBroadcast uid:" + uid
-                                        + " BroadcastFilter:" + (BroadcastFilter) receiver
-                                        + " broadcast:" + br.intent.getAction());
-                            }
-                        } else /* if (receiver instanceof ResolveInfo) */ {
-                            ResolveInfo info = (ResolveInfo) receiver;
-                            String packageName = info.activityInfo.applicationInfo.packageName;
-                            if (DEBUG_BROADCAST_DEFERRAL) {
-                                Slog.i(TAG, "getDeferredBootCompletedBroadcast uid:" + uid
-                                        + " packageName:" + packageName
-                                        + " broadcast:" + br.intent.getAction());
+                        if( br.receivers.size() > 0 ) {
+                            final Object receiver = br.receivers.get(0);
+                            if (receiver instanceof BroadcastFilter) {
+                                if (DEBUG_BROADCAST_DEFERRAL) {
+                                    Slog.i(TAG, "getDeferredBootCompletedBroadcast uid:" + uid
+                                            + " BroadcastFilter:" + (BroadcastFilter) receiver
+                                            + " broadcast:" + br.intent.getAction());
+                                }
+                            } else /* if (receiver instanceof ResolveInfo) */ {
+                                ResolveInfo info = (ResolveInfo) receiver;
+                                String packageName = info.activityInfo.applicationInfo.packageName;
+                                if (DEBUG_BROADCAST_DEFERRAL) {
+                                    Slog.i(TAG, "getDeferredBootCompletedBroadcast uid:" + uid
+                                            + " packageName:" + packageName
+                                            + " broadcast:" + br.intent.getAction());
+                                }
                             }
                         }
                     }

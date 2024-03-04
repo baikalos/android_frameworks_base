@@ -3651,14 +3651,17 @@ public class DeviceIdleController extends SystemService
             case STATE_INACTIVE:
                 // We have now been inactive long enough, it is time to start looking
                 // for motion and sleep some more while doing so.
-                startMonitoringMotionLocked();
                 long delay = mConstants.IDLE_AFTER_INACTIVE_TIMEOUT;
                 if (shouldUseIdleTimeoutFactorLocked()) {
                     delay = (long) (mPreIdleFactor * delay);
                 }
-                scheduleAlarmLocked(delay, false);
-                moveToStateLocked(STATE_IDLE_PENDING, reason);
-                break;
+
+                if( !mAggressiveDeviceIdleMode && delay > 0 ) {
+                    startMonitoringMotionLocked();
+                    scheduleAlarmLocked(delay, false);
+                    moveToStateLocked(STATE_IDLE_PENDING, reason);
+                    break;
+                }
             case STATE_IDLE_PENDING:
                 cancelLocatingLocked();
                 mLocated = false;
@@ -3666,7 +3669,7 @@ public class DeviceIdleController extends SystemService
                 mLastGpsLocation = null;
                 moveToStateLocked(STATE_SENSING, reason);
 
-                if( mConstants.SENSING_TIMEOUT > 0 ) {
+                if( !mAggressiveDeviceIdleMode && mConstants.SENSING_TIMEOUT > 0 ) {
                 // Wait for open constraints and an accelerometer reading before moving on.
                     if (mUseMotionSensor && mAnyMotionDetector.hasSensor()) {
                         scheduleSensingTimeoutAlarmLocked(mConstants.SENSING_TIMEOUT);
@@ -3684,7 +3687,7 @@ public class DeviceIdleController extends SystemService
             case STATE_SENSING:
                 cancelSensingTimeoutAlarmLocked();
                 moveToStateLocked(STATE_LOCATING, reason);
-                if( mConstants.LOCATING_TIMEOUT > 0 ) {
+                if( !mAggressiveDeviceIdleMode && mConstants.LOCATING_TIMEOUT > 0 ) {
                     scheduleAlarmLocked(mConstants.LOCATING_TIMEOUT, false);
                     LocationManager locationManager = mInjector.getLocationManager();
                     if (locationManager != null

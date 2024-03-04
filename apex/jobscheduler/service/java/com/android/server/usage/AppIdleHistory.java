@@ -24,11 +24,13 @@ import static android.app.usage.UsageStatsManager.REASON_MAIN_TIMEOUT;
 import static android.app.usage.UsageStatsManager.REASON_MAIN_USAGE;
 import static android.app.usage.UsageStatsManager.REASON_SUB_MASK;
 import static android.app.usage.UsageStatsManager.REASON_SUB_USAGE_USER_INTERACTION;
+import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_EXEMPTED;
 import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_ACTIVE;
-import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_NEVER;
+import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_WORKING_SET;
+import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_FREQUENT;
 import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_RARE;
 import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_RESTRICTED;
-import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_WORKING_SET;
+import static android.app.usage.UsageStatsManager.STANDBY_BUCKET_NEVER;
 
 import static com.android.server.usage.AppStandbyController.isUserUsage;
 
@@ -47,6 +49,7 @@ import android.util.TimeUtils;
 import android.util.Xml;
 
 import android.baikalos.AppProfile;
+import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.baikalos.AppProfileManager;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -414,10 +417,21 @@ public class AppIdleHistory {
     }
 
     public boolean isIdle(String packageName, int userId, long elapsedRealtime) {
+
+        AppProfile profile = AppProfileManager.getProfile(packageName,-1);
+        if( profile != null && 
+            profile.getBackgroundMode(false) < 0 || 
+            profile.mAllowWhileIdle ) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle ->STANDBY_BUCKET_EXEMPTED > 1 :" + packageName);
+            return false;
+        } 
+
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);
         AppUsageHistory appUsageHistory =
                 getPackageHistory(userHistory, packageName, elapsedRealtime, true);
-        return appUsageHistory.currentBucket >= IDLE_BUCKET_CUTOFF;
+        boolean result = appUsageHistory.currentBucket >= IDLE_BUCKET_CUTOFF;
+        if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle " + result + " -> " + fromBucketToString(appUsageHistory.currentBucket) + " :" + packageName);
+        return result;
     }
 
     public AppUsageHistory getAppUsageHistory(String packageName, int userId,
@@ -435,16 +449,15 @@ public class AppIdleHistory {
 
     public void setAppStandbyBucket(String packageName, int userId, long elapsedRealtime,
             int bucket, int reason, boolean resetExpiryTimes) {
-        
-        if( bucket >= STANDBY_BUCKET_ACTIVE && bucket < IDLE_BUCKET_CUTOFF ) {
-            AppProfile profile = AppProfileManager.getProfile(packageName);
-            if( profile.getBackgroundMode() > 0 ) {
-                bucket = STANDBY_BUCKET_RESTRICTED;
-            }
-            if( AppProfileManager.getInstance().isStamina() && !profile.getStamina() && profile.getBackgroundMode() >= 0 ) {
-                bucket = STANDBY_BUCKET_RESTRICTED;
-            }
+
+        AppProfile profile = AppProfileManager.getProfile(packageName,-1);
+        if( profile != null && profile.mBackgroundMode > 0 && bucket < STANDBY_BUCKET_RESTRICTED ) {
+            bucket = STANDBY_BUCKET_RESTRICTED;
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "setAppStandbyBucket " + bucket + " ->RARE > 1 :" + packageName);
         } 
+       
+        //if( bucket >= STANDBY_BUCKET_ACTIVE && bucket < IDLE_BUCKET_CUTOFF ) {
+        //} 
 
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);
         AppUsageHistory appUsageHistory =
@@ -571,9 +584,32 @@ public class AppIdleHistory {
 
     public int getAppStandbyBucket(String packageName, int userId, long elapsedRealtime) {
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);
+        AppProfile profile = AppProfileManager.getProfile(packageName,-1);
+        int backgroundMode = profile == null ? 0 : profile.getBackgroundMode(false);
+        if( backgroundMode > 0 ) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket RARE :" + packageName);
+            return STANDBY_BUCKET_RARE;
+        } else {
+            if( backgroundMode < 0 || 
+                profile.mAllowWhileIdle ||
+                profile.mImportantApp ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket STANDBY_BUCKET_EXEMPTED :" + packageName);
+                    return STANDBY_BUCKET_EXEMPTED;
+            } 
+        }
+
         AppUsageHistory appUsageHistory =
                 getPackageHistory(userHistory, packageName, elapsedRealtime, false);
-        return appUsageHistory == null ? STANDBY_BUCKET_NEVER : appUsageHistory.currentBucket;
+        /*return*/int result = appUsageHistory == null ? STANDBY_BUCKET_NEVER : appUsageHistory.currentBucket;
+
+        /*if( backgroundMode == 0 && result >= STANDBY_BUCKET_RARE ) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket STANDBY_BUCKET_FREQUENT :" + packageName);
+            return STANDBY_BUCKET_FREQUENT;
+        }*/
+
+        if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket " + fromBucketToString(result) + " :" + packageName);
+
+        return result;
     }
 
     public ArrayList<AppStandbyInfo> getAppStandbyBuckets(int userId, boolean appIdleEnabled) {
@@ -1053,5 +1089,17 @@ public class AppIdleHistory {
             TimeUtils.formatDuration(totalElapsedTimeMs - expiryTimeMs, idpw);
         }
         idpw.print(")");
+    }
+
+    private String fromBucketToString(int bucket) {
+        if( bucket < STANDBY_BUCKET_EXEMPTED ) return "STANDBY_BUCKET_INVALID(" + bucket + ")";
+        if( bucket < STANDBY_BUCKET_ACTIVE ) return "STANDBY_BUCKET_EXEMPTED(" + bucket + ")";
+        if( bucket < STANDBY_BUCKET_WORKING_SET ) return "STANDBY_BUCKET_ACTIVE(" + bucket + ")";
+        if( bucket < STANDBY_BUCKET_FREQUENT ) return "STANDBY_BUCKET_WORKING_SET(" + bucket + ")";
+        if( bucket < STANDBY_BUCKET_RARE ) return "STANDBY_BUCKET_FREQUENT(" + bucket + ")";
+        if( bucket < STANDBY_BUCKET_RESTRICTED ) return "STANDBY_BUCKET_RARE(" + bucket + ")";
+        if( bucket < STANDBY_BUCKET_NEVER ) return "STANDBY_BUCKET_RESTRICTED(" + bucket + ")";
+        else if( bucket == STANDBY_BUCKET_NEVER ) return "STANDBY_BUCKET_NEVER(" + bucket + ")";
+        else return "STANDBY_BUCKET_INVALID(" + bucket + ")";
     }
 }

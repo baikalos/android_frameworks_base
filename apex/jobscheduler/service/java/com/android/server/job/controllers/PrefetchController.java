@@ -51,6 +51,8 @@ import com.android.server.LocalServices;
 import com.android.server.job.JobSchedulerService;
 import com.android.server.utils.AlarmQueue;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.function.Predicate;
 
 /**
@@ -58,8 +60,8 @@ import java.util.function.Predicate;
  */
 public class PrefetchController extends StateController {
     private static final String TAG = "JobScheduler.Prefetch";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     private final PcConstants mPcConstants;
     private final PcHandler mHandler;
@@ -271,7 +273,7 @@ public class PrefetchController extends StateController {
 
     private void processUpdatedEstimatedLaunchTime(int userId, @NonNull String pkgName,
             @CurrentTimeMillisLong long newEstimatedLaunchTime) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Estimated launch time for " + packageToString(userId, pkgName)
                     + " changed to " + newEstimatedLaunchTime
                     + " ("
@@ -282,7 +284,7 @@ public class PrefetchController extends StateController {
         synchronized (mLock) {
             final ArraySet<JobStatus> jobs = mTrackedJobs.get(userId, pkgName);
             if (jobs == null) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.i(TAG,
                             "Not caching launch time since we haven't seen any prefetch"
                                     + " jobs for " + packageToString(userId, pkgName));
@@ -463,7 +465,7 @@ public class PrefetchController extends StateController {
                     // the local cache go through the handler (and therefore will be sequential).
                     final long nextEstimatedLaunchTime = mUsageStatsManagerInternal
                             .getEstimatedPackageLaunchTime(pkgName, userId);
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Retrieved launch time for "
                                 + packageToString(userId, pkgName)
                                 + " of " + nextEstimatedLaunchTime

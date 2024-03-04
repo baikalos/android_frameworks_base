@@ -269,6 +269,7 @@ public class BaikalDebugManager {
         AppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
         AppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_OOM_RAW && BaikalConstants.BAIKAL_DEBUG_RAW;
         NetworkManagementService.DBG = BaikalConstants.BAIKAL_DEBUG_NETWORK;
+        NetworkManagementService.DBGB = BaikalConstants.BAIKAL_DEBUG_NETWORK;
 
         NetworkPolicyLogger.LOGD = BaikalConstants.BAIKAL_DEBUG_NETWORK;
         NetworkPolicyLogger.LOGV = BaikalConstants.BAIKAL_DEBUG_NETWORK && BaikalConstants.BAIKAL_DEBUG_RAW;

@@ -2045,7 +2045,8 @@ public final class PowerManagerService extends SystemService
            	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: duplicate " + wakeLock);
             return;
         }
-       	if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: " + wakeLock, new Throwable());
+       	//if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: " + wakeLock, new Throwable());
+        if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockAcquiredLocked: " + wakeLock);
         if (mSystemReady && !wakeLock.mDisabled) {
             wakeLock.mNotifiedAcquired = true;
             mNotifier.onWakeLockAcquired(wakeLock.mFlags, wakeLock.mTag, wakeLock.mPackageName,
@@ -2086,13 +2087,13 @@ public final class PowerManagerService extends SystemService
             }
 			if ((wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK) == PowerManager.PARTIAL_WAKE_LOCK ) {
                 int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
-                if( appid < Process.FIRST_APPLICATION_UID 
+                /*if( appid < Process.FIRST_APPLICATION_UID 
                     && !wakeLock.mTag.startsWith("*job*")
                     && !wakeLock.mTag.startsWith("*sync*") ) {
 
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: system LONG " + wakeLock);
                     return;
-                }
+                }*/
                 if( wakeLock.mAudio ) {
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "notifyWakeLockLongStartedLocked: Audio LONG " + wakeLock);
                     return;
@@ -4365,10 +4366,10 @@ public final class PowerManagerService extends SystemService
 
     private boolean setLowPowerModeInternal(boolean enabled) {
         synchronized (mLock) {
-            if (DEBUG) {
+            if (true) {
                 Slog.d(TAG, "setLowPowerModeInternal " + enabled + " mIsPowered=" + mIsPowered);
             }
-            if (mIsPowered) {
+            if (mIsPowered && enabled) {
                 return false;
             }
 
@@ -4700,9 +4701,12 @@ public final class PowerManagerService extends SystemService
         if ((wakeLock.mFlags & PowerManager.WAKE_LOCK_LEVEL_MASK)
                 == PowerManager.PARTIAL_WAKE_LOCK) {
             boolean disabled = false;
+            boolean wasDisabled = wakeLock.mDisabled;
+
             final int appid = UserHandle.getAppId(wakeLock.mOwnerUid);
             if ( !wakeLock.mAudio && 
-                (appid >= Process.FIRST_APPLICATION_UID 
+                 !wakeLock.mTag.equals("GOOGLE_C2DM") &&
+                (appid >= 0 /* Process.FIRST_APPLICATION_UID */
                 || wakeLock.mTag.startsWith("*job*")
                 || wakeLock.mTag.startsWith("*sync*")) ) {
                 // Cached inactive processes are never allowed to hold wake locks.
@@ -4712,49 +4716,69 @@ public final class PowerManagerService extends SystemService
                                     != ActivityManager.PROCESS_STATE_NONEXISTENT &&
                             wakeLock.mUidState.mProcState > ActivityManager.PROCESS_STATE_RECEIVER);
                 }
-                int mode = wakeLock.getBackgroundMode(true,false);
+                int mode = wakeLock.getBackgroundMode(true,false, /*-1*/ 0);
                 int wakefulness = getGlobalWakefulnessLocked();
 
-                if( !disabled && mode == 2 ) disabled = true;
-                if( !disabled && mode == 1 && wakefulness != WAKEFULNESS_AWAKE ) disabled = true;
+                if( !disabled && mode == 2 ) {
+                    disabled = true;
+                    if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: (1) " + disabled + ", " + wakeLock);
+                }
+                if( !disabled && mode == 1 && wakefulness != WAKEFULNESS_AWAKE ) {
+                    disabled = true;
+                    if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: (2) " + disabled + ", " + wakeLock);
+                }
 
-                if( !disabled && !wakeLock.mAudio) {
+                if( !disabled && !wakeLock.mAudio && mode >= 0 ) {
 
-                    boolean tempWhitelisted = Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) >= 0;
-                    if (!tempWhitelisted && mode > -1) {
+                    //boolean tempWhitelisted = Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) >= 0;
+                    //if ( !tempWhitelisted ) {
+
                         final UidState state = wakeLock.mUidState;
 
-                        if (!disabled && mDeviceIdleMode) {
-                            // If we are in idle mode, we will also ignore all partial wake locks that are
-                            // for application uids that are not allowlisted.
-                            if (/*Arrays.binarySearch(mDeviceIdleWhitelist, appid) < 0
-                                  &&*/ state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
-                                    && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE) {
+                        if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) 
+                            Slog.d(TAG, "setWakeLockDisabledStateLocked: (check) wakefulness=" + wakefulness + ", mProcState=" + state.mProcState + ", " + wakeLock);
+
+                        if (!disabled && (wakefulness != WAKEFULNESS_AWAKE) ) {
+                            if (appid < Process.FIRST_APPLICATION_UID ||
+                               (state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
+                             && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE) ) {
                                 disabled = true;
+                                if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: (3) " + disabled + ", " + wakeLock);
+                            }
+                        }
+
+                        if (!disabled && mDeviceIdleMode) {
+                            if (appid < Process.FIRST_APPLICATION_UID ||
+                               (state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
+                             && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE) ) {
+                                disabled = true;
+                                if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: (4) " + disabled + ", " + wakeLock);
                             }
                         }
                         if (!disabled && mLowPowerStandbyActive) {
-                            if (Arrays.binarySearch(mLowPowerStandbyAllowlist, appid) < 0
+                            if (appid < Process.FIRST_APPLICATION_UID || 
+                               (Arrays.binarySearch(mLowPowerStandbyAllowlist, appid) < 0
                                     && state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
-                                    && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_TOP) {
+                                    && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_TOP) ) {
                                 disabled = true;
+                                if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: (5) " + disabled + ", " + wakeLock);
                             }
                         }
 
-                        if (!disabled && !mDeviceIdleMode && wakefulness == WAKEFULNESS_AWAKE && AppProfileSettings.isSuperSaverActive()) {
+                        if (!disabled /*&& !mDeviceIdleMode */ && wakefulness == WAKEFULNESS_AWAKE && AppProfileSettings.isSuperSaverActive()) {
                             // If we are in idle mode, we will also ignore all partial wake locks that are
                             // for application uids that are not allowlisted.
                             if (state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
                                     && state.mProcState > ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE) {
                                 disabled = true;
+                                if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: (6) " + disabled + ", " + wakeLock);
                             }
                         }
-                    }
+                    //}
                 }
             }
-            boolean wasDisabled = wakeLock.mDisabled;
             boolean changed = wakeLock.setDisabled(disabled);
-           	if( disabled != wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: " + wakeLock);
+           	if( disabled != wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: " + disabled + ", " + wakeLock);
             return changed;
         }
         return false;
@@ -6017,6 +6041,10 @@ public final class PowerManagerService extends SystemService
         }
 
         public int getBackgroundMode(boolean checkOwner, boolean ignoreGms) {
+            return getBackgroundMode(checkOwner, ignoreGms, 0);
+        }
+
+        public int getBackgroundMode(boolean checkOwner, boolean ignoreGms, int def) {
             String opPackageName = null;
             int  opUid = -1;
 
@@ -6024,34 +6052,65 @@ public final class PowerManagerService extends SystemService
                 WorkSource workSource = mWorkSource;
                 WorkChain workChain = getFirstNonEmptyWorkChain(workSource);
                 if (workChain != null) {
-                    opPackageName = workChain.getAttributionTag();
                     opUid = workChain.getAttributionUid();
+                    opPackageName = workChain.getAttributionTag();
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted ws: opPackageName=" + opPackageName + ", wl=" + this);
                 } else {
-                    opPackageName = workSource.getPackageName(0) != null
-                            ? workSource.getPackageName(0) : mPackageName;
                     opUid = workSource.getUid(0);
+                    opPackageName = workSource.getPackageName(0); //!= null
+                            //? workSource.getPackageName(0) : mPackageName;
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted wc: opPackageName=" + opPackageName + ", wl=" + this);
                 }
             } else {
-                if( checkOwner ) { 
+                //if( checkOwner ) { 
                     opPackageName = mPackageName;
                     opUid = mOwnerUid;
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: opPackageName=" + opPackageName + ", wl=" + this);
-                }
+                //}
             }
+
+            if( opPackageName == null ) {
+                if( opUid < 10000 ) opPackageName = "android";
+                else {
+                    String[] pkgs = mContext.getPackageManager().getPackagesForUid(opUid);
+                    if( pkgs != null ) opPackageName = pkgs[0];
+                }
+            } 
 
             if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) return 0;
 
-            if( opPackageName != null ) {
-                AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName);
-                if( profile.getBackgroundMode() < 0 ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName + ", wl=" + this);
-                    //return true;
-                }
-                return profile.getBackgroundMode();
+            boolean tempWhitelisted = Arrays.binarySearch(mDeviceIdleTempWhitelist, opUid) >= 0;
+
+            if( tempWhitelisted ) {
+                if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: temp whitelisted opPackageName=" + opPackageName + " : " + -1 + ", wl=" + this);
+                return -1;
             }
-            return 0;
+
+            if( opPackageName != null ) {
+                AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName, opUid);
+                int mode = profile.getBackgroundMode();
+                if( mode < 0 ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName + " : " + -1 + ", wl=" + this);
+                    return mode;
+                } else if( mode == 0 ) {
+                    if( opUid < Process.FIRST_APPLICATION_UID  ) {
+                        if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: core system app opPackageName=" + opPackageName + " : " + -1 + ", wl=" + this);
+                        return -1;
+                    }
+                    if( profile.mAllowWhileIdle ) {
+                        if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: allow while idle opPackageName=" + opPackageName + " : " + mode + ", wl=" + this);
+                        return mode; //def;
+                    }
+                    if( profile.mImportantApp ) {
+                        if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: important app opPackageName=" + opPackageName + " : " + def + ", wl=" + this);
+                        return def;
+                    }                    
+                } else {
+                    if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: default app mode opPackageName=" + opPackageName + " : " + mode + ", wl=" + this);
+                }
+                return mode;
+            }
+            return def;
         }
 
     }
@@ -6799,8 +6858,11 @@ public final class PowerManagerService extends SystemService
 
         @Override // Binder call
         public boolean isDeviceIdleMode() {
+            final int uid = Binder.getCallingUid();
             final long ident = Binder.clearCallingIdentity();
             try {
+                AppProfile profile = AppProfileManager.getInstance().getAppProfile(uid);
+                if( profile != null && profile.mHideIdle ) return false;
                 return isDeviceIdleModeInternal();
             } finally {
                 Binder.restoreCallingIdentity(ident);
@@ -6809,8 +6871,11 @@ public final class PowerManagerService extends SystemService
 
         @Override // Binder call
         public boolean isLightDeviceIdleMode() {
+            final int uid = Binder.getCallingUid();
             final long ident = Binder.clearCallingIdentity();
             try {
+                AppProfile profile = AppProfileManager.getInstance().getAppProfile(uid);
+                if( profile != null && profile.mHideIdle ) return false;
                 return isLightDeviceIdleModeInternal();
             } finally {
                 Binder.restoreCallingIdentity(ident);

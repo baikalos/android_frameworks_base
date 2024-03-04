@@ -288,6 +288,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
     /** Enable or disable full battery saver. */
     @VisibleForTesting
     public void enableBatterySaver(boolean enable, int reason) {
+        enable = false;
         synchronized (mLock) {
             if (getFullEnabledLocked() == enable) {
                 return;
@@ -319,6 +320,14 @@ public class BatterySaverController implements BatterySaverPolicyListener {
      * account whether a policy says to advertise isEnabled so this can be propagated externally.
      */
     public boolean isEnabled() {
+        boolean result = isEnabledBaikal();
+        if (DEBUG) {
+            Slog.d(TAG, "isEnabled: " + result, new Throwable());
+        }
+        return result;
+    }
+
+    public boolean isEnabledBaikal() {
         synchronized (mLock) {
             return getFullEnabledLocked() || (getAdaptiveEnabledLocked()
                     && mBatterySaverPolicy.shouldAdvertiseIsEnabled());
@@ -457,6 +466,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
 
         updateBatterySavingStats();
 
+        //sendBroadcast = false;
         if (sendBroadcast) {
 
             if (DEBUG) {
@@ -532,6 +542,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
 
     @GuardedBy("mLock")
     private void setFullEnabledLocked(boolean value) {
+        value = false;
         if (mFullEnabledRaw == value) {
             return;
         }

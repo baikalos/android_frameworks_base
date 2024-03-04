@@ -75,6 +75,8 @@ import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 import com.android.server.utils.AlarmQueue;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import java.util.ArrayList;
@@ -112,8 +114,8 @@ import java.util.function.Predicate;
  */
 public final class QuotaController extends StateController {
     private static final String TAG = "JobScheduler.Quota";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     private static final String ALARM_TAG_CLEANUP = "*job.cleanup*";
     private static final String ALARM_TAG_QUOTA_CHECK = "*job.quota_check*";
@@ -629,13 +631,13 @@ public final class QuotaController extends StateController {
     @Override
     @GuardedBy("mLock")
     public void prepareForExecutionLocked(JobStatus jobStatus) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Prepping for " + jobStatus.toShortString());
         }
 
         final int uid = jobStatus.getSourceUid();
         if (mTopAppCache.get(uid)) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, jobStatus.toShortString() + " is top started job");
             }
             mTopStartedJobs.add(jobStatus);
@@ -865,6 +867,8 @@ public final class QuotaController extends StateController {
             return true;
         }
 
+        if( jobStatus.canRunInExtreme() ) return true;
+
         return 0 < getRemainingEJExecutionTimeLocked(
                 jobStatus.getSourceUserId(), jobStatus.getSourcePackageName());
     }
@@ -888,6 +892,9 @@ public final class QuotaController extends StateController {
         if (!mIsEnabled) {
             return true;
         }
+
+        if( jobStatus.canRunInExtreme() ) return true;
+
         final int standbyBucket = jobStatus.getEffectiveStandbyBucket();
         // A job is within quota if one of the following is true:
         //   1. it was started while the app was in the TOP state
@@ -1538,7 +1545,7 @@ public final class QuotaController extends StateController {
             final long nowElapsed, @NonNull ShrinkableDebits debits, final long credit) {
         final long oldTally = debits.getTallyLocked();
         final long leftover = debits.transactLocked(-credit);
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "debits overflowed by " + leftover);
         }
         boolean changed = oldTally != debits.getTallyLocked();
@@ -1578,7 +1585,7 @@ public final class QuotaController extends StateController {
         if (mNextCleanupTimeElapsed > nowElapsed) {
             // There's already an alarm scheduled. Just stick with that one. There's no way we'll
             // end up scheduling an earlier alarm.
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "Not scheduling cleanup since there's already one at "
                         + mNextCleanupTimeElapsed
                         + " (in " + (mNextCleanupTimeElapsed - nowElapsed) + "ms)");
@@ -1592,7 +1599,7 @@ public final class QuotaController extends StateController {
         if (earliestEndElapsed == Long.MAX_VALUE) {
             // Couldn't find a good time to clean up. Maybe this was called after we deleted all
             // timing sessions.
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Didn't find a time to schedule cleanup");
             }
             return;
@@ -1608,7 +1615,7 @@ public final class QuotaController extends StateController {
         mNextCleanupTimeElapsed = nextCleanupElapsed;
         mAlarmManager.set(AlarmManager.ELAPSED_REALTIME, nextCleanupElapsed, ALARM_TAG_CLEANUP,
                 mSessionCleanupAlarmListener, mHandler);
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Scheduled next cleanup for " + mNextCleanupTimeElapsed);
         }
     }
@@ -1639,7 +1646,7 @@ public final class QuotaController extends StateController {
     private void handleNewChargingStateLocked() {
         mTimerChargingUpdateFunctor.setStatus(sElapsedRealtimeClock.millis(),
                 mService.isBatteryCharging());
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "handleNewChargingStateLocked: " + mService.isBatteryCharging());
         }
         // Deal with Timers first.
@@ -1832,7 +1839,7 @@ public final class QuotaController extends StateController {
                         && isUnderTimingSessionCountQuota;
         if (inRegularQuota && remainingEJQuota > 0) {
             // Already in quota. Why was this method called?
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.e(TAG, "maybeScheduleStartAlarmLocked called for "
                         + packageToString(userId, packageName)
                         + " even though it already has "
@@ -1914,6 +1921,11 @@ public final class QuotaController extends StateController {
             // If the job started as an EJ, then we should only consider EJ quota for the constraint
             // satisfaction.
             isSatisfied = isWithinEjQuota;
+        } else if (jobStatus.canRunInExtreme()) {
+            isSatisfied = true;
+            boolean result = jobStatus.setQuotaConstraintSatisfied(nowElapsed, isSatisfied);
+            Slog.w(TAG, "canRunInExtreme=true, " + jobStatus);
+            return result;
         } else if (mService.isCurrentlyRunningLocked(jobStatus)) {
             // Job is running but didn't start as an EJ, so only the regular quota should be
             // considered.
@@ -1923,6 +1935,7 @@ public final class QuotaController extends StateController {
         }
         if (!isSatisfied && jobStatus.getWhenStandbyDeferred() == 0) {
             // Mark that the job is being deferred due to buckets.
+            Slog.w(TAG, "Defer job due to buckets. " + jobStatus);
             jobStatus.setWhenStandbyDeferred(nowElapsed);
         }
         return jobStatus.setQuotaConstraintSatisfied(nowElapsed, isSatisfied);
@@ -2120,13 +2133,13 @@ public final class QuotaController extends StateController {
             if (isTopStartedJobLocked(jobStatus)) {
                 // We intentionally don't pay attention to fg state changes after a TOP job has
                 // started.
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.v(TAG,
                             "Timer ignoring " + jobStatus.toShortString() + " because isTop");
                 }
                 return;
             }
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "Starting to track " + jobStatus.toShortString());
             }
             // Always maintain list of running jobs, even when quota is free.
@@ -2150,14 +2163,14 @@ public final class QuotaController extends StateController {
         }
 
         void stopTrackingJob(@NonNull JobStatus jobStatus) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "Stopping tracking of " + jobStatus.toShortString());
             }
             synchronized (mLock) {
                 if (mRunningBgJobs.size() == 0) {
                     // maybeStopTrackingJobLocked can be called when an app cancels a job, so a
                     // timer may not be running when it's asked to stop tracking a job.
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Timer isn't tracking any jobs but still told to stop");
                     }
                     return;
@@ -2166,6 +2179,7 @@ public final class QuotaController extends StateController {
                 final int standbyBucket = JobSchedulerService.standbyBucketForPackage(
                         mPkg.packageName, mPkg.userId, nowElapsed);
                 if (mRunningBgJobs.remove(jobStatus) && mRunningBgJobs.size() == 0
+                        && !jobStatus.canRunInExtreme() 
                         && !isQuotaFreeLocked(standbyBucket)) {
                     emitSessionLocked(nowElapsed);
                     cancelCutoff();
@@ -2242,7 +2256,7 @@ public final class QuotaController extends StateController {
             final long topAppGracePeriodEndElapsed = mTopAppGraceCache.get(mUid);
             final boolean hasTopAppExemption = !mRegularJobTimer
                     && (mTopAppCache.get(mUid) || nowElapsed < topAppGracePeriodEndElapsed);
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "quotaFree=" + isQuotaFreeLocked(standbyBucket)
                         + " isFG=" + mForegroundUids.get(mUid)
                         + " tempEx=" + hasTempAllowlistExemption
@@ -2296,7 +2310,7 @@ public final class QuotaController extends StateController {
                 final long timeRemainingMs = mRegularJobTimer
                         ? getTimeUntilQuotaConsumedLocked(mPkg.userId, mPkg.packageName)
                         : getTimeUntilEJQuotaConsumedLocked(mPkg.userId, mPkg.packageName);
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.i(TAG,
                             (mRegularJobTimer ? "Regular job" : "EJ") + " for " + mPkg + " has "
                                     + timeRemainingMs + "ms left.");
@@ -2408,7 +2422,7 @@ public final class QuotaController extends StateController {
                             mActivities.removeReturnOld(event.mInstanceId);
                     if (existingEvent != null && mActivities.size() == 0) {
                         final long pendingReward = getPendingReward(nowElapsed);
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Crediting " + mPkg + " " + pendingReward + "ms"
                                     + " for " + calculateTimeChunks(nowElapsed) + " time chunks");
                         }
@@ -2501,7 +2515,7 @@ public final class QuotaController extends StateController {
     @VisibleForTesting
     void updateStandbyBucket(
             final int userId, final @NonNull String packageName, final int bucketIndex) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.i(TAG, "Moving pkg " + packageToString(userId, packageName)
                     + " to bucketIndex " + bucketIndex);
         }
@@ -2658,7 +2672,7 @@ public final class QuotaController extends StateController {
                 switch (msg.what) {
                     case MSG_REACHED_QUOTA: {
                         Package pkg = (Package) msg.obj;
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Checking if " + pkg + " has reached its quota.");
                         }
 
@@ -2666,7 +2680,7 @@ public final class QuotaController extends StateController {
                                 pkg.packageName);
                         if (timeRemainingMs <= 50) {
                             // Less than 50 milliseconds left. Start process of shutting down jobs.
-                            if (DEBUG) Slog.d(TAG, pkg + " has reached its quota.");
+                            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, pkg + " has reached its quota.");
                             mStateChangedListener.onControllerStateChanged(
                                     maybeUpdateConstraintForPkgLocked(
                                             sElapsedRealtimeClock.millis(),
@@ -2678,7 +2692,7 @@ public final class QuotaController extends StateController {
                             Message rescheduleMsg = obtainMessage(MSG_REACHED_QUOTA, pkg);
                             timeRemainingMs = getTimeUntilQuotaConsumedLocked(pkg.userId,
                                     pkg.packageName);
-                            if (DEBUG) {
+                            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                 Slog.d(TAG, pkg + " has " + timeRemainingMs + "ms left.");
                             }
                             sendMessageDelayed(rescheduleMsg, timeRemainingMs);
@@ -2687,14 +2701,14 @@ public final class QuotaController extends StateController {
                     }
                     case MSG_REACHED_EJ_QUOTA: {
                         Package pkg = (Package) msg.obj;
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Checking if " + pkg + " has reached its EJ quota.");
                         }
 
                         long timeRemainingMs = getRemainingEJExecutionTimeLocked(
                                 pkg.userId, pkg.packageName);
                         if (timeRemainingMs <= 0) {
-                            if (DEBUG) Slog.d(TAG, pkg + " has reached its EJ quota.");
+                            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.d(TAG, pkg + " has reached its EJ quota.");
                             mStateChangedListener.onControllerStateChanged(
                                     maybeUpdateConstraintForPkgLocked(
                                             sElapsedRealtimeClock.millis(),
@@ -2706,7 +2720,7 @@ public final class QuotaController extends StateController {
                             Message rescheduleMsg = obtainMessage(MSG_REACHED_EJ_QUOTA, pkg);
                             timeRemainingMs = getTimeUntilEJQuotaConsumedLocked(
                                     pkg.userId, pkg.packageName);
-                            if (DEBUG) {
+                            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                 Slog.d(TAG, pkg + " has " + timeRemainingMs + "ms left for EJ");
                             }
                             sendMessageDelayed(rescheduleMsg, timeRemainingMs);
@@ -2714,7 +2728,7 @@ public final class QuotaController extends StateController {
                         break;
                     }
                     case MSG_CLEAN_UP_SESSIONS:
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Cleaning up timing sessions.");
                         }
                         deleteObsoleteSessionsLocked();
@@ -2724,7 +2738,7 @@ public final class QuotaController extends StateController {
                     case MSG_CHECK_PACKAGE: {
                         String packageName = (String) msg.obj;
                         int userId = msg.arg1;
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Checking pkg " + packageToString(userId, packageName));
                         }
                         mStateChangedListener.onControllerStateChanged(
@@ -2802,7 +2816,7 @@ public final class QuotaController extends StateController {
                         final int userId = msg.arg1;
                         final UsageEvents.Event event = (UsageEvents.Event) msg.obj;
                         final String pkgName = event.getPackageName();
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.d(TAG, "Processing event " + event.getEventType()
                                     + " for " + packageToString(userId, pkgName));
                         }
@@ -2844,7 +2858,7 @@ public final class QuotaController extends StateController {
                             if (mTempAllowlistCache.get(uid) || mTopAppCache.get(uid)) {
                                 // App added back to the temp allowlist or became top again
                                 // during the grace period.
-                                if (DEBUG) {
+                                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                     Slog.d(TAG, uid + " is still allowed");
                                 }
                                 break;
@@ -2853,12 +2867,12 @@ public final class QuotaController extends StateController {
                             if (nowElapsed < mTempAllowlistGraceCache.get(uid)
                                     || nowElapsed < mTopAppGraceCache.get(uid)) {
                                 // One of the grace periods is still in effect.
-                                if (DEBUG) {
+                                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                     Slog.d(TAG, uid + " is still in grace period");
                                 }
                                 break;
                             }
-                            if (DEBUG) {
+                            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                 Slog.d(TAG, uid + " is now out of grace period");
                             }
                             mTempAllowlistGraceCache.delete(uid);

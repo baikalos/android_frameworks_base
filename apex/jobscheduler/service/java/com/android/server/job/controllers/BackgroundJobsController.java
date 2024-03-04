@@ -37,6 +37,8 @@ import com.android.server.job.JobStore;
 import com.android.server.job.StateControllerProto;
 import com.android.server.job.StateControllerProto.BackgroundJobsController.TrackedJob;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -52,8 +54,8 @@ import java.util.function.Predicate;
  */
 public final class BackgroundJobsController extends StateController {
     private static final String TAG = "JobScheduler.Background";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     // Tri-state about possible "is this uid 'active'?" knowledge
     static final int UNKNOWN = 0;
@@ -177,7 +179,7 @@ public final class BackgroundJobsController extends StateController {
     private void updateJobRestrictionsLocked(int filterUid, int newActiveState) {
         mUpdateJobFunctor.prepare(newActiveState);
 
-        final long start = DEBUG ? SystemClock.elapsedRealtimeNanos() : 0;
+        final long start = BaikalConstants.BAIKAL_DEBUG_JOBS ? SystemClock.elapsedRealtimeNanos() : 0;
 
         final JobStore store = mService.getJobStore();
         if (filterUid > 0) {
@@ -186,8 +188,8 @@ public final class BackgroundJobsController extends StateController {
             store.forEachJob(mUpdateJobFunctor);
         }
 
-        final long time = DEBUG ? (SystemClock.elapsedRealtimeNanos() - start) : 0;
-        if (DEBUG) {
+        final long time = BaikalConstants.BAIKAL_DEBUG_JOBS ? (SystemClock.elapsedRealtimeNanos() - start) : 0;
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, String.format(
                     "Job status updated: %d/%d checked/total jobs, %d us",
                     mUpdateJobFunctor.mCheckedCount,

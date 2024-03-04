@@ -1320,6 +1320,9 @@ class ActivityClientController extends IActivityClientController.Stub {
     @Override
     public void dismissKeyguard(IBinder token, IKeyguardDismissCallback callback,
             CharSequence message) {
+
+        Slog.d(TAG, "dismissKeyguard:" + message, new Throwable());
+
         if (message != null) {
             mService.mAmInternal.enforceCallingPermission(
                     android.Manifest.permission.SHOW_KEYGUARD_MESSAGE, "dismissKeyguard");

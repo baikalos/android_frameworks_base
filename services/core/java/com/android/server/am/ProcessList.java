@@ -2772,6 +2772,7 @@ public final class ProcessList {
                 ProcessRecord app = apps.valueAt(ia);
                 if (app.isPersistent() && !evenPersistent) {
                     // we don't kill persistent processes
+                    Slog.w(TAG, "We don't kill persistent processes: " + app, new Throwable());
                     continue;
                 }
                 if (app.isRemoved()) {
@@ -2949,7 +2950,7 @@ public final class ProcessList {
             }
             UidRecord uidRec = mActiveUids.get(proc.uid);
             if (uidRec == null) {
-                uidRec = new UidRecord(proc.uid, mService);
+                uidRec = new UidRecord(proc.uid, proc.mAppProfile, mService);
                 // This is the first appearance of the uid, report it now!
                 if (DEBUG_UID_OBSERVERS) {
                     Slog.i(TAG_UID_OBSERVERS, "Creating new process uid: " + uidRec);
@@ -3071,13 +3072,13 @@ public final class ProcessList {
                 && (TextUtils.equals(proc, info.processName))) {
             state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
             state.setSetSchedGroup(ProcessList.SCHED_GROUP_DEFAULT);
-            r.setPersistent(true);
-            state.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
+            //r.setPersistent(true);
+            state.setMaxAdj(ProcessList.FOREGROUND_APP_ADJ);
             //state.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
             Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
         }
 
-        if( r.mAppProfile.mBackgroundMode > 0 ) {
+        if( r.mAppProfile.mBackgroundMode > 0 || r.mAppProfile.getBackgroundMode() > 0 || r.mAppProfile.mBootDisabled ) {
             Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for restricted app " + info.packageName + ", profile=" + r.mAppProfile, new Throwable());
         } else if ( r.mAppProfile.mDebug ) {
             Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for debugging app " + info.packageName + ", profile=" + r.mAppProfile, new Throwable());
@@ -5107,15 +5108,15 @@ public final class ProcessList {
         final UidRecord uidRec = app.getUidRecord();
         final long lastCanKillTime = app.mState.getLastCanKillOnBgRestrictedAndIdleTime();
         
-        if( app.mAppProfile.mPinned ) {
+        if( app.mAppProfile.mPinned || app.mAppProfile.mDoNotClose || app.mAppProfile.mAllowWhileIdle ) {
             Slog.wtf(TAG, "Killing pinned app!!! :" + app.mAppProfile.mPackageName);
-            //return 0;
+            return 0;
         }
 
         if (!mService.mConstants.mKillBgRestrictedAndCachedIdle
                 || app.isKilled() || app.getThread() == null || uidRec == null || !uidRec.isIdle()
                 || !app.isCached() || app.mState.shouldNotKillOnBgRestrictedAndIdle()
-                || !app.mState.isBackgroundRestricted() || lastCanKillTime == 0) {
+                || !app.isBackgroundRestricted() || lastCanKillTime == 0) {
             return 0;
         }
         final long future = lastCanKillTime

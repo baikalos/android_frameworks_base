@@ -135,10 +135,10 @@ public class BaikalSystemService extends SystemService {
     public static int getTemporaryAppWhitelistDuration(int uid, String packageName, String activity) {
         if( activity != null ) {
             if( activity.startsWith("com.huawei.android.push.intent.RECEIVE") ) { 
-                Slog.i(TAG,"getTemporaryAppWhitelistDuration: Huawei Push");
+                Slog.i(TAG,"getTemporaryAppWhitelistDuration: Huawei Push for " + packageName + "/" + uid);
                 return 10000;
             } else if( activity.startsWith("com.google.android.c2dm.intent.RECEIVE") ) {
-                Slog.i(TAG,"getTemporaryAppWhitelistDuration: Google Push");
+                Slog.i(TAG,"getTemporaryAppWhitelistDuration: Google Push for " + packageName + "/" + uid);
                 return 10000;
             }
         }

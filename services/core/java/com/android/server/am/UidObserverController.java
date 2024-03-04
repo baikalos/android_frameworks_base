@@ -71,7 +71,7 @@ public class UidObserverController {
     /**
      * This is for verifying the UID report flow.
      */
-    private static final boolean VALIDATE_UID_STATES = true;
+    private static final boolean VALIDATE_UID_STATES = false; //true;
     private final ActiveUids mValidateUids;
 
     UidObserverController(@NonNull Handler handler) {
@@ -213,7 +213,7 @@ public class UidObserverController {
         }
         mUidObservers.finishBroadcast();
 
-        if (VALIDATE_UID_STATES && mUidObservers.getRegisteredCallbackCount() > 0) {
+        /*if (VALIDATE_UID_STATES && mUidObservers.getRegisteredCallbackCount() > 0) {
             for (int j = 0; j < numUidChanges; ++j) {
                 final ChangeRecord item = mActiveUidChanges[j];
                 if ((item.change & UidRecord.CHANGE_GONE) != 0) {
@@ -235,7 +235,7 @@ public class UidObserverController {
                     validateUid.setCurCapability(item.capability);
                 }
             }
-        }
+        }*/
 
         synchronized (mLock) {
             for (int j = 0; j < numUidChanges; j++) {

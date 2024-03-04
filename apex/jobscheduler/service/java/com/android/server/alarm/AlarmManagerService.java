@@ -2894,7 +2894,10 @@ public class AlarmManagerService extends SystemService {
             if (alarmClock == null && (exact ||  
 	        	(flags & (FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
         		|| type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP )  ) {
-                if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, listenerTag)) {
+
+                String operationTag = listenerTag;
+
+                if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, operationTag)) {
                     if( exact ) {
                         exact = false;
                         windowLength = 3600000;
@@ -2905,9 +2908,9 @@ public class AlarmManagerService extends SystemService {
 
                     flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED | FLAG_ALLOW_WHILE_IDLE_COMPAT);
                     flags &= ~(FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE);
-                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm disabled:" + callingPackage + "/" + callingUid + ":" + listenerTag );
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm disabled:" + callingPackage + "/" + callingUid + ":" + operationTag );
                 } else {
-                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm enabled:" + callingPackage + "/" + callingUid + ":" + listenerTag );
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Wakeup alarm enabled:" + callingPackage + "/" + callingUid + ":" + operationTag );
                 }
             }
 

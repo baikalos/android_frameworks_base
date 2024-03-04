@@ -43,6 +43,16 @@ public class BaikalSpooferService {
         mInstallerNone = com.android.server.pm.InstallSource.EMPTY;
     }
 
+    public static int getScalingFactor(String packageName,int uid) {
+        AppProfile profile = AppProfileManager.getProfile(packageName, uid);
+        if( profile != null ) {
+            if( profile.mScaleFactor != 0 ) Log.w(TAG, "getScalingFactor:" + packageName + "/" + uid + " - " + profile.mScaleFactor ); 
+            return profile.mScaleFactor;
+        }           
+        return 0;
+    }
+
+
     public static com.android.server.pm.InstallSource overrideInstallSource(com.android.server.pm.PackageSetting packageSettings) {
 
         AppProfile profile = AppProfileManager.getProfile(packageSettings.getName(), packageSettings.getAppId());
@@ -92,4 +102,5 @@ public class BaikalSpooferService {
         }
         return null;
     }
+
 }

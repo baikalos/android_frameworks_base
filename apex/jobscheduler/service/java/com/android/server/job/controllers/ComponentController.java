@@ -38,6 +38,8 @@ import android.util.proto.ProtoOutputStream;
 import com.android.internal.annotations.GuardedBy;
 import com.android.server.job.JobSchedulerService;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -47,8 +49,8 @@ import java.util.function.Predicate;
  */
 public class ComponentController extends StateController {
     private static final String TAG = "JobScheduler.Component";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 
@@ -174,7 +176,7 @@ public class ComponentController extends StateController {
     private boolean updateComponentEnabledStateLocked(JobStatus jobStatus) {
         final ServiceInfo service = getServiceInfoLocked(jobStatus);
 
-        if (DEBUG && service == null) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS && service == null) {
             Slog.v(TAG, jobStatus.toShortString() + " component not present");
         }
         final ServiceInfo ogService = jobStatus.serviceInfo;

@@ -286,6 +286,8 @@ import com.android.server.connectivity.MultipathPolicyTracker;
 import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import libcore.io.IoUtils;
@@ -352,8 +354,8 @@ import java.util.stream.Collectors;
  */
 public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
     static final String TAG = NetworkPolicyLogger.TAG;
-    private static final boolean LOGD = NetworkPolicyLogger.LOGD;
-    private static final boolean LOGV = NetworkPolicyLogger.LOGV;
+    public static boolean LOGD = false; // NetworkPolicyLogger.LOGD;
+    public static boolean LOGV = false; // NetworkPolicyLogger.LOGV;
 
     /**
      * No opportunistic quota could be calculated from user data plan or data settings.
@@ -540,6 +542,8 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
     volatile boolean mRestrictBackgroundChangedInBsm;
     @GuardedBy("mUidRulesFirstLock")
     volatile boolean mRestrictedNetworkingMode;
+    @GuardedBy("mUidRulesFirstLock")
+    volatile boolean mUnrestrictedNetworkingMode;
     @GuardedBy("mUidRulesFirstLock")
     volatile boolean mLowPowerStandbyActive;
 
@@ -755,6 +759,11 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
             mContext.getContentResolver().registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.RESTRICTED_NETWORKING_MODE), false,
                     this);
+
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_UNRESTRICTED_NET),
+                    false, this);
+
         }
 
         public boolean isRestrictedModeEnabled() {
@@ -762,13 +771,19 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                     Settings.Global.RESTRICTED_NETWORKING_MODE, 1) != 0;
         }
 
+        public boolean isUnrestrictedModeEnabled() {
+            return Settings.Global.getInt(mContext.getContentResolver(),
+                    Settings.Global.BAIKALOS_UNRESTRICTED_NET,0) == 1;
+        }
+
+
         @Override
         public void onChange(boolean selfChange) {
-            mListener.onChange(isRestrictedModeEnabled());
+            mListener.onChange(isRestrictedModeEnabled(), isUnrestrictedModeEnabled());
         }
 
         public interface RestrictedModeListener {
-            void onChange(boolean enabled);
+            void onChange(boolean enabled, boolean disabled);
         }
     }
 
@@ -1024,13 +1039,15 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                             ServiceType.NETWORK_FIREWALL).batterySaverEnabled;
 
                     mRestrictedModeObserver = new RestrictedModeObserver(mContext,
-                            enabled -> {
+                            (enabled, disabled) -> {
                                 synchronized (mUidRulesFirstLock) {
                                     mRestrictedNetworkingMode = enabled;
+                                    mUnrestrictedNetworkingMode = disabled;
                                     updateRestrictedModeAllowlistUL();
                                 }
                             });
                     mRestrictedNetworkingMode = mRestrictedModeObserver.isRestrictedModeEnabled();
+                    mUnrestrictedNetworkingMode = mRestrictedModeObserver.isUnrestrictedModeEnabled();
 
                     mSystemReady = true;
 
@@ -4726,6 +4743,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
             final List<UserInfo> users = mUserManager.getUsers();
             for (int ui = users.size() - 1; ui >= 0; ui--) {
                 UserInfo user = users.get(ui);
+                AppProfileSettings.updateRulesForWhitelistedAppIdsBaikal(uidRules, user.id, chain);
                 updateRulesForWhitelistedAppIds(uidRules, mPowerSaveTempWhitelistAppIds, user.id);
                 updateRulesForWhitelistedAppIds(uidRules, mPowerSaveWhitelistAppIds, user.id);
                 if (chain == FIREWALL_CHAIN_POWERSAVE) {
@@ -4796,6 +4814,28 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
         }
     }
 
+    private boolean isBaikalosWhitelisted(int uid, boolean dozable) {
+
+        if( mUnrestrictedNetworkingMode ) return true;
+
+        final int appId = UserHandle.getAppId(uid);
+
+        String[] pkgs = mContext.getPackageManager().getPackagesForUid(appId);
+        if( pkgs != null ) {
+            for( String pkg : pkgs) {
+                AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(pkg);
+                if( profile != null ) {
+                    if( profile.mAllowIdleNetwork )  return true;
+                    if( profile.mImportantApp )  return true;
+                    if( profile.getBackgroundMode(false) < (dozable ? 0 : 1) )  return true;
+                }
+            }
+        } else {
+            if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"isBaikalosWhitelisted: can't get package list for " + uid);
+        }
+        return false;
+    }
+
     /**
      * Returns whether a uid is allowlisted from power saving restrictions (eg: Battery Saver, Doze
      * mode, and app idle).
@@ -4808,8 +4848,6 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
     private boolean isWhitelistedFromPowerSaveUL(int uid, boolean deviceIdleMode) {
         final int appId = UserHandle.getAppId(uid);
 
-        if( appId < Process.FIRST_APPLICATION_UID ) return true;
-
         boolean isWhitelisted = mPowerSaveTempWhitelistAppIds.get(appId)
                 || mPowerSaveWhitelistAppIds.get(appId);
 
@@ -4817,19 +4855,10 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
             isWhitelisted = isWhitelisted || isWhitelistedFromPowerSaveExceptIdleUL(uid);
         }
 
-        if( !isWhitelisted && appId >= Process.FIRST_APPLICATION_UID ) {
-            String[] pkgs = mContext.getPackageManager().getPackagesForUid(uid);
-            if( pkgs != null ) {
-                for( String pkg : pkgs) {
-                    AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(pkg);
-                    if( profile != null ) {
-                        if( profile.mAllowIdleNetwork )  return true;
-                        if( profile.getBackgroundMode() < 0 )  return true;
-                    }
-                }
-            }
+        if( !isWhitelisted ) {
+            isWhitelisted = isWhitelisted || isBaikalosWhitelisted(uid, deviceIdleMode);
         }
-
+        if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"isWhitelistedFromPowerSaveUL: uid=" + uid + ", result=" + isWhitelisted);
         return isWhitelisted;
     }
 
@@ -4839,6 +4868,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
      */
     @GuardedBy("mUidRulesFirstLock")
     private boolean isWhitelistedFromPowerSaveExceptIdleUL(int uid) {
+        if( isBaikalosWhitelisted(uid, true) ) return true;
         final int appId = UserHandle.getAppId(uid);
         return mPowerSaveWhitelistExceptIdleAppIds.get(appId);
     }
@@ -4848,6 +4878,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
      */
     @GuardedBy("mUidRulesFirstLock")
     private boolean isAllowlistedFromLowPowerStandbyUL(int uid) {
+        if( isBaikalosWhitelisted(uid, false) ) return true;
         return mLowPowerStandbyAllowlistUids.get(uid);
     }
 
@@ -4879,13 +4910,26 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                 UserInfo user = users.get(ui);
                 int[] idleUids = mUsageStats.getIdleUidsForUser(user.id);
                 for (int uid : idleUids) {
-                    if (!mPowerSaveTempWhitelistAppIds.get(UserHandle.getAppId(uid), false)) {
+
+                    if( hasInternetPermissionUL(uid) ) {
+                    if ( isBaikalosWhitelisted(uid,false) ) {
+                        if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"updateRulesForAppIdleUL: (1) ALLOW" + uid);
+                        //uidRules.put(uid, FIREWALL_RULE_ALLOW);
+                    } else if (mPowerSaveTempWhitelistAppIds.get(UserHandle.getAppId(uid), false)) {
+                        if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"updateRulesForAppIdleUL: (2) ALLOW" + uid);
+                        //uidRules.put(uid, FIREWALL_RULE_ALLOW);
+                    } else if (hasInternetPermissionUL(uid) && isUidForegroundOnRestrictPowerUL(uid)) {
+                        if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"updateRulesForAppIdleUL: (3) ALLOW" + uid);
+                        //uidRules.put(uid, FIREWALL_RULE_ALLOW);
+                    } else if (!mPowerSaveTempWhitelistAppIds.get(UserHandle.getAppId(uid), false)) {
                         // quick check: if this uid doesn't have INTERNET permission, it
                         // doesn't have network access anyway, so it is a waste to mess
                         // with it here.
                         if (hasInternetPermissionUL(uid) && !isUidForegroundOnRestrictPowerUL(uid)) {
+                            if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"updateRulesForAppIdleUL: DENY" + uid);
                             uidRules.put(uid, FIREWALL_RULE_DENY);
                         }
+                    } 
                     }
                 }
             }
@@ -4906,12 +4950,14 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
         try {
             int appId = UserHandle.getAppId(uid);
             if (!mPowerSaveTempWhitelistAppIds.get(appId) && isUidIdle(uid, uidProcessState)
-                    && !isUidForegroundOnRestrictPowerUL(uid)) {
+                    && !isUidForegroundOnRestrictPowerUL(uid) && !isBaikalosWhitelisted(uid,true)) {
+
                 setUidFirewallRuleUL(FIREWALL_CHAIN_STANDBY, uid, FIREWALL_RULE_DENY);
-                if (LOGD) Log.d(TAG, "updateRuleForAppIdleUL DENY " + uid);
+                if ( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Log.d(TAG, "updateRuleForAppIdleUL: DENY " + uid);
             } else {
-                setUidFirewallRuleUL(FIREWALL_CHAIN_STANDBY, uid, FIREWALL_RULE_DEFAULT);
-                if (LOGD) Log.d(TAG, "updateRuleForAppIdleUL " + uid + " to DEFAULT");
+                //setUidFirewallRuleUL(FIREWALL_CHAIN_STANDBY, uid, FIREWALL_RULE_DEFAULT);
+                setUidFirewallRuleUL(FIREWALL_CHAIN_STANDBY, uid, FIREWALL_RULE_ALLOW);
+                if ( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Log.d(TAG, "updateRuleForAppIdleUL: ALLOW " + uid);
             }
         } finally {
             Trace.traceEnd(Trace.TRACE_TAG_NETWORK);
@@ -4940,13 +4986,17 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                 // Chain isn't enabled and the uid had no restrictions to begin with.
                 continue;
             }
-            final boolean isUidIdle = !paroled && isUidIdle(uid);
+            final boolean isUidIdle = !paroled && isUidIdle(uid) && !isBaikalosWhitelisted(uid,true) ;
+ 
             if (isUidIdle && !mPowerSaveTempWhitelistAppIds.get(UserHandle.getAppId(uid))
                     && !isUidForegroundOnRestrictPowerUL(uid)) {
+                if ( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Log.d(TAG, "updateRulesForAppIdleParoleUL: DENY " + uid);
                 mUidFirewallStandbyRules.put(uid, FIREWALL_RULE_DENY);
                 blockedUids.put(uid, FIREWALL_RULE_DENY);
             } else {
-                mUidFirewallStandbyRules.put(uid, FIREWALL_RULE_DEFAULT);
+                //mUidFirewallStandbyRules.put(uid, FIREWALL_RULE_DEFAULT);
+                if ( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Log.d(TAG, "updateRulesForAppIdleParoleUL: ALLOW " + uid);
+                mUidFirewallStandbyRules.put(uid, FIREWALL_RULE_ALLOW);
             }
             updateRulesForPowerRestrictionsUL(uid, isUidIdle);
         }
@@ -5164,6 +5214,8 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                 // No change.
                 return;
             }
+
+            shouldWhitelist = shouldWhitelist || isBaikalosWhitelisted(uid,true);
 
             final long token = Binder.clearCallingIdentity();
             try {
@@ -5481,7 +5533,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
 
     @GuardedBy("mUidRulesFirstLock")
     private void updateRulesForPowerRestrictionsUL(int uid, int uidProcState) {
-        updateRulesForPowerRestrictionsUL(uid, isUidIdle(uid, uidProcState));
+        updateRulesForPowerRestrictionsUL(uid, isUidIdle(uid, uidProcState) && !isBaikalosWhitelisted(uid,false));
     }
 
     /**
@@ -5553,7 +5605,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                     & ALLOWED_METERED_REASON_MASK) | newAllowedReasons;
             uidBlockedState.updateEffectiveBlockedReasons();
 
-            if (LOGV) {
+            if (BaikalConstants.BAIKAL_DEBUG_NETWORK) {
                 Log.v(TAG, "updateRulesForPowerRestrictionsUL(" + uid + ")"
                         + ", isIdle: " + isUidIdle
                         + ", mRestrictPower: " + mRestrictPower

@@ -37,6 +37,8 @@ import com.android.server.job.JobSchedulerService;
 import com.android.server.job.StateControllerProto;
 import com.android.server.job.StateControllerProto.ContentObserverController.Observer.TriggerContentData;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.util.ArrayList;
 import java.util.function.Predicate;
 
@@ -45,8 +47,8 @@ import java.util.function.Predicate;
  */
 public final class ContentObserverController extends StateController {
     private static final String TAG = "JobScheduler.ContentObserver";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     /**
      * Maximum number of changing URIs we will batch together to report.
@@ -80,7 +82,7 @@ public final class ContentObserverController extends StateController {
             if (taskStatus.contentObserverJobInstance == null) {
                 taskStatus.contentObserverJobInstance = new JobInstance(taskStatus);
             }
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "Tracking content-trigger job " + taskStatus);
             }
             mTrackedTasks.add(taskStatus);
@@ -193,7 +195,7 @@ public final class ContentObserverController extends StateController {
                     taskStatus.contentObserverJobInstance = null;
                 }
             }
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "No longer tracking job " + taskStatus);
             }
         }
@@ -225,7 +227,7 @@ public final class ContentObserverController extends StateController {
 
         @Override
         public void onChange(boolean selfChange, Uri uri) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "onChange(self=" + selfChange + ") for " + uri
                         + " when mUri=" + mUri + " mUserId=" + mUserId);
             }
@@ -292,7 +294,7 @@ public final class ContentObserverController extends StateController {
                         observersOfUser.put(uri, obs);
                         final boolean andDescendants = (uri.getFlags() &
                                 JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS) != 0;
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             Slog.v(TAG, "New observer " + obs + " for " + uri.getUri()
                                     + " andDescendants=" + andDescendants
                                     + " sourceUserId=" + sourceUserId);
@@ -304,7 +306,7 @@ public final class ContentObserverController extends StateController {
                                 sourceUserId
                         );
                     } else {
-                        if (DEBUG) {
+                        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                             final boolean andDescendants = (uri.getFlags() &
                                     JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS) != 0;
                             Slog.v(TAG, "Reusing existing observer " + obs + " for " + uri.getUri()
@@ -365,7 +367,7 @@ public final class ContentObserverController extends StateController {
                 final ObserverInstance obs = mMyObservers.get(i);
                 obs.mJobs.remove(this);
                 if (obs.mJobs.size() == 0) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.i(TAG, "Unregistering observer " + obs + " for " + obs.mUri.getUri());
                     }
                     mContext.getContentResolver().unregisterContentObserver(obs);

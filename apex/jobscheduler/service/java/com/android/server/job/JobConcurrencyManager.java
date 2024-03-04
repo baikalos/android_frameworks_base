@@ -63,6 +63,8 @@ import com.android.server.job.controllers.StateController;
 import com.android.server.job.restrictions.JobRestriction;
 import com.android.server.pm.UserManagerInternal;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -79,7 +81,7 @@ import java.util.function.Predicate;
  */
 class JobConcurrencyManager {
     private static final String TAG = JobSchedulerService.TAG + ".Concurrency";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG;
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG;
 
     /** The maximum number of concurrent jobs we'll aim to run at one time. */
     public static final int STANDARD_CONCURRENCY_LIMIT = 16;
@@ -476,7 +478,7 @@ class JobConcurrencyManager {
                 return;
             }
             mCurrentInteractiveState = interactive;
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Interactive: " + interactive);
             }
 
@@ -524,7 +526,7 @@ class JobConcurrencyManager {
 
             mEffectiveInteractiveState = false;
 
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Ramping up concurrency");
             }
 
@@ -624,7 +626,7 @@ class JobConcurrencyManager {
 
     @GuardedBy("mLock")
     private void assignJobsToContextsInternalLocked() {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, printPendingQueueLocked());
         }
 
@@ -695,7 +697,7 @@ class JobConcurrencyManager {
             assignment.context = jsc;
             idle.add(assignment);
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, printAssignments("running jobs initial", stoppable, preferredUidOnly));
         }
 
@@ -708,7 +710,7 @@ class JobConcurrencyManager {
             if (mRunningJobs.contains(nextPending)) {
                 // Should never happen.
                 Slog.wtf(TAG, "Pending queue contained a running job");
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.e(TAG, "Pending+running job: " + nextPending);
                 }
                 pendingJobQueue.remove(nextPending);
@@ -717,7 +719,7 @@ class JobConcurrencyManager {
 
             final boolean isTopEj = nextPending.shouldTreatAsExpeditedJob()
                     && nextPending.lastEvaluatedBias == JobInfo.BIAS_TOP_APP;
-            if (DEBUG && isSimilarJobRunningLocked(nextPending)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS && isSimilarJobRunningLocked(nextPending)) {
                 Slog.w(TAG, "Already running similar " + (isTopEj ? "TOP-EJ" : "job")
                         + " to: " + nextPending);
             }
@@ -871,7 +873,7 @@ class JobConcurrencyManager {
                         packageStats);
             }
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, printAssignments("running jobs final",
                     stoppable, preferredUidOnly, changed));
 
@@ -882,7 +884,7 @@ class JobConcurrencyManager {
             final ContextAssignment assignment = changed.valueAt(c);
             final JobStatus js = assignment.context.getRunningJobLocked();
             if (js != null) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "preempting job: " + js);
                 }
                 // preferredUid will be set to uid of currently running job, if appropriate.
@@ -891,7 +893,7 @@ class JobConcurrencyManager {
                         JobParameters.INTERNAL_STOP_REASON_PREEMPT, assignment.preemptReason);
             } else {
                 final JobStatus pendingJob = assignment.newJob;
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "About to run job on context "
                             + assignment.context.getId() + ", job: " + pendingJob);
                 }
@@ -1191,14 +1193,14 @@ class JobConcurrencyManager {
                 if (mRunningJobs.contains(nextPending)) {
                     // Should never happen.
                     Slog.wtf(TAG, "Pending queue contained a running job");
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.e(TAG, "Pending+running job: " + nextPending);
                     }
                     pendingJobQueue.remove(nextPending);
                     continue;
                 }
 
-                if (DEBUG && isSimilarJobRunningLocked(nextPending)) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS && isSimilarJobRunningLocked(nextPending)) {
                     Slog.w(TAG, "Already running similar job to: " + nextPending);
                 }
 
@@ -1244,18 +1246,18 @@ class JobConcurrencyManager {
                 }
             }
             if (highestBiasJob != null) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Running job " + highestBiasJob + " as preemption");
                 }
                 mWorkCountTracker.stageJob(highBiasWorkType, highBiasAllWorkTypes);
                 startJobLocked(worker, highestBiasJob, highBiasWorkType);
             } else {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Couldn't find preemption job for uid " + worker.getPreferredUid());
                 }
                 worker.clearPreferredUid();
                 if (backupJob != null) {
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Running job " + backupJob + " instead");
                     }
                     mWorkCountTracker.stageJob(backupWorkType, backupAllWorkTypes);
@@ -1278,14 +1280,14 @@ class JobConcurrencyManager {
                 if (mRunningJobs.contains(nextPending)) {
                     // Should never happen.
                     Slog.wtf(TAG, "Pending queue contained a running job");
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.e(TAG, "Pending+running job: " + nextPending);
                     }
                     pendingJobQueue.remove(nextPending);
                     continue;
                 }
 
-                if (DEBUG && isSimilarJobRunningLocked(nextPending)) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS && isSimilarJobRunningLocked(nextPending)) {
                     Slog.w(TAG, "Already running similar job to: " + nextPending);
                 }
 
@@ -1309,7 +1311,7 @@ class JobConcurrencyManager {
             if (highestBiasJob != null) {
                 // This slot is free, and we haven't yet hit the limit on
                 // concurrent jobs...  we can just throw the job in to here.
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "About to run job: " + highestBiasJob);
                 }
                 mWorkCountTracker.stageJob(highBiasWorkType, highBiasAllWorkTypes);

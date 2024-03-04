@@ -52,6 +52,8 @@ import com.android.server.IoThread;
 import com.android.server.job.JobSchedulerInternal.JobStorePersistStats;
 import com.android.server.job.controllers.JobStatus;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlSerializer;
@@ -85,7 +87,7 @@ import java.util.function.Predicate;
  */
 public final class JobStore {
     private static final String TAG = "JobStore";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG;
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG;
 
     /** Threshold to adjust how often we want to write to the db. */
     private static final long JOB_PERSIST_DELAY = 2000L;
@@ -214,7 +216,7 @@ public final class JobStore {
         if (jobStatus.isPersisted()) {
             maybeWriteStatusToDiskAsync();
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.d(TAG, "Added job status to store: " + jobStatus);
         }
         return replaced;
@@ -253,7 +255,7 @@ public final class JobStore {
     public boolean remove(JobStatus jobStatus, boolean removeFromPersisted) {
         boolean removed = mJobSet.remove(jobStatus);
         if (!removed) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.d(TAG, "Couldn't remove job: didn't exist: " + jobStatus);
             }
             return false;
@@ -350,7 +352,7 @@ public final class JobStore {
     private void maybeWriteStatusToDiskAsync() {
         synchronized (mWriteScheduleLock) {
             if (!mWriteScheduled) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.v(TAG, "Scheduling persist of jobs to disk.");
                 }
                 mIoHandler.postDelayed(mWriteRunnable, JOB_PERSIST_DELAY);
@@ -469,7 +471,7 @@ public final class JobStore {
                 });
             }
             writeJobsMapImpl(storeCopy);
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.v(TAG, "Finished writing, took " + (sElapsedRealtimeClock.millis()
                         - startElapsed) + "ms");
             }
@@ -493,7 +495,7 @@ public final class JobStore {
                 out.attribute(null, "version", Integer.toString(JOBS_FILE_VERSION));
                 for (int i=0; i<jobList.size(); i++) {
                     JobStatus jobStatus = jobList.get(i);
-                    if (DEBUG) {
+                    if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                         Slog.d(TAG, "Saving job " + jobStatus.getJobId());
                     }
                     out.startTag(null, "job");
@@ -516,11 +518,11 @@ public final class JobStore {
 
                 mJobsFile.finishWrite(fos);
             } catch (IOException e) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.v(TAG, "Error writing out job data.", e);
                 }
             } catch (XmlPullParserException e) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Error persisting bundle.", e);
                 }
             } finally {
@@ -632,7 +634,7 @@ public final class JobStore {
             // we haven't yet been able to calculate the usual elapsed-timebase bounds
             // correctly due to wall-clock uncertainty.
             Pair <Long, Long> utcJobTimes = jobStatus.getPersistedUtcTimes();
-            if (DEBUG && utcJobTimes != null) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS && utcJobTimes != null) {
                 Slog.i(TAG, "storing original UTC timestamps for " + jobStatus);
             }
 
@@ -737,7 +739,7 @@ public final class JobStore {
                     }
                 }
             } catch (FileNotFoundException e) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Could not find jobs file, probably there was nothing to load.");
                 }
             } catch (XmlPullParserException | IOException e) {
@@ -767,7 +769,7 @@ public final class JobStore {
                 Slog.d(TAG, "Start tag: " + parser.getName());
             }
             if (eventType == XmlPullParser.END_DOCUMENT) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "No persisted jobs.");
                 }
                 return null;
@@ -797,7 +799,7 @@ public final class JobStore {
                         if ("job".equals(tagName)) {
                             JobStatus persistedJob = restoreJobFromXml(rtcIsGood, parser, version);
                             if (persistedJob != null) {
-                                if (DEBUG) {
+                                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                                     Slog.d(TAG, "Read out " + persistedJob);
                                 }
                                 jobs.add(persistedJob);
@@ -914,7 +916,7 @@ public final class JobStore {
             try {
                 rtcRuntimes = buildRtcExecutionTimesFromXml(parser);
             } catch (NumberFormatException e) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Error parsing execution time parameters, skipping.");
                 }
                 return null;
@@ -971,7 +973,7 @@ public final class JobStore {
                     return null;
                 }
             } else {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Invalid parameter tag, skipping - " + parser.getName());
                 }
                 // Expecting a parameters start tag.
@@ -987,7 +989,7 @@ public final class JobStore {
             } while (eventType == XmlPullParser.TEXT);
             if (!(eventType == XmlPullParser.START_TAG
                     && XML_TAG_EXTRAS.equals(parser.getName()))) {
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.d(TAG, "Error reading extras, skipping.");
                 }
                 return null;
@@ -1024,7 +1026,7 @@ public final class JobStore {
                     && extras != null
                     && extras.getBoolean("SyncManagerJob", false)) {
                 sourcePackageName = extras.getString("owningPackage", sourcePackageName);
-                if (DEBUG) {
+                if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                     Slog.i(TAG, "Fixing up sync job source package name from 'android' to '"
                             + sourcePackageName + "'");
                 }

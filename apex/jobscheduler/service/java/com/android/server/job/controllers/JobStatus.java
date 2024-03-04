@@ -56,6 +56,8 @@ import com.android.server.job.JobServerProtoEnums;
 import com.android.server.job.JobStatusDumpProto;
 import com.android.server.job.JobStatusShortInfoProto;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import java.io.PrintWriter;
@@ -79,7 +81,7 @@ import java.util.function.Predicate;
  */
 public final class JobStatus {
     private static final String TAG = "JobScheduler.JobStatus";
-    static final boolean DEBUG = JobSchedulerService.DEBUG;
+    //static final boolean DEBUG = JobSchedulerService.DEBUG;
 
     private static final int NUM_CONSTRAINT_CHANGE_HISTORY = 10;
 
@@ -268,6 +270,9 @@ public final class JobStatus {
 
     // Set to true if doze constraint was satisfied due to app being whitelisted.
     boolean appHasDozeExemption;
+
+    // Set to true if doze constraint was satisfied due to app being whitelisted.
+    boolean appHasBatterySaverExemption;
 
     // Set to true when the app is "active" per AppStateTracker
     public boolean uidActive;
@@ -530,7 +535,7 @@ public final class JobStatus {
         this.requiredConstraints = requiredConstraints;
         mRequiredConstraintsOfInterest = requiredConstraints & CONSTRAINTS_OF_INTEREST;
         addDynamicConstraints(dynamicConstraints);
-        mReadyNotDozing = canRunInDoze();
+        mReadyNotDozing = canRunInDoze();// || canRunInBatterySaver();
         if (standbyBucket == RESTRICTED_INDEX) {
             addDynamicConstraints(DYNAMIC_RESTRICTED_CONSTRAINTS);
         } else {
@@ -574,7 +579,7 @@ public final class JobStatus {
                 jobStatus.getInternalFlags(), jobStatus.mDynamicConstraints);
         mPersistedUtcTimes = jobStatus.mPersistedUtcTimes;
         if (jobStatus.mPersistedUtcTimes != null) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "Cloning job with persisted run times", new RuntimeException("here"));
             }
         }
@@ -606,7 +611,7 @@ public final class JobStatus {
         // elapsed timebase bounds intrinsically become correct.
         this.mPersistedUtcTimes = persistedExecutionTimesUTC;
         if (persistedExecutionTimesUTC != null) {
-            if (DEBUG) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
                 Slog.i(TAG, "+ restored job with RTC times because of bad boot clock");
             }
         }
@@ -1203,7 +1208,11 @@ public final class JobStatus {
                 && (mDynamicConstraints & CONSTRAINT_DEVICE_NOT_DOZING) == 0);
     }
 
-    boolean canRunInBatterySaver() {
+    public boolean canRunInExtreme() {
+        return appHasBatterySaverExemption;
+    }
+
+    public boolean canRunInBatterySaver() {
         return (getInternalFlags() & INTERNAL_FLAG_HAS_FOREGROUND_EXEMPTION) != 0
                 || ((shouldTreatAsExpeditedJob() || startedAsExpeditedJob)
                 && (mDynamicConstraints & CONSTRAINT_BACKGROUND_NOT_RESTRICTED) == 0);
@@ -1261,8 +1270,9 @@ public final class JobStatus {
 
     /** @return true if the constraint was changed, false otherwise. */
     boolean setDeviceNotDozingConstraintSatisfied(final long nowElapsed,
-            boolean state, boolean whitelisted) {
+            boolean state, boolean whitelisted, boolean allowInIdle) {
         appHasDozeExemption = whitelisted;
+        appHasBatterySaverExemption = allowInIdle;
         if (setConstraintSatisfied(CONSTRAINT_DEVICE_NOT_DOZING, nowElapsed, state)) {
             // The constraint was changed. Update the ready flag.
             mReadyNotDozing = state || canRunInDoze();
@@ -1370,9 +1380,9 @@ public final class JobStatus {
         if (old == state) {
             return false;
         }
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG,
-                    "Constraint " + constraint + " is " + (!state ? "NOT " : "") + "satisfied for "
+                    "Constraint " + Integer.toHexString(constraint) + " is " + (!state ? "NOT " : "") + "satisfied for "
                             + toShortString());
         }
         final boolean wasReady = !state && isReady();
@@ -1638,6 +1648,16 @@ public final class JobStatus {
         if (((!mReadyWithinQuota || !mReadyTareWealth)
                 && !mReadyDynamicSatisfied && !shouldTreatAsExpeditedJob())
                 || getEffectiveStandbyBucket() == NEVER_INDEX) {
+
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
+                Slog.v(TAG,"Not ready "
+                    + "mReadyWithinQuota=" + mReadyWithinQuota 
+                    + ", mReadyTareWealth=" + mReadyTareWealth
+                    + ", mReadyDynamicSatisfied=" + mReadyDynamicSatisfied
+                    + ", shouldTreatAsExpeditedJob()=" + shouldTreatAsExpeditedJob()
+                    + ", getEffectiveStandbyBucket()=" + getEffectiveStandbyBucket()
+                    + ", " + sourcePackageName + "/" + sourceUid);
+            }
             return false;
         }
         // Deadline constraint trumps other constraints besides quota and dynamic (except for
@@ -1645,8 +1665,23 @@ public final class JobStatus {
         // run if its constraints are satisfied).
         // DeviceNotDozing implicit constraint must be satisfied
         // NotRestrictedInBackground implicit constraint must be satisfied
-        return mReadyNotDozing && mReadyNotRestrictedInBg && (serviceInfo != null)
+
+        boolean result = mReadyNotDozing && mReadyNotRestrictedInBg && (serviceInfo != null)
                 && (mReadyDeadlineSatisfied || isConstraintsSatisfied(satisfiedConstraints));
+
+        if( !result ) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
+                Slog.v(TAG,"Not ready " 
+                    + "mReadyNotDozing=" + mReadyNotDozing 
+                    + ", mReadyNotRestrictedInBg=" + mReadyNotRestrictedInBg
+                    + ", serviceInfo=" + serviceInfo
+                    + ", mReadyDeadlineSatisfied=" + mReadyDeadlineSatisfied
+                    + ", satisfiedConstraints=" + Integer.toHexString(satisfiedConstraints)
+                    + ",  isConstraintsSatisfied(satisfiedConstraints))=" +  isConstraintsSatisfied(satisfiedConstraints)
+                    + ", " + sourcePackageName + "/" + sourceUid);
+            }
+        }
+        return result;
     }
 
     /** All constraints besides implicit and deadline. */
@@ -1683,7 +1718,15 @@ public final class JobStatus {
             sat |= (requiredConstraints & SOFT_OVERRIDE_CONSTRAINTS);
         }
 
-        return (sat & mRequiredConstraintsOfInterest) == mRequiredConstraintsOfInterest;
+
+        boolean result = (sat & mRequiredConstraintsOfInterest) == mRequiredConstraintsOfInterest;
+        if (!result && BaikalConstants.BAIKAL_DEBUG_JOBS) {
+            Slog.v(TAG,"Not ready" 
+                + ", p1=" + Integer.toHexString(sat & mRequiredConstraintsOfInterest)
+                + ", p2=" + Integer.toHexString(mRequiredConstraintsOfInterest)
+                + ", " + sourcePackageName + "/" + sourceUid);
+        }    
+        return result;
     }
 
     public boolean matches(int uid, int jobId) {

@@ -28,6 +28,8 @@ import com.android.server.am.ActivityManagerService;
 import com.android.server.job.JobSchedulerService;
 import com.android.server.job.StateControllerProto;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.io.PrintWriter;
 
 /**
@@ -38,8 +40,8 @@ import java.io.PrintWriter;
  */
 public final class CarIdlenessTracker extends BroadcastReceiver implements IdlenessTracker {
     private static final String TAG = "JobScheduler.CarIdlenessTracker";
-    private static final boolean DEBUG = JobSchedulerService.DEBUG
-            || Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = JobSchedulerService.DEBUG
+    //        || Log.isLoggable(TAG, Log.DEBUG);
 
     public static final String ACTION_GARAGE_MODE_ON =
             "com.android.server.jobscheduler.GARAGE_MODE_ON";
@@ -205,7 +207,7 @@ public final class CarIdlenessTracker extends BroadcastReceiver implements Idlen
     }
 
     private static void logIfDebug(String msg) {
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, msg);
         }
     }

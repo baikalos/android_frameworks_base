@@ -49,13 +49,13 @@ public class BroadcastConstants {
             "bcast_allow_bg_activity_start_timeout";
 
     // All time intervals are in milliseconds
-    private static final long DEFAULT_TIMEOUT = 10_000 * Build.HW_TIMEOUT_MULTIPLIER;
-    private static final long DEFAULT_SLOW_TIME = 5_000 * Build.HW_TIMEOUT_MULTIPLIER;
-    private static final long DEFAULT_DEFERRAL = 5_000 * Build.HW_TIMEOUT_MULTIPLIER;
+    private static final long DEFAULT_TIMEOUT = 20_000 * Build.HW_TIMEOUT_MULTIPLIER;
+    private static final long DEFAULT_SLOW_TIME = 10_000 * Build.HW_TIMEOUT_MULTIPLIER;
+    private static final long DEFAULT_DEFERRAL = 10_000 * Build.HW_TIMEOUT_MULTIPLIER;
     private static final float DEFAULT_DEFERRAL_DECAY_FACTOR = 0.75f;
     private static final long DEFAULT_DEFERRAL_FLOOR = 0;
     private static final long DEFAULT_ALLOW_BG_ACTIVITY_START_TIMEOUT =
-            10_000 * Build.HW_TIMEOUT_MULTIPLIER;
+            30_000 * Build.HW_TIMEOUT_MULTIPLIER;
 
     /**
      * Defer LOCKED_BOOT_COMPLETED and BOOT_COMPLETED broadcasts until the first time any process in

@@ -2364,7 +2364,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         mSwipeToScreenshotObserver = null;
 
         mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
-        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext); 
+        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext, mConstants); 
         mBaikalAlarmManager = BaikalAlarmManager.getInstance(mHandlerThread.getLooper(), mContext); 
     }
 
@@ -2483,7 +2483,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         Watchdog.getInstance().addThread(mHandler);
 
         mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
-        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext); 
+        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext, mConstants); 
         mBaikalAlarmManager = BaikalAlarmManager.getInstance(mHandlerThread.getLooper(), mContext); 
 
         // bind background threads to little cores
@@ -6020,25 +6020,32 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
     }
 
-    private boolean isInRestrictedBucket(int userId, String packageName, long nowElapsed) {
-        return UsageStatsManager.STANDBY_BUCKET_RESTRICTED
-                <= mUsageStatsService.getAppStandbyBucket(packageName, userId, nowElapsed);
+    private boolean isInRestrictedBucket(AppProfile appProfile, int userId, String packageName, long nowElapsed) {
+        /*return UsageStatsManager.STANDBY_BUCKET_RESTRICTED
+                <= mUsageStatsService.getAppStandbyBucket(packageName, userId, nowElapsed);*/
+        return appProfile.getBackgroundMode() > 0;
     }
 
     // Unified app-op and target sdk check
     @GuardedBy(anyOf = {"this", "mProcLock"})
-    int appRestrictedInBackgroundLOSP(int uid, String packageName, int packageTargetSdk) {
+    int appRestrictedInBackgroundLOSP(AppProfile appProfile, int uid, String packageName, int packageTargetSdk) {
         // Apps that target O+ are always subject to background check
+
         if (packageTargetSdk >= Build.VERSION_CODES.O) {
             if (DEBUG_BACKGROUND_CHECK) {
                 Slog.i(TAG, "App " + uid + "/" + packageName + " targets O+, restricted");
             }
             return ActivityManager.APP_START_MODE_DELAYED_RIGID;
         }
+
+        int mode = appProfile.getBackgroundMode();
+        if( mode < 0 ) return ActivityManager.APP_START_MODE_NORMAL;
+        if( appProfile.mAllowWhileIdle ) return ActivityManager.APP_START_MODE_NORMAL;
+
         // It's a legacy app. If it's in the RESTRICTED bucket, always restrict on battery.
         if (mOnBattery // Short-circuit in common case.
                 && mConstants.FORCE_BACKGROUND_CHECK_ON_RESTRICTED_APPS
-                && isInRestrictedBucket(
+                && isInRestrictedBucket(appProfile, 
                         UserHandle.getUserId(uid), packageName, SystemClock.elapsedRealtime())) {
             if (DEBUG_BACKGROUND_CHECK) {
                 Slog.i(TAG, "Legacy app " + uid + "/" + packageName + " in RESTRICTED bucket");
@@ -6075,7 +6082,18 @@ public class ActivityManagerService extends IActivityManager.Stub
     // some other background operations are not.  If we're doing a check
     // of service-launch policy, allow those callers to proceed unrestricted.
     @GuardedBy(anyOf = {"this", "mProcLock"})
-    int appServicesRestrictedInBackgroundLOSP(int uid, String packageName, int packageTargetSdk) {
+    int appServicesRestrictedInBackgroundLOSP(AppProfile appProfile, int uid, String packageName, int packageTargetSdk) {
+
+        int mode = appProfile.getBackgroundMode();
+
+        if( mode < 0 || appProfile.mAllowWhileIdle ) {
+            if (DEBUG_BACKGROUND_CHECK) {
+                Slog.i(TAG, "App " + uid + "/" + packageName
+                        + " is whitelisted; not restricted in background");
+            }
+            return ActivityManager.APP_START_MODE_NORMAL;
+        }
+
         // Persistent app?
         if (mPackageManagerInt.isPackagePersistent(packageName)) {
             if (DEBUG_BACKGROUND_CHECK) {
@@ -6104,11 +6122,31 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
 
         // None of the service-policy criteria apply, so we apply the common criteria
-        return appRestrictedInBackgroundLOSP(uid, packageName, packageTargetSdk);
+        return appRestrictedInBackgroundLOSP(appProfile, uid, packageName, packageTargetSdk);
     }
 
     @GuardedBy(anyOf = {"this", "mProcLock"})
     int getAppStartModeLOSP(int uid, String packageName, int packageTargetSdk,
+            int callingPid, boolean alwaysRestrict, boolean disabledOnly, boolean forcedStandby) {
+
+
+        if( mAppProfileManager.isTopAppUid(uid,packageName) ) {
+            if (DEBUG_BACKGROUND_CHECK) Slog.d(TAG, "checkAllowBackground: top uid=" + uid + " pkg=" + packageName + " result=" + 0);
+            return 0;
+        }
+
+        AppProfile appProfile = null;
+       
+        appProfile = mAppProfileManager.getAppProfile(packageName, uid);
+        if( appProfile == null ) appProfile = new AppProfile(packageName,uid);
+
+        int result = getAppStartModeBaikal(appProfile, uid, packageName, packageTargetSdk,
+            callingPid, alwaysRestrict, disabledOnly, forcedStandby);
+        if (DEBUG_BACKGROUND_CHECK) Slog.d(TAG, "checkAllowBackground: uid=" + uid + " pkg=" + packageName + " result=" + result);
+        return result;
+    }
+
+    int getAppStartModeBaikal(AppProfile appProfile, int uid, String packageName, int packageTargetSdk,
             int callingPid, boolean alwaysRestrict, boolean disabledOnly, boolean forcedStandby) {
         if (mInternal.isPendingTopUid(uid)) {
             return ActivityManager.APP_START_MODE_NORMAL;
@@ -6116,8 +6154,8 @@ public class ActivityManagerService extends IActivityManager.Stub
         UidRecord uidRec = mProcessList.getUidRecordLOSP(uid);
         if (DEBUG_BACKGROUND_CHECK) Slog.d(TAG, "checkAllowBackground: uid=" + uid + " pkg="
                 + packageName + " rec=" + uidRec + " always=" + alwaysRestrict + " idle="
-                + (uidRec != null ? uidRec.isIdle() : false));
-        if (uidRec == null || alwaysRestrict || forcedStandby || uidRec.isIdle()) {
+                + (uidRec != null ? uidRec.isIdle() : false) + " forcedStandby=" + forcedStandby);
+        if (uidRec == null || alwaysRestrict || forcedStandby || uidRec.isIdle() || appProfile.getBackgroundMode() > 0) {
             boolean ephemeral;
             if (uidRec == null) {
                 ephemeral = getPackageManagerInternal().isPackageEphemeral(
@@ -6138,8 +6176,8 @@ public class ActivityManagerService extends IActivityManager.Stub
                     return ActivityManager.APP_START_MODE_NORMAL;
                 }
                 final int startMode = (alwaysRestrict)
-                        ? appRestrictedInBackgroundLOSP(uid, packageName, packageTargetSdk)
-                        : appServicesRestrictedInBackgroundLOSP(uid, packageName,
+                        ? appRestrictedInBackgroundLOSP(appProfile, uid, packageName, packageTargetSdk)
+                        : appServicesRestrictedInBackgroundLOSP(appProfile, uid, packageName,
                                 packageTargetSdk);
                 if (DEBUG_BACKGROUND_CHECK) {
                     Slog.d(TAG, "checkAllowBackground: uid=" + uid
@@ -6826,8 +6864,8 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
 
         if( app.mAppProfile != null && app.mAppProfile.mPinned ) {
-            app.setPersistent(true);
-            app.mState.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
+            //app.setPersistent(true);
+            app.mState.setMaxAdj(ProcessList.FOREGROUND_APP_ADJ);
             //app.mState.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
             Slog.d(TAG, "Baikal.AppProfile: setPinned " + info.packageName);
         }
@@ -18753,7 +18791,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
         AppProfile appProfile = null;
        
-        appProfile = AppProfileSettings.getInstance().getProfileLocked(info.packageName);
+        appProfile = mAppProfileManager.getAppProfile(info.packageName, info.uid);
 
         if( appProfile == null ) return false;
         if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) return true;

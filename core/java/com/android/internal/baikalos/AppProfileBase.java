@@ -77,11 +77,11 @@ public class AppProfileBase extends ContentObserver {
     static HashSet<Integer> _mAppsForDebug = new HashSet<Integer>();
 
     static HashSet<String> _systemAppsByPackageName = new HashSet<String>(); 
-    static HashSet<String> _systemWhitelistedByPackageName = new HashSet<String>(); 
     static HashSet<String> _systemImportantByPackageName = new HashSet<String>(); 
+    static HashSet<String> _systemWhitelistedByPackageName = new HashSet<String>(); 
 
-    AppProfile mSystemProfile;
-    AppProfile mAndroidProfile;
+    //AppProfile mSystemProfile;
+    //AppProfile mAndroidProfile;
 
     boolean isChanged = false;
 
@@ -96,7 +96,7 @@ public class AppProfileBase extends ContentObserver {
     AppProfileBase(Handler handler,Context context) {
         super(handler);
 
-        mAndroidProfile = new AppProfile("android");
+        /*mAndroidProfile = new AppProfile("android");
         mAndroidProfile.mBackgroundMode = -2;
         mAndroidProfile.mSystemApp = true;
         mAndroidProfile.mImportantApp = true;
@@ -106,7 +106,7 @@ public class AppProfileBase extends ContentObserver {
         mSystemProfile.mBackgroundMode = -2;
         mSystemProfile.mSystemApp = true;
         mSystemProfile.mImportantApp = true;
-        mSystemProfile.mSystemWhitelisted = true;
+        mSystemProfile.mSystemWhitelisted = true;*/
 
         mContext = context;
         mIsReady = true;
@@ -199,15 +199,26 @@ public class AppProfileBase extends ContentObserver {
     }
 
     private static boolean selfUpdate;
-    void loadProfiles() {
+    public void loadProfiles() {
         mBackend.refreshList();
 
         synchronized(this) {
-            loadProfilesLocked();
+            String appProfiles = Settings.Global.getString(mResolver,
+                    Settings.Global.BAIKALOS_APP_PROFILES);
+
+            loadProfilesLocked(appProfiles);
+        }
+    }
+
+    void loadProfiles(String appSettingsString) {
+        mBackend.refreshList();
+
+        synchronized(this) {
+            loadProfilesLocked(appSettingsString);
         }
     }
     
-    void loadProfilesLocked() {
+    void loadProfilesLocked(String appSettingsString) {
 
         updateImportantAppsLocked();
 
@@ -218,8 +229,8 @@ public class AppProfileBase extends ContentObserver {
         HashSet<Integer> newAppsForDebug = new HashSet<Integer>();
 
         HashMap<String,AppProfile> newProfilesByPackageName = new HashMap<String,AppProfile> ();
-        newProfilesByPackageName.put(mSystemProfile.mPackageName,mSystemProfile);
-        newProfilesByPackageName.put(mAndroidProfile.mPackageName,mAndroidProfile);
+        //newProfilesByPackageName.put(mSystemProfile.mPackageName,mSystemProfile);
+        //newProfilesByPackageName.put(mAndroidProfile.mPackageName,mAndroidProfile);
 
         HashMap<Integer,AppProfile> newProfilesByUid = new HashMap<Integer,AppProfile> ();
 
@@ -263,9 +274,17 @@ public class AppProfileBase extends ContentObserver {
     
                         if( !newProfilesByUid.containsKey(profile.mUid)  ) {
                             newProfilesByUid.put(profile.mUid, profile);
+                        } else {
+                            AppProfile old_uid_profile = newProfilesByUid.get(profile.mUid);
+                            AppProfile replace = merge(old_uid_profile,profile);
+                            if( replace != null ) {
+                                newProfilesByUid.remove(profile.mUid);
+                                newProfilesByUid.put(replace.mUid, replace);
+                            }
                         }
     
                         if(!profile.mStamina && isStaminaWl(uid,profile.mPackageName)) {
+                            Slog.e(TAG, "Enforce stamina(0) on " + profile.mPackageName);
                             profile.mStamina = true;
                         }
                     }
@@ -287,8 +306,12 @@ public class AppProfileBase extends ContentObserver {
                 if( uid == -1 ) continue;
 
                 AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
-                profile.mSystemApp = true;
+                if( !profile.mSystemApp ) {
+                    Slog.e(TAG, "Enforce mSystemApp on " + pkgName);
+                    profile.mSystemApp = true;
+                }
                 if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                    Slog.e(TAG, "Enforce stamina(1) on " + pkgName);
                     profile.mStamina = true;
                 }
             }
@@ -297,8 +320,12 @@ public class AppProfileBase extends ContentObserver {
                 int uid = getAppUidLocked(pkgName);
                 if( uid == -1 ) continue;
                 AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
-                profile.mSystemWhitelisted = true;
+                if( !profile.mSystemWhitelisted ) {
+                    Slog.e(TAG, "Enforce mSystemWhitelisted on " + pkgName);
+                    profile.mSystemWhitelisted = true;
+                }
                 if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                    Slog.e(TAG, "Enforce stamina(2) on " + pkgName);
                     profile.mStamina = true;
                 }
             }
@@ -307,8 +334,12 @@ public class AppProfileBase extends ContentObserver {
                 int uid = getAppUidLocked(pkgName);
                 if( uid == -1 ) continue;
                 AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
-                profile.mImportantApp = true;
+                if( !profile.mImportantApp ) {
+                    Slog.e(TAG, "Enforce mImportantApp on " + pkgName);
+                    profile.mImportantApp = true;
+                }
                 if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                    Slog.e(TAG, "Enforce stamina(3) on " + pkgName);
                     profile.mStamina = true;
                 }
             }
@@ -335,6 +366,17 @@ public class AppProfileBase extends ContentObserver {
         selfUpdate = false;
     }
 
+    private AppProfile merge(AppProfile existing, AppProfile from) {    
+        AppProfile to = new AppProfile(existing);
+        if( isSysWhitelistedLocked(from.mPackageName) ) to.mSystemWhitelisted = true;
+        if( to.mBackgroundMode > from.mBackgroundMode ) to.mBackgroundMode = from.mBackgroundMode;
+        if( from.mSystemApp ) to.mSystemApp = true;
+        //if( from.mStamina ) to.mStamina = true;
+        if( from.mImportantApp ) to.mImportantApp = true;
+        if( from.mAllowWhileIdle ) to.mAllowWhileIdle = true;
+        return to;
+    }
+
     private AppProfile findOrAddDefaultProfile(String pkgName, 
                                 HashMap<String,AppProfile> newProfiles, 
                                 HashMap<Integer, AppProfile> newProfilesByUid,
@@ -351,12 +393,12 @@ public class AppProfileBase extends ContentObserver {
         if( profile == null && oldProfiles.containsKey(pkgName) ) {
             AppProfile old_profile = oldProfiles.get(pkgName);
             profile = old_profile;
+            newProfiles.put(profile.mPackageName, profile);
         } 
 
         if( profile == null ) {
-            profile = new AppProfile(pkgName);
             int uid = getAppUidLocked(pkgName);
-            profile.mUid = uid;
+            profile = new AppProfile(pkgName, uid);
         }
                
         if( !newProfiles.containsKey(profile.mPackageName)  ) {
@@ -454,7 +496,7 @@ public class AppProfileBase extends ContentObserver {
 
 
         boolean runInBackground = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_IN_BACKGROUND,
-                    uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;        
+                    uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;
 
         boolean runAnyInBackground = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
                     uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;
@@ -513,9 +555,9 @@ public class AppProfileBase extends ContentObserver {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_ANY_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
                     setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_IGNORED); 
                 }
-                if( runInBackground ) {
+                if( !runInBackground ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
-                    setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_IGNORED); 
+                    setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
                 }
                 if( isWhitelisted ) mBackend.removeApp(profile.mPackageName);
             break;
@@ -527,17 +569,24 @@ public class AppProfileBase extends ContentObserver {
 
     public AppProfile getProfileLocked(String packageName) {
         if( packageName != null ) {
-            if( "android".equals(packageName) ) return mAndroidProfile; 
-            if( "system".equals(packageName) ) return mSystemProfile;
+            //if( "android".equals(packageName) ) return mAndroidProfile; 
+            //if( "system".equals(packageName) ) return mSystemProfile;
 	        return _profilesByPackageName.get(packageName);
         }
         return null;
     }
 
     public AppProfile getProfileLocked(int uid) {
-        if( uid < 5000 ) return mAndroidProfile;
-        if( uid < 10000 ) return mSystemProfile;
-        return _profilesByUid.get(uid);
+        //if( uid < 5000 ) return mAndroidProfile;
+        //if( uid < 10000 ) return mSystemProfile;
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
+            Slog.d(TAG,"getProfileLocked(" + uid + ")", new Throwable());
+        }
+        AppProfile profile = _profilesByUid.get(uid);
+        if( profile != null ) return profile;
+        //if( uid < 5000 ) return mAndroidProfile;
+        //if( uid < 10000 ) return mSystemProfile;
+        return null;
     }
 
     int getAppUidLocked(String packageName) {
@@ -549,6 +598,10 @@ public class AppProfileBase extends ContentObserver {
             ApplicationInfo ai = pm.getApplicationInfo(packageName,
                     PackageManager.MATCH_ALL);
             if( ai != null ) {
+                if( ai.uid == 0 ) {
+                    Slog.i(TAG,"Package " + packageName + " has invalid uid=0!!");
+                    return -1;
+                }
                 return ai.uid;
             }
         } catch(Exception e) {
@@ -582,7 +635,7 @@ public class AppProfileBase extends ContentObserver {
         //}
     }
 
-    public static AppProfile loadSingleProfile(String packageName, Context context) {
+    public static AppProfile loadSingleProfile(String packageName, int uid, Context context) {
 
         Slog.e(TAG, "loadSingleProfile:" + packageName);
 
@@ -620,7 +673,7 @@ public class AppProfileBase extends ContentObserver {
             Slog.e(TAG, "Bad BaikalService settings", e);
         } 
 
-        AppProfile default_profile = new AppProfile(packageName);
+        AppProfile default_profile = new AppProfile(packageName, uid);
         
         return updateProfileFromSystemApplist(default_profile,context); 
     }
@@ -691,11 +744,13 @@ public class AppProfileBase extends ContentObserver {
     }
 
     public boolean isStaminaWl(int uid, String packageName) {
-        if( uid < Process.FIRST_APPLICATION_UID ) return true;
+        //if( uid < Process.FIRST_APPLICATION_UID ) return true;
         if( packageName == null ) return false;
+        if( packageName.contains("auto_generated_rro_") ) return false;
         if( packageName.startsWith("com.android.service.ims") ) return true;
         if( packageName.startsWith("com.android.launcher3") ) return true;
-        if( packageName.startsWith("com.android.systemui") ) return true;
+        if( packageName.startsWith("com.android.systemui.plugin") ) return true;
+        if( packageName.equals("com.android.systemui") ) return true;
         if( packageName.startsWith("com.android.nfc") ) return true;
         if( packageName.startsWith("com.android.providers") ) return true;
         if( packageName.startsWith("com.android.inputmethod") ) return true;

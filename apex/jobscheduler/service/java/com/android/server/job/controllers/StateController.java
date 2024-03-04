@@ -16,7 +16,7 @@
 
 package com.android.server.job.controllers;
 
-import static com.android.server.job.JobSchedulerService.DEBUG;
+//import static com.android.server.job.JobSchedulerService.DEBUG;
 
 import android.annotation.NonNull;
 import android.content.Context;
@@ -30,6 +30,8 @@ import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.job.JobSchedulerService;
 import com.android.server.job.JobSchedulerService.Constants;
 import com.android.server.job.StateChangedListener;
+
+import com.android.internal.baikalos.BaikalConstants;
 
 import java.util.function.Predicate;
 
@@ -151,7 +153,7 @@ public abstract class StateController {
     protected boolean wouldBeReadyWithConstraintLocked(JobStatus jobStatus, int constraint) {
         // This is very cheap to check (just a few conditions on data in JobStatus).
         final boolean jobWouldBeReady = jobStatus.wouldBeReadyWithConstraint(constraint);
-        if (DEBUG) {
+        if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, "wouldBeReadyWithConstraintLocked: " + jobStatus.toShortString()
                     + " constraint=" + constraint
                     + " readyWithConstraint=" + jobWouldBeReady);
