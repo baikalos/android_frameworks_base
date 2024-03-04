@@ -12206,6 +12206,12 @@ public final class Settings {
          * @hide
          */
         @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_INCALL = "baikalos_trust_incall";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
 
         /*
@@ -12243,6 +12249,12 @@ public final class Settings {
          * @hide
          */
         public static final String AURORA_ENABLED = "aurora_enabled";
+
+        /**
+         * Control whether FU is enabled for this user.
+         * @hide
+         */
+        public static final String FU_ENABLED = "fu_enabled";
         
         
         /* End of BaikalOS Secure Settings */
@@ -17277,6 +17289,12 @@ public final class Settings {
          * @hide
          */
         public static final String BAIKALOS_KILL_IN_BACKGROUND = "baikalos_kill_in_background";
+
+        /**
+         * This preference enables Ato Limit in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_AUTO_LIMIT = "baikalos_auto_limit";
 
         /**
          * This preference enables Stamina Mode.
