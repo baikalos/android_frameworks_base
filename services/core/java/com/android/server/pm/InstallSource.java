@@ -16,8 +16,11 @@
 
 package com.android.server.pm;
 
+import static com.android.server.pm.PackageManagerService.TAG;
+
 import android.annotation.Nullable;
 import android.content.pm.PackageInstaller;
+import android.util.Slog;
 
 import com.android.internal.util.Preconditions;
 
@@ -32,7 +35,7 @@ public final class InstallSource {
      * An instance of InstallSource representing an absence of knowledge of the source of
      * a package. Used in preference to null.
      */
-    static final InstallSource EMPTY = new InstallSource(null, null, null, null, false, false,
+    public static final InstallSource EMPTY = new InstallSource(null, null, null, null, false, false,
             null, PackageInstaller.PACKAGE_SOURCE_UNSPECIFIED);
 
     /** We also memoize this case because it is common - all un-updated system apps. */
@@ -146,7 +149,19 @@ public final class InstallSource {
             boolean isInitiatingPackageUninstalled,
             @Nullable PackageSignatures initiatingPackageSignatures,
             int packageSource) {
+
+
         if (initiatingPackageName == null) {
+            Slog.v(TAG, "initiatingPackageName=" + initiatingPackageName
+                  + ", originatingPackageName=" + originatingPackageName
+                  + ", installerPackageName=" + installerPackageName
+                  + ", installerAttributionTag=" + installerAttributionTag
+                  + ", isOrphaned=" + isOrphaned
+                  + ", isInitiatingPackageUninstalled=" + isInitiatingPackageUninstalled
+                  + ", initiatingPackageSignatures=" + initiatingPackageSignatures
+                  + ", packageSource=" + packageSource
+                  , new Throwable() );
+
             Preconditions.checkArgument(initiatingPackageSignatures == null);
             Preconditions.checkArgument(!isInitiatingPackageUninstalled);
         }
@@ -242,8 +257,25 @@ public final class InstallSource {
                 isInitiatingPackageUninstalled, initiatingPackageSignatures);
     }
 
+    public static InstallSource baikalClone(@Nullable String initiatingPackageName, 
+                                            @Nullable String installerPackageName, 
+                                            @Nullable PackageSignatures initiatingPackageSignatures,
+                                            int packageSource) {
+        return createInternal(initiatingPackageName,
+        null,
+        installerPackageName,
+        null,
+        packageSource,
+        false,
+        false,
+        initiatingPackageSignatures);
+    }
+
     @Nullable
     private static String intern(@Nullable String packageName) {
         return packageName == null ? null : packageName.intern();
     }
+
+
 }
+

@@ -153,6 +153,7 @@ import com.android.server.utils.WatchedSparseBooleanArray;
 import com.android.server.utils.WatchedSparseIntArray;
 import com.android.server.wm.ActivityTaskManagerInternal;
 import com.android.server.baikalos.BaikalAppManagerService;
+import com.android.server.baikalos.BaikalSpooferService;
 import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalSpoofer;
 
@@ -193,6 +194,7 @@ public class ComputerEngine implements Computer {
 
         public Settings(@NonNull com.android.server.pm.Settings settings) {
             mSettings = settings;
+            BaikalSpooferService.updatePackageSettings(settings);
         }
 
         @Nullable

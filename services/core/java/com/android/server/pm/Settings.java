@@ -790,7 +790,7 @@ public final class Settings implements Watchable, Snappable {
         onChanged();
     }
 
-    PackageSetting getPackageLPr(String pkgName) {
+    public PackageSetting getPackageLPr(String pkgName) {
         return mPackages.get(pkgName);
     }
 

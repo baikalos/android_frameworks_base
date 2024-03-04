@@ -54,6 +54,8 @@ import com.android.server.pm.pkg.SuspendParams;
 import com.android.server.utils.SnapshotCache;
 import com.android.server.utils.WatchedArraySet;
 
+import com.android.server.baikalos.BaikalSpooferService;
+
 import libcore.util.EmptyArray;
 
 import java.io.File;
@@ -1425,6 +1427,8 @@ public class PackageSetting extends SettingBase implements PackageStateInternal 
 
     @DataClass.Generated.Member
     public @NonNull InstallSource getInstallSource() {
+        InstallSource overridden = BaikalSpooferService.overrideInstallSource(this);
+        if( overridden != null ) return overridden;
         return installSource;
     }
 
