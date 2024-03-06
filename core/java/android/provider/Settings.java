@@ -17556,6 +17556,13 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_ENABLE_OPTIONAL_COMPONENTS = "baikalos_enable_optional_components";
 
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_OLD_LINKS = "baikalos_old_links";
+
+
         /* End of BaikalOS Global Settings */
 
         /**

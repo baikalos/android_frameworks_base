@@ -327,14 +327,15 @@ public class BaikalSpoofer {
             setVersionField("DEVICE_INITIAL_SDK_INT", 23);
             setVersionField("SECURITY_PATCH", "2016-10-01");*/
 
-            setBuildField("BRAND", "Hisense");
-            setBuildField("PRODUCT", "F30");
-            setBuildField("MODEL", "Hisense F30");
-        	setBuildField("MANUFACTURER", "Hisense");
-            setBuildField("DEVICE", "HS6735MT");
-            setBuildField("FINGERPRINT", "Hisense/F30/HS6735MT:6.0/MRA58K/L1228.6.01.01:user/release-keys");
+            setBuildField("BRAND", "motorola");
+            setBuildField("PRODUCT", "griffin_retcn");
+            setBuildField("MODEL", "XT1650-05");
+        	setBuildField("MANUFACTURER", "motorola");
+            setBuildField("DEVICE", "griffin");
+            setBuildField("ID", "MCC24.246-37");
+            setBuildField("FINGERPRINT", "motorola/griffin_retcn/griffin:6.0.1/MCC24.246-37/42:user/release-keys");
             //setVersionField("DEVICE_INITIAL_SDK_INT", 24);
-            setVersionField("SECURITY_PATCH", "2016-02-01");
+            setVersionField("SECURITY_PATCH", "2016-07-01");
 
             //setBuildField("ID", "NJH47F");
             setBuildField("TYPE", "user");
@@ -640,7 +641,7 @@ public class BaikalSpoofer {
 
     private static String overrideGmsUnstableString(String key, String def) {
         if( "ro.product.first_api_level".equals(key) ) return "24";
-        if( "ro.build.version.security_patch".equals(key) ) return "2016-02-01";
+        if( "ro.build.version.security_patch".equals(key) ) return "2016-07-01";
         return def;
     }
 

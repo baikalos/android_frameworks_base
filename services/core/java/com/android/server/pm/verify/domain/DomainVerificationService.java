@@ -38,6 +38,7 @@ import android.content.pm.verify.domain.DomainVerificationState;
 import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.content.pm.verify.domain.IDomainVerificationManager;
 import android.os.UserHandle;
+import android.provider.Settings;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.IndentingPrintWriter;
@@ -66,6 +67,9 @@ import com.android.server.pm.verify.domain.models.DomainVerificationPkgState;
 import com.android.server.pm.verify.domain.models.DomainVerificationStateMap;
 import com.android.server.pm.verify.domain.proxy.DomainVerificationProxy;
 import com.android.server.pm.verify.domain.proxy.DomainVerificationProxyUnavailable;
+
+import android.baikalos.AppProfile;
+import com.android.server.baikalos.AppProfileManager;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -153,6 +157,8 @@ public class DomainVerificationService extends SystemService
     @NonNull
     private DomainVerificationProxy mProxy = new DomainVerificationProxyUnavailable();
 
+    private Context mContext;
+
     private boolean mCanSendBroadcasts;
 
     public DomainVerificationService(@NonNull Context context, @NonNull SystemConfig systemConfig,
@@ -160,6 +166,7 @@ public class DomainVerificationService extends SystemService
         super(context);
         mSystemConfig = systemConfig;
         mPlatformCompat = platformCompat;
+        mContext = context;
         mCollector = new DomainVerificationCollector(platformCompat, systemConfig);
         mSettings = new DomainVerificationSettings(mCollector);
         mEnforcer = new DomainVerificationEnforcer(context);
@@ -1614,10 +1621,22 @@ public class DomainVerificationService extends SystemService
                 continue;
             }
             int approval = approvalLevelForDomain(pkgSetting, domain, false, userId, domain);
-            highestApproval = Math.max(highestApproval, approval);
+            if( approval == APPROVAL_LEVEL_LEGACY_ASK ) {
+                highestApproval = APPROVAL_LEVEL_LEGACY_ASK;
+            } else if( highestApproval != APPROVAL_LEVEL_LEGACY_ASK ) {
+                highestApproval = Math.max(highestApproval, approval);
+            }
             fillInfoMapForSamePackage(inputMap, packageName, approval);
         }
-
+        if( highestApproval == APPROVAL_LEVEL_LEGACY_ASK ) { 
+            size = inputMap.size();
+            for (int index = 0; index < size; index++) {
+                if(inputMap.valueAt(index) > APPROVAL_LEVEL_LEGACY_ASK) {
+                    inputMap.setValueAt(index, APPROVAL_LEVEL_LEGACY_ASK);
+                }
+            }
+            return APPROVAL_LEVEL_LEGACY_ASK;
+        }
         return highestApproval;
     }
 
@@ -1811,23 +1830,54 @@ public class DomainVerificationService extends SystemService
             return APPROVAL_LEVEL_NONE;
         }
 
+        //boolean forceAllOld = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_OLD_LINKS, 0) != 0;
+        boolean forceOld = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_OLD_LINKS, 0) != 0;
+        if( !forceOld ) {
+            AppProfileManager manager = AppProfileManager.getInstance();
+            if( manager != null ) {
+                AppProfile profile = manager.getAppProfile(packageName,0);
+                if( profile != null ) {
+                    forceOld = profile.mOldLinks;
+                    if( forceOld ) Slog.d(TAG,"Forced old links app:" + packageName);
+                }
+            }
+        }
+
         // Should never be null, but if it is, skip this and assume that v2 is enabled
-        if (pkg != null && !DomainVerificationUtils.isChangeEnabled(mPlatformCompat, pkg,
-                SETTINGS_API_V2)) {
+        if (forceOld /*|| forceAllOld*/ || (pkg != null && !DomainVerificationUtils.isChangeEnabled(mPlatformCompat, pkg,
+                SETTINGS_API_V2))) {
             switch (mLegacySettings.getUserState(packageName, userId)) {
                 case PackageManager.INTENT_FILTER_DOMAIN_VERIFICATION_STATUS_UNDEFINED:
                     // If nothing specifically set, assume v2 rules
+                    if( forceOld /*|| forceAllOld */) { 
+                        Slog.d(TAG,"Forced old link for:" + packageName + " APPROVAL_LEVEL_LEGACY_ASK");
+                        return APPROVAL_LEVEL_LEGACY_ASK;
+                    }
                     break;
                 case PackageManager.INTENT_FILTER_DOMAIN_VERIFICATION_STATUS_NEVER:
+                    Slog.d(TAG,"Forced all old link API for:" + packageName + " APPROVAL_LEVEL_NONE");
                     return APPROVAL_LEVEL_NONE;
                 case PackageManager.INTENT_FILTER_DOMAIN_VERIFICATION_STATUS_ASK:
+                    if( forceOld ) { 
+                        Slog.d(TAG,"Forced old link for:" + packageName + " APPROVAL_LEVEL_LEGACY_ALWAYS");
+                        return APPROVAL_LEVEL_LEGACY_ALWAYS;
+                    }
+                    Slog.d(TAG,"Forced all old link API for:" + packageName + " APPROVAL_LEVEL_LEGACY_ASK");
+                    return APPROVAL_LEVEL_LEGACY_ASK;
                 case PackageManager.INTENT_FILTER_DOMAIN_VERIFICATION_STATUS_ALWAYS_ASK:
+                    if( forceOld ) { 
+                        Slog.d(TAG,"Forced old link for:" + packageName + " APPROVAL_LEVEL_LEGACY_ALWAYS");
+                        return APPROVAL_LEVEL_LEGACY_ALWAYS;
+                    }
+                    Slog.d(TAG,"Forced all old link API for:" + packageName + " APPROVAL_LEVEL_LEGACY_ASK");
                     return APPROVAL_LEVEL_LEGACY_ASK;
                 case PackageManager.INTENT_FILTER_DOMAIN_VERIFICATION_STATUS_ALWAYS:
+                    Slog.d(TAG,"Forced old link API for:" + packageName + " APPROVAL_LEVEL_LEGACY_ALWAYS");
                     return APPROVAL_LEVEL_LEGACY_ALWAYS;
             }
         }
 
+        Slog.d(TAG,"Using A12 link API for:" + packageName);
         synchronized (mLock) {
             DomainVerificationPkgState pkgState = mAttachedPkgStates.get(packageName);
             if (pkgState == null) {

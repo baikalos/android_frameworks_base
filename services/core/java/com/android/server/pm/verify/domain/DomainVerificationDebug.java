@@ -45,7 +45,7 @@ public class DomainVerificationDebug {
 
     // Disable to turn off all logging. This is used to allow a "basic" set of debug flags to be
     // enabled and checked in, without having everything be on or off.
-    public static final boolean DEBUG_ANY = false;
+    public static final boolean DEBUG_ANY = true;
 
     // Enable to turn on all logging. Requires enabling DEBUG_ANY.
     public static final boolean DEBUG_ALL = false;

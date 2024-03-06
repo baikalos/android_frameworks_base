@@ -195,6 +195,9 @@ public class AppProfile {
     public int mScaleFactor;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mOldLinks;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     @SuppressLint({"MutableBareField","InternalField"})
@@ -325,6 +328,7 @@ public class AppProfile {
         mHideIdle = false;
         mInstaller = 0;
         mScaleFactor = 0;
+        mOldLinks = false;
     }
 
     public AppProfile(@Nullable String packageName, int uid) {
@@ -361,6 +365,7 @@ public class AppProfile {
         mHideIdle = false;
         mInstaller = 0;
         mScaleFactor = 0;
+        mOldLinks = false;
     }
 
     public AppProfile(@Nullable AppProfile profile) {
@@ -561,6 +566,7 @@ public class AppProfile {
             !mHide3P &&
             !mAllowWhileIdle &&
             !mHideIdle &&
+            !mOldLinks &&
             mInstaller == 0 &&
             mScaleFactor == 0 &&
             mPerfProfile == 0 &&
@@ -626,6 +632,7 @@ public class AppProfile {
         this.mHideIdle = profile.mHideIdle;
         this.mInstaller = profile.mInstaller;
         this.mScaleFactor = profile.mScaleFactor;
+        this.mOldLinks = profile.mOldLinks;
         if( TRACE || mDebug ) Slog.d(TAG, "AppProfile updated :" + profile.serialize());
     }
 
@@ -679,6 +686,8 @@ public class AppProfile {
         if( mHideIdle ) result +=  "," + "hidl=" + mHideIdle;
         if( mInstaller != 0 ) result +=  "," + "ins=" + mInstaller;
         if( mScaleFactor != 0 ) result +=  "," + "dsf=" + mScaleFactor;
+        if( mOldLinks ) result +=  "," + "olnk=" + mOldLinks;
+       
 
         return result;
     }
@@ -743,6 +752,7 @@ public class AppProfile {
             mHideIdle = parser.getBoolean("hidl",false);
             mInstaller = parser.getInt("ins",0);
             mScaleFactor = parser.getInt("dsf",0);
+            mOldLinks = parser.getBoolean("olnk",false);
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
