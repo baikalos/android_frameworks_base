@@ -2772,7 +2772,7 @@ public final class ProcessList {
                 ProcessRecord app = apps.valueAt(ia);
                 if (app.isPersistent() && !evenPersistent) {
                     // we don't kill persistent processes
-                    Slog.w(TAG, "We don't kill persistent processes: " + app, new Throwable());
+                    Slog.w(TAG, "We don't kill persistent processes: " + app);
                     continue;
                 }
                 if (app.isRemoved()) {
