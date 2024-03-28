@@ -5742,7 +5742,7 @@ public final class Settings {
          * @hide
          */
         @Readable
-        public static final String RINGTONE_VIBRATION_PATTERN = "ringtone_vibration_pattern";
+        public static final String RINGTONE_VIBRATION_PATTERN = "baikal_ringtone_vibration_pattern";
 
         /**
          * Custom vibration pattern
@@ -5750,7 +5750,7 @@ public final class Settings {
          * @hide
          */
         @Readable
-        public static final String CUSTOM_RINGTONE_VIBRATION_PATTERN = "custom_ringtone_vibration_pattern";
+        public static final String CUSTOM_RINGTONE_VIBRATION_PATTERN = "baikal_custom_ringtone_vibration_pattern";
 
         /**
          * Bring back old style mobile data indicators.
@@ -6399,6 +6399,8 @@ public final class Settings {
             PUBLIC_SETTINGS.add(VOLUME_BLUETOOTH_SCO);
             PUBLIC_SETTINGS.add(VOLUME_ASSISTANT);
             PUBLIC_SETTINGS.add(RINGTONE);
+            PUBLIC_SETTINGS.add(RINGTONE_VIBRATION_PATTERN);
+            PUBLIC_SETTINGS.add(CUSTOM_RINGTONE_VIBRATION_PATTERN);
             PUBLIC_SETTINGS.add(NOTIFICATION_SOUND);
             PUBLIC_SETTINGS.add(ALARM_ALERT);
             PUBLIC_SETTINGS.add(TEXT_AUTO_REPLACE);
