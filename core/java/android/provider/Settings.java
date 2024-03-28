@@ -12253,6 +12253,13 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_TRUST_WIFI_DEV = "baikalos_trust_wifi_dev";
 
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_EXPAND_ALL_NOTIFICATIONS = "baikalos_expand_all_notifications";
+
+
         /**
          * Control whether GMS is enabled for this user.
          * @hide
@@ -17553,6 +17560,34 @@ public final class Settings {
          */
         @Readable
         public static final String BAIKALOS_POWER_LEVEL_IDLE = "baikalos_power_level_idle";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_CURRENT = "baikalos_power_level_current";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_IND = "baikalos_power_level_ind";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWERSAVER_POLICY = "baikalos_powersaver_policy";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWERSAVER_POLICY_BACKUP = "baikalos_powersaver_policy_backup";
 
 
         /**

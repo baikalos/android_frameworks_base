@@ -186,7 +186,7 @@ public class AppProfileManager {
     private boolean mThermAvailable = false;
 
     private boolean mAggressiveMode = false;
-    //private boolean mExtremeMode = false;
+    private boolean mForcedExtremeMode = false;
     private boolean mAggressiveIdleMode = false;
     private boolean mKillInBackground = false;
     private boolean mAllowDowngrade = false;
@@ -267,10 +267,6 @@ public class AppProfileManager {
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_AGGRESSIVE_IDLE),
                     false, this);
-
-                /*mResolver.registerContentObserver(
-                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_EXTREME_IDLE),
-                    false, this);*/
 
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE),
@@ -447,7 +443,6 @@ public class AppProfileManager {
         boolean changed = false;
 
         mAggressiveMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) != 0;
-        //mExtremeMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
         mAggressiveIdleMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) != 0;
         mKillInBackground = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_KILL_IN_BACKGROUND, 0) != 0;
 
@@ -534,7 +529,7 @@ public class AppProfileManager {
         boolean superSaverForDraw = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_SUPER_SAVER_DRAW, 0) != 0;
         AppProfileSettings.setSuperSaverActiveForDraw(superSaverForDraw);
 
-        boolean autoLimit = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AUTO_LIMIT, 0) != 0;
+        boolean autoLimit = false; //Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AUTO_LIMIT, 0) != 0;
         changed |= AppProfile.setAutoLimit(autoLimit);
 
         if( changed ) {
@@ -1441,7 +1436,7 @@ public class AppProfileManager {
                 FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputLimitValue);
                 Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,2);
             } else {
-                if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Bypass/Limited charging " + bypassEnabled);
+                if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Bypass charging " + bypassEnabled);
                 FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
                 SystemPropertiesSet("baikal.charging.mode", bypassEnabled ? "1" : "0");
                 Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,bypassEnabled ? 1 : 0);

@@ -252,8 +252,8 @@ public class BatterySaverStateMachine {
 
     /** @return true if the automatic percentage based mode should be used */
     private boolean isAutomaticModeActiveLocked() {
-        return mSettingAutomaticBatterySaver == PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE
-                && mSettingBatterySaverTriggerThreshold > 0;
+        return mSettingAutomaticBatterySaver == false; //PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE
+                //&& mSettingBatterySaverTriggerThreshold > 0;
     }
 
     /**

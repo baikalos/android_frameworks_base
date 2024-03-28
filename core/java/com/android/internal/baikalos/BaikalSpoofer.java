@@ -73,11 +73,12 @@ public class BaikalSpoofer {
     private static OverrideSharedPrefsId sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_NONE;
     private static OverrideSystemPropertiesId sOverrideSystemPropertiesId = OverrideSystemPropertiesId.OVERRIDE_NONE;
 
-    private static boolean sIsGmsUnstable = false;
-    private static boolean sIsFinsky = false;
-    private static boolean sPreventHwKeyAttestation = false;
-    private static boolean sHideDevMode = false;
-    private static boolean sAutoRevokeDisabled = false;
+    private static volatile boolean sIsGmsUnstable = false;
+    private static volatile boolean sIsFinsky = false;
+    private static volatile boolean sIsExcluded = false;
+    private static volatile boolean sPreventHwKeyAttestation = false;
+    private static volatile boolean sHideDevMode = false;
+    private static volatile boolean sAutoRevokeDisabled = false;
 
     private static String sPackageName = null;
     private static String sProcessName = null;
@@ -109,6 +110,27 @@ public class BaikalSpoofer {
          */
         //DECAL(3);
 
+
+    private static final String[] packagesToKeep = {
+            "com.google.android.apps.motionsense.bridge",
+            "com.google.android.apps.nexuslauncher",
+            "com.google.android.apps.pixelmigrate",
+            "com.google.android.apps.recorder",
+            "com.google.android.apps.restore",
+            "com.google.android.apps.tachyon",
+            "com.google.android.apps.tycho",
+            "com.google.android.apps.wearables.maestro.companion",
+            "com.google.android.apps.youtube.kids",
+            "com.google.android.apps.youtube.music",
+            "com.google.android.as",
+            "com.google.android.dialer",
+            "com.google.android.euicc",
+            "com.google.android.setupwizard",
+            "com.google.android.youtube",
+            "com.google.ar.core",
+            "com.google.intelligence.sense",
+            "com.google.oslo"
+    };
 
     private static AppProfile spoofedProfile = null;
 
@@ -343,6 +365,12 @@ public class BaikalSpoofer {
         } else if( "com.android.vending".equals(packageName) ) {
             sIsFinsky = true;
         }
+
+        if (Arrays.asList(packagesToKeep).contains(packageName) ||
+                packageName.startsWith("com.google.android.GoogleCamera")) {
+            sIsExcluded = true;
+            return;
+        }
     }
 
 
@@ -491,6 +519,14 @@ public class BaikalSpoofer {
     }
 
     public static void onEngineGetCertificateChain() {
+
+        if(sPreventHwKeyAttestation) {
+            throw new UnsupportedOperationException();
+        } 
+
+
+        if (sIsExcluded) return;
+    
         // Check stack for SafetyNet
         if (isCallerSafetyNet()) {
             throw new UnsupportedOperationException();
@@ -500,10 +536,6 @@ public class BaikalSpoofer {
         if (sIsFinsky) {
             throw new UnsupportedOperationException();
         }
-
-        if(sPreventHwKeyAttestation) {
-            throw new UnsupportedOperationException();
-        } 
     }
 
     private static void setOverrideSharedPrefs(String packageName) {
@@ -776,15 +808,23 @@ public class BaikalSpoofer {
             sAudioManager = (AudioManager) sContext.getSystemService(Context.AUDIO_SERVICE);
         }
 
+        if( sAudioManager == null && AppProfile.isDebug() ) Log.i(TAG,"overridePrefferedDevice sAudioManager = null", new Throwable());
+
         if( sAudioManager != null && sBuiltinPlaybackDevice == null ) {
 
+            AudioDeviceInfo speakerDevice = null;
             AudioDeviceInfo[] deviceList = sAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
             for (AudioDeviceInfo device : deviceList) {
+                if( AppProfile.isDebug() ) Log.i(TAG,"overridePrefferedDevice device:" + device.getType());
                 if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER_SAFE) {
                     sBuiltinPlaybackDevice = device;
                     break;
                 }
+                if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
+                    speakerDevice = device;
+                }
             }
+            if( sBuiltinPlaybackDevice == null ) sBuiltinPlaybackDevice = speakerDevice;
         }
 
         if( sAudioManager != null && sBuiltinRecordingDevice == null ) {

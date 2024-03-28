@@ -322,7 +322,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
     public boolean isEnabled() {
         boolean result = isEnabledBaikal();
         if (DEBUG) {
-            Slog.d(TAG, "isEnabled: " + result, new Throwable());
+            Slog.d(TAG, "isEnabled: " + result /*, new Throwable()*/);
         }
         return result;
     }
