@@ -252,7 +252,7 @@ public class BatterySaverStateMachine {
 
     /** @return true if the automatic percentage based mode should be used */
     private boolean isAutomaticModeActiveLocked() {
-        return mSettingAutomaticBatterySaver == false; //PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE
+        return false; // mSettingAutomaticBatterySaver == PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE
                 //&& mSettingBatterySaverTriggerThreshold > 0;
     }
 
@@ -263,13 +263,13 @@ public class BatterySaverStateMachine {
      * @return true if the battery level is below automatic's threshold.
      */
     private boolean isInAutomaticLowZoneLocked() {
-        return mIsBatteryLevelLow;
+        return false; //mIsBatteryLevelLow;
     }
 
     /** @return true if the dynamic mode should be used */
     private boolean isDynamicModeActiveLocked() {
-        return mSettingAutomaticBatterySaver == PowerManager.POWER_SAVE_MODE_TRIGGER_DYNAMIC
-                && mDynamicPowerSavingsEnableBatterySaver;
+        return false; //mSettingAutomaticBatterySaver == PowerManager.POWER_SAVE_MODE_TRIGGER_DYNAMIC
+                //&& mDynamicPowerSavingsEnableBatterySaver;
     }
 
     /**
@@ -279,7 +279,7 @@ public class BatterySaverStateMachine {
      * @return true if the battery level is below dynamic's threshold.
      */
     private boolean isInDynamicLowZoneLocked() {
-        return mBatteryLevel <= mDynamicPowerSavingsDisableThreshold;
+        return false; // mBatteryLevel <= mDynamicPowerSavingsDisableThreshold;
     }
 
     /**
