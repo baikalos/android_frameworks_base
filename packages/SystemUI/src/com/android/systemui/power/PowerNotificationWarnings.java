@@ -373,7 +373,7 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
                         .setContentTitle(mContext.getString(R.string.auto_saver_title))
                         .setStyle(new Notification.BigTextStyle().bigText(message))
                         .setContentText(message);
-        nb.setContentIntent(pendingBroadcast(ACTION_ENABLE_AUTO_SAVER));
+        //nb.setContentIntent(pendingBroadcast(ACTION_ENABLE_AUTO_SAVER));
         nb.setDeleteIntent(pendingBroadcast(ACTION_DISMISS_AUTO_SAVER_SUGGESTION));
         nb.addAction(0,
                 mContext.getString(R.string.no_auto_saver_action),
@@ -646,7 +646,7 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
     }
 
     private void showAutoSaverSuggestion() {
-        mShowAutoSaverSuggestion = true;
+        mShowAutoSaverSuggestion = false;// true;
         updateNotification();
     }
 
@@ -663,12 +663,12 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
     private void showStartSaverConfirmation(Bundle extras) {
         if (mSaverConfirmation != null) return;
         final SystemUIDialog d = new SystemUIDialog(mContext);
-        final boolean confirmOnly = extras.getBoolean(BatterySaverUtils.EXTRA_CONFIRM_TEXT_ONLY);
+        final boolean confirmOnly = true; //extras.getBoolean(BatterySaverUtils.EXTRA_CONFIRM_TEXT_ONLY);
         final int batterySaverTriggerMode =
                 extras.getInt(BatterySaverUtils.EXTRA_POWER_SAVE_MODE_TRIGGER,
                         PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE);
-        final int batterySaverTriggerLevel =
-                extras.getInt(BatterySaverUtils.EXTRA_POWER_SAVE_MODE_TRIGGER_LEVEL, 0);
+        final int batterySaverTriggerLevel = -1;
+                //extras.getInt(BatterySaverUtils.EXTRA_POWER_SAVE_MODE_TRIGGER_LEVEL, 0);
         d.setMessage(getBatterySaverDescription());
 
         // Sad hack for http://b/78261259 and http://b/78298335. Otherwise "Battery" may be split
@@ -803,13 +803,13 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
     }
 
     private void setSaverMode(boolean mode, boolean needFirstTimeWarning) {
-        BatterySaverUtils.setPowerSaveMode(mContext, mode, needFirstTimeWarning);
+        //BatterySaverUtils.setPowerSaveMode(mContext, mode, needFirstTimeWarning);
     }
 
     private void startBatterySaverSchedulePage() {
-        Intent intent = new Intent(BATTERY_SAVER_SCHEDULE_SCREEN_INTENT_ACTION);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        mActivityStarter.startActivity(intent, true /* dismissShade */);
+        //Intent intent = new Intent(BATTERY_SAVER_SCHEDULE_SCREEN_INTENT_ACTION);
+        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        //mActivityStarter.startActivity(intent, true /* dismissShade */);
     }
 
     private void logEvent(BatteryWarningEvents.LowBatteryWarningEvent event) {
@@ -840,22 +840,23 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            
             final String action = intent.getAction();
             Slog.i(TAG, "Received " + action);
             if (action.equals(ACTION_SHOW_BATTERY_SAVER_SETTINGS)) {
                 logEvent(BatteryWarningEvents
                         .LowBatteryWarningEvent.LOW_BATTERY_NOTIFICATION_SETTINGS);
                 dismissLowBatteryNotification();
-                mContext.startActivityAsUser(mOpenBatterySaverSettings,
-                        mUserTracker.getUserHandle());
+                /*mContext.startActivityAsUser(mOpenBatterySaverSettings,
+                        mUserTracker.getUserHandle());*/
             } else if (action.equals(ACTION_START_SAVER)) {
                 logEvent(BatteryWarningEvents
                         .LowBatteryWarningEvent.LOW_BATTERY_NOTIFICATION_TURN_ON);
-                setSaverMode(true, true);
+                //setSaverMode(true, true);
                 dismissLowBatteryNotification();
             } else if (action.equals(ACTION_SHOW_START_SAVER_CONFIRMATION)) {
                 dismissLowBatteryNotification();
-                showStartSaverConfirmation(intent.getExtras());
+                //showStartSaverConfirmation(intent.getExtras());
             } else if (action.equals(ACTION_DISMISSED_WARNING)) {
                 logEvent(BatteryWarningEvents
                         .LowBatteryWarningEvent.LOW_BATTERY_NOTIFICATION_CANCEL);

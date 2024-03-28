@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2018 The OmniROM Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,23 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.android.systemui.qs.tiles;
 
+import android.content.ComponentName;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.Looper;
+import android.database.ContentObserver;
+import android.net.Uri;
+import android.os.UserHandle;
 import android.provider.Settings;
-import android.provider.Settings.Secure;
 import android.service.quicksettings.Tile;
 import android.view.View;
-import android.widget.Switch;
+
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.Nullable;
 
-import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.logging.MetricsLogger;
-import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
+import com.android.systemui.qs.QSHost;
+import com.android.systemui.qs.tileimpl.QSTileImpl;
+import com.android.systemui.plugins.qs.QSTile.BooleanState;
 import com.android.systemui.R;
+
+import com.android.internal.logging.MetricsLogger;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;
@@ -37,27 +43,25 @@ import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.qs.QSTile.BooleanState;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.qs.QSHost;
-import com.android.systemui.qs.SettingObserver;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.statusbar.policy.BatteryController;
-import com.android.systemui.util.settings.SecureSettings;
+import com.android.systemui.statusbar.policy.BluetoothController;
+
+import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
 
 import javax.inject.Inject;
 
-public class BatterySaverTile extends QSTileImpl<BooleanState> implements
-        BatteryController.BatteryStateChangeCallback {
+import com.android.internal.baikalos.BaikalConstants;
+
+public class BatterySaverTile extends QSTileImpl<BooleanState> {
 
     public static final String TILE_SPEC = "battery";
 
-    private final BatteryController mBatteryController;
-    @VisibleForTesting
-    protected final SettingObserver mSetting;
-
-    private int mLevel;
-    private boolean mPowerSave;
-    private boolean mCharging;
-    private boolean mPluggedIn;
+    private boolean mExtremeEnabled;
+    private boolean mListening;
+    private final Icon mIconOff = ResourceIcon.get(R.drawable.qs_battery_saver_icon_off);
+    private final Icon mIconOn = ResourceIcon.get(R.drawable.qs_battery_saver_icon_on);
+    private boolean isAvailable = false;
 
     @Inject
     public BatterySaverTile(
@@ -68,48 +72,69 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
             MetricsLogger metricsLogger,
             StatusBarStateController statusBarStateController,
             ActivityStarter activityStarter,
-            QSLogger qsLogger,
-            BatteryController batteryController,
-            SecureSettings secureSettings
+            QSLogger qsLogger
     ) {
         super(host, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
-        mBatteryController = batteryController;
-        mBatteryController.observe(getLifecycle(), this);
-        int currentUser = host.getUserContext().getUserId();
-        mSetting = new SettingObserver(
-                secureSettings,
-                mHandler,
-                Secure.LOW_POWER_WARNING_ACKNOWLEDGED,
-                currentUser
-        ) {
-            @Override
-            protected void handleValueChanged(int value, boolean observedChange) {
-                // mHandler is the background handler so calling this is OK
-                handleRefreshState(null);
-            }
-        };
+
+        if( !BaikalConstants.isKernelCompatible() ) return;
+        isAvailable = true;
+
+        mExtremeEnabled = Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
+
     }
 
     @Override
     public boolean isAvailable() {
-        return false;
+        return isAvailable;
     }
 
     @Override
     public BooleanState newTileState() {
-        return new BooleanState();
+        BooleanState state = new BooleanState();
+        state.handlesLongClick = false;
+        return state;
     }
 
     @Override
-    protected void handleDestroy() {
-        super.handleDestroy();
-        mSetting.setListening(false);
+    public void handleClick(@Nullable View view) {
+        mExtremeEnabled = !mExtremeEnabled;
+        Settings.Global.putInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_EXTREME_IDLE, mExtremeEnabled ? 1 : 0);
+
+        refreshState();
+    }
+
+
+    @Override
+    public Intent getLongClickIntent() {
+	    return null;
+    }
+
+
+    @Override
+    public CharSequence getTileLabel() {
+        return mContext.getString(R.string.quick_settings_extreme_label);
     }
 
     @Override
-    protected void handleUserSwitch(int newUserId) {
-        mSetting.setUserId(newUserId);
+    protected void handleUpdateState(BooleanState state, Object arg) {
+        if (state.slash == null) {
+            state.slash = new SlashState();
+        }
+        mExtremeEnabled = Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
+        state.value = mExtremeEnabled;
+        state.slash.isSlashed = !state.value;
+        state.icon = mExtremeEnabled ? mIconOn : mIconOff;
+        state.label = mContext.getString(R.string.quick_settings_extreme_label);
+
+        if ( !mExtremeEnabled ) {
+            state.state = Tile.STATE_INACTIVE;
+        } else {
+            state.state = Tile.STATE_ACTIVE;
+        }
     }
 
     @Override
@@ -117,61 +142,26 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
         return MetricsEvent.QS_BATTERY_TILE;
     }
 
+    private ContentObserver mObserver = new ContentObserver(mHandler) {
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            refreshState();
+        }
+    };
+
     @Override
     public void handleSetListening(boolean listening) {
-        super.handleSetListening(listening);
-        mSetting.setListening(listening);
-        if (!listening) {
-            // If we stopped listening, it means that the tile is not visible. In that case, we
-            // don't need to save the view anymore
-            mBatteryController.clearLastPowerSaverStartView();
-        }
-    }
-
-    @Override
-    public Intent getLongClickIntent() {
-        return new Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS);
-    }
-
-    @Override
-    protected void handleClick(@Nullable View view) {
-        if (getState().state == Tile.STATE_UNAVAILABLE) {
+        if (mObserver == null) {
             return;
         }
-        mBatteryController.setPowerSaveMode(!mPowerSave, view);
-    }
-
-    @Override
-    public CharSequence getTileLabel() {
-        return mContext.getString(R.string.battery_detail_switch_title);
-    }
-
-    @Override
-    protected void handleUpdateState(BooleanState state, Object arg) {
-        state.state = mPluggedIn ? Tile.STATE_UNAVAILABLE
-                : mPowerSave ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE;
-        state.icon = ResourceIcon.get(mPowerSave
-                ? R.drawable.qs_battery_saver_icon_on
-                : R.drawable.qs_battery_saver_icon_off);
-        state.label = mContext.getString(R.string.battery_detail_switch_title);
-        state.secondaryLabel = "";
-        state.contentDescription = state.label;
-        state.value = mPowerSave;
-        state.expandedAccessibilityClassName = Switch.class.getName();
-        state.showRippleEffect = mSetting.getValue() == 0;
-    }
-
-    @Override
-    public void onBatteryLevelChanged(int level, boolean pluggedIn, boolean charging) {
-        mLevel = level;
-        mPluggedIn = pluggedIn;
-        mCharging = charging;
-        refreshState(level);
-    }
-
-    @Override
-    public void onPowerSaveChanged(boolean isPowerSave) {
-        mPowerSave = isPowerSave;
-        refreshState(null);
+        if (mListening != listening) {
+            mListening = listening;
+            if (listening) {
+                mContext.getContentResolver().registerContentObserver(
+                        Settings.Global.getUriFor(Settings.Global.BAIKALOS_EXTREME_IDLE), false, mObserver);
+            } else {
+                mContext.getContentResolver().unregisterContentObserver(mObserver);
+            }
+        }
     }
 }

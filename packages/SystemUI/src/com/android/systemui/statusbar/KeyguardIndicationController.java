@@ -395,9 +395,9 @@ public class KeyguardIndicationController {
                     updateOrganizedOwnedDevice();
                     if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
                         int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-                        int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-                        int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-                        float batterylvl = (level / (float) scale) * 100;
+                        int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+                        int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+                        float batterylvl = (100f * level)/(float)scale;
                         mBatteryLevel = (int) batterylvl;
                         updateDeviceEntryIndication(false);
                     }

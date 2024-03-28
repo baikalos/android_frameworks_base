@@ -6839,6 +6839,9 @@ public final class ActivityThread extends ClientTransactionHandler
                 StrictMode.setThreadPolicy(savedPolicy);
             }
         }
+                                                                     
+
+        Typeface.updateDefaultFont(data.info.getResources());
 
         // Preload fonts resources
         FontsContract.setApplicationContextForResources(appContext);

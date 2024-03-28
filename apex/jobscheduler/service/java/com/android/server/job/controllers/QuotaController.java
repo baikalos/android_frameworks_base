@@ -1924,7 +1924,7 @@ public final class QuotaController extends StateController {
         } else if (jobStatus.canRunInExtreme()) {
             isSatisfied = true;
             boolean result = jobStatus.setQuotaConstraintSatisfied(nowElapsed, isSatisfied);
-            Slog.w(TAG, "canRunInExtreme=true, " + jobStatus);
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.w(TAG, "canRunInExtreme=true, " + jobStatus);
             return result;
         } else if (mService.isCurrentlyRunningLocked(jobStatus)) {
             // Job is running but didn't start as an EJ, so only the regular quota should be
@@ -1935,7 +1935,7 @@ public final class QuotaController extends StateController {
         }
         if (!isSatisfied && jobStatus.getWhenStandbyDeferred() == 0) {
             // Mark that the job is being deferred due to buckets.
-            Slog.w(TAG, "Defer job due to buckets. " + jobStatus);
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.w(TAG, "Defer job due to buckets. " + jobStatus);
             jobStatus.setWhenStandbyDeferred(nowElapsed);
         }
         return jobStatus.setQuotaConstraintSatisfied(nowElapsed, isSatisfied);

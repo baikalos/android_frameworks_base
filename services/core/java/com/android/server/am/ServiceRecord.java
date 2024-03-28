@@ -1035,6 +1035,18 @@ final class ServiceRecord extends Binder implements ComponentName.WithComponentN
                             localPackageName, appUid);
                     Notification localForegroundNoti = _foregroundNoti;
                     try {
+                        int targetSdkVersion = Build.VERSION_CODES.O_MR1;
+                        boolean isSystemApp = false;
+                        boolean ignoreNotification = false;
+                        try {
+                            final ApplicationInfo applicationInfo =
+                                    ams.mContext.getPackageManager().getApplicationInfoAsUser(
+                                            appInfo.packageName, 0, userId);
+                            targetSdkVersion = applicationInfo.targetSdkVersion;
+                            isSystemApp = (applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+                        } catch (PackageManager.NameNotFoundException e) {
+                        }
+
                         if (localForegroundNoti.getSmallIcon() == null) {
                             // It is not correct for the caller to not supply a notification
                             // icon, but this used to be able to slip through, so for
@@ -1093,18 +1105,15 @@ final class ServiceRecord extends Binder implements ComponentName.WithComponentN
                         }
                         if (nm.getNotificationChannel(localPackageName, appUid,
                                 localForegroundNoti.getChannelId()) == null) {
-                            int targetSdkVersion = Build.VERSION_CODES.O_MR1;
-                            try {
-                                final ApplicationInfo applicationInfo =
-                                        ams.mContext.getPackageManager().getApplicationInfoAsUser(
-                                                appInfo.packageName, 0, userId);
-                                targetSdkVersion = applicationInfo.targetSdkVersion;
-                            } catch (PackageManager.NameNotFoundException e) {
-                            }
-                            if (targetSdkVersion >= Build.VERSION_CODES.O_MR1) {
-                                throw new RuntimeException(
-                                        "invalid channel for service notification: "
-                                                + foregroundNoti);
+
+                            if( isSystemApp ) {
+                                ignoreNotification = true;
+                            } else {
+                                if (targetSdkVersion >= Build.VERSION_CODES.O_MR1) {
+                                    throw new RuntimeException(
+                                            "invalid channel for service notification: "
+                                                    + foregroundNoti);
+                                }
                             }
                         }
                         if (localForegroundNoti.getSmallIcon() == null) {
@@ -1112,14 +1121,19 @@ final class ServiceRecord extends Binder implements ComponentName.WithComponentN
                             // a notification.  We don't want to
                             // just ignore it, we want to prevent the service from
                             // being foreground.
-                            throw new RuntimeException("invalid service notification: "
-                                    + foregroundNoti);
+                            if( isSystemApp ) {
+                                ignoreNotification = true;
+                            } else {
+                                throw new RuntimeException("invalid service notification: "
+                                        + foregroundNoti);
+                            }
                         }
-                        nm.enqueueNotification(localPackageName, localPackageName,
-                                appUid, appPid, null, localForegroundId, localForegroundNoti,
-                                userId);
-
-                        foregroundNoti = localForegroundNoti; // save it for amending next time
+                        if( !ignoreNotification ) {
+                            nm.enqueueNotification(localPackageName, localPackageName,
+                                    appUid, appPid, null, localForegroundId, localForegroundNoti,
+                                    userId);
+                            foregroundNoti = localForegroundNoti; // save it for amending next time
+                        }
 
                         signalForegroundServiceNotification(packageName, appInfo.uid,
                                 localForegroundId, false /* canceling */);

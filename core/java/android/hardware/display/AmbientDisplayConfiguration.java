@@ -293,19 +293,14 @@ public class AmbientDisplayConfiguration {
             Settings.Secure.DOZE_ON_CHARGE, 0, user) == 1;
     }
 
+    public boolean alwaysOnChargingActive(int user) {
+        return Settings.Secure.getIntForUser(mContext.getContentResolver(),
+            Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, 0, user) == 1;
+    }
+
     private boolean alwaysOnChargingEnabled(int user) {
         if (alwaysOnChargingEnabledSetting(user)) {
-            final Intent intent = mContext.registerReceiver(null, sIntentFilter);
-            if (intent != null) {
-                int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-                boolean isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                            status == BatteryManager.BATTERY_STATUS_FULL;
-                int plugged = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
-                boolean isPlugged = plugged == BatteryManager.BATTERY_PLUGGED_AC || 
-                            plugged == BatteryManager.BATTERY_PLUGGED_USB ||
-                            plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS;
-                return isPlugged && isCharging;
-            }
+            return alwaysOnChargingActive(user);
         }
         return false;
     }

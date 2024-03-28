@@ -186,7 +186,7 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
 
     @Override
     public Certificate[] engineGetCertificateChain(String alias) {
-        BaikalSpoofer.onEngineGetCertificateChain();
+        //BaikalSpoofer.onEngineGetCertificateChain();
 
         KeyEntryResponse response = getKeyMetadata(alias);
 
@@ -237,7 +237,8 @@ public class AndroidKeyStoreSpi extends KeyStoreSpi {
                 if (x509Certificate.getExtensionValue(EAT_OID) != null ||
                     x509Certificate.getExtensionValue(ASN1_OID) != null ||
                     x509Certificate.getExtensionValue(KNOX_OID) != null) {
-                    throw new UnsupportedOperationException();
+                    BaikalSpoofer.onEngineGetCertificateChain();
+                    //throw new UnsupportedOperationException();
                 }
             }
         }

@@ -106,7 +106,7 @@ import com.android.server.net.NetworkPolicyManagerInternal;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
 
-//import android.baikalos.AppProfile;
+import android.baikalos.AppProfile;
 //import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.BaikalConstants;
@@ -721,7 +721,7 @@ public class DeviceIdleController extends SystemService
 
     private final AlarmManager.OnAlarmListener mMotionTimeoutAlarmListener = () -> {
         synchronized (DeviceIdleController.this) {
-            if ( !mAggressiveDeviceIdleMode && !isStationaryLocked()) {
+            if ( !mAggressiveDeviceIdleMode && AppProfile.getPowerMode() < 3 && !isStationaryLocked()) {
                 // If the device keeps registering motion, then the alarm should be
                 // rescheduled, so this shouldn't go off until the device is stationary.
                 // This case may happen in a race condition (alarm goes off right before
@@ -795,7 +795,7 @@ public class DeviceIdleController extends SystemService
 
     @GuardedBy("this")
     private boolean isStationaryLocked() {
-        if( mAggressiveDeviceIdleMode ) return true;
+        if( mAggressiveDeviceIdleMode || (AppProfile.getPowerMode() >= 3 ) ) return true;
 
         final long now = mInjector.getElapsedRealtime();
         return mMotionListener.active
@@ -812,6 +812,7 @@ public class DeviceIdleController extends SystemService
                 return;
             }
             if( mAggressiveDeviceIdleMode ) return;
+            if( AppProfile.getPowerMode() >= 3 ) return;
 
             postStationaryStatus(listener);
             if (mMotionListener.active) {
@@ -1696,7 +1697,7 @@ public class DeviceIdleController extends SystemService
     @Override
     public void onAnyMotionResult(int result) {
 
-        if( mAggressiveDeviceIdleMode ) result = AnyMotionDetector.RESULT_STATIONARY;
+        if( mAggressiveDeviceIdleMode || AppProfile.getPowerMode() >= 3 ) result = AnyMotionDetector.RESULT_STATIONARY;
 
         if (DEBUG) Slog.d(TAG, "onAnyMotionResult(" + result + ")");
         synchronized (this) {
@@ -3656,7 +3657,7 @@ public class DeviceIdleController extends SystemService
                     delay = (long) (mPreIdleFactor * delay);
                 }
 
-                if( !mAggressiveDeviceIdleMode && delay > 0 ) {
+                if( !mAggressiveDeviceIdleMode || AppProfile.getPowerMode() >= 3 && delay > 0 ) {
                     startMonitoringMotionLocked();
                     scheduleAlarmLocked(delay, false);
                     moveToStateLocked(STATE_IDLE_PENDING, reason);
@@ -3669,7 +3670,7 @@ public class DeviceIdleController extends SystemService
                 mLastGpsLocation = null;
                 moveToStateLocked(STATE_SENSING, reason);
 
-                if( !mAggressiveDeviceIdleMode && mConstants.SENSING_TIMEOUT > 0 ) {
+                if( !mAggressiveDeviceIdleMode || AppProfile.getPowerMode() >= 3 && mConstants.SENSING_TIMEOUT > 0 ) {
                 // Wait for open constraints and an accelerometer reading before moving on.
                     if (mUseMotionSensor && mAnyMotionDetector.hasSensor()) {
                         scheduleSensingTimeoutAlarmLocked(mConstants.SENSING_TIMEOUT);
@@ -3687,7 +3688,7 @@ public class DeviceIdleController extends SystemService
             case STATE_SENSING:
                 cancelSensingTimeoutAlarmLocked();
                 moveToStateLocked(STATE_LOCATING, reason);
-                if( !mAggressiveDeviceIdleMode && mConstants.LOCATING_TIMEOUT > 0 ) {
+                if( !mAggressiveDeviceIdleMode && AppProfile.getPowerMode() < 3 && mConstants.LOCATING_TIMEOUT > 0 ) {
                     scheduleAlarmLocked(mConstants.LOCATING_TIMEOUT, false);
                     LocationManager locationManager = mInjector.getLocationManager();
                     if (locationManager != null
@@ -4004,7 +4005,7 @@ public class DeviceIdleController extends SystemService
 
     @GuardedBy("this")
     void handleMotionDetectedLocked(long timeout, String type) {
-        if( !mAggressiveDeviceIdleMode ) {
+        if( !mAggressiveDeviceIdleMode && (AppProfile.getPowerMode() < 3) ) {
             if (mStationaryListeners.size() > 0) {
                 postStationaryStatusUpdated();
                 cancelMotionTimeoutAlarmLocked();
@@ -4028,6 +4029,12 @@ public class DeviceIdleController extends SystemService
         final boolean becomeInactive = mState != STATE_ACTIVE
                 || mLightState == LIGHT_STATE_OVERRIDE;
         // We only want to change the IDLE state if it's OVERRIDE.
+
+        if( mAggressiveDeviceIdleMode || AppProfile.getPowerMode() >= 3 ) {
+            becomeInactiveIfAppropriateLocked();
+            return;
+        }
+
         becomeActiveLocked(type, Process.myUid(), timeout, mLightState == LIGHT_STATE_OVERRIDE);
         if (becomeInactive) {
             becomeInactiveIfAppropriateLocked();
@@ -4070,7 +4077,7 @@ public class DeviceIdleController extends SystemService
 
     void startMonitoringMotionLocked() {
         if (DEBUG) Slog.d(TAG, "startMonitoringMotionLocked()");
-        if (mMotionSensor != null && !mMotionListener.active && !mAggressiveDeviceIdleMode) {
+        if (mMotionSensor != null && !mMotionListener.active && !mAggressiveDeviceIdleMode && (AppProfile.getPowerMode() < 3) ) {
             mMotionListener.registerLocked();
         }
     }
@@ -4081,7 +4088,7 @@ public class DeviceIdleController extends SystemService
      */
     private void maybeStopMonitoringMotionLocked() {
         if (DEBUG) Slog.d(TAG, "maybeStopMonitoringMotionLocked()");
-        if (mMotionSensor != null && (mStationaryListeners.size() == 0 || mAggressiveDeviceIdleMode)) {
+        if (mMotionSensor != null && (mStationaryListeners.size() == 0 || mAggressiveDeviceIdleMode || AppProfile.getPowerMode() >= 3)) {
             if (mMotionListener.active) {
                 mMotionListener.unregisterLocked();
                 cancelMotionTimeoutAlarmLocked();

@@ -303,6 +303,12 @@ public class Typeface {
             final ProviderResourceEntry providerEntry = (ProviderResourceEntry) entry;
 
             String systemFontFamilyName = providerEntry.getSystemFontFamilyName();
+            
+            if (systemFontFamilyName != null && sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+                //Log.e(TAG, "createFromResources: ProviderResourceEntry:" + systemFontFamilyName + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
+                return Typeface.create(sFallbackName, NORMAL);
+            }  
+ 
             if (systemFontFamilyName != null && hasFontFamily(systemFontFamilyName)) {
                 return Typeface.create(systemFontFamilyName, NORMAL);
             }
@@ -325,6 +331,11 @@ public class Typeface {
                     providerEntry.getPackage(), providerEntry.getQuery(), certs);
             Typeface typeface = FontsContract.getFontSync(request);
             return typeface == null ? DEFAULT : typeface;
+        }
+
+        //Log.e(TAG, "createFromResources: " + path + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
+        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            return Typeface.create(sFallbackName, NORMAL);
         }
 
         Typeface typeface = findFromCache(mgr, path);
@@ -655,10 +666,10 @@ public class Typeface {
         }
 
         private Typeface resolveFallbackTypeface() {
-            Log.e(TAG, "resolveFallbackTypeface " + mFallbackFamilyName + ", " + sFallbackName);
+            //Log.e(TAG, "resolveFallbackTypeface " + mFallbackFamilyName + ", " + sFallbackName);
             if (mFallbackFamilyName == null) {
                 if( sFallbackName == null )
-                    return null;
+                    return DEFAULT;
                  mFallbackFamilyName = sFallbackName;
             }
 
@@ -679,7 +690,7 @@ public class Typeface {
          * @return Newly created Typeface. May return null if some parameters are invalid.
          */
         public Typeface build() {
-            Log.e(TAG, "Typeface build " + mFallbackFamilyName + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
+            //Log.e(TAG, "Typeface build " + mFallbackFamilyName + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
             if (mFontBuilder == null || AppProfile.getCurrentAppProfile().mOverrideFonts) {
                 return resolveFallbackTypeface();
             }
@@ -874,6 +885,9 @@ public class Typeface {
          * @return the Typeface object
          */
         public @NonNull Typeface build() {
+            if( AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+                return getDefault();
+            }
             final int userFallbackSize = mFamilies.size();
             if( mFallbackName == null ) mFallbackName = sFallbackName;
             final Typeface fallbackTypeface = getSystemDefaultTypeface(mFallbackName);
@@ -901,6 +915,9 @@ public class Typeface {
      * @return The best matching typeface.
      */
     public static Typeface create(String familyName, @Style int style) {
+        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            return create(getSystemOverrideTypeface(sFallbackName), style); 
+        }
         return create(getSystemOverrideTypeface(familyName), style);
     }
 
@@ -922,6 +939,11 @@ public class Typeface {
      * @return The best matching typeface.
      */
     public static Typeface create(Typeface family, @Style int style) {
+
+        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            family = getDefault();
+        }
+
         if ((style & ~STYLE_MASK) != 0) {
             style = NORMAL;
         }
@@ -994,6 +1016,11 @@ public class Typeface {
     public static @NonNull Typeface create(@Nullable Typeface family,
             @IntRange(from = 1, to = 1000) int weight, boolean italic) {
         Preconditions.checkArgumentInRange(weight, 0, 1000, "weight");
+
+        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            family = getDefault();
+        }
+
         if (family == null) {
             family = getDefault();
         }
@@ -1027,7 +1054,12 @@ public class Typeface {
     /** @hide */
     public static Typeface createFromTypefaceWithVariation(@Nullable Typeface family,
             @NonNull List<FontVariationAxis> axes) {
-        final Typeface base = family == null ? Typeface.DEFAULT : family;
+        Typeface base = family == null ? Typeface.DEFAULT : family;
+
+        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            base = Typeface.DEFAULT;
+        }
+
         return new Typeface(nativeCreateFromTypefaceWithVariation(base.native_instance, axes));
     }
 
@@ -1419,9 +1451,11 @@ public class Typeface {
             if (typeface == null) {
                 // This should never happen, but if the system font family name is invalid, just return
                 // instead of crashing the app.
-                Log.e(TAG, "Can't update default font to" + familyName);
+                Log.e(TAG, "Can't update default font to :" + familyName);
                 return;
             }
+
+            //Log.e(TAG, "Update default font to :" + familyName);
 
             setDefault(typeface);
 

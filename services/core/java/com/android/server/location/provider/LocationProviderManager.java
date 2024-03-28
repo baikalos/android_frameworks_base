@@ -2185,35 +2185,34 @@ public class LocationProviderManager extends
 
         if (!isBypass) {
             switch (mLocationPowerSaveModeHelper.getLocationPowerSaveMode()) {
-                case LOCATION_MODE_FOREGROUND_ONLY:
+                case LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF: 
+                    return false;
+                case LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF: // Network only
+                    if (GPS_PROVIDER.equals(mName)) {
+                        return false;
+                    }
+                    break;
+                case LOCATION_MODE_FOREGROUND_ONLY: // ForegroundOnly
                     if (!registration.isForeground()) {
                         return false;
                     }
                     break;
-                case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF:
+                case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF: // Foreground GPS + NetworkOnly 
                     if (registration.isForeground()) {
                         break;
                     }
-                    if (!GPS_PROVIDER.equals(mName)) {
-                        break;
-                    }
-                    if (!mScreenInteractiveHelper.isInteractive()) {
+                    if (GPS_PROVIDER.equals(mName)) {
                         return false;
                     }
+                    break;
+                case LOCATION_MODE_NO_CHANGE: // Default
                     break;
 
-                case LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF:
-                case LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF:
-                    // fall through
-                    if (!registration.isForeground()) {
-                        return false;
-                    }
+                case 929292:
                     if (!mScreenInteractiveHelper.isInteractive()) {
                         return false;
                     }
                     break;
-                case LOCATION_MODE_NO_CHANGE:
-                    // fall through
                 default:
                     break;
             }

@@ -94,8 +94,9 @@ import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.LocalServices;
 import com.android.server.pm.UserManagerInternal;
 
-import com.android.server.BaikalSystemService;
 import com.android.internal.baikalos.AppProfileSettings;
+import com.android.server.BaikalSystemService;
+import com.android.server.baikalos.BaikalPowerSaveManager;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -1784,9 +1785,14 @@ public final class BroadcastQueue {
                 info.activityInfo.applicationInfo.uid);
 
         boolean background = mQueueName.equals("background") || mQueueName.equals("offload_bg");
+        boolean appProcessReady = app != null && app.getThread() != null && !app.isKilled();
 
-        AppProfile appProfile = AppProfileSettings.getInstance() == null ? new AppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid) : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
-        if( appProfile == null ) appProfile = new AppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid);
+
+        AppProfile appProfile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+        if( appProfile == null ) {
+            Slog.i(TAG,"AppProfileSettings: not ready or no profile " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
+            appProfile = new AppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid);
+        }
 
         if( Intent.ACTION_BOOT_COMPLETED.equals(r.intent.getAction()) || 
             Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(r.intent.getAction()) ||
@@ -1809,6 +1815,11 @@ public final class BroadcastQueue {
 
 
         boolean callerBackground = background; // false;
+        int backgroundMode = appProfile.getBackgroundMode();
+        if( !appProcessReady 
+            && BaikalPowerSaveManager.getCurrentPolicy().forceBackgroundCheck
+            && (backgroundMode > 1 || (backgroundMode > 0 && mService.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE) ) )
+                 callerBackground = false;
 
         if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
 
@@ -1853,9 +1864,13 @@ public final class BroadcastQueue {
             }
         }*/
 
-        if( !skip && callerBackground ) {
+        if( !appProcessReady && Intent.ACTION_QUERY_PACKAGE_RESTART.equals(r.intent.getAction()) ) {
+            callerBackground = true;
+        }
+
+        if( !skip && callerBackground && !appProcessReady ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
-                if( appProfile.getBackgroundMode() > 1 ) {
+                if( backgroundMode > 1 ) {
                     Slog.w(TAG, "Skipping delivery: Background execution disabled by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
@@ -1874,7 +1889,7 @@ public final class BroadcastQueue {
                     skip = true;
                 }
             } else {
-                if( appProfile.getBackgroundMode() > 0 ) {
+                if( backgroundMode > 0 ) {
                     Slog.w(TAG, "Skipping delivery: Background execution limited by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
@@ -1895,11 +1910,11 @@ public final class BroadcastQueue {
             }
         }
 
-        if( !skip && callerBackground && appProfile.getBackgroundMode() > 0 ) {
+        if( !skip && !appProcessReady && callerBackground && backgroundMode > 0 ) {
             if( "io.chaldeaprjkt.gamespace".equals(appProfile.mPackageName) ) {
 
-                    if( appProfile.getBackgroundMode() > 1 || 
-                        (appProfile.getBackgroundMode() > 0 && 
+                    if( backgroundMode > 1 || 
+                       (backgroundMode > 0 && 
                         mService.mWakefulness.get() != PowerManagerInternal.WAKEFULNESS_AWAKE) ) {
 
                         Slog.w(TAG, "Skipping delivery: Background execution of gamespace disabled by baikalos: "
@@ -1939,7 +1954,7 @@ public final class BroadcastQueue {
             }
         }
         
-        if (!skip) {
+        if (!skip && !appProcessReady) {
             final int allowed = mService.getAppStartModeLOSP(
                     info.activityInfo.applicationInfo.uid, info.activityInfo.packageName,
                     info.activityInfo.applicationInfo.targetSdkVersion, -1, true, false, false);
@@ -2069,8 +2084,8 @@ public final class BroadcastQueue {
             }
         }
 
-        if (!skip && /*callerBackground &&*/ (app == null || app.getThread() == null || app.isKilled()) && !(appProfile.getBackgroundMode() < 0) ) {
-            if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) {
+        if (!skip && !appProcessReady && (backgroundMode >= 0) ) {
+            if( appProfile.mBootDisabled || backgroundMode > 1 ) {
                 Slog.w(TAG, "Skipping delivery for not running and autostart disabled package "
                     + "appProfile=" + appProfile.toString() 
                     + ", mQueueName=" + mQueueName
@@ -2089,6 +2104,28 @@ public final class BroadcastQueue {
 
                 skip = true;
             }
+        }
+
+        if( !skip && backgroundMode > 0 ) {
+                Slog.w(TAG, "Delivering for restricted package "
+                    + "appProfile=" + appProfile.toString() 
+                    + ", backgroundMode=" + backgroundMode
+                    + ", skip=" + skip
+                    + ", appProcessReady=" + appProcessReady
+                    + ", forceBackgroundCheck=" + BaikalPowerSaveManager.getCurrentPolicy().forceBackgroundCheck
+                    + ", mQueueName=" + mQueueName
+                    + ", background=" + background
+                    + ", callerBackground=" + callerBackground
+                    + ", callingUid=" + r.callingUid
+                    + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                    + ", Wakefulness=" + mService.mWakefulness.get()
+                    + ", callerApp=" + r.callerApp
+                    + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
+                    + ", callerApp.getCurProcState=" +  (r.callerApp != null ? r.callerApp.mState.getCurProcState() : 9999)
+                    + " receiving " 
+                    + r.intent + " to "
+                    + component.flattenToShortString()
+                    );
         }
 
         if (skip) {

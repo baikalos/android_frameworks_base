@@ -1426,13 +1426,13 @@ final public class ActivityManagerConstants extends ContentObserver {
     public void updateKillBgRestrictedCachedIdleSettleTime(int settleTimeMs) {
         final long currentSettleTime = mKillBgRestrictedAndCachedIdleSettleTimeMs;
         mKillBgRestrictedAndCachedIdleSettleTimeMs = settleTimeMs;
-        if (mKillBgRestrictedAndCachedIdleSettleTimeMs != currentSettleTime) {
+        //if (mKillBgRestrictedAndCachedIdleSettleTimeMs != currentSettleTime) {
             mService.mHandler.removeMessages(
                     ActivityManagerService.IDLE_UIDS_MSG);
             mService.mHandler.sendEmptyMessageDelayed(
                     ActivityManagerService.IDLE_UIDS_MSG,
                     mKillBgRestrictedAndCachedIdleSettleTimeMs);
-        }
+        //}
     }
 
     private void updateFgsAllowOptOut() {

@@ -587,8 +587,8 @@ public class AppIdleHistory {
         AppProfile profile = AppProfileManager.getProfile(packageName,-1);
         int backgroundMode = profile == null ? 0 : profile.getBackgroundMode(false);
         if( backgroundMode > 0 ) {
-            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket RARE :" + packageName);
-            return STANDBY_BUCKET_RARE;
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket STANDBY_BUCKET_RESTRICTED :" + packageName);
+            return STANDBY_BUCKET_RESTRICTED;
         } else {
             if( backgroundMode < 0 || 
                 profile.mAllowWhileIdle ||

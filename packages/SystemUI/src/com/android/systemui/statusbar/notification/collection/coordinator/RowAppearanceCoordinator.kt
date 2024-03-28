@@ -16,7 +16,13 @@
 
 package com.android.systemui.statusbar.notification.collection.coordinator
 
+import android.database.ContentObserver
 import android.content.Context
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.UserHandle
+import android.provider.Settings
 import com.android.systemui.R
 import com.android.systemui.statusbar.notification.AssistantFeedbackController
 import com.android.systemui.statusbar.notification.collection.ListEntry
@@ -25,6 +31,7 @@ import com.android.systemui.statusbar.notification.collection.NotificationEntry
 import com.android.systemui.statusbar.notification.collection.coordinator.dagger.CoordinatorScope
 import com.android.systemui.statusbar.notification.collection.provider.SectionStyleProvider
 import com.android.systemui.statusbar.notification.collection.render.NotifRowController
+import com.android.systemui.util.settings.SecureSettings
 import javax.inject.Inject
 
 /**
@@ -33,10 +40,14 @@ import javax.inject.Inject
  */
 @CoordinatorScope
 class RowAppearanceCoordinator @Inject internal constructor(
-    context: Context,
+    private val context: Context,
     private var mAssistantFeedbackController: AssistantFeedbackController,
     private var mSectionStyleProvider: SectionStyleProvider
 ) : Coordinator {
+
+    private val mainLooper = Looper.getMainLooper()
+    private val expandAllNotificationsUri =
+            Settings.Secure.getUriFor(Settings.Secure.BAIKALOS_EXPAND_ALL_NOTIFICATIONS)
 
     private var entryToExpand: NotificationEntry? = null
 
@@ -45,12 +56,33 @@ class RowAppearanceCoordinator @Inject internal constructor(
      * expanded state. If `false`, then only the first notification will be expanded if
      * possible.
      */
-    private val mAlwaysExpandNonGroupedNotification =
+    private var mAlwaysExpandNonGroupedNotification =
         context.resources.getBoolean(R.bool.config_alwaysExpandNonGroupedNotifications)
 
     override fun attach(pipeline: NotifPipeline) {
+
+        val settingsObserver: ContentObserver = object : ContentObserver(Handler(mainLooper)) {
+            override fun onChange(selfChange: Boolean, uri: Uri?) {
+                if (uri == expandAllNotificationsUri) {
+                    readExpandAllNotifications()
+                }
+            }
+        }
+
+        context.contentResolver.registerContentObserver(
+                expandAllNotificationsUri,
+                true,
+                settingsObserver)
+
+
         pipeline.addOnBeforeRenderListListener(::onBeforeRenderList)
         pipeline.addOnAfterRenderEntryListener(::onAfterRenderEntry)
+    }
+
+    private fun readExpandAllNotifications() {
+        val expandAllNotifications =
+                Settings.Secure.getInt(context.contentResolver,Settings.Secure.BAIKALOS_EXPAND_ALL_NOTIFICATIONS,0) != 0
+        mAlwaysExpandNonGroupedNotification = expandAllNotifications
     }
 
     private fun onBeforeRenderList(list: List<ListEntry>) {

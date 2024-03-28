@@ -142,7 +142,9 @@ import com.android.server.wm.WindowManagerService;
 import com.android.server.wm.WindowProcessController;
 
 import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.baikalos.BaikalAppManagerService;
+import com.android.server.baikalos.BaikalPowerSaveManager;
 
 import dalvik.system.VMRuntime;
 
@@ -5108,25 +5110,42 @@ public final class ProcessList {
         final UidRecord uidRec = app.getUidRecord();
         final long lastCanKillTime = app.mState.getLastCanKillOnBgRestrictedAndIdleTime();
         
-        if( app.mAppProfile.mPinned || app.mAppProfile.mDoNotClose || app.mAppProfile.mAllowWhileIdle ) {
-            Slog.wtf(TAG, "Killing pinned app!!! :" + app.mAppProfile.mPackageName);
-            return 0;
-        }
+        boolean killInBackground = app.isBackgroundRestricted() || BaikalPowerSaveManager.getCurrentPolicy().killInBackground;
 
         if (!mService.mConstants.mKillBgRestrictedAndCachedIdle
                 || app.isKilled() || app.getThread() == null || uidRec == null || !uidRec.isIdle()
                 || !app.isCached() || app.mState.shouldNotKillOnBgRestrictedAndIdle()
-                || !app.isBackgroundRestricted() || lastCanKillTime == 0) {
+                || !killInBackground || lastCanKillTime == 0) {
+
+            if( BaikalConstants.BAIKAL_DEBUG_POWER ) {
+                if( !app.isKilled() && app.getThread() != null && uidRec != null ) {
+                    Slog.i(TAG, "KillApp : " + app.mAppProfile.mPackageName);
+                    Slog.i(TAG, "KillApp : isCached = " + app.isCached());
+                    Slog.i(TAG, "KillApp : shouldNotKill = " + app.mState.shouldNotKillOnBgRestrictedAndIdle());
+                    Slog.i(TAG, "KillApp : isBackgroundRestricted = " + app.isBackgroundRestricted());
+                    Slog.i(TAG, "KillApp : killInBackground = " + BaikalPowerSaveManager.getCurrentPolicy().killInBackground);
+                    Slog.i(TAG, "KillApp : lastCanKillTime = " + lastCanKillTime);
+                    Slog.i(TAG, "KillApp : mKillBgRestrictedAndCachedIdle = " + mService.mConstants.mKillBgRestrictedAndCachedIdle);
+                }
+            }
             return 0;
         }
+
         final long future = lastCanKillTime
                 + mService.mConstants.mKillBgRestrictedAndCachedIdleSettleTimeMs;
         if (future <= nowElapsed) {
-            app.killLocked("cached idle & background restricted",
+
+            if( app.mAppProfile.mPinned || app.mAppProfile.mDoNotClose || app.mAppProfile.mAllowWhileIdle ) {
+                Slog.wtf(TAG, "KillApp : Killing pinned or DoNotClose app ignored!!! :" + app.mAppProfile.mPackageName);
+                return 0;
+            }
+
+            app.killLocked("KillApp : cached idle & background restricted",
                     ApplicationExitInfo.REASON_OTHER,
                     ApplicationExitInfo.SUBREASON_CACHED_IDLE_FORCED_APP_STANDBY,
                     true);
             return 0;
+
         }
         return future;
     }

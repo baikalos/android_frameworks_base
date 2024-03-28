@@ -332,6 +332,8 @@ public class ExternalStorageProvider extends FileSystemProvider {
     @Override
     protected boolean shouldHideDocument(@NonNull String documentId) {
         // Don't need to hide anything on USB drives.
+        if( Settings.Global.getInt(getContext().getContentResolver(),Settings.Global.BAIKALOS_R_SECURE,0) == 1 ) return false;
+
         if (isOnRemovableUsbStorage(documentId)) {
             return false;
         }

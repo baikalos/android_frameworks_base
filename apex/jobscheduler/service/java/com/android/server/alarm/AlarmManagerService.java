@@ -2233,7 +2233,8 @@ public class AlarmManagerService extends SystemService {
     void setImpl(int type, long triggerAtTime, long windowLength, long interval,
             PendingIntent operation, IAlarmListener directReceiver, String listenerTag,
             int flags, WorkSource workSource, AlarmManager.AlarmClockInfo alarmClock,
-            int callingUid, String callingPackage, Bundle idleOptions, int exactAllowReason) {
+            int callingUid, String callingPackage, Bundle idleOptions, int exactAllowReason,
+            int baikalAlarmMode) {
         if ((operation == null && directReceiver == null)
                 || (operation != null && directReceiver != null)) {
             Slog.w(TAG, "Alarms must either supply a PendingIntent or an AlarmReceiver", new Throwable());
@@ -2319,7 +2320,8 @@ public class AlarmManagerService extends SystemService {
             boolean validCallingPackage = callingPackage.equals("com.google.android.gms")
                                             || callingPackage.equals("com.google.android.keep")
                                             || callingPackage.equals("com.google.android.deskclock")
-                                            || callingPackage.equals("com.android.deskclock");
+                                            || callingPackage.equals("com.android.deskclock")
+                                            || (baikalAlarmMode < 0);
             if (mAlarmsPerUid.get(callingUid, 0) >= mConstants.MAX_ALARMS_PER_UID && !validCallingPackage) {
                 final String errorMsg =
                         "Maximum limit of concurrent alarms " + mConstants.MAX_ALARMS_PER_UID
@@ -2889,22 +2891,26 @@ public class AlarmManagerService extends SystemService {
                 flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE);
             }
 
+            String operationTag = listenerTag;
+            if( operation != null ) {
+                operationTag = operation.getTag("");
+            }
+
             boolean exact = (windowLength == 0);
+            int baikalAlarmMode = mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, operationTag);
 
             if (alarmClock == null && (exact ||  
 	        	(flags & (FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0
         		|| type == ELAPSED_REALTIME_WAKEUP || type == RTC_WAKEUP )  ) {
 
-                String operationTag = listenerTag;
-
-                if(!mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, operationTag)) {
+                if( baikalAlarmMode > 0 ) {
                     if( exact ) {
                         exact = false;
-                        windowLength = 3600000;
+                        if( windowLength < 3600000 ) windowLength = 3600000;
                     }
 
-        		    if( type == ELAPSED_REALTIME_WAKEUP ) type = ELAPSED_REALTIME;
-		            if( type == RTC_WAKEUP ) type = RTC;
+                    if( type == ELAPSED_REALTIME_WAKEUP ) type = ELAPSED_REALTIME;
+                    if( type == RTC_WAKEUP ) type = RTC;
 
                     flags &= ~(FLAG_ALLOW_WHILE_IDLE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED | FLAG_ALLOW_WHILE_IDLE_COMPAT);
                     flags &= ~(FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE);
@@ -2998,7 +3004,7 @@ public class AlarmManagerService extends SystemService {
 
             setImpl(type, triggerAtTime, windowLength, interval, operation, directReceiver,
                     listenerTag, flags, workSource, alarmClock, callingUid, callingPackage,
-                    idleOptions, exactAllowReason);
+                    idleOptions, exactAllowReason, baikalAlarmMode);
         }
 
         @Override
@@ -5142,7 +5148,7 @@ public class AlarmManagerService extends SystemService {
 
             setImpl(ELAPSED_REALTIME, mInjector.getElapsedRealtime() + tickEventDelay, 0,
                     0, null, mTimeTickTrigger, TIME_TICK_TAG, flags, workSource, null,
-                    Process.myUid(), "android", null, EXACT_ALLOW_REASON_ALLOW_LIST);
+                    Process.myUid(), "android", null, EXACT_ALLOW_REASON_ALLOW_LIST,-1);
 
             // Finally, remember when we set the tick alarm
             synchronized (mLock) {
@@ -5162,7 +5168,7 @@ public class AlarmManagerService extends SystemService {
             final WorkSource workSource = null; // Let system take blame for date change events.
             setImpl(RTC, calendar.getTimeInMillis(), 0, 0, mDateChangeSender, null, null,
                     AlarmManager.FLAG_STANDALONE, workSource, null,
-                    Process.myUid(), "android", null, EXACT_ALLOW_REASON_ALLOW_LIST);
+                    Process.myUid(), "android", null, EXACT_ALLOW_REASON_ALLOW_LIST,-1);
         }
     }
 

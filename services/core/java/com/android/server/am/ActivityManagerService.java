@@ -6034,9 +6034,11 @@ public class ActivityManagerService extends IActivityManager.Stub
     }
 
     private boolean isInRestrictedBucket(AppProfile appProfile, int userId, String packageName, long nowElapsed) {
-        /*return UsageStatsManager.STANDBY_BUCKET_RESTRICTED
-                <= mUsageStatsService.getAppStandbyBucket(packageName, userId, nowElapsed);*/
-        return appProfile.getBackgroundMode() > 0;
+        int mode = appProfile.getBackgroundMode();
+        if( mode > 0 ) return true;
+        if( mode < 0 ) return false;
+        return UsageStatsManager.STANDBY_BUCKET_RESTRICTED
+                <= mUsageStatsService.getAppStandbyBucket(packageName, userId, nowElapsed);
     }
 
     // Unified app-op and target sdk check
@@ -13423,7 +13425,9 @@ public class ActivityManagerService extends IActivityManager.Stub
 
         // The first sticky in the list is returned directly back to the client.
         Intent sticky = allSticky != null ? allSticky.get(0) : null;
-        if (DEBUG_BROADCAST) Slog.v(TAG_BROADCAST, "Register receiver " + filter + ": " + sticky);
+        if (DEBUG_BROADCAST) {
+            Slog.v(TAG_BROADCAST, "Register receiver " + filter + ": " + sticky);
+        } 
         if (receiver == null) {
             return sticky;
         }
@@ -13436,6 +13440,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 EventLog.writeEvent(0x534e4554, "177931370", callingUid, "");
             }
         }
+
 
         synchronized (this) {
             IApplicationThread thread;

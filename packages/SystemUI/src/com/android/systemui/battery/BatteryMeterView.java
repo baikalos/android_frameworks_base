@@ -26,6 +26,7 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.database.ContentObserver;
+import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
@@ -104,6 +105,13 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     private boolean mBatteryStateUnknown;
     // Lazily-loaded since this is expected to be a rare-if-ever state
     private Drawable mUnknownStateDrawable;
+
+    private boolean mStaminaMode;
+    private boolean mExtremeMode;
+    private int mPowerLevel;
+    private int mChargingMode;
+    private boolean mPowerModeInd;
+
 
     private int mBatteryStyle = BATTERY_STYLE_PORTRAIT;
     private int mShowBatteryPercent;
@@ -187,6 +195,18 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
             mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.BAIKALOS_CHARGING_MODE), false, this);
+
+            mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_EXTREME_IDLE), false, this);
+
+            mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_STAMINA_ENABLED), false, this);
+
+            mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_POWER_LEVEL_CURRENT), false, this);
+
+            mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_POWER_LEVEL_IND), false, this);
         }
 
         @Override
@@ -203,7 +223,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     private void setupLayoutTransition() {
-        Log.v(TAG, "setupLayoutTransition()");
+        //Log.v(TAG, "setupLayoutTransition()");
         if( true ) return;
 
         LayoutTransition transition = new LayoutTransition();
@@ -359,6 +379,13 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             removeView(mBatteryPercentView);
             mBatteryPercentView = null;
         }
+
+        mStaminaMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_STAMINA_ENABLED, 0) != 0;
+        mExtremeMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
+        mPowerLevel = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_CURRENT, 0);
+        mChargingMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_CHARGING_MODE, 0);
+        mPowerModeInd = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_IND, 0) != 0;
+
         updateShowPercent();
     }
 
@@ -387,7 +414,13 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     private void setPercentTextAtCurrentLevel() {
+
+        if (mBatteryPercentView == null) {
+            return;
+        }
+
         String text = NumberFormat.getPercentInstance().format(mLevel / 100f);
+
         
         mEstimateText = null;
 
@@ -409,6 +442,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
                 }
             });
         } else {
+
             // Use the high voltage symbol ⚡ (u26A1 unicode) but prevent the system
             // to load its emoji colored variant with the uFE0E flag
             String bolt = "\u26A1\uFE0E";
@@ -419,9 +453,8 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
                     mBatteryStyle == BATTERY_STYLE_TEXT) ? (bolt + " ") : "";
             
             if( mCharging ) {
-                int mode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_CHARGING_MODE, 0);
-                if( mode ==  1 ) mChargeIndicator = brick + " ";
-                else if( mode == 2 ) mChargeIndicator = exclamation + " ";  
+                if( mChargingMode ==  1 ) mChargeIndicator = brick + " ";
+                else if( mChargingMode == 2 ) mChargeIndicator = exclamation + " ";  
             }
 
             String percentText = mChargeIndicator + text;
@@ -431,6 +464,27 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             if (!TextUtils.equals(mBatteryPercentView.getText(), percentText)) {
                 mBatteryPercentView.setText(percentText);
             }
+        }
+
+        if( mPowerModeInd ) {
+            if (mStaminaMode) {
+                Log.v(TAG, "staminaMode");
+                mBatteryPercentView.setTextColor(Color.rgb(0,200,0));
+            } else if (mPowerLevel > 4) {
+                Log.v(TAG, "extremeMode > 4");
+                mBatteryPercentView.setTextColor(Color.rgb(255,50,20));
+            } else if (mPowerLevel > 3) {
+                Log.v(TAG, "powerLevel > 3");
+                mBatteryPercentView.setTextColor(Color.rgb(250,150,100));
+            } else if (mPowerLevel > 2) {
+                Log.v(TAG, "powerLevel > 2");
+                mBatteryPercentView.setTextColor(Color.rgb(100,200,200));
+            } else if (mTextColor != 0) {
+                Log.v(TAG, "powerLevel=" + mPowerLevel);
+                mBatteryPercentView.setTextColor(mTextColor);
+            }
+        } else {
+            if( mTextColor != 0 ) mBatteryPercentView.setTextColor(mTextColor);
         }
 
         updateContentDescription();
@@ -492,7 +546,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
                 if (mPercentageStyleId != 0) { // Only set if specified as attribute
                     mBatteryPercentView.setTextAppearance(mPercentageStyleId);
                 }
-                if (mTextColor != 0) mBatteryPercentView.setTextColor(mTextColor);
+                //if (mTextColor != 0) mBatteryPercentView.setTextColor(mTextColor);
                 updatePercentText();
                 addView(mBatteryPercentView, new LayoutParams(
                         LayoutParams.WRAP_CONTENT,
@@ -646,6 +700,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mNonAdaptedForegroundColor = mDualToneHandler.getFillColor(intensity);
         mNonAdaptedBackgroundColor = mDualToneHandler.getBackgroundColor(intensity);
 
+        Log.v(TAG, "updateColors intensity=" + intensity + ", mNonAdaptedSingleToneColor=" + mNonAdaptedSingleToneColor + ", tint=" + tint);
         updateColors(mNonAdaptedForegroundColor, mNonAdaptedBackgroundColor,
                 mNonAdaptedSingleToneColor);
     }
@@ -666,7 +721,9 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mLandscapeDrawable.setColors(foregroundColor, backgroundColor, singleToneColor);
         mTextColor = singleToneColor;
         if (mBatteryPercentView != null) {
-            mBatteryPercentView.setTextColor(singleToneColor);
+            //mBatteryPercentView.setTextColor(singleToneColor);
+            setPercentTextAtCurrentLevel();
+            
         }
 
         if (mUnknownStateDrawable != null) {

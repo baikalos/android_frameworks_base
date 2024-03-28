@@ -2821,12 +2821,17 @@ public final class PowerManagerService extends SystemService
                 final long now = mClock.uptimeMillis();
 
                 boolean aod_on_charger_enabled = updateAodOnChargerStatus();
+
+                if( aod_on_charger_enabled && (!mIsPoweredInitialized || (wasPowered != mIsPowered)) ) {
+                    Settings.Secure.putInt(mContext.getContentResolver(), Settings.Secure.DOZE_ALWAYS_ON_CHARGER_ON, mIsPowered ? 1 : 0 );
+                }
+
                 boolean aod_enabled = updateAodStatus();
 
                 if( aod_enabled || aod_on_charger_enabled ) {
-                    if( wasPowered != mIsPowered && 
+                    if( !mIsPoweredInitialized || ( wasPowered != mIsPowered && 
                         (getGlobalWakefulnessLocked() == WAKEFULNESS_ASLEEP || 
-                         getGlobalWakefulnessLocked() == WAKEFULNESS_DOZING ) ) {
+                         getGlobalWakefulnessLocked() == WAKEFULNESS_DOZING) ) ) {
                         Slog.i(TAG, "Update Aod On Charger Status");
 
                         if( mIsPowered || aod_enabled ) {
@@ -2897,6 +2902,8 @@ public final class PowerManagerService extends SystemService
 
         boolean enabled = Settings.Secure.getIntForUser(resolver,
                 Settings.Secure.DOZE_ON_CHARGE, 0, UserHandle.USER_CURRENT) != 0;
+
+        
 
         return enabled;
     }
@@ -6752,9 +6759,9 @@ public final class PowerManagerService extends SystemService
         public int getPowerSaveModeTrigger() {
             final long ident = Binder.clearCallingIdentity();
             try {
-                return Settings.Global.getInt(mContext.getContentResolver(),
-                        Settings.Global.AUTOMATIC_POWER_SAVE_MODE,
-                        PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE);
+                return 0; //Settings.Global.getInt(mContext.getContentResolver(),
+                        //Settings.Global.AUTOMATIC_POWER_SAVE_MODE,
+                        //PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE);
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }

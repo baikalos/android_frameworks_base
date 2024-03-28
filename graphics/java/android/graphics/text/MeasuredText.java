@@ -29,7 +29,7 @@ import android.util.Log;
 import com.android.internal.util.Preconditions;
 
 import dalvik.annotation.optimization.CriticalNative;
-import dalvik.annotation.optimization.NeverInline;
+//import dalvik.annotation.optimization.NeverInline;
 
 import libcore.util.NativeAllocationRegistry;
 
@@ -91,7 +91,7 @@ public class MeasuredText {
         }
     }
 
-    @NeverInline
+    //@NeverInline
     private void throwRangeError(int start, int end) {
         throw new IllegalArgumentException(String.format(Locale.US,
             "start(%d) end(%d) length(%d) out of bounds", start, end, mChars.length));
@@ -103,7 +103,7 @@ public class MeasuredText {
         }
     }
 
-    @NeverInline
+    //@NeverInline
     private void throwOffsetError(int offset) {
         throw new IllegalArgumentException(String.format(Locale.US,
             "offset (%d) length(%d) out of bounds", offset, mChars.length));

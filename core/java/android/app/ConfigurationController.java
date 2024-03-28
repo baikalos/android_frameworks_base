@@ -165,7 +165,9 @@ class ConfigurationController {
                 mPendingConfiguration = null;
             }
 
+
             if (config == null) {
+                //Slog.v(TAG, "Handle configuration changed: " + config, new Throwable());
                 return;
             }
 
@@ -268,6 +270,11 @@ class ConfigurationController {
      */
     void updateLocaleListFromAppContext(@NonNull Context context) {
         try {
+
+            if (context.getResources() == null || context.getResources().getConfiguration() == null ||
+                    mResourcesManager == null || mResourcesManager.getConfiguration() == null)
+                return;
+
             final Locale bestLocale = context.getResources().getConfiguration().getLocales().get(0);
             final LocaleList newLocaleList = mResourcesManager.getConfiguration().getLocales();
             final int newLocaleListSize = newLocaleList.size();

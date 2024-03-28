@@ -1304,14 +1304,17 @@ public class AppStateTrackerImpl implements AppStateTracker {
         AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName,uid) : null;
         boolean stamina = mAppProfileManager != null ? mAppProfileManager.isStamina() : false;
 
-        int backgroundMode = profile != null ? profile.getBackgroundMode(true) : 0;
-        if( backgroundMode < 0 ) {
-            return false;
-        } 
+        int backgroundMode = 0;
+        if( profile != null ) {
+            backgroundMode =  profile.getBackgroundMode(true);
+            if( backgroundMode < 0 ) return false;
+            if( profile.mAllowWhileIdle ) return false;
+        }
 
         if (isUidActive(uid)) {
             return false;
         }
+
         synchronized (mLock) {
             if (isAppRestricted(uid, packageName)) {
                 return true;

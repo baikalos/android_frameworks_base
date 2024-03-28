@@ -30,7 +30,7 @@ public class AppProfile {
     private static final String TAG = "Baikal.AppProfile";
 
     @SuppressLint({"MutableBareField","InternalField","AllUpper"})
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
 
     @SuppressLint({"MutableBareField","InternalField","AllUpper"})
     public static boolean VERBOSE = false;
@@ -239,6 +239,10 @@ public class AppProfile {
         if( DEBUG ) Slog.d(TAG, "PowerMode mode set to :" + mode);
     }
 
+    public static int getPowerMode() {
+        return sPowerMode;
+    }
+
     public static void setStaminaActive(boolean enable) {
         sStaminaActive = enable;
         if( DEBUG ) Slog.d(TAG, "StaminaActive mode set to :" + enable);
@@ -383,13 +387,13 @@ public class AppProfile {
 
 
     public int getBackgroundMode() {
-        return getBackgroundMode(true);
+        return getBackgroundMode(false);
     }
 
     public int getBackgroundMode(boolean disableOnPowerSaver) {
         if( !DEBUG ) return getBackgroundModeInternal(disableOnPowerSaver);
         int result = getBackgroundModeInternal(disableOnPowerSaver);
-        if( result > 0 ) {
+        if( TRACE && result > 0 ) {
             if( mDebug ) {
                 Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid + " result=" + result, new Throwable());
             } else {
@@ -425,11 +429,10 @@ public class AppProfile {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(2) mSystemWhitelisted:" + mBackgroundMode);
             return mBackgroundMode;
         }
-
+        /*
         if( sTopUid == mUid ) {
-            int mode = mBackgroundMode > 0 ? 0 : mBackgroundMode;
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(0) mTopUid:" + mode);
-            return mode;
+            return mBackgroundMode;
         }
 
         if( mSystemApp ) {
@@ -470,20 +473,20 @@ public class AppProfile {
         if( mCurAdj < 500 )  {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9.1) mCurAdj:" + mBackgroundMode);
             return mBackgroundMode;
-        }
+        }*/
 
-        if( mBackgroundMode > 0 && !sScreenOn )  {
+        /*if( mBackgroundMode > 0 && !sScreenOn )  {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(10) mBackgroundMode:2");
             return 2;
-        }
+        }*/
 
         // make it a bit more complex
-        if( sStaminaActive && mBackgroundMode >= 0 && !mStamina ) {
+        /*if( sStaminaActive && mBackgroundMode >= 0 && !mStamina ) {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(11) stamina:2");
             return 2;
-        }
+        }*/
 
-        if( !sAutoLimit || disableOnPowerSaver ) {
+        /* if( !sAutoLimit || disableOnPowerSaver ) {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(12.1) no limit:" + mBackgroundMode);
             return mBackgroundMode;
         }
@@ -503,7 +506,7 @@ public class AppProfile {
                 if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(13) moderate/screenoff:2");
                 return 2;
             }
-        }
+        } */
 
         if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) default:" + mBackgroundMode);
         return mBackgroundMode;
