@@ -686,7 +686,7 @@ public class AppProfileManager {
 
         //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
 
-        if( !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE  && !mScreenMode)  {
+        if( !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE  /*&& !mScreenMode*/)  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mScreenMode=" + mScreenMode +
