@@ -5965,6 +5965,28 @@ public final class Settings {
         public static final String BAIKALOS_BACKGROUND_BLUR_RADIUS = "background_blur_radius";
 
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PULSE_DURATION = "baikalos_pulse_duration";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PULSE_DURATION_IN = "baikalos_pulse_duration_in";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PULSE_DURATION_OUT = "baikalos_pulse_duration_out";
+
+
         /* End of BaikalOS System Settings */
         /**
          * Change quick settings tiles animation style

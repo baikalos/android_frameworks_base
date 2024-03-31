@@ -28,6 +28,7 @@ import android.os.Handler;
 import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.ArrayMap;
+import android.util.Log;
 import android.view.accessibility.AccessibilityManager;
 
 import com.android.internal.logging.MetricsLogger;
@@ -59,6 +60,11 @@ public abstract class HeadsUpManager extends AlertingNotificationManager {
     protected int mSnoozeLengthMs;
     protected boolean mHasPinnedNotification;
     protected int mUser;
+
+    protected int mPulseDuration;
+    protected int mPulseDurationIn;
+    protected int mPulseDurationOut;
+
 
     private final ArrayMap<String, Long> mSnoozedPackages;
     private final AccessibilityManagerWrapper mAccessibilityMgr;
@@ -97,6 +103,26 @@ public abstract class HeadsUpManager extends AlertingNotificationManager {
         mAutoDismissNotificationDecay = Settings.System.getIntForUser(context.getContentResolver(),
                 Settings.System.HEADS_UP_TIMEOUT,
                 mDecayDefault, UserHandle.USER_CURRENT) * 1000;
+
+
+      
+        mPulseDuration = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION, 
+                            -1, UserHandle.USER_CURRENT) * 1000;
+
+        if( mPulseDuration < 0 ) mPulseDuration = resources.getInteger(R.integer.doze_pulse_duration_visible);
+
+
+        mPulseDurationIn = resources.getInteger(R.integer.doze_pulse_duration_in);
+        mPulseDurationIn = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION_IN, 
+                            mPulseDurationIn, UserHandle.USER_CURRENT);
+
+        mPulseDurationOut = resources.getInteger(R.integer.doze_pulse_duration_out);
+        mPulseDurationOut = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION_OUT, 
+                            mPulseDurationOut, UserHandle.USER_CURRENT);
+
         mTouchAcceptanceDelay = resources.getInteger(R.integer.touch_acceptance_delay);
         mSnoozedPackages = new ArrayMap<>();
         int defaultSnoozeLengthMs =
@@ -116,6 +142,23 @@ public abstract class HeadsUpManager extends AlertingNotificationManager {
                 mAutoDismissNotificationDecay = Settings.System.getIntForUser(
                     context.getContentResolver(), Settings.System.HEADS_UP_TIMEOUT,
                     mDecayDefault, UserHandle.USER_CURRENT) * 1000;
+
+                mPulseDuration = Settings.System.getIntForUser(context.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION, 
+                            -1, UserHandle.USER_CURRENT) * 1000;
+
+                if( mPulseDuration < 0 ) mPulseDuration = resources.getInteger(R.integer.doze_pulse_duration_visible);
+
+                mPulseDurationIn = resources.getInteger(R.integer.doze_pulse_duration_in);
+                mPulseDurationIn = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION_IN, 
+                            mPulseDurationIn, UserHandle.USER_CURRENT);
+
+                mPulseDurationOut = resources.getInteger(R.integer.doze_pulse_duration_out);
+                mPulseDurationOut = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION_OUT, 
+                            mPulseDurationOut, UserHandle.USER_CURRENT);
+
             }
         };
         context.getContentResolver().registerContentObserver(
@@ -124,6 +167,17 @@ public abstract class HeadsUpManager extends AlertingNotificationManager {
         context.getContentResolver().registerContentObserver(
                 Settings.System.getUriFor(Settings.System.HEADS_UP_TIMEOUT), false,
                 settingsObserver);
+
+        context.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.BAIKALOS_PULSE_DURATION), false,
+                settingsObserver);
+        context.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.BAIKALOS_PULSE_DURATION_IN), false,
+                settingsObserver);
+        context.getContentResolver().registerContentObserver(
+                Settings.System.getUriFor(Settings.System.BAIKALOS_PULSE_DURATION_OUT), false,
+                settingsObserver);
+
     }
 
     /**
@@ -328,6 +382,16 @@ public abstract class HeadsUpManager extends AlertingNotificationManager {
         return false;
     }
 
+    private boolean isPulsingInternal() {
+        for (String key : mAlertEntries.keySet()) {
+            AlertEntry entry = getHeadsUpEntry(key);
+            if (entry.mEntry.showingPulsing()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Unpins all pinned Heads Up Notifications.
      * @param userUnPinned The unpinned action is trigger by user real operation.
@@ -487,11 +551,19 @@ public abstract class HeadsUpManager extends AlertingNotificationManager {
          * @param requestedTimeout
          */
         protected int getRecommendedHeadsUpTimeoutMs(int requestedTimeout) {
-            return mAccessibilityMgr.getRecommendedTimeoutMillis(
+            if( mEntry.showingPulsing() ) {
+                requestedTimeout = mPulseDurationIn + mPulseDuration + mPulseDurationOut;
+                Log.d(TAG, "getRecommendedHeadsUpTimeoutMs: mPulseDurationIn=" + mPulseDurationIn + ", mPulseDuration=" + mPulseDuration + ", mPulseDurationOut=" + mPulseDurationOut);
+            }
+
+            int result = mAccessibilityMgr.getRecommendedTimeoutMillis(
                     requestedTimeout,
                     AccessibilityManager.FLAG_CONTENT_CONTROLS
                             | AccessibilityManager.FLAG_CONTENT_ICONS
                             | AccessibilityManager.FLAG_CONTENT_TEXT);
+
+            Log.d(TAG, "getRecommendedHeadsUpTimeoutMs: requestedTimeout=" + requestedTimeout + ", showingPulsing=" + mEntry.showingPulsing() + ", result=" + result);
+            return result;
         }
     }
 }

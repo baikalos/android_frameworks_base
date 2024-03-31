@@ -71,8 +71,11 @@ class EdgeLightViewController @Inject constructor(
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
     private val wallpaperManager = context.getSystemService(WallpaperManager::class.java)
-    private val animationDuration =
-        (dozeParameters.pulseVisibleDuration / 3).toLong() - COLLAPSE_ANIMATION_DURATION
+
+    private val animationDuration = 2000L - COLLAPSE_ANIMATION_DURATION
+    
+    //private val animationDuration =
+    //    (dozeParameters.pulseVisibleDuration / 3).toLong() - COLLAPSE_ANIMATION_DURATION
 
     private var screenOn = false
     private var edgeLightView: EdgeLightView? = null
@@ -164,7 +167,7 @@ class EdgeLightViewController @Inject constructor(
     }
 
     private fun canPulse(): Boolean {
-        return sysuiStatusBarStateController.isDozing() && sysuiStatusBarStateController.getState() == StatusBarState.KEYGUARD && !keyguardStateController.isUnlocked
+        return sysuiStatusBarStateController.isDozing(); // && sysuiStatusBarStateController.getState() == StatusBarState.KEYGUARD && !keyguardStateController.isUnlocked
     }
 
     private suspend fun isEdgeLightEnabled(): Boolean {
@@ -308,7 +311,10 @@ class EdgeLightViewController @Inject constructor(
                     this@EdgeLightViewController.pulsing = true
                     // Use accent color if color mode is set to notification color
                     // and pulse is not because of notification.
+                    logD("setPulsing: pulsing");
+
                     if (colorMode == ColorMode.NOTIFICATION && reason != DozeLog.PULSE_REASON_NOTIFICATION) {
+                        logD("setPulsing: setColor accent");
                         edgeLightView?.setColor(Utils.getColorAccentDefaultColor(context))
                     }
                     if (screenOn) {
@@ -316,6 +322,7 @@ class EdgeLightViewController @Inject constructor(
                         show()
                     }
                 } else {
+                    logD("setPulsing: !pulsing");
                     this@EdgeLightViewController.pulsing = false
                     hide()
                 }
@@ -325,11 +332,14 @@ class EdgeLightViewController @Inject constructor(
 
     private fun show() {
         if (canPulse()) {
+            logD("show: canPulse");
             coroutineScope.launch {
                 settingsMutex.withLock {
                     if (edgeLightEnabled) edgeLightView?.show()
                 }
             }
+        } else {
+           logD("show: !canPulse");
         }
     }
 
@@ -339,19 +349,21 @@ class EdgeLightViewController @Inject constructor(
 
     override fun onKeyguardGoingAwayChanged() {
         if (!canPulse()) {
+            logD("onKeyguardGoingAwayChanged: !canPulse");
             hide()
         }
     }
 
     override fun onKeyguardFadingAwayChanged() {
         if (!canPulse()) {
+            logD("onKeyguardFadingAwayChanged: !canPulse");
             hide()
         }
     }
 
     companion object {
         private const val TAG = "EdgeLightViewController"
-        private val DEBUG = Log.isLoggable(TAG, Log.DEBUG)
+        private val DEBUG = true; // Log.isLoggable(TAG, Log.DEBUG)
 
         private const val COLLAPSE_ANIMATION_DURATION = 700L
 

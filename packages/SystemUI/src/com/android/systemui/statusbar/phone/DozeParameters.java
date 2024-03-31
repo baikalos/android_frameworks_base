@@ -70,6 +70,7 @@ public class DozeParameters implements
         com.android.systemui.plugins.statusbar.DozeParameters,
         Dumpable, ConfigurationController.ConfigurationListener,
         StatusBarStateController.StateListener, FoldAodAnimationController.FoldAodAnimationStatus {
+    private static final String TAG = "DozeParameters";
     private static final int MAX_DURATION = 60 * 1000;
     public static final boolean FORCE_NO_BLANKING =
             SystemProperties.getBoolean("debug.force_no_blanking", false);
@@ -93,6 +94,13 @@ public class DozeParameters implements
     private boolean mIsQuickPickupEnabled;
 
     private boolean mKeyguardVisible;
+
+    private int mPulseDuration;
+    private int mPulseDurationIn;
+    private int mPulseDurationOut;
+
+    private Context mContext;
+
     @VisibleForTesting
     final KeyguardUpdateMonitorCallback mKeyguardVisibilityCallback =
             new KeyguardUpdateMonitorCallback() {
@@ -143,12 +151,16 @@ public class DozeParameters implements
         mScreenOffAnimationController = screenOffAnimationController;
         mUnlockedScreenOffAnimationController = unlockedScreenOffAnimationController;
         mUserTracker = userTracker;
+        mContext = context;
 
         keyguardUpdateMonitor.registerCallback(mKeyguardVisibilityCallback);
         tunerService.addTunable(
                 this,
                 Settings.Secure.DOZE_ALWAYS_ON,
-                Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED);
+                Settings.Secure.ACCESSIBILITY_DISPLAY_INVERSION_ENABLED,
+                Settings.System.BAIKALOS_PULSE_DURATION,
+                Settings.System.BAIKALOS_PULSE_DURATION_IN,
+                Settings.System.BAIKALOS_PULSE_DURATION_OUT);
         configurationController.addCallback(this);
         statusBarStateController.addCallback(this);
 
@@ -193,15 +205,16 @@ public class DozeParameters implements
     }
 
     public int getPulseInDuration() {
-        return getInt("doze.pulse.duration.in", R.integer.doze_pulse_duration_in);
+        return mPulseDurationIn; //getInt("doze.pulse.duration.in", R.integer.doze_pulse_duration_in);
     }
 
     public int getPulseVisibleDuration() {
-        return getInt("doze.pulse.duration.visible", R.integer.doze_pulse_duration_visible);
+        Log.d(TAG, "getPulseVisibleDuration: mPulseDuration=" + mPulseDuration, new Throwable());
+        return mPulseDuration; //getInt("doze.pulse.duration.visible", R.integer.doze_pulse_duration_visible);
     }
 
     public int getPulseOutDuration() {
-        return getInt("doze.pulse.duration.out", R.integer.doze_pulse_duration_out);
+        return mPulseDurationOut; // getInt("doze.pulse.duration.out", R.integer.doze_pulse_duration_out);
     }
 
     public boolean getPulseOnSigMotion() {
@@ -427,10 +440,36 @@ public class DozeParameters implements
         mCallbacks.remove(callback);
     }
 
+
+    private void updatePulseDuration() {
+
+        mPulseDuration = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION, 
+                            -1, UserHandle.USER_CURRENT) * 1000;
+
+        if( mPulseDuration < 0 ) mPulseDuration = mResources.getInteger(R.integer.doze_pulse_duration_visible);
+
+        mPulseDurationIn = mResources.getInteger(R.integer.doze_pulse_duration_in);
+        mPulseDurationIn = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION_IN, 
+                            mPulseDurationIn, UserHandle.USER_CURRENT);
+
+        mPulseDurationOut = mResources.getInteger(R.integer.doze_pulse_duration_out);
+        mPulseDurationOut = Settings.System.getIntForUser(mContext.getContentResolver(),
+                            Settings.System.BAIKALOS_PULSE_DURATION_OUT, 
+                            mPulseDurationOut, UserHandle.USER_CURRENT);
+    }
+
+
     @Override
     public void onTuningChanged(String key, String newValue) {
         if (key.equals(Settings.Secure.DOZE_ALWAYS_ON)) {
             updateControlScreenOff();
+        } else if( key.equals(Settings.System.BAIKALOS_PULSE_DURATION) ||
+                    key.equals(Settings.System.BAIKALOS_PULSE_DURATION_IN) ||
+                    key.equals(Settings.System.BAIKALOS_PULSE_DURATION_OUT)
+        ) {
+            updatePulseDuration();
         }
 
         dispatchAlwaysOnEvent();
@@ -518,6 +557,12 @@ public class DozeParameters implements
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(mPickupGesture, false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(mAlwaysOnEnabled, false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(Settings.System.BAIKALOS_PULSE_DURATION), 
+                                                false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(Settings.System.BAIKALOS_PULSE_DURATION_IN), 
+                                                false, this, UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(Settings.System.BAIKALOS_PULSE_DURATION_OUT), 
+                                                false, this, UserHandle.USER_ALL);
             update(null);
         }
 
