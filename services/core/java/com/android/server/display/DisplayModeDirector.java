@@ -861,11 +861,12 @@ public class DisplayModeDirector {
                 }
 
                 case MSG_DEFAULT_PEAK_REFRESH_RATE_CHANGED:
-                    Float defaultPeakRefreshRate = (Float) msg.obj;
-                    mSettingsObserver.onDeviceConfigDefaultPeakRefreshRateChanged(
-                            defaultPeakRefreshRate);
+                    if( msg.obj != null ) {
+                        Float defaultPeakRefreshRate = (Float) msg.obj;
+                        mSettingsObserver.onDeviceConfigDefaultPeakRefreshRateChanged(
+                                defaultPeakRefreshRate);
+                    }
                     break;
-
                 case MSG_REFRESH_RATE_RANGE_CHANGED:
                     DesiredDisplayModeSpecsListener desiredDisplayModeSpecsListener =
                             (DesiredDisplayModeSpecsListener) msg.obj;
@@ -1262,8 +1263,7 @@ public class DisplayModeDirector {
                     setDefaultPeakRefreshRate(mDefaultDisplayDeviceConfig,
                         /* attemptLoadingFromDeviceConfig= */ false);
                     updateRefreshRateSettingLocked();
-                } 
-                if (mDefaultPeakRefreshRate != defaultPeakRefreshRate) {
+                } else if (mDefaultPeakRefreshRate != defaultPeakRefreshRate) {
                     mDefaultPeakRefreshRate = defaultPeakRefreshRate;
                     updateRefreshRateSettingLocked();
                 }
@@ -2926,8 +2926,10 @@ public class DisplayModeDirector {
         @Override
         public void onPropertiesChanged(@NonNull DeviceConfig.Properties properties) {
             Float defaultPeakRefreshRate = getDefaultPeakRefreshRate();
-            mHandler.obtainMessage(MSG_DEFAULT_PEAK_REFRESH_RATE_CHANGED,
+            if( defaultPeakRefreshRate != null ) {
+                mHandler.obtainMessage(MSG_DEFAULT_PEAK_REFRESH_RATE_CHANGED,
                     defaultPeakRefreshRate).sendToTarget();
+            }
 
             int[] lowDisplayBrightnessThresholds = getLowDisplayBrightnessThresholds();
             int[] lowAmbientBrightnessThresholds = getLowAmbientBrightnessThresholds();
