@@ -128,11 +128,11 @@ public class SignalDrawable extends DrawableWrapper {
         boolean shouldAnimate = isInState(STATE_CARRIER_CHANGE) && isVisible();
         if (shouldAnimate == mAnimating) return;
         mAnimating = shouldAnimate;
-        if (shouldAnimate) {
+        /*if (shouldAnimate) {
             mChangeDot.run();
-        } else {
+        } else {*/
             mHandler.removeCallbacks(mChangeDot);
-        }
+        /*}*/
     }
 
     @Override

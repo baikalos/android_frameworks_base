@@ -58,14 +58,14 @@ class FullCircleBatteryDrawable(private val context: Context, frameColor: Int) :
         set(value) {
             val previousCharging = charging
             field = value
-            if (value) {
-                if (!previousCharging) {
-                    startChargingAnimation(ValueAnimator.INFINITE)
-                }
-            } else {
-                cancelChargingAnimation()
+            //if (value) {
+            //    if (!previousCharging) {
+                    //startChargingAnimation(ValueAnimator.INFINITE)
+            //    }
+            //} else {
+                //cancelChargingAnimation()
                 postInvalidate()
-            }
+            //}
         }
 
     var powerSaveEnabled = false
