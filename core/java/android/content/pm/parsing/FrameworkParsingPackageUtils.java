@@ -313,9 +313,11 @@ public class FrameworkParsingPackageUtils {
             }
 
             // We don't meet the minimum SDK requirement.
+            /*
             return input.error(PackageManager.INSTALL_FAILED_OLDER_SDK,
                     "Requires newer sdk version #" + minVers
-                            + " (current version is #" + platformSdkVersion + ")");
+                            + " (current version is #" + platformSdkVersion + ")");*/
+            return input.success(platformSdkVersion);
         }
 
         // If it's a pre-release SDK and the codename matches this platform, we

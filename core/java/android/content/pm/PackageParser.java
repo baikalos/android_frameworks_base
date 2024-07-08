@@ -2699,7 +2699,8 @@ public class PackageParser {
             // We don't meet the minimum SDK requirement.
             outError[0] = "Requires newer sdk version #" + minVers
                     + " (current version is #" + platformSdkVersion + ")";
-            return -1;
+            //return -1;
+            return platformSdkVersion;
         }
 
         // If it's a pre-release SDK and the codename matches this platform, we
