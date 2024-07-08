@@ -117,7 +117,7 @@ public class UiModeNightTile extends QSTileImpl<QSTile.BooleanState> implements
     @Override
     protected void handleUpdateState(BooleanState state, Object arg) {
         int uiMode = mUiModeManager.getNightMode();
-        boolean powerSave = mBatteryController.isPowerSave();
+        boolean powerSave = false; //mBatteryController.isPowerSave();
         boolean nightMode = (mContext.getResources().getConfiguration().uiMode
                         & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
 

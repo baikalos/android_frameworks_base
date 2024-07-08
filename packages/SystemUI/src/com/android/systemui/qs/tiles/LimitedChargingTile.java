@@ -119,7 +119,7 @@ public class LimitedChargingTile extends QSTileImpl<BooleanState> {
         if (state.slash == null) {
             state.slash = new SlashState();
         }
-        mBPCEnabled = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_LIMITED_CHARGE_SCREEN_ON, 0) == 1;
+        mBPCEnabled = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0) == 1;
         state.value = mBPCEnabled;
         state.slash.isSlashed = !state.value;
         state.icon = mIcon;
