@@ -477,6 +477,15 @@ public class ContentProviderHelper {
                 if (i >= numLaunchingProviders) {
                     final long origId = Binder.clearCallingIdentity();
 
+                    if( !mService.mAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
+                        !mService.mAppProfileManager.isTopAppUid(cpr.appInfo.uid,cpr.appInfo.packageName) )
+                    {
+                        if(mService.isAppBackgroundBlocked(cpr.appInfo) ) {
+                            Slog.i(TAG,"Baikal.AppProfile: getContentProvider blocked for background restricted app:" + cpr.appInfo, new Throwable());
+                            return null;
+                        } 
+                    }
+
                     try {
                         if (!TextUtils.equals(cpr.appInfo.packageName, callingPackage)) {
                             // Report component used since a content provider is being bound.

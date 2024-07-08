@@ -2892,10 +2892,11 @@ public final class ActiveServices {
         try {
             IPackageManager pm = AppGlobals.getPackageManager();
             enableState = pm.getComponentEnabledSetting(s.name, 0);
-            Slog.w(TAG, "Service component:" + s.name + ", state=" + enableState);
         } catch (Exception e) {
             Slog.w(TAG, "Exception checking component:" + s.name, e);
         }
+
+        Slog.w(TAG, "bindServiceLocked: from " + callingPackage + "/" + callingUid + ":" + callingPid + " " + s.name + ", state=" + enableState);
 
         if( enableState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED && enableState != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT ) {
             Slog.w(TAG, "Background service start disabled by baikal component name from:" + callerApp + " for: " + s);
@@ -2907,15 +2908,15 @@ public final class ActiveServices {
         if( callerApp.info.uid == 1000 ||  
             (callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
             !mAm.mAppProfileManager.isTopAppUid(callerApp.info.uid,callerApp.info.packageName) &&
-            !mAm.mAppProfileManager.isTopAppUid(s.definingUid,s.definingPackageName) ) ) {
-            if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
+            !mAm.mAppProfileManager.isTopAppUid(s.appInfo.uid, s.packageName) ) ) {
+            if( mAm.mAppProfileManager.isAppBlocked(null, s.packageName, s.appInfo.uid) ) {
                 Slog.w(TAG, "Background service start disabled by baikal settings from:" + callerApp + " for: " + s);
                 Slog.w(TAG, "Background service start attempt from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
                 s.stopIfKilled = true;
                 return 0;
             }
         } else {
-            if( mAm.mAppProfileManager.isAppBlocked(null, s.definingPackageName, s.definingUid) ) {
+            if( mAm.mAppProfileManager.isAppBlocked(null, s.packageName, s.appInfo.uid) ) {
                 Slog.w(TAG, "Background service start disabled by baikal settings, but requested from foreground app: " + s);
                 Slog.w(TAG, "Background service start forced from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState(), new Throwable());
             }

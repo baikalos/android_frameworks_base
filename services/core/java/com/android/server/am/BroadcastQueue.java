@@ -963,7 +963,8 @@ public final class BroadcastQueue {
             }
         }
 
-        AppProfile appProfile = AppProfileSettings.getInstance() == null ? new AppProfile(filter.packageName, filter.receiverList.uid) : AppProfileSettings.getInstance().getProfileLocked(filter.packageName);
+        AppProfile appProfile = filter.receiverList.app.mAppProfile;
+        if( appProfile == null ) appProfile = AppProfileSettings.getInstance() == null ? new AppProfile(filter.packageName, filter.receiverList.uid) : AppProfileSettings.getInstance().getProfileLocked(filter.packageName);
         if( appProfile == null ) appProfile = new AppProfile(filter.packageName, filter.receiverList.uid);
 
         if (!skip && filter.receiverList.app != null && appProfile.getBackgroundMode() > 0 ) {
@@ -1787,8 +1788,13 @@ public final class BroadcastQueue {
         boolean background = mQueueName.equals("background") || mQueueName.equals("offload_bg");
         boolean appProcessReady = app != null && app.getThread() != null && !app.isKilled();
 
+        AppProfile appProfile = null;
+        if( appProcessReady ) appProfile = app.mAppProfile;
 
-        AppProfile appProfile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+        if( appProfile == null ) {
+            appProfile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+        }
+
         if( appProfile == null ) {
             Slog.i(TAG,"AppProfileSettings: not ready or no profile " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
             appProfile = new AppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid);
@@ -2051,11 +2057,16 @@ public final class BroadcastQueue {
             for (int i = 0; i < r.requiredPermissions.length; i++) {
                 String requiredPermission = r.requiredPermissions[i];
                 try {
-                    perm = AppGlobals.getPackageManager().
+                    if( requiredPermission != null && requiredPermission.startsWith("com.huawei") &&
+                        info.activityInfo.applicationInfo.packageName.startsWith("com.huawei") ) {
+                        perm = PackageManager.PERMISSION_GRANTED;
+                    } else {
+                        perm = AppGlobals.getPackageManager().
                             checkPermission(requiredPermission,
                                     info.activityInfo.applicationInfo.packageName,
                                     UserHandle
                                     .getUserId(info.activityInfo.applicationInfo.uid));
+                    }
                 } catch (RemoteException e) {
                     perm = PackageManager.PERMISSION_DENIED;
                 }
@@ -2085,7 +2096,7 @@ public final class BroadcastQueue {
         }
 
         if (!skip && !appProcessReady && (backgroundMode >= 0) ) {
-            if( appProfile.mBootDisabled || backgroundMode > 1 ) {
+            if( appProfile.mBootDisabled || backgroundMode > 0 ) {
                 Slog.w(TAG, "Skipping delivery for not running and autostart disabled package "
                     + "appProfile=" + appProfile.toString() 
                     + ", mQueueName=" + mQueueName

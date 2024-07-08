@@ -1618,6 +1618,8 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     final AppProfileSettings mAppProfileSettings;
     final AppProfileManager mAppProfileManager;
+    static AppProfileManager sAppProfileManager;
+
     final BaikalAlarmManager mBaikalAlarmManager;
 
     final class UiHandler extends Handler {
@@ -2366,6 +2368,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
         mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext, mConstants); 
         mBaikalAlarmManager = BaikalAlarmManager.getInstance(mHandlerThread.getLooper(), mContext); 
+        sAppProfileManager = mAppProfileManager;
     }
 
     // Note: This method is invoked on the main thread but may need to attach various
@@ -5952,6 +5955,11 @@ public class ActivityManagerService extends IActivityManager.Stub
                 }
             }
         }
+        
+        if( AppProfileManager.checkComponentPermission(permission, pid, uid, owningUid, exported)) {
+            return PackageManager.PERMISSION_GRANTED;
+        }
+
         return ActivityManager.checkComponentPermission(permission, uid,
                 owningUid, exported);
     }
@@ -6101,7 +6109,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
         int mode = appProfile.getBackgroundMode();
 
-        if( mode < 0 || appProfile.mAllowWhileIdle ) {
+        if( mode < 0 /*|| appProfile.mAllowWhileIdle*/ ) {
             if (DEBUG_BACKGROUND_CHECK) {
                 Slog.i(TAG, "App " + uid + "/" + packageName
                         + " is whitelisted; not restricted in background");
@@ -6127,8 +6135,17 @@ public class ActivityManagerService extends IActivityManager.Stub
             return ActivityManager.APP_START_MODE_NORMAL;
         }
 
+
+        if (isOnDeviceIdleTempAllowlistLOSP(uid, /*allowExceptIdleToo=*/ false)) {
+            if (DEBUG_BACKGROUND_CHECK) {
+                Slog.i(TAG, "App " + uid + "/" + packageName
+                        + " on idle allowlist; not restricted in background");
+            }
+            return ActivityManager.APP_START_MODE_NORMAL;
+        }
+
         // Is this app on the battery whitelist?
-        if (isOnDeviceIdleAllowlistLOSP(uid, /*allowExceptIdleToo=*/ false)) {
+        if (!appProfile.mIsGmsPersistent && !appProfile.mIsGmsUnstable && isOnDeviceIdlePersAllowlistLOSP(uid, /*allowExceptIdleToo=*/ false)) {
             if (DEBUG_BACKGROUND_CHECK) {
                 Slog.i(TAG, "App " + uid + "/" + packageName
                         + " on idle allowlist; not restricted in background");
@@ -6237,6 +6254,31 @@ public class ActivityManagerService extends IActivityManager.Stub
         return Arrays.binarySearch(allowlist, appId) >= 0
                 || Arrays.binarySearch(mDeviceIdleTempAllowlist, appId) >= 0
                 || mPendingTempAllowlist.get(uid) != null;
+    }
+
+    /**
+     * @return whether a UID is in the system, user or temp doze allowlist.
+     */
+    @GuardedBy(anyOf = {"this", "mProcLock"})
+    boolean isOnDeviceIdleTempAllowlistLOSP(int uid, boolean allowExceptIdleToo) {
+        final int appId = UserHandle.getAppId(uid);
+
+        return Arrays.binarySearch(mDeviceIdleTempAllowlist, appId) >= 0
+                || mPendingTempAllowlist.get(uid) != null;
+    }
+
+    /**
+     * @return whether a UID is in the system, user or temp doze allowlist.
+     */
+    @GuardedBy(anyOf = {"this", "mProcLock"})
+    boolean isOnDeviceIdlePersAllowlistLOSP(int uid, boolean allowExceptIdleToo) {
+        final int appId = UserHandle.getAppId(uid);
+
+        final int[] allowlist = allowExceptIdleToo
+                ? mDeviceIdleExceptIdleAllowlist
+                : mDeviceIdleAllowlist;
+
+        return Arrays.binarySearch(allowlist, appId) >= 0;
     }
 
     /**
@@ -13011,6 +13053,14 @@ public class ActivityManagerService extends IActivityManager.Stub
                             ? new ComponentName(app.packageName, app.backupAgentName)
                             : new ComponentName("android", "FullBackupAgent");
 
+            if( !mAppProfileManager.isTopAppUid(app.uid,app.packageName) )
+            {
+                if(isAppBackgroundBlocked(app) ) {
+                    Slog.i(TAG,"Baikal.AppProfile: bindBackupAgent blocked for background restricted app:" + app, new Throwable());
+                    return false;
+                } 
+            }
+
             // startProcessLocked() returns existing proc's record if it's already running
             ProcessRecord proc = startProcessLocked(app.processName, app,
                     false, 0,
@@ -17462,6 +17512,17 @@ public class ActivityManagerService extends IActivityManager.Stub
                     // If the process is known as top app, set a hint so when the process is
                     // started, the top priority can be applied immediately to avoid cpu being
                     // preempted by other processes before attaching the process of top app.
+
+                    if( isAppBackgroundBlocked(info) ) {
+
+                        if( !isTop ) {
+                            Slog.i(TAG,"Baikal.AppProfile: startProcess blocked for background restricted app for:" + info);
+                            return;
+                        } else {
+                            Slog.i(TAG,"Baikal.AppProfile: startProcess on top for background restricted:" + info, new Throwable());
+                        }
+                    }
+
                     startProcessLocked(processName, info, knownToBeDead, 0 /* intentFlags */,
                             new HostingRecord(hostingType, hostingName, isTop),
                             ZYGOTE_POLICY_FLAG_LATENCY_SENSITIVE, false /* allowWhileBooting */,
@@ -18822,5 +18883,15 @@ public class ActivityManagerService extends IActivityManager.Stub
         if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) return true;
         return false;
 
+    }
+
+    boolean isAppBackgroundBlocked(ApplicationInfo info) {
+        AppProfile appProfile = null;
+       
+        appProfile = mAppProfileManager.getAppProfile(info.packageName, info.uid);
+
+        if( appProfile == null ) return false;
+        if( appProfile.getBackgroundMode() > 1 ) return true;
+        return false;
     }
 }

@@ -3085,7 +3085,7 @@ public final class ProcessList {
         } else if ( r.mAppProfile.mDebug ) {
             Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for debugging app " + info.packageName + ", profile=" + r.mAppProfile, new Throwable());
         } else {
-            Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.mAppProfile);
+            Slog.d(TAG, "Baikal.AppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.mAppProfile + ", proc=" + proc);
         }
 
         addProcessNameLocked(r);

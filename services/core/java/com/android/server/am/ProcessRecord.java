@@ -516,16 +516,43 @@ class ProcessRecord implements WindowProcessListener {
         if( appSettings != null ) { 
             mAppProfile = appSettings.getProfile(_info.packageName);
             if( mAppProfile == null ) mAppProfile = new AppProfile(_info.packageName, _uid);
-            Slog.d(TAG,"Baikal.AppProfile: Loaded ProcessRecord AppProfile:" + mAppProfile.toString());
+            Slog.i(TAG,"Baikal.AppProfile: Loaded ProcessRecord AppProfile:" + mAppProfile.toString());
             if( mAppProfile.mBackgroundMode > 0 ) {
-                Slog.d(TAG,"Baikal.AppProfile: Started ProcessRecord for background restricted app for:" + mAppProfile.toString(), new Throwable());
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for background restricted app for:" + mAppProfile.toString(), new Throwable());
             } else if( mAppProfile.mDebug ) {
-                Slog.d(TAG,"Baikal.AppProfile: Started ProcessRecord for debug app for:" + mAppProfile.toString(), new Throwable());
-            } 
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for debug app for:" + mAppProfile.toString(), new Throwable());
+            } else {
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for:" + mAppProfile.toString() + ", proc=" + _processName);
+            }
         } else {
-            Slog.w(TAG,"Baikal.AppProfile: Not ready for package:" + _info.packageName);
+            Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord Not ready for package:" + _info.packageName + ", proc=" + _processName);
             mAppProfile = new AppProfile(_info.packageName, _uid);
         }
+
+
+        if( "com.google.android.gms".equals(_info.packageName) ) {
+            mAppProfile = new AppProfile(mAppProfile);
+            mAppProfile.mIsGms = true;
+            if("com.google.android.gms.persistent".equals(_processName)) {
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for google persistent package:" + _info.packageName + ", proc=" + _processName);
+                mAppProfile.mIsGmsPersistent = true;
+            } else if("com.google.android.gms.unstable".equals(_processName)) {
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for google unstable package:" + _info.packageName + ", proc=" + _processName);
+                mAppProfile.mIsGmsUnstable = true; 
+                mAppProfile.mSystemWhitelisted = false;
+                mAppProfile.mImportantApp = false;
+            } else {
+                mAppProfile.mSystemWhitelisted = false;
+                mAppProfile.mImportantApp = false;
+            }
+        } 
+        /* else {
+            if("com.google.android.gms.persistent".equals(_processName)) {
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for google persistent package wtf:" + _info.packageName + ", proc=" + _processName);
+                mAppProfile = new AppProfile(mAppProfile);
+                mAppProfile.mIsGmsPersistent = true;
+            }
+        } */
 
         ProcessInfo procInfo = null;
         if (_service.mPackageManagerInt != null) {
