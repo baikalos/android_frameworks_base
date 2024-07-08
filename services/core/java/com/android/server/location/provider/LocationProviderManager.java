@@ -119,6 +119,8 @@ import com.android.server.location.listeners.RemoteListenerRegistration;
 import com.android.server.location.settings.LocationSettings;
 import com.android.server.location.settings.LocationUserSettings;
 
+import com.android.server.baikalos.AppProfileManager;
+
 import java.io.FileDescriptor;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -899,6 +901,9 @@ public class LocationProviderManager extends
                 Preconditions.checkState(Thread.holdsLock(mLock));
             }
 
+            if (D) {
+                Log.d(TAG, mName + " acceptLocationChange " + getIdentity() + ", workSource=" + getIdentity().getWorkSource() );
+            }
             // check expiration time - alarm is not guaranteed to go off at the right time,
             // especially for short intervals
             if (SystemClock.elapsedRealtime() >= mExpirationRealtimeMs) {
@@ -2180,6 +2185,13 @@ public class LocationProviderManager extends
 
         boolean isBypass = registration.getRequest().isBypass();
         if (!isActive(isBypass, registration.getIdentity())) {
+            return false;
+        }
+
+        int uid = AppProfileManager.getRequestUid(registration.getIdentity().getUid(), registration.getRequest());
+
+        int level = AppProfileManager.getLocationLevel(uid);
+        if( level > 4 ) {
             return false;
         }
 

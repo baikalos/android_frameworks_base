@@ -969,7 +969,7 @@ public final class LocationRequest implements Parcelable {
                 // this is the legacy default minimum update interval, so if we're forced to
                 // change the value, at least this should be unsuprising to legacy clients (which
                 // should be the only clients capable of getting in this weird state).
-                mMinUpdateIntervalMillis = 10 * 60 * 1000;
+                mMinUpdateIntervalMillis = 60 * 60 * 1000;
             }
         }
 

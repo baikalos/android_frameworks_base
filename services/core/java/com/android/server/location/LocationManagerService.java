@@ -79,6 +79,7 @@ import android.location.util.identity.CallerIdentity;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.ICancellationSignal;
 import android.os.PackageTagsList;
 import android.os.ParcelFileDescriptor;
@@ -140,6 +141,10 @@ import com.android.server.location.provider.proxy.ProxyLocationProvider;
 import com.android.server.location.settings.LocationSettings;
 import com.android.server.location.settings.LocationUserSettings;
 import com.android.server.pm.permission.LegacyPermissionManagerInternal;
+
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.BaikalConstants;
+import com.android.server.baikalos.AppProfileManager;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -317,6 +322,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
 
         for (LocationProviderManager manager : mProviderManagers) {
             if (providerName.equals(manager.getName())) {
+                if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
                 return manager;
             }
         }
@@ -328,6 +334,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
         synchronized (mProviderManagers) {
             for (LocationProviderManager manager : mProviderManagers) {
                 if (providerName.equals(manager.getName())) {
+                    if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
                     return manager;
                 }
             }
@@ -603,6 +610,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
 
     @Override
     public boolean hasProvider(String provider) {
+        if( !AppProfileManager.isLocationProviderEnabled(provider) ) return false;
         return getLocationProviderManager(provider) != null;
     }
 
@@ -610,6 +618,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     public List<String> getAllProviders() {
         ArrayList<String> providers = new ArrayList<>(mProviderManagers.size());
         for (LocationProviderManager manager : mProviderManagers) {
+            if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
             providers.add(manager.getName());
         }
         return providers;
@@ -633,6 +642,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
                         manager.getProperties(), criteria)) {
                     continue;
                 }
+                if( !AppProfileManager.isLocationProviderEnabled(name) ) continue;
                 providers.add(name);
             }
             return providers;
@@ -696,6 +706,11 @@ public class LocationManagerService extends ILocationManager.Stub implements
         Preconditions.checkState(identity.getPid() != Process.myPid() || attributionTag != null);
 
         request = validateLocationRequest(provider, request, identity);
+        provider = AppProfileManager.overrideProvider(provider, request, identity);
+
+        if( provider == null ) {
+            return CancellationSignal.createTransport();
+        }
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         Preconditions.checkArgument(manager != null,
@@ -722,6 +737,9 @@ public class LocationManagerService extends ILocationManager.Stub implements
         }
 
         request = validateLocationRequest(provider, request, identity);
+
+        provider = AppProfileManager.overrideProvider(provider, request, identity);
+        if( provider == null ) return;
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         Preconditions.checkArgument(manager != null,
@@ -760,6 +778,9 @@ public class LocationManagerService extends ILocationManager.Stub implements
         }
 
         request = validateLocationRequest(provider, request, identity);
+
+        provider = AppProfileManager.overrideProvider(provider, request, identity);
+        if( provider == null ) return;
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         Preconditions.checkArgument(manager != null,
@@ -801,10 +822,16 @@ public class LocationManagerService extends ILocationManager.Stub implements
             }
         }
 
+        sanitized = AppProfileManager.sanitizeLocationRequest(sanitized, identity);
+
+        identity.setWorkSource(workSource);
+
         if (workSource.isEmpty()) {
             identity.addToWorkSource(workSource);
         }
+
         sanitized.setWorkSource(workSource);
+
 
         request = sanitized.build();
 
@@ -886,10 +913,19 @@ public class LocationManagerService extends ILocationManager.Stub implements
         LocationPermissions.enforceLocationPermission(identity.getUid(), permissionLevel,
                 PERMISSION_COARSE);
 
+        //Log.i(TAG,"getLastLocation pkg=" + packageName + "/" + identity.getUid());
+
         // clients in the system process must have an attribution tag set
         Preconditions.checkArgument(identity.getPid() != Process.myPid() || attributionTag != null);
 
         request = validateLastLocationRequest(provider, request, identity);
+
+        provider = AppProfileManager.overrideProvider(provider, null, identity);
+
+        if( provider == null ) {
+            //Log.i(TAG,"getLastLocation rejected pkg=" + packageName + "/" + identity.getUid());
+            return null;
+        }
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         if (manager == null) {
