@@ -71,7 +71,7 @@ public class PulseControllerImpl implements
         NotificationMediaManager.MediaListener,
         CommandQueue.Callbacks {
 
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG = true;
 
     private static final String TAG = PulseControllerImpl.class.getSimpleName();
     private static final int RENDER_STYLE_LEGACY = 0;

@@ -60,7 +60,7 @@ public class SystemUIApplication extends Application implements
         SystemUIAppComponentFactory.ContextInitializer, DumpableContainer {
 
     public static final String TAG = "SystemUIService";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     private BootCompleteCacheImpl mBootCompleteCache;
     private DumpManager mDumpManager;

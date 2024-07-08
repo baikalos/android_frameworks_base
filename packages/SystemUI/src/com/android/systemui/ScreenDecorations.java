@@ -103,7 +103,7 @@ import kotlin.Pair;
  */
 @SysUISingleton
 public class ScreenDecorations implements CoreStartable, Tunable , Dumpable {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final String TAG = "ScreenDecorations";
 
     public static final String SIZE = "sysui_rounded_size";

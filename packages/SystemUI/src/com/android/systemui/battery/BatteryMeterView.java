@@ -224,24 +224,27 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
     private void setupLayoutTransition() {
         //Log.v(TAG, "setupLayoutTransition()");
-        if( true ) return;
+        //if( true ) return;
 
         LayoutTransition transition = new LayoutTransition();
         transition.setDuration(200);
 
         // Animates appearing/disappearing of the battery percentage text using fade-in/fade-out
         // and disables all other animation types
-        ObjectAnimator appearAnimator = ObjectAnimator.ofFloat(null, "alpha", 0f, 1f);
-        transition.setAnimator(LayoutTransition.APPEARING, appearAnimator);
-        transition.setInterpolator(LayoutTransition.APPEARING, Interpolators.ALPHA_IN);
+        //ObjectAnimator appearAnimator = ObjectAnimator.ofFloat(null, "alpha", 0f, 1f);
+        //transition.setAnimator(LayoutTransition.APPEARING, appearAnimator);
+        //transition.setInterpolator(LayoutTransition.APPEARING, Interpolators.ALPHA_IN);
 
-        ObjectAnimator disappearAnimator = ObjectAnimator.ofFloat(null, "alpha", 1f, 0f);
-        transition.setInterpolator(LayoutTransition.DISAPPEARING, Interpolators.ALPHA_OUT);
-        transition.setAnimator(LayoutTransition.DISAPPEARING, disappearAnimator);
+        //ObjectAnimator disappearAnimator = ObjectAnimator.ofFloat(null, "alpha", 1f, 0f);
+        //transition.setInterpolator(LayoutTransition.DISAPPEARING, Interpolators.ALPHA_OUT);
+        //transition.setAnimator(LayoutTransition.DISAPPEARING, disappearAnimator);
 
         transition.setAnimator(LayoutTransition.CHANGE_APPEARING, null);
         transition.setAnimator(LayoutTransition.CHANGE_DISAPPEARING, null);
         transition.setAnimator(LayoutTransition.CHANGING, null);
+
+        transition.setAnimator(LayoutTransition.APPEARING, null);
+        transition.setAnimator(LayoutTransition.DISAPPEARING, null);
 
         setLayoutTransition(transition);
     }
@@ -323,7 +326,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
      * @param pluggedIn whether the device is plugged in or not
      */
     public void onBatteryLevelChanged(@IntRange(from = 0, to = 100) int level, boolean pluggedIn) {
-        Log.v(TAG, "onBatteryLevelChanged()");
+        //Log.v(TAG, "onBatteryLevelChanged()");
 
         if (mLevel != level) {
             mLevel = level;
@@ -472,7 +475,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
                 mBatteryPercentView.setTextColor(Color.rgb(0,200,0));
             } else if (mPowerLevel > 4) {
                 Log.v(TAG, "extremeMode > 4");
-                mBatteryPercentView.setTextColor(Color.rgb(255,50,20));
+                mBatteryPercentView.setTextColor(Color.rgb(255,100,20));
             } else if (mPowerLevel > 3) {
                 Log.v(TAG, "powerLevel > 3");
                 mBatteryPercentView.setTextColor(Color.rgb(250,150,100));
@@ -484,7 +487,15 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
                 mBatteryPercentView.setTextColor(mTextColor);
             }
         } else {
-            if( mTextColor != 0 ) mBatteryPercentView.setTextColor(mTextColor);
+            if (mStaminaMode) {
+                Log.v(TAG, "staminaMode");
+                mBatteryPercentView.setTextColor(Color.rgb(0,200,0));
+            } else if (mPowerLevel > 5) {
+                Log.v(TAG, "battery saver");
+                mBatteryPercentView.setTextColor(Color.rgb(255,0,0));
+            } else {
+                if( mTextColor != 0 ) mBatteryPercentView.setTextColor(mTextColor);
+            }
         }
 
         updateContentDescription();

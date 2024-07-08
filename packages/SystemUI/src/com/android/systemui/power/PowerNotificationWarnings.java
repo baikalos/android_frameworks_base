@@ -245,7 +245,7 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
         if (mInvalidCharger) {
             showInvalidChargerNotification();
             mShowing = SHOWING_INVALID_CHARGER;
-        } else if (mWarning) {
+        } /*else if (mWarning) {
             showWarningNotification();
             mShowing = SHOWING_WARNING;
         } else if (mShowAutoSaverSuggestion) {
@@ -257,7 +257,7 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
                 showAutoSaverSuggestionNotification();
             }
             mShowing = SHOWING_AUTO_SAVER_SUGGESTION;
-        } else {
+        } */ else {
             mNoMan.cancelAsUser(TAG_BATTERY, SystemMessage.NOTE_BAD_CHARGER, UserHandle.ALL);
             mNoMan.cancelAsUser(TAG_BATTERY, SystemMessage.NOTE_POWER_LOW, UserHandle.ALL);
             mNoMan.cancelAsUser(TAG_AUTO_SAVER,
@@ -317,9 +317,9 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
                         .setDeleteIntent(pendingBroadcast(ACTION_DISMISSED_WARNING))
                         .setStyle(new Notification.BigTextStyle().bigText(contentText))
                         .setVisibility(Notification.VISIBILITY_PUBLIC);
-        if (hasBatterySettings()) {
+        /*if (hasBatterySettings()) {
             nb.setContentIntent(pendingBroadcast(ACTION_SHOW_BATTERY_SAVER_SETTINGS));
-        }
+        }*/
         // Make the notification red if the percentage goes below a certain amount or the time
         // remaining estimate is disabled
         if (!mCurrentBatterySnapshot.isHybrid() || mBucket < -1
