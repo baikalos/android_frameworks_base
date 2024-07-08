@@ -1545,8 +1545,8 @@ final class DefaultPermissionGrantPolicy {
                 DefaultPermissionGrant permissionGrant = permissionGrants.get(j);
                 if (!pm.isPermissionDangerous(permissionGrant.name)) {
                     Log.w(TAG, "Ignoring permission " + permissionGrant.name
-                            + " which isn't dangerous");
-                    continue;
+                            + " which isn't dangerous for " + packageName);
+                    //continue;
                 }
                 if (permissions == null) {
                     permissions = new ArraySet<>();
@@ -1554,7 +1554,6 @@ final class DefaultPermissionGrantPolicy {
                     permissions.clear();
                 }
                 permissions.add(permissionGrant.name);
-
 
                 grantRuntimePermissions(pm, pkg, permissions, permissionGrant.fixed,
                         permissionGrant.whitelisted, true /*whitelistRestrictedPermissions*/,

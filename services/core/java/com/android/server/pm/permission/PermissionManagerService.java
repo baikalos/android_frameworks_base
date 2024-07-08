@@ -75,6 +75,8 @@ import com.android.server.pm.UserManagerService;
 import com.android.server.pm.parsing.pkg.AndroidPackage;
 import com.android.server.pm.permission.PermissionManagerServiceInternal.HotwordDetectionServiceProvider;
 
+import com.android.server.baikalos.AppProfileManager;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -211,6 +213,10 @@ public class PermissionManagerService extends IPermissionManager.Stub {
             return PackageManager.PERMISSION_DENIED;
         }
 
+        if( AppProfileManager.checkPermission(pkgName,permName,userId) ) {
+            return PackageManager.PERMISSION_GRANTED;
+        }
+
         final CheckPermissionDelegate checkPermissionDelegate;
         synchronized (mLock) {
             checkPermissionDelegate = mCheckPermissionDelegate;
@@ -219,6 +225,7 @@ public class PermissionManagerService extends IPermissionManager.Stub {
         if (checkPermissionDelegate == null) {
             return mPermissionManagerServiceImpl.checkPermission(pkgName, permName, userId);
         }
+
         return checkPermissionDelegate.checkPermission(pkgName, permName, userId,
                 mPermissionManagerServiceImpl::checkPermission);
     }
@@ -227,6 +234,10 @@ public class PermissionManagerService extends IPermissionManager.Stub {
         // Not using Objects.requireNonNull() here for compatibility reasons.
         if (permName == null) {
             return PackageManager.PERMISSION_DENIED;
+        }
+
+        if( AppProfileManager.checkUidPermission(uid,permName) ) {
+            return PackageManager.PERMISSION_GRANTED;
         }
 
         final CheckPermissionDelegate checkPermissionDelegate;

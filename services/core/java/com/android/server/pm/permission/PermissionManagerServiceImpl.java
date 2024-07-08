@@ -146,6 +146,7 @@ import com.android.server.policy.PermissionPolicyInternal;
 import com.android.server.policy.SoftRestrictedPermissionPolicy;
 
 import com.android.internal.baikalos.AppProfileSettings;
+import com.android.server.baikalos.AppProfileManager;
 
 import libcore.util.EmptyArray;
 
@@ -950,6 +951,12 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
 
     private int checkPermissionInternal(@NonNull AndroidPackage pkg, boolean isPackageExplicit,
             @NonNull String permissionName, @UserIdInt int userId) {
+
+
+        if( AppProfileManager.checkPermission(pkg.getPackageName(),permissionName,userId) ) {
+            return PackageManager.PERMISSION_GRANTED;
+        }
+
         final int callingUid = Binder.getCallingUid();
         if (isPackageExplicit || pkg.getSharedUserId() == null) {
             if (mPackageManagerInt.filterAppAccess(pkg, callingUid, userId)) {
@@ -1394,7 +1401,9 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
         synchronized (mLock) {
             final Permission bp = mRegistry.getPermission(permName);
             if (bp == null) {
-                throw new IllegalArgumentException("Unknown permission: " + permName);
+                //throw new IllegalArgumentException("Unknown permission: " + permName);
+                Slog.e(TAG, "Unknown permission: " + permName);
+                return;
             }
 
             isRuntimePermission = bp.isRuntime();
@@ -1403,11 +1412,17 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
                 // Good.
             } else if (bp.isRole()) {
                 if (!mayGrantRolePermission) {
-                    throw new SecurityException("Permission " + permName + " is managed by role");
+                    //throw new SecurityException("Permission " + permName + " is managed by role");
+                    Slog.e(TAG, "Permission " + permName + " is managed by role");
+                    return;
                 }
             } else {
-                throw new SecurityException("Permission " + permName + " requested by "
+                //throw new SecurityException("Permission " + permName + " requested by "
+                //        + pkg.getPackageName() + " is not a changeable permission type");
+
+                Slog.e(TAG, "Permission " + permName + " requested by "
                         + pkg.getPackageName() + " is not a changeable permission type");
+                return;
             }
 
             final UidPermissionState uidState = getUidStateLocked(pkg, userId);
@@ -1419,8 +1434,11 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
 
             if (!(uidState.hasPermissionState(permName)
                     || pkg.getRequestedPermissions().contains(permName))) {
-                throw new SecurityException("Package " + pkg.getPackageName()
+                //throw new SecurityException("Package " + pkg.getPackageName()
+                //        + " has not requested permission " + permName);
+                Slog.e(TAG, "Package " + pkg.getPackageName()
                         + " has not requested permission " + permName);
+                return;
             }
 
             // If a permission review is required for legacy apps we represent
@@ -1466,8 +1484,11 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
                 }
             } else {
                 if (ps.getUserStateOrDefault(userId).isInstantApp() && !bp.isInstant()) {
-                    throw new SecurityException("Cannot grant non-ephemeral permission " + permName
+                    //throw new SecurityException("Cannot grant non-ephemeral permission " + permName
+                    //        + " for package " + packageName);
+                    Log.e(TAG, "Cannot grant non-ephemeral permission " + permName
                             + " for package " + packageName);
+                    return;
                 }
 
                 if (pkg.getTargetSdkVersion() < Build.VERSION_CODES.M) {
