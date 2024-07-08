@@ -1361,6 +1361,8 @@ public class AudioRecord implements AudioRouting, MicrophoneDirection,
                     + "uninitialized AudioRecord.");
         }
 
+        mPreferredDevice = BaikalSpoofer.updatePreferredDevice(this, mPreferredDevice, true);
+        
         // start recording
         synchronized(mRecordingStateLock) {
             if (native_start(MediaSyncEvent.SYNC_EVENT_NONE, 0) == SUCCESS) {
@@ -2019,7 +2021,7 @@ public class AudioRecord implements AudioRouting, MicrophoneDirection,
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
-        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, true);
+        deviceInfo = BaikalSpoofer.overridePreferredDevice(this, deviceInfo, true);
         // Do some validation....
         if (deviceInfo != null && !deviceInfo.isSource()) {
             return false;

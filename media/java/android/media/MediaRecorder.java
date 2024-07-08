@@ -1670,7 +1670,7 @@ public class MediaRecorder implements AudioRouting,
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
-        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, true);
+        deviceInfo = BaikalSpoofer.overridePreferredDevice(this, deviceInfo, true);
         if (deviceInfo != null && !deviceInfo.isSource()) {
             return false;
         }

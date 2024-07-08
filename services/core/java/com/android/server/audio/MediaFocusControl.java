@@ -998,18 +998,6 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
                 .record();
 
 
-        AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(callingPackageName);
-        if( profile != null &&  profile.mBAFSend ) {
-            if (DEBUG) {
-                Log.v(TAG, "requestAudioFocus() blocked from uid/pid " + Binder.getCallingUid()
-                    + "/" + Binder.getCallingPid()
-                    + " clientId=" + clientId + " callingPackage=" + callingPackageName
-                    + " req=" + focusChangeHint
-                    + " flags=0x" + Integer.toHexString(flags)
-                    + " sdk=" + sdk);
-            }
-            return AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-        }
 
         
 
@@ -1033,11 +1021,31 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
             return AudioManager.AUDIOFOCUS_REQUEST_FAILED;
         }
 
-        if ((flags != AudioManager.AUDIOFOCUS_FLAG_TEST)
+        boolean blocked = false;
+
+        if (flags != AudioManager.AUDIOFOCUS_FLAG_TEST) {
                 // note we're using the real uid for appOp evaluation
-                && (mAppOps.noteOp(AppOpsManager.OP_TAKE_AUDIO_FOCUS, Binder.getCallingUid(),
-                        callingPackageName, attributionTag, null) != AppOpsManager.MODE_ALLOWED)) {
-            return AudioManager.AUDIOFOCUS_REQUEST_FAILED;
+            if( mAppOps.noteOp(AppOpsManager.OP_TAKE_AUDIO_FOCUS, Binder.getCallingUid(),
+                        callingPackageName, attributionTag, null) != AppOpsManager.MODE_ALLOWED) {
+                Log.e(TAG, "AudioFocus disabled by appop for requestAudioFocus(), aborting.");
+                return AudioManager.AUDIOFOCUS_REQUEST_FAILED;
+
+            }
+
+            AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(callingPackageName);
+            if( profile != null && profile.mBAFSend ) {
+                Log.e(TAG, "requestAudioFocus() blocked from uid/pid " + Binder.getCallingUid()
+                    + "/" + Binder.getCallingPid()
+                    + " clientId=" + clientId + " callingPackage=" + callingPackageName
+                    + " req=" + focusChangeHint
+                    + " flags=0x" + Integer.toHexString(flags)
+                    + " sdk=" + sdk);
+                /*final FocusRequester fr = mFocusStack.peek();
+                notifyExtPolicyFocusGrant_syncAf(fr.toAudioFocusInfo(),
+                            AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+                return AudioManager.AUDIOFOCUS_REQUEST_GRANTED;*/
+                blocked = true;
+            }
         }
 
         synchronized(mAudioFocusLock) {
@@ -1146,9 +1154,12 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
                     if (needAdd) {
                         mMultiAudioFocusList.add(nfr);
                     }
-                    nfr.handleFocusGainFromRequest(AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+                    if( !blocked ) {
+                        nfr.handleFocusGainFromRequest(AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+                    }
                     notifyExtPolicyFocusGrant_syncAf(nfr.toAudioFocusInfo(),
                             AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+                    Log.w(TAG, "requestAudioFocus(1) granted=" + !blocked);
                     return AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
                 }
             }
@@ -1156,18 +1167,22 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
             if (focusGrantDelayed) {
                 // focusGrantDelayed being true implies we can't reassign focus right now
                 // which implies the focus stack is not empty.
-                final int requestResult = pushBelowLockedFocusOwnersAndPropagate(nfr);
+                int requestResult = AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
+                if( !blocked ) requestResult = pushBelowLockedFocusOwnersAndPropagate(nfr);
                 if (requestResult != AudioManager.AUDIOFOCUS_REQUEST_FAILED) {
                     notifyExtPolicyFocusGrant_syncAf(nfr.toAudioFocusInfo(), requestResult);
                 }
                 return requestResult;
             } else {
                 // propagate the focus change through the stack
-                propagateFocusLossFromGain_syncAf(focusChangeHint, nfr, forceDuck);
+                if( !blocked ) propagateFocusLossFromGain_syncAf(focusChangeHint, nfr, forceDuck);
 
                 // push focus requester at the top of the audio focus stack
                 mFocusStack.push(nfr);
-                nfr.handleFocusGainFromRequest(AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+
+                if( !blocked ) {
+                    nfr.handleFocusGainFromRequest(AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+                }
             }
             notifyExtPolicyFocusGrant_syncAf(nfr.toAudioFocusInfo(),
                     AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
@@ -1177,6 +1192,7 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
             }
         }//synchronized(mAudioFocusLock)
 
+        Log.w(TAG, "requestAudioFocus(2) granted=" + !blocked);
         return AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
     }
 

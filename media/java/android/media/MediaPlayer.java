@@ -1369,8 +1369,14 @@ public class MediaPlayer extends PlayerBase
     private void startImpl() {
         baseStart(0); // unknown device at this point
         stayAwake(true);
+        mPreferredDevice = BaikalSpoofer.updatePreferredDevice(this, mPreferredDevice, false);
+        if( mPreferredDevice != null ) {
+            baseStart(mPreferredDevice.getId());
+        } else {
+            baseStart(native_getRoutedDeviceId());
+        }
+
         tryToEnableNativeRoutingCallback();
-        BaikalSpoofer.updatePreferredDevice(this, mPreferredDevice, false);
         _start();
     }
 
@@ -1469,7 +1475,7 @@ public class MediaPlayer extends PlayerBase
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
-        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, false);
+        deviceInfo = BaikalSpoofer.overridePreferredDevice(this, deviceInfo, false);
         if (deviceInfo != null && !deviceInfo.isSink()) {
             return false;
         }

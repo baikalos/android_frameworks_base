@@ -61,7 +61,7 @@ import java.util.TreeSet;
 @TestApi
 public class AudioSystem
 {
-    private static final boolean DEBUG_VOLUME = false;
+    private static final boolean DEBUG_VOLUME = true;
 
     private static final String TAG = "AudioSystem";
 
@@ -1683,6 +1683,11 @@ public class AudioSystem
     @UnsupportedAppUsage
     public static int setDeviceConnectionState(AudioDeviceAttributes attributes, int state,
             int codecFormat) {
+
+        if (DEBUG_VOLUME) {
+            Log.i(TAG, "setDeviceConnectionState: " + attributes + ", state=" + state + ", codecFormat=" + codecFormat/*, new Throwable()*/);
+        }
+
         android.media.audio.common.AudioPort port =
                 AidlConversion.api2aidl_AudioDeviceAttributes_AudioPort(attributes);
         Parcel parcel = Parcel.obtain();

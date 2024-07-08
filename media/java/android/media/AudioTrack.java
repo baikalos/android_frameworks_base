@@ -2957,10 +2957,14 @@ public class AudioTrack extends PlayerBase
         }
         synchronized(mPlayStateLock) {
             baseStart(0); // unknown device at this point
-            BaikalSpoofer.updatePreferredDevice(this, mPreferredDevice, false);
+            mPreferredDevice = BaikalSpoofer.updatePreferredDevice(this, mPreferredDevice, false);
             native_start();
             // FIXME see b/179218630
-            //baseStart(native_getRoutedDeviceId());
+            if( mPreferredDevice != null ) {
+                baseStart(mPreferredDevice.getId());
+            } else {
+                baseStart(native_getRoutedDeviceId());
+            }
             if (mPlayState == PLAYSTATE_PAUSED_STOPPING) {
                 mPlayState = PLAYSTATE_STOPPING;
             } else {
@@ -3692,7 +3696,7 @@ public class AudioTrack extends PlayerBase
      */
     @Override
     public boolean setPreferredDevice(AudioDeviceInfo deviceInfo) {
-        deviceInfo = BaikalSpoofer.overridePrefferedDevice(this, deviceInfo, false);
+        deviceInfo = BaikalSpoofer.overridePreferredDevice(this, deviceInfo, false);
         // Do some validation....
         if (deviceInfo != null && !deviceInfo.isSink()) {
             return false;

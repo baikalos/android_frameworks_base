@@ -395,17 +395,20 @@ public class FocusRequester {
                 }
 
                 AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(mPackageName);
+
                 if( (mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS || 
                     mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK )
                     && profile != null && profile.mBAFRecv ) {
-                    if (DEBUG) {
-                        Log.v(TAG, "blocked dispatching " + focusChangeToString(mFocusLossReceived) + " to "
-                            + mClientId + ", app=" + mCallingUid + "/" + mPackageName);
-                    }
+                    Log.v(TAG, "blocked dispatching " + focusChangeToString(mFocusLossReceived) + " to "
+                        + mClientId + ", app=" + mCallingUid + "/" + mPackageName);
+
+                    mFocusController.notifyExtPolicyFocusLoss_syncAf(
+                            toAudioFocusInfo(), false /* wasDispatched */);
                     return;
+                    //return;
                 }
 
-                if (DEBUG) {
+                if (true/*DEBUG*/) {
                     Log.v(TAG, "not blocked dispatching " + focusChangeToString(mFocusLossReceived) + " to "
                         + mClientId + ", app=" + mCallingUid + "/" + mPackageName);
                 }
