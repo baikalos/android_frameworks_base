@@ -2270,7 +2270,7 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
                         || mReportedScreenStateToPolicy == REPORTED_TO_POLICY_UNREPORTED)) {
             setReportedScreenState(REPORTED_TO_POLICY_SCREEN_TURNING_ON);
             if (mPowerState.getColorFadeLevel() == 0.0f) {
-                //blockScreenOn();
+                blockScreenOn();
             } else {
                 unblockScreenOn();
             }
