@@ -2898,6 +2898,10 @@ public class AlarmManagerService extends SystemService {
 
             boolean exact = (windowLength == 0);
             int baikalAlarmMode = mBaikalAlarmManager.isAppWakeupAllowed(callingPackage, callingUid, operationTag);
+            if( baikalAlarmMode == 2 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.w(TAG, "Alarm blocked:" + callingPackage + "/" + callingUid + ":" + operationTag );
+                return;
+            }
 
             if (alarmClock == null && (exact ||  
 	        	(flags & (FLAG_ALLOW_WHILE_IDLE | FLAG_PRIORITIZE | AlarmManager.FLAG_STANDALONE | FLAG_ALLOW_WHILE_IDLE_UNRESTRICTED)) != 0

@@ -422,7 +422,7 @@ public class AppIdleHistory {
         if( profile != null && 
             profile.getBackgroundMode(false) < 0 || 
             profile.mAllowWhileIdle ) {
-            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle ->STANDBY_BUCKET_EXEMPTED > 1 :" + packageName);
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle forced -> STANDBY_BUCKET_EXEMPTED > 1 :" + packageName);
             return false;
         } 
 
@@ -455,6 +455,12 @@ public class AppIdleHistory {
             bucket = STANDBY_BUCKET_RESTRICTED;
             if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "setAppStandbyBucket " + bucket + " ->RARE > 1 :" + packageName);
         } 
+
+
+        if( bucket == STANDBY_BUCKET_EXEMPTED ) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "setAppStandbyBucket " + bucket + " ->STANDBY_BUCKET_EXEMPTED :" + packageName);
+            if( BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.d(TAG, "setAppStandbyBucket " + bucket + " ->STANDBY_BUCKET_EXEMPTED :" + packageName, new Throwable());
+        }
        
         //if( bucket >= STANDBY_BUCKET_ACTIVE && bucket < IDLE_BUCKET_CUTOFF ) {
         //} 
@@ -587,13 +593,13 @@ public class AppIdleHistory {
         AppProfile profile = AppProfileManager.getProfile(packageName,-1);
         int backgroundMode = profile == null ? 0 : profile.getBackgroundMode(false);
         if( backgroundMode > 0 ) {
-            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket STANDBY_BUCKET_RESTRICTED :" + packageName);
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket forced STANDBY_BUCKET_RESTRICTED :" + packageName);
             return STANDBY_BUCKET_RESTRICTED;
         } else {
             if( backgroundMode < 0 || 
                 profile.mAllowWhileIdle ||
                 profile.mImportantApp ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket STANDBY_BUCKET_EXEMPTED :" + packageName);
+                    if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket forced STANDBY_BUCKET_EXEMPTED :" + packageName + " bk=" + backgroundMode + " pn=" + profile);
                     return STANDBY_BUCKET_EXEMPTED;
             } 
         }

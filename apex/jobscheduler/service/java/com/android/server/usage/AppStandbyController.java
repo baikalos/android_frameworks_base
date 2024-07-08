@@ -127,6 +127,7 @@ import com.android.server.pm.parsing.pkg.AndroidPackage;
 import com.android.server.usage.AppIdleHistory.AppUsageHistory;
 
 import android.baikalos.AppProfile;
+import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.baikalos.AppProfileManager;
 
 import libcore.util.EmptyArray;
@@ -1411,15 +1412,18 @@ public class AppStandbyController
         if (packageName == null) return STANDBY_BUCKET_NEVER;
         // If not enabled at all, of course nobody is ever idle.
         if (!mAppIdleEnabled) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket mAppIdleEnabled STANDBY_BUCKET_EXEMPTED:" + packageName);
             return STANDBY_BUCKET_EXEMPTED;
         }
         if (appId < Process.FIRST_APPLICATION_UID) {
             // System uids never go idle.
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket FIRST_APPLICATION_UID STANDBY_BUCKET_EXEMPTED:" + packageName);
             return STANDBY_BUCKET_EXEMPTED;
         }
         if (packageName.equals("android")) {
             // Nor does the framework (which should be redundant with the above, but for MR1 we will
             // retain this for safety).
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket android STANDBY_BUCKET_EXEMPTED:" + packageName);
             return STANDBY_BUCKET_EXEMPTED;
         }
         if (mSystemServicesReady) {
@@ -1433,24 +1437,29 @@ public class AppStandbyController
                 return STANDBY_BUCKET_RESTRICTED;
             }
             if( profile.getBackgroundMode(false) < 0 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket mBackgroundMode < 0 STANDBY_BUCKET_EXEMPTED:" + packageName);
                 return STANDBY_BUCKET_EXEMPTED;
             }
             // We allow all whitelisted apps, including those that don't want to be whitelisted
             // for idle mode, because app idle (aka app standby) is really not as big an issue
             // for controlling who participates vs. doze mode.
             if (mInjector.isNonIdleWhitelisted(packageName)) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket isNonIdleWhitelisted STANDBY_BUCKET_EXEMPTED:" + packageName);
                 return STANDBY_BUCKET_EXEMPTED;
             }
 
             if (isActiveDeviceAdmin(packageName, userId)) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket isActiveDeviceAdmin STANDBY_BUCKET_EXEMPTED:" + packageName);
                 return STANDBY_BUCKET_EXEMPTED;
             }
 
             if (isAdminProtectedPackages(packageName, userId)) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket isAdminProtectedPackages STANDBY_BUCKET_EXEMPTED:" + packageName);
                 return STANDBY_BUCKET_EXEMPTED;
             }
 
             if (isActiveNetworkScorer(packageName)) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket isActiveNetworkScorer STANDBY_BUCKET_EXEMPTED:" + packageName);
                 return STANDBY_BUCKET_EXEMPTED;
             }
 
@@ -1460,6 +1469,7 @@ public class AppStandbyController
             }
 
             if (isDeviceProvisioningPackage(packageName)) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket isDeviceProvisioningPackage STANDBY_BUCKET_EXEMPTED:" + packageName);
                 return STANDBY_BUCKET_EXEMPTED;
             }
 
@@ -1474,6 +1484,7 @@ public class AppStandbyController
 
         // Check this last, as it can be the most expensive check
         if (isCarrierApp(packageName)) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket isCarrierApp STANDBY_BUCKET_EXEMPTED:" + packageName);
             return STANDBY_BUCKET_EXEMPTED;
         }
 
@@ -1625,11 +1636,11 @@ public class AppStandbyController
     @Override
     public void restrictApp(@NonNull String packageName, int userId, int mainReason,
             @ForcedReasons int restrictReason) {
-        if (mainReason != REASON_MAIN_FORCED_BY_SYSTEM
+        /*if (mainReason != REASON_MAIN_FORCED_BY_SYSTEM
                 && mainReason != REASON_MAIN_FORCED_BY_USER) {
             Slog.e(TAG, "Tried to restrict app " + packageName + " for an unsupported reason :" + mainReason, new Throwable());
             return;
-        }
+        }*/
         // If the package is not installed, don't allow the bucket to be set.
         if (!mInjector.isPackageInstalled(packageName, 0, userId)) {
             Slog.e(TAG, "Tried to restrict uninstalled app: " + packageName);
