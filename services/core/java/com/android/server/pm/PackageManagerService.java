@@ -337,7 +337,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
     public static final boolean DEBUG_PACKAGE_SCANNING = false;
     static final boolean DEBUG_VERIFY = false;
     public static final boolean DEBUG_PERMISSIONS = false;
-    public static final boolean DEBUG_COMPRESSION = Build.IS_DEBUGGABLE;
+    public static final boolean DEBUG_COMPRESSION = false; 
     public static final boolean TRACE_SNAPSHOTS = false;
     private static final boolean DEBUG_PER_UID_READ_TIMEOUTS = false;
 
@@ -347,7 +347,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
     public static final boolean DEBUG_DEXOPT = false;
 
     static final boolean DEBUG_ABI_SELECTION = false;
-    public static final boolean DEBUG_INSTANT = Build.IS_DEBUGGABLE;
+    public static final boolean DEBUG_INSTANT = false;
 
     static final boolean HIDE_EPHEMERAL_APIS = false;
 
@@ -3687,7 +3687,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
         }
         final long token = Binder.clearCallingIdentity();
         try {
-            if (snapshot.getPackageInfo(packageName, MATCH_FACTORY_ONLY,
+            if (snapshot.getPackageInfo(packageName, /*MATCH_FACTORY_ONLY*/ MATCH_SYSTEM_ONLY,
                     UserHandle.USER_SYSTEM) == null) {
                 PackageInfo packageInfo =
                         snapshot.getPackageInfo(packageName, 0, UserHandle.USER_SYSTEM);
@@ -5730,6 +5730,14 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
 
             scheduleWritePackageRestrictions(userId);
             return true;
+        }
+
+        public void setComponentEnabledSetting(ComponentName componentName,
+                int newState, int flags, int userId, String callingPackage) {
+            if (!mUserManager.exists(userId)) return;
+
+            setEnabledSettings(List.of(new PackageManager.ComponentEnabledSetting(componentName, newState, flags)),
+                    userId, callingPackage);
         }
 
         @Override

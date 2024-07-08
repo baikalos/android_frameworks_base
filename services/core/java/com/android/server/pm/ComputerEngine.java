@@ -1805,7 +1805,10 @@ public class ComputerEngine implements Computer {
 
         AndroidPackage p = mPackages.get(packageName);
         if (matchFactoryOnly && p != null && !p.isSystem()) {
-            return null;
+            if (DEBUG_PACKAGE_INFO) {
+                Log.v(TAG, "matchFactoryOnly not a system package " + packageName + ": " + p);
+                return null;
+            }
         }
         if (DEBUG_PACKAGE_INFO) {
             Log.v(TAG, "getPackageInfo " + packageName + ": " + p);
