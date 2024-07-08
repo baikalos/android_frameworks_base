@@ -17403,6 +17403,12 @@ public final class Settings {
          * This preference enabled forced Bypass Charging
          * @hide
          */
+        public static final String BAIKALOS_LIMITED_CHARGE_FORCE = "baikalos_limited_charge_force";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
         public static final String BAIKALOS_BPCHARGE_SCREEN_ON = "baikalos_bpcharge_screen_on";
 
         /**
@@ -17576,6 +17582,13 @@ public final class Settings {
          * @hide
          */
         @Readable
+        public static final String BAIKALOS_POWER_LEVEL_ON_CHARGER = "baikalos_power_level_on_charger";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
         public static final String BAIKALOS_POWER_LEVEL_STANDBY = "baikalos_power_level_standby";
 
         /**
@@ -17647,6 +17660,36 @@ public final class Settings {
          * @hide
          */
         public static final String BAIKALOS_OLD_LINKS = "baikalos_old_links";
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_PROFILE_MANAGER_REFRESH = "baikalos_profile_manager_refresh";
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_PS_MANAGER_REFRESH = "baikalos_ps_manager_refresh";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_DISABLE_GMS_SPOOF = "baikalos_disable_gms_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_APP_VOLUMES = "baikalos_app_volumes";
+
+
 
 
         /* End of BaikalOS Global Settings */
