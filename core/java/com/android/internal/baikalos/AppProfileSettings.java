@@ -141,6 +141,7 @@ public class AppProfileSettings extends AppProfileBase {
 
     public static void updateRulesForWhitelistedAppIdsBaikal(final SparseIntArray uidRules, int userId, int chain) {
     
+        
         AppProfileSettings _settings = AppProfileSettings.getInstance();
         if( _settings == null ) {
             Slog.e(TAG,"updateRulesForWhitelistedAppIdsBaikal: Not ready yet");
@@ -157,7 +158,7 @@ public class AppProfileSettings extends AppProfileBase {
         final HashMap<String, AppProfile> profilesByPackageName =  _settings._profilesByPackageName;
         final HashMap<Integer, AppProfile> profilesByUid =  _settings._profilesByUid;
 
-        final int minlevel = chain != 2 /*FIREWALL_CHAIN_DOZABLE*/ ? 0 : 1;
+        final int minlevel = chain != 2 ? 0 : 1;
 
         List<PackageInfo> installedAppInfo = packageManager.getInstalledPackages(0);
         for (PackageInfo info : installedAppInfo) {
@@ -170,17 +171,14 @@ public class AppProfileSettings extends AppProfileBase {
                 profile = new AppProfile(info.packageName, info.applicationInfo.uid);
             }
 
-            if( /*profile.mAllowWhileIdle ||*/
-                profile.mImportantApp ||
+            if( profile.mImportantApp ||
                 profile.mAllowIdleNetwork || 
                 profile.mStamina || 
                 profile.getBackgroundMode(false) < minlevel ) {
 
-                /*if( chain != 2  ) { */ /*FIREWALL_CHAIN_STANDBY*/
                     final int uid = UserHandle.getUid(userId, UserHandle.getAppId(info.applicationInfo.uid));
                     if( BaikalConstants.BAIKAL_DEBUG_NETWORK ) Slog.d(TAG,"updateRulesForWhitelistedAppIdsBaikal:" + info.packageName + "/" + uid + " " + chainToString(chain));
                     uidRules.put(uid, 1);
-                /* } */
             }
         }
     }

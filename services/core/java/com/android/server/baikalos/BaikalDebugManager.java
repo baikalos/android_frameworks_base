@@ -284,7 +284,7 @@ public class BaikalDebugManager {
         ActivityManagerDebugConfig.DEBUG_BROADCAST_DEFERRAL = ActivityManagerDebugConfig.DEBUG_BROADCAST;
         ActivityManagerDebugConfig.DEBUG_FREEZER = BaikalConstants.BAIKAL_DEBUG_FREEZER;
         ActivityManagerDebugConfig.DEBUG_NETWORK = BaikalConstants.BAIKAL_DEBUG_NETWORK;    
-        ActivityManagerDebugConfig.DEBUG_OOM_ADJ = BaikalConstants.BAIKAL_DEBUG_OOM;
+        ActivityManagerDebugConfig.DEBUG_OOM_ADJ = BaikalConstants.BAIKAL_DEBUG_OOM_RAW;
         ActivityManagerDebugConfig.DEBUG_OOM_ADJ_REASON = ActivityManagerDebugConfig.DEBUG_OOM_ADJ;
         ActivityManagerDebugConfig.DEBUG_POWER = BaikalConstants.BAIKAL_DEBUG_POWER;
         ActivityManagerDebugConfig.DEBUG_POWER_QUICK = ActivityManagerDebugConfig.DEBUG_POWER;

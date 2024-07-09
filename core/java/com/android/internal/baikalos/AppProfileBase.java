@@ -280,6 +280,7 @@ public class AppProfileBase extends ContentObserver {
                             if( replace != null ) {
                                 newProfilesByUid.remove(profile.mUid);
                                 newProfilesByUid.put(replace.mUid, replace);
+                                profile = replace;
                             }
                         }
     
@@ -382,19 +383,31 @@ public class AppProfileBase extends ContentObserver {
                                 HashMap<Integer, AppProfile> newProfilesByUid,
                                 HashMap<String,AppProfile> oldProfiles ) {
 
-        Slog.e(TAG, "Add system or important app:" + pkgName);
+        //Slog.e(TAG, "Add system or important app:" + pkgName);
 
         AppProfile profile = null;
 
+        //if( newProfiles.containsKey(pkgName)  ) {
+        //    profile = newProfiles.get(pkgName);
+        //}
+
+        if(/* profile == null &&*/ oldProfiles.containsKey(pkgName) && !newProfiles.containsKey(pkgName) ) {
+            AppProfile old_profile = oldProfiles.get(pkgName);
+            old_profile.clear();
+            profile = old_profile;
+            //newProfiles.put(profile.mPackageName, profile);
+        } 
+
         if( newProfiles.containsKey(pkgName)  ) {
-            profile = newProfiles.get(pkgName);
+            if( profile == null ) {
+                profile = newProfiles.get(pkgName);
+            } else {
+                profile.update(newProfiles.get(pkgName));
+                newProfiles.put(profile.mPackageName, profile);
+                newProfilesByUid.put(profile.mUid, profile);
+            }
         }
 
-        if( profile == null && oldProfiles.containsKey(pkgName) ) {
-            AppProfile old_profile = oldProfiles.get(pkgName);
-            profile = old_profile;
-            newProfiles.put(profile.mPackageName, profile);
-        } 
 
         if( profile == null ) {
             int uid = getAppUidLocked(pkgName);
@@ -443,7 +456,7 @@ public class AppProfileBase extends ContentObserver {
         if( !val.equals(appProfiles) ) {
             //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) { 
                 Slog.i(TAG, "Write new profile data string :" + val);
-                Slog.i(TAG, "Old profile data string :" + val);
+                Slog.i(TAG, "Old profile data string :" + appProfiles);
             //}
             Settings.Global.putString(mResolver,
                 Settings.Global.BAIKALOS_APP_PROFILES,val);

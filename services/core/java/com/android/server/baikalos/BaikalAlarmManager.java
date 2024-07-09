@@ -88,6 +88,8 @@ public class BaikalAlarmManager {
     private AppProfileSettings mAppSettings;
     private AppProfileManager mAppProfileManager;
 
+    private boolean mEnableDeviceComponents;
+
     static BaikalAlarmManager mInstance;
 
     final BaikalAlarmManagerHandler mHandler;
@@ -130,6 +132,7 @@ public class BaikalAlarmManager {
             mInstance = this;
             mAppSettings = AppProfileSettings.getInstance(); 
             mAppProfileManager = AppProfileManager.getInstance();
+            mEnableDeviceComponents = SystemProperties.getBoolean("persist.baikal.opt.srv", false);
         }
     }
 
@@ -176,6 +179,22 @@ public class BaikalAlarmManager {
             return 0;
         }
 
+        if( mAppProfileManager.isGmsUid(uid) ) {
+            if(  tag != null ) {
+
+                if( !mEnableDeviceComponents && tag.endsWith("ALARM_WAKEUP_ACTIVITY_DETECTION") ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". GCM blocked uid=" + uid);
+                    return 2;
+                }
+
+                if( tag.startsWith("com.google.android.gms.gcm") ||
+                    tag.endsWith("GCM_RECONNECT") ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". GCM exception uid=" + uid);
+                    return -1;
+                }
+            }
+        }
+
 
         AppProfile profile = mAppSettings.getProfile(packageName);
         if( profile != null ) {
@@ -202,7 +221,7 @@ public class BaikalAlarmManager {
         }
 
         if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". set to " + !mDisableWakeupByDefault + " for " + packageName);
-        return !mDisableWakeupByDefault ? -1 : 0;
+        return !mDisableWakeupByDefault ? -1 : 1;
     }
 
     public void setDisableWakeupByDefault(boolean disable) {

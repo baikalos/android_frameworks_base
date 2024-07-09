@@ -109,6 +109,7 @@ public class BaikalPowerSaveManager {
     private int mPowerLevelOn = 0;
     private int mPowerLevelStandby = 0;
     private int mPowerLevelIdle = 0;
+    private int mPowerLevelOnCharger = 0;
 
     private boolean mUnrestrictedNetwork;
 
@@ -148,7 +149,10 @@ public class BaikalPowerSaveManager {
     }
 
     public static PowerSaverPolicyConfig getCurrentPolicy() {
-        if( mCurrentPolicy == null ) return new PowerSaverPolicyConfig("<unlnown>",0);
+        if( mCurrentPolicy == null ) {
+            Slog.i(TAG,"mCurrentPolicy=null");
+            return new PowerSaverPolicyConfig("<unknown>",0);
+        }
         return mCurrentPolicy;
     }
 
@@ -161,11 +165,17 @@ public class BaikalPowerSaveManager {
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_POWER_LEVEL_ON),
                     false, this);
+
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_POWER_LEVEL_STANDBY),
                     false, this);
+
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_POWER_LEVEL_IDLE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_POWER_LEVEL_ON_CHARGER),
                     false, this);
 
                 mResolver.registerContentObserver(
@@ -179,6 +189,8 @@ public class BaikalPowerSaveManager {
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_POWERSAVER_POLICY),
                     false, this);
+
+
 
             } catch( Exception e ) {
             }
@@ -417,11 +429,13 @@ public class BaikalPowerSaveManager {
                     Settings.Global.BAIKALOS_UNRESTRICTED_NET,0) == 1;
         if( unrestrictedNetwork != mUnrestrictedNetwork ) {
             mUnrestrictedNetwork = unrestrictedNetwork;
+            changed = true;
         }
 
         int powerLevelOn = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_ON, POWERSAVER_POLICY_NONE);
         int powerLevelStandby = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_STANDBY, POWERSAVER_POLICY_NONE);
         int powerLevelIdle = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_IDLE, POWERSAVER_POLICY_NONE);
+        int powerLevelOnCharger = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_ON_CHARGER, POWERSAVER_POLICY_NONE);
 
         boolean forcedExtremeMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_EXTREME_IDLE, 0) != 0;
 
@@ -452,6 +466,11 @@ public class BaikalPowerSaveManager {
 
         if( powerLevelIdle != mPowerLevelIdle) { 
             mPowerLevelIdle = powerLevelIdle; 
+            changed = true;
+        }
+
+        if( powerLevelOnCharger != mPowerLevelOnCharger) { 
+            mPowerLevelOnCharger = powerLevelOnCharger; 
             changed = true;
         }
 
@@ -535,15 +554,16 @@ public class BaikalPowerSaveManager {
             Slog.i(TAG,"mPowerLevelStandby=" + mPowerLevelStandby);
             Slog.i(TAG,"mPowerLevelIdle=" + mPowerLevelIdle);
             Slog.i(TAG,"mForcedExtremeMode=" + mForcedExtremeMode);
+            Slog.i(TAG,"mPowerLevelOnCharger=" + mPowerLevelOnCharger);
             Slog.i(TAG,"mStamina=" + mStamina);
         }
         
         int powerSaverLevel = 0;
 
 
-        /*if( mIsPowered ) {
-            powerSaverLevel = POWERSAVER_POLICY_NONE;
-        } else*/ if( mStamina ) {
+        if( mIsPowered ) {
+            powerSaverLevel = setEffectiveMode(powerSaverLevel,mPowerLevelOnCharger);
+        } else if( mStamina ) {
             powerSaverLevel = setEffectiveMode(powerSaverLevel,POWERSAVER_POLICY_STAMINA);
         } else if( mForcedExtremeMode ) {
             powerSaverLevel = setEffectiveMode(powerSaverLevel,POWERSAVER_POLICY_BATTERY_SAVER);
@@ -561,6 +581,7 @@ public class BaikalPowerSaveManager {
 
         if( powerSaverLevel != mCurrentPowerSaverLevel || force ) {
 
+            mCurrentPowerSaverLevel = powerSaverLevel;
             if( powerSaverLevel >= POWERSAVER_POLICY_NONE && powerSaverLevel < POWERSAVER_POLICY_MAX ) {
                 if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
                 mCurrentPolicy = mPolicies[powerSaverLevel];
@@ -572,7 +593,6 @@ public class BaikalPowerSaveManager {
                 Slog.wtf(TAG,"INVALID mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
             }
 
-            mCurrentPowerSaverLevel = powerSaverLevel;
             if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
         }
     }

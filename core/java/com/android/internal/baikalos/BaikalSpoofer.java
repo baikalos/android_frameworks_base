@@ -42,6 +42,9 @@ import android.provider.Settings;
 import android.baikalos.AppProfile;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -52,6 +55,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import dalvik.system.PathClassLoader;
 
 import android.graphics.Shader.TileMode;
 
@@ -70,6 +74,8 @@ public class BaikalSpoofer {
 
     private static final String TAG = "BaikalSpoofer";
 
+    private static String GMS_SECURITY_PATCH = "2017-12-05";
+
     private static OverrideSharedPrefsId sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_NONE;
     private static OverrideSystemPropertiesId sOverrideSystemPropertiesId = OverrideSystemPropertiesId.OVERRIDE_NONE;
 
@@ -79,6 +85,7 @@ public class BaikalSpoofer {
     private static volatile boolean sPreventHwKeyAttestation = false;
     private static volatile boolean sHideDevMode = false;
     private static volatile boolean sAutoRevokeDisabled = false;
+    private static volatile boolean sDisableGmsSpoof = false;
 
     private static String sPackageName = null;
     private static String sProcessName = null;
@@ -92,6 +99,9 @@ public class BaikalSpoofer {
 
     private static boolean sOverrideAudioUsage = false;
     private static int sBaikalSpooferActive = 0;
+
+    private static AppVolumeDB sAppVolumeDB;
+
 
 
         //CLAMP   (0),
@@ -171,8 +181,7 @@ public class BaikalSpoofer {
 
     public static void maybeSpoofProperties(Application app, Context context) {
         sBaikalSpooferActive++;
-        maybeSpoofBuild(app.getPackageName(), app.getProcessName(), context);
-        maybeSpoofDevice(app.getPackageName(), context);
+        maybeSpoofDevice(app, context);
     }
 
     public static int maybeSpoofFeature(String packageName, String name, int version) {
@@ -335,6 +344,13 @@ public class BaikalSpoofer {
         
         if(  sIsGmsUnstable ) {
 
+            if( sDisableGmsSpoof ) {
+                Log.e(TAG, "Spoof Device for GMS SN disabled: " + Application.getProcessName());
+                sIsExcluded = true;
+                return;
+            }
+
+
             sOverrideSystemPropertiesId = OverrideSystemPropertiesId.OVERRIDE_COM_GOOGLE_GMS_UNSTABLE;
             Log.e(TAG, "Spoof Device for GMS SN check: " + Application.getProcessName());
 
@@ -349,19 +365,21 @@ public class BaikalSpoofer {
             setVersionField("DEVICE_INITIAL_SDK_INT", 23);
             setVersionField("SECURITY_PATCH", "2016-10-01");*/
 
-            setBuildField("BRAND", "motorola");
-            setBuildField("PRODUCT", "griffin_retcn");
-            setBuildField("MODEL", "XT1650-05");
-        	setBuildField("MANUFACTURER", "motorola");
-            setBuildField("DEVICE", "griffin");
-            setBuildField("ID", "MCC24.246-37");
-            setBuildField("FINGERPRINT", "motorola/griffin_retcn/griffin:6.0.1/MCC24.246-37/42:user/release-keys");
-            //setVersionField("DEVICE_INITIAL_SDK_INT", 24);
-            setVersionField("SECURITY_PATCH", "2016-07-01");
-
-            //setBuildField("ID", "NJH47F");
+        	setBuildField("MANUFACTURER", "Google");
+            setBuildField("MODEL", "Pixel");
+            setBuildField("FINGERPRINT", "google/sailfish/sailfish:8.1.0/OPM1.171019.011/4448085:user/release-keys");
+            setBuildField("BRAND", "google");
+            setBuildField("PRODUCT", "sailfish");
+            setBuildField("DEVICE", "sailfish");
+            setVersionField("RELEASE", "8.1.0");
+            setBuildField("ID", "OPM1.171019.011");
+            setVersionField("INCREMENTAL", "4448085");
             setBuildField("TYPE", "user");
             setBuildField("TAGS", "release-keys");
+            setVersionField("SECURITY_PATCH", GMS_SECURITY_PATCH);
+            setVersionField("DEVICE_INITIAL_SDK_INT", 25);
+
+
         } else if( "com.android.vending".equals(packageName) ) {
             sIsFinsky = true;
         }
@@ -371,10 +389,20 @@ public class BaikalSpoofer {
             sIsExcluded = true;
             return;
         }
+
+        if( sIsFinsky && sDisableGmsSpoof ) {
+            Log.e(TAG, "Spoof Device for GMS SN disabled: " + Application.getProcessName());
+            sIsExcluded = true;
+            return;
+        }
+
     }
 
 
-    private static void maybeSpoofDevice(String packageName, Context context) {
+    private static void maybeSpoofDevice(Application app, Context context) {
+
+        String packageName = app.getPackageName();
+        String processName = app.getProcessName();
 
         sContext = context;
 
@@ -394,6 +422,23 @@ public class BaikalSpoofer {
             return;
         }
 
+        try {
+            sDisableGmsSpoof = Settings.Global.getInt(context.getContentResolver(),
+                Settings.Global.BAIKALOS_DISABLE_GMS_SPOOF,0) == 1;
+
+        } catch(Exception er) {
+            Log.e(TAG, "Failed to read gms spoof status for:" + packageName, er);
+        };
+
+
+        try {
+            sAppVolumeDB = new AppVolumeDB(context);
+        } catch(Exception er) {
+            Log.e(TAG, "Failed to load volume db for:" + packageName, er);
+        };
+
+        maybeSpoofBuild(packageName, processName,  context);
+
         setOverrideSharedPrefs(packageName);
 
         int device_id = -1;
@@ -411,7 +456,7 @@ public class BaikalSpoofer {
                 sAutoRevokeDisabled = Settings.Global.getInt(context.getContentResolver(),
                         Settings.Global.BAIKALOS_DISABLE_AUTOREVOKE,0) == 1;
             } catch(Exception er) {
-                Log.e(TAG, "Failed to read auto revoke status for:" + packageName);
+                Log.e(TAG, "Failed to read auto revoke status for:" + packageName, er);
             };
 
             AppProfile profile = null;
@@ -524,7 +569,6 @@ public class BaikalSpoofer {
             throw new UnsupportedOperationException();
         } 
 
-
         if (sIsExcluded) return;
     
         // Check stack for SafetyNet
@@ -538,10 +582,11 @@ public class BaikalSpoofer {
         }
     }
 
+
     private static void setOverrideSharedPrefs(String packageName) {
         sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_NONE;
         if( "com.android.camera".equals(packageName) ) sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_COM_ANDROID_CAMERA;
-        if( "com.google.android.gms".equals(packageName) ) sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_COM_GOOGLE_GMS;
+        if( !sDisableGmsSpoof && "com.google.android.gms".equals(packageName) ) sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_COM_GOOGLE_GMS;
 
     }
 
@@ -672,18 +717,25 @@ public class BaikalSpoofer {
     }
 
     private static String overrideGmsUnstableString(String key, String def) {
-        if( "ro.product.first_api_level".equals(key) ) return "24";
-        if( "ro.build.version.security_patch".equals(key) ) return "2016-07-01";
+        if( key != null ) {
+            if( key.endsWith(".first_api_level") ) return "25";
+            if( key.endsWith(".security_patch") ) return GMS_SECURITY_PATCH;
+            if( key.endsWith(".build.id") ) return "OPM1.171019.011";
+        }
         return def;
     }
 
     private static int overrideGmsUnstableInt(String key, int def) {
-        if( "ro.product.first_api_level".equals(key) ) return 24;
+        if( key != null ) {
+            if( key.endsWith(".first_api_level") ) return 25;
+        }
         return def;
     }
 
     private static long overrideGmsUnstableLong(String key, long def) {
-        if( "ro.product.first_api_level".equals(key) ) return 24;
+        if( key != null ) {
+            if( key.endsWith(".first_api_level") ) return 25;
+        }
         return def;
     }
 
@@ -765,9 +817,9 @@ public class BaikalSpoofer {
 
 
 
-    public static AudioDeviceInfo overridePrefferedDevice(AudioRouting self, AudioDeviceInfo originalDeviceInfo, boolean record) {
+    public static AudioDeviceInfo overridePreferredDevice(AudioRouting self, AudioDeviceInfo originalDeviceInfo, boolean record) {
         if( AppProfile.getCurrentAppProfile().mSonification != 0 ) {
-            setBuiltinDevices();
+            if( sBuiltinPlaybackDevice == null || sBuiltinRecordingDevice == null ) setBuiltinDevices();
             if( !record ) {
                 if( AppProfile.isDebug() ) Log.i(TAG,"overridePrefferedDevice playback :" + originalDeviceInfo + "->" + sBuiltinPlaybackDevice, new Throwable());
                 return sBuiltinPlaybackDevice;
@@ -779,19 +831,20 @@ public class BaikalSpoofer {
         return originalDeviceInfo;
     }
 
-    public static boolean updatePreferredDevice(AudioRouting self, AudioDeviceInfo originalDeviceInfo, boolean record) {
+    public static AudioDeviceInfo updatePreferredDevice(AudioRouting self, AudioDeviceInfo originalDeviceInfo, boolean record) {
         if( AppProfile.getCurrentAppProfile().mSonification != 0 ) {
-            setBuiltinDevices();
+            if( sBuiltinPlaybackDevice == null || sBuiltinRecordingDevice == null ) setBuiltinDevices();
             if( !record ) {
-                if( sBuiltinPlaybackDevice != null ) self.setPreferredDevice(sBuiltinPlaybackDevice);
+                if( sBuiltinPlaybackDevice != null && (originalDeviceInfo == null || originalDeviceInfo.getId() != sBuiltinPlaybackDevice.getId()) ) self.setPreferredDevice(sBuiltinPlaybackDevice);
                 if( AppProfile.isDebug() ) Log.i(TAG,"updatePreferredDevice playback:" + originalDeviceInfo + "->" + sBuiltinPlaybackDevice, new Throwable());
+                return sBuiltinPlaybackDevice;
             } else {
-                if( sBuiltinRecordingDevice != null ) self.setPreferredDevice(sBuiltinRecordingDevice);
+                if( sBuiltinRecordingDevice != null && (originalDeviceInfo == null || originalDeviceInfo.getId() != sBuiltinRecordingDevice.getId()) ) self.setPreferredDevice(sBuiltinRecordingDevice);
                 if( AppProfile.isDebug() ) Log.i(TAG,"updatePreferredDevice record:" + originalDeviceInfo + "->" + sBuiltinRecordingDevice, new Throwable());
+                return sBuiltinRecordingDevice;
             }
-            return true;
         }
-        return false;
+        return originalDeviceInfo;
     }
 
     public static AudioAttributes overrideAudioAttributes(AudioAttributes attributes, String logTag) {

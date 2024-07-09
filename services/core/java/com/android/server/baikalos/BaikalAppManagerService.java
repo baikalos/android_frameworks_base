@@ -101,8 +101,11 @@ public final class BaikalAppManagerService extends SystemService {
     public static final String[] DOLBY_PACKAGES = 
     {
         "com.dolby.daxservice",
-        "com.motorola.dolby.dolbyui"
+        "com.dolby.daxappui"
     };
+
+//        "com.motorola.dolby.dolbyui",
+
 
     /*public static final String[] DOLBY_PACKAGES = 
     {

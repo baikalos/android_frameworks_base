@@ -177,12 +177,6 @@ public class AppProfile {
     public boolean mHide3P;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mSystemApp;
-
-    @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mImportantApp;
-
-    @SuppressLint({"MutableBareField","InternalField"})
     public boolean mAllowWhileIdle;
 
     @SuppressLint({"MutableBareField","InternalField"})
@@ -198,10 +192,32 @@ public class AppProfile {
     public boolean mOldLinks;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public int mLocationLevel;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mPriviledgedPhoneState;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mSystemApp;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mImportantApp;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mIsGmsPersistent;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mIsGmsUnstable;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mIsGms;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean isInvalidated;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mIsInitialized;
+
 
     private int mCurAdj = 0;
 
@@ -303,36 +319,9 @@ public class AppProfile {
     }*/
 
     private AppProfile() {
-        mPerfProfile = 0;
-        mThermalProfile = 0;
         mPackageName = "";
-        mMaxFrameRate = 0;
-        mMinFrameRate = 0;
-        mRotation = 0;
-        mAudioMode = 0;
-        mSpoofDevice = 0;
-        mCamera = 0;
-        mPerformanceLevel = 0;
-        mMicrophone = 0;
-        mFreezerMode = 0;
-        mSystemWhitelisted = false;
-        mAllowIdleNetwork = false;
-        mFileAccess = 0;
-        mOverrideFonts = false;
-        mDebug = false;
-        mHeavyMemory = false;
-        mHeavyCPU = false;
-        mBlockOverlays = false;
-        mHideHMS = false;
-        mHideGMS = false;
-        mHide3P = false;
-        mSystemApp = false;
-        mImportantApp = false;
-        mAllowWhileIdle = false;
-        mHideIdle = false;
-        mInstaller = 0;
-        mScaleFactor = 0;
-        mOldLinks = false;
+        mUid = -1;
+        clear();
     }
 
     public AppProfile(@Nullable String packageName, int uid) {
@@ -341,6 +330,16 @@ public class AppProfile {
         else mPackageName = packageName;
 
         mUid = uid;
+        clear();
+    }
+
+    public AppProfile(@Nullable AppProfile profile) {
+        update(profile);
+    }
+
+
+    public void clear() {
+
         mPerfProfile = 0;
         mThermalProfile = 0;
         mMaxFrameRate = 0;
@@ -369,13 +368,22 @@ public class AppProfile {
         mHideIdle = false;
         mInstaller = 0;
         mScaleFactor = 0;
+        mLocationLevel = 0;
         mOldLinks = false;
-    }
+        mPriviledgedPhoneState = false;
 
-    public AppProfile(@Nullable AppProfile profile) {
-        update(profile);
-    }
+        mSystemApp = false;
+        mImportantApp = false;
+        mAllowWhileIdle = false;
+        mIsInitialized = false;
+        mSystemWhitelisted = false;
 
+        mIsGms = false;
+        mIsGmsPersistent = false;
+        mIsGmsUnstable = false;
+
+        isInvalidated = true;
+    }
 
     public void setCurAdj(int adj) {
         mCurAdj = adj;
@@ -393,7 +401,7 @@ public class AppProfile {
     public int getBackgroundMode(boolean disableOnPowerSaver) {
         if( !DEBUG ) return getBackgroundModeInternal(disableOnPowerSaver);
         int result = getBackgroundModeInternal(disableOnPowerSaver);
-        if( TRACE && result > 0 ) {
+        if( TRACE && result != 0 ) {
             if( mDebug ) {
                 Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid + " result=" + result, new Throwable());
             } else {
@@ -406,20 +414,58 @@ public class AppProfile {
     public int getBackgroundModeInternal(boolean disableOnPowerSaver) {
 
         if( (isInvalidated ||
+            !mIsInitialized) && mUid >=0 && mUid < 10000 ) {
+            mImportantApp = true;
+            // mAllowWhileIdle = true;
+            mStamina = true;
+            mIsInitialized = true;
+            isInvalidated = false;
+        }
+
+        if( (isInvalidated ||
             !mIsInitialized) &&
             mPackageName != null &&
             (  mPackageName.startsWith("com.google.android.gms") 
             || mPackageName.startsWith("com.huawei.hms") 
             || mPackageName.startsWith("com.huawei.hwid")
             && ! ( mPackageName.contains("auto_generated_rro_") ) ) ) {
-            mSystemWhitelisted = true;
-            mImportantApp = true;
-            //mAllowWhileIdle = true;
+
+            if( mPackageName.startsWith("com.google.android.gms") ) mIsGms = true;
+        
+            if( (mIsGms && mIsGmsPersistent) || !mIsGms) {
+                mSystemWhitelisted = true;
+                mStamina = true;
+                mImportantApp = true;
+            } else {
+                mSystemWhitelisted = false;
+                mStamina = false;
+                mImportantApp = false;
+            }
+            // mAllowWhileIdle = true;
+            mPriviledgedPhoneState = true;
             mAllowIdleNetwork = true;
             mIsInitialized = true;
+            isInvalidated = false;
         }
 
-        if( TRACE && mDebug ) Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid, new Throwable());
+        if( (isInvalidated ||
+            !mIsInitialized) &&
+            mPackageName != null &&
+            mPackageName.equals("com.android.systemui") ) {
+            mImportantApp = true;
+            // mAllowWhileIdle = true;
+            mPriviledgedPhoneState = true;
+            mIsInitialized = true;
+            isInvalidated = false;
+        }
+
+        //if( TRACE && mDebug ) Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid, new Throwable());
+
+        if( mIsGms && !mIsGmsPersistent /*&& !mIsGmsUnstable*/ ) {
+            int rc = 0; // mSystemWhitelisted ? -1 : mBackgroundMode >=0 ? ;
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(-2) non important gms: " + rc);
+            return rc;
+        }
 
         if( mSystemWhitelisted ) {
             if( mBackgroundMode >= 0 ) { 
@@ -429,9 +475,9 @@ public class AppProfile {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(2) mSystemWhitelisted:" + mBackgroundMode);
             return mBackgroundMode;
         }
-        /*
+        
         if( sTopUid == mUid ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(0) mTopUid:" + mode);
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(0) mTopUid:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
@@ -470,10 +516,10 @@ public class AppProfile {
             return mBackgroundMode;
         }
 
-        if( mCurAdj < 500 )  {
+        if( mCurAdj <= 100 )  {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9.1) mCurAdj:" + mBackgroundMode);
             return mBackgroundMode;
-        }*/
+        }
 
         /*if( mBackgroundMode > 0 && !sScreenOn )  {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(10) mBackgroundMode:2");
@@ -573,6 +619,8 @@ public class AppProfile {
             mInstaller == 0 &&
             mScaleFactor == 0 &&
             mPerfProfile == 0 &&
+            mLocationLevel == 0 &&
+            !mPriviledgedPhoneState &&
             mThermalProfile == 0 ) return true;
         return false;
     }
@@ -636,6 +684,11 @@ public class AppProfile {
         this.mInstaller = profile.mInstaller;
         this.mScaleFactor = profile.mScaleFactor;
         this.mOldLinks = profile.mOldLinks;
+        this.mLocationLevel = profile.mLocationLevel;
+        this.mPriviledgedPhoneState = profile.mPriviledgedPhoneState;
+        this.mIsGms = profile.mIsGms;
+        this.mIsGmsPersistent = profile.mIsGmsPersistent;
+        this.mIsGmsUnstable = profile.mIsGmsUnstable;
         if( TRACE || mDebug ) Slog.d(TAG, "AppProfile updated :" + profile.serialize());
     }
 
@@ -690,7 +743,10 @@ public class AppProfile {
         if( mInstaller != 0 ) result +=  "," + "ins=" + mInstaller;
         if( mScaleFactor != 0 ) result +=  "," + "dsf=" + mScaleFactor;
         if( mOldLinks ) result +=  "," + "olnk=" + mOldLinks;
-       
+        if( mLocationLevel != 0 ) result +=  "," + "llv=" + mLocationLevel;
+        if( mPriviledgedPhoneState ) result +=  "," + "pvps=" + mPriviledgedPhoneState;
+
+
 
         return result;
     }
@@ -756,6 +812,9 @@ public class AppProfile {
             mInstaller = parser.getInt("ins",0);
             mScaleFactor = parser.getInt("dsf",0);
             mOldLinks = parser.getBoolean("olnk",false);
+            mLocationLevel = parser.getInt("llv",0);
+            mPriviledgedPhoneState = parser.getBoolean("pvps",false);
+
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
@@ -779,7 +838,10 @@ public class AppProfile {
     }*/
 
     public String toString() {
-        return this.serialize();
+        String result = this.serialize();
+        if( mSystemApp ) result += ",sys=true";
+        if( mImportantApp ) result +=",imp=true";
+        return result;
     }
 
 

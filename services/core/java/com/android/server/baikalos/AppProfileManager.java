@@ -22,6 +22,7 @@ import static com.android.server.am.ProcessList.SCHED_GROUP_RESTRICTED;
 import static com.android.server.am.ProcessList.SCHED_GROUP_DEFAULT;
 import static com.android.server.am.ProcessList.SCHED_GROUP_TOP_APP;
 import static com.android.server.am.ProcessList.SCHED_GROUP_TOP_APP_BOUND;
+import static android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE;
 
 import static com.android.server.pm.verify.domain.DomainVerificationCollector.RESTRICT_DOMAINS;
 
@@ -51,6 +52,16 @@ import static android.os.PowerManagerInternal.WAKEFULNESS_AWAKE;
 import static android.os.PowerManagerInternal.WAKEFULNESS_DREAMING;
 import static android.os.PowerManagerInternal.WAKEFULNESS_DOZING;
 
+import static android.location.LocationManager.FUSED_PROVIDER;
+import static android.location.LocationManager.GPS_PROVIDER;
+import static android.location.LocationManager.NETWORK_PROVIDER;
+import static android.location.LocationManager.PASSIVE_PROVIDER;
+
+import static android.location.LocationRequest.QUALITY_BALANCED_POWER_ACCURACY;
+import static android.location.LocationRequest.QUALITY_HIGH_ACCURACY;
+import static android.location.LocationRequest.QUALITY_LOW_POWER;
+import static android.location.LocationRequest.PASSIVE_INTERVAL;
+
 import android.util.Slog;
 
 import android.content.Context;
@@ -58,7 +69,10 @@ import android.os.FileUtils;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.os.Binder;
 import android.os.UserHandle;
+import android.os.WorkSource;
+import android.os.WorkSource.WorkChain;
 import android.os.IPowerManager;
 import android.os.PowerManager;
 import android.os.SystemProperties;
@@ -112,9 +126,19 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
+import com.android.internal.baikalos.AppVolumeDB;
 
 import com.android.server.LocalServices;
 import com.android.server.am.ActivityManagerConstants;
+
+
+import android.location.LocationManager;
+import android.location.LocationProvider;
+import android.location.LocationRequest;
+import android.location.LastLocationRequest;
+import android.location.util.identity.CallerIdentity;
+
+import com.android.server.location.provider.LocationProviderManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -177,6 +201,7 @@ public class AppProfileManager {
 
     private boolean mSmartBypassChargingEnabled;
     private boolean mBypassChargingForced;
+    private boolean mLimitedChargingForced;
     private boolean mBypassChargingScreenOn;
     private boolean mLimitedChargingScreenOn;
 
@@ -196,6 +221,8 @@ public class AppProfileManager {
     private boolean mPhoneCall = false;
     private boolean mAudioPlaying = false;
 
+    private boolean mForcedUpdate = false;
+
     private int mGmsUid = -1;
 
     TelephonyManager mTelephonyManager;
@@ -204,6 +231,8 @@ public class AppProfileManager {
     static BaikalDebugManager mDebugManager;
     static BaikalBoostManager mBoostManager;
     static BaikalPowerSaveManager mBaikalPowerSaveManager;
+    static AppVolumeDB mAppVolumeDB;
+
 
     private PowerManagerInternal mPowerManagerInternal;
     private ActivityManagerConstants mAmConstants;
@@ -240,6 +269,10 @@ public class AppProfileManager {
             super(handler);
 
             try {
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_PROFILE_MANAGER_REFRESH),
+                    false, this);
+
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_BPCHARGE_FORCE),
                     false, this);
@@ -337,6 +370,7 @@ public class AppProfileManager {
         mLooper = looper;
         mHandler = new AppProfileManagerHandler(mLooper);
         mAmConstants = amConstants;
+        mAppVolumeDB = new AppVolumeDB(mContext);
 
         final Resources resources = mContext.getResources();
 
@@ -424,6 +458,12 @@ public class AppProfileManager {
             mSystemDefaultMaxFps = maxFps;
 
             mResolver = mContext.getContentResolver();
+
+            Settings.Global.putInt(mResolver, Settings.Global.BAIKALOS_STAMINA_ENABLED, 0);
+            Settings.Global.putInt(mResolver, Settings.Global.BAIKALOS_EXTREME_IDLE, 0);
+            Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0);
+
+
             mObserver = new AppProfileContentObserver(mHandler);
 
             mGmsUid = BaikalConstants.getUidByPackage(mContext, "com.google.android.gms");
@@ -434,6 +474,7 @@ public class AppProfileManager {
             mBaikalPowerSaveManager = BaikalPowerSaveManager.getInstance(mLooper,mContext,mAmConstants); 
             mBaikalPowerSaveManager.initialize();
 
+            mAppVolumeDB.loadVolumes(true);
         }
     }
 
@@ -441,6 +482,16 @@ public class AppProfileManager {
     protected void updateConstantsLocked() {
         
         boolean changed = false;
+
+        boolean refresh = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_PROFILE_MANAGER_REFRESH, 0) != 0;
+        if( refresh ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings forced reload request");
+            Settings.Global.putInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_PROFILE_MANAGER_REFRESH, 0);
+            mForcedUpdate = true;
+            return;
+        }
+
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings update mForcedUpdate=" + mForcedUpdate);
 
         mAggressiveMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) != 0;
         mAggressiveIdleMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) != 0;
@@ -474,9 +525,15 @@ public class AppProfileManager {
             changed = true;
         }
 
-        boolean forced = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0) != 0;
-        if( mBypassChargingForced != forced ) {
-            mBypassChargingForced = forced;
+        boolean bypassForced = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0) != 0;
+        if( mBypassChargingForced != bypassForced ) {
+            mBypassChargingForced = bypassForced;
+            changed = true;
+        }
+
+        boolean limitedForced = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0) != 0;
+        if( mLimitedChargingForced != limitedForced ) {
+            mLimitedChargingForced = limitedForced;
             changed = true;
         }
 
@@ -532,8 +589,9 @@ public class AppProfileManager {
         boolean autoLimit = false; //Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AUTO_LIMIT, 0) != 0;
         changed |= AppProfile.setAutoLimit(autoLimit);
 
-        if( changed ) {
-            activateCurrentProfileLocked(false,false);
+        if( changed || mForcedUpdate ) {
+            activateCurrentProfileLocked(mForcedUpdate,false);
+            mForcedUpdate = false;
         }
     }
 
@@ -1227,7 +1285,13 @@ public class AppProfileManager {
 
     public AppProfile getAppProfile(String packageName, int uid) {
         AppProfile profile = mAppSettings != null ? mAppSettings.getProfile(packageName) : null;
-        return profile != null ? profile : new AppProfile(packageName, uid);
+        
+        if( profile != null ) return profile;
+        if( uid == -1 ) uid = BaikalConstants.getUidByPackage(mContext, packageName);
+        if( uid == -1 ) {
+            uid = 99999;
+        }
+        return new AppProfile(packageName,uid);
     }
 
     public AppProfile getAppProfile(int uid) {
@@ -1276,6 +1340,14 @@ public class AppProfileManager {
     }
 
     public boolean isBlocked(AppProfile profile, String packageName, int uid) {
+        boolean result = isBlockedInternal(profile, packageName, uid);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+            Slog.w(TAG, "isBlocked: " + result + ", pn=" + (profile == null ? "null" : profile.toString())  + ", pkg=" + packageName + "/" + uid);
+        }
+        return result;
+    }
+
+    public boolean isBlockedInternal(AppProfile profile, String packageName, int uid) {
         if( mAppSettings == null ) return false;
         if( uid < Process.FIRST_APPLICATION_UID ) return false;
         if( profile == null ) {
@@ -1412,6 +1484,7 @@ public class AppProfileManager {
             Slog.i(TAG,"mBypassChargingAvailable=" + mBypassChargingAvailable +
                     ", mSmartBypassChargingEnabled=" + mSmartBypassChargingEnabled +
                     ", mBypassChargingForced=" + mBypassChargingForced +
+                    ", mLimitedChargingForced=" + mLimitedChargingForced +
                     ", mBypassChargingScreenOn=" + mBypassChargingScreenOn +
                     ", mCurrentProfile.mBypassCharging=" + mCurrentProfile.mBypassCharging +
                     ", mLimitedChargingScreenOn=" + mLimitedChargingScreenOn +
@@ -1428,7 +1501,7 @@ public class AppProfileManager {
         }
 
         boolean bypassEnabled = mSmartBypassChargingEnabled | mCurrentProfile.mBypassCharging | mBypassChargingForced | (mBypassChargingScreenOn && mScreenMode);
-        boolean limitedEnabled = !"none".equals(mPowerInputLimitValue) && mLimitedChargingScreenOn && mScreenMode;
+        boolean limitedEnabled = !"none".equals(mPowerInputLimitValue) && (mLimitedChargingForced || (mLimitedChargingScreenOn && mScreenMode));
 
         try {
             if( !bypassEnabled && limitedEnabled ) {
@@ -1504,4 +1577,211 @@ public class AppProfileManager {
 
 // ----------------- READER MODE --------------
 
+// Location
+
+    public static boolean isLocationProviderEnabled(String name) {
+
+        int uid = Binder.getCallingUid();
+
+        int level = getLocationLevel(uid);
+        switch(level) {
+            case 0:
+                return true;
+            case 1:
+                return true;
+            case 5:
+                if( name.equals(PASSIVE_PROVIDER) ) return false;
+            case 4:
+                if( name.equals(NETWORK_PROVIDER) ) return false;
+            case 3:
+                if( name.equals(FUSED_PROVIDER) ) return false;
+            case 2:
+                if( name.equals(GPS_PROVIDER) ) return false;
+
+        }
+        return true;
+    }
+
+    public static String overrideProvider(String provider, LocationRequest request, CallerIdentity identity) {
+
+        int uid = identity.getUid(); //Binder.getCallingUid();
+
+        if( request != null ) {
+            WorkSource workSource = new WorkSource(request.getWorkSource());
+            if (workSource != null && !workSource.isEmpty()) {
+                WorkChain workChain = getFirstNonEmptyWorkChain(workSource);
+                if (workChain != null) {
+                    uid = workChain.getAttributionUid();
+                } else {
+                    uid = workSource.getUid(0);
+                }
+                //Slog.i(TAG, "overrideProvider: Using workSource=" + workSource);
+            }
+        }
+
+        int level = getLocationLevel(uid);
+        if( level < 2 ) return provider;
+        if( level > 4 ) {
+            //Slog.i(TAG, "overrideProvider: NONE Using uid=" + uid);
+            return null;
+        } else if( level > 3 ) {
+            //Slog.i(TAG, "overrideProvider: PASSIVE Using uid=" + uid);
+            return PASSIVE_PROVIDER;
+        } else {
+            if( GPS_PROVIDER.equals(provider) ) {
+                //Slog.i(TAG, "overrideProvider: NETWORK Using uid=" + uid);
+                return NETWORK_PROVIDER;
+            }
+        }
+        return provider;
+    }
+
+    public static int getRequestUid(int uid, LocationRequest request) {
+
+        WorkSource workSource = new WorkSource(request.getWorkSource());
+        if (workSource != null && !workSource.isEmpty()) {
+            WorkChain workChain = getFirstNonEmptyWorkChain(workSource);
+            if (workChain != null) {
+                uid = workChain.getAttributionUid();
+            } else {
+                uid = workSource.getUid(0);
+            }
+            //Slog.i(TAG, "getRequestUid: Using workSource=" + workSource);
+        }
+        return uid;
+    }
+
+
+    public static LocationRequest.Builder sanitizeLocationRequest(LocationRequest.Builder source, CallerIdentity identity) {
+
+        int uid = identity.getUid(); //Binder.getCallingUid();
+
+        LocationRequest request = source.build();
+
+        LocationRequest.Builder sanitized = new LocationRequest.Builder(request);
+
+        WorkSource workSource = new WorkSource(request.getWorkSource());
+        if (workSource != null && !workSource.isEmpty()) {
+            WorkChain workChain = getFirstNonEmptyWorkChain(workSource);
+            if (workChain != null) {
+                uid = workChain.getAttributionUid();
+            } else {
+                uid = workSource.getUid(0);
+            }
+            //Slog.i(TAG, "sanitizeLocationRequest: Using workSource=" + workSource);
+        }
+
+        int level = getLocationLevel(uid);
+        switch(level) {
+            case 0:
+                return sanitized;
+
+            case 1: // FULL
+                sanitized.setQuality(QUALITY_HIGH_ACCURACY);
+                sanitized.setMinUpdateIntervalMillis(0);
+                sanitized.setMinUpdateDistanceMeters(0);
+                return sanitized;
+            case 5: // NONE
+                //sanitized.setMinUpdateIntervalMillis( 180*60*1000 );
+                //sanitized.setIntervalMillis(PASSIVE_INTERVAL);
+                //sanitized.setQuality(POWER_LOW);
+            case 4: // PASSIVE
+                sanitized.setMinUpdateIntervalMillis( 180*60*1000 );
+                sanitized.setIntervalMillis(PASSIVE_INTERVAL);
+                sanitized.setQuality(QUALITY_LOW_POWER);
+                return sanitized;
+
+            case 3: // COARSE CITY
+                sanitized.setQuality(QUALITY_LOW_POWER);
+                return sanitized;
+
+            case 2: // COARSE BLOCK
+                sanitized.setQuality(QUALITY_BALANCED_POWER_ACCURACY);
+                return sanitized;
+
+        }
+        return sanitized;
+    }
+
+
+    public static int getLocationLevel(int uid) {
+
+        //Slog.i(TAG, "getLocationLevel: uid=" + uid);
+        if( mInstance == null ) return 0;
+
+        if( mInstance.isGmsUid(uid) ) return 0;
+
+        AppProfile profile = mInstance.getAppProfile(uid);
+        if( profile == null ) return 0;
+        return profile.mLocationLevel;    
+    }
+
+    private static WorkChain getFirstNonEmptyWorkChain(WorkSource workSource) {
+        if (workSource.getWorkChains() == null) {
+            return null;
+        }
+
+        for (WorkChain workChain: workSource.getWorkChains()) {
+            if (workChain.getSize() > 0) {
+                return workChain;
+            }
+        }
+
+        return null;
+    }
+
+    public static boolean checkComponentPermission(String permission, int pid, int uid,
+            int owningUid, boolean exported) {
+
+        if( mInstance == null ) return false;
+
+        if( mInstance.mContext != null ) {
+            String packageName = BaikalConstants.getPackageByUid(mInstance.mContext, uid);
+            return checkPermission(packageName, permission, 0);
+        }
+        return false;
+    }
+
+
+    public static boolean checkPermission(String pkgName, String permName, int userId) {
+
+        if( mInstance == null ) return false;
+
+        if (pkgName == null || permName == null) {
+            return false;
+        }
+
+        if( permName.startsWith("com.huawei") ) {
+            if( pkgName.startsWith("com.huawei") ) {
+                Slog.i(TAG, "checkPermission: huawei " + permName + " granted for " + pkgName);
+                return true;
+            }
+        }
+
+        if( permName.equals(READ_PRIVILEGED_PHONE_STATE) ) {
+            if( pkgName.equals("android") ) {
+                //Slog.d(TAG, "checkPermission: READ_PRIVILEGED_PHONE_STATE granted for " + pkgName);
+                return true;
+            }
+            AppProfile profile = mInstance.getAppProfile(pkgName,-1);
+            if( profile != null ) {
+                if( profile.mPriviledgedPhoneState ) {
+                    Slog.d(TAG, "checkPermission: READ_PRIVILEGED_PHONE_STATE granted for " + pkgName);
+                    return true;
+                }
+            } 
+            Slog.d(TAG, "checkPermission: READ_PRIVILEGED_PHONE_STATE denied for " + pkgName);
+        }
+        return false;
+    }
+
+    public static boolean checkUidPermission(int uid, String permName) {
+        if( mInstance == null ) return false;
+
+        if( mInstance.mContext != null ) {
+            String packageName = BaikalConstants.getPackageByUid(mInstance.mContext, uid);
+            return checkPermission(packageName, permName, 0);
+        }
+        return false;
+    }
 }
