@@ -4736,7 +4736,7 @@ public final class ActiveServices {
 
         // Check to see if the service had been started as foreground, but being
         // brought down before actually showing a notification.  That is not allowed.
-        if (r.fgRequired) {
+        if (false /*r.fgRequired*/) {
             Slog.w(TAG_SERVICE, "Bringing down service while still waiting for start foreground: "
                     + r);
             r.fgRequired = false;
@@ -4785,8 +4785,11 @@ public final class ActiveServices {
             // This is not actually the service we think is running...  this should not happen,
             // but if it does, fail hard.
             smap.mServicesByInstanceName.put(r.instanceName, found);
-            throw new IllegalStateException("Bringing down " + r + " but actually running "
+            Slog.wtf(TAG_SERVICE,"Bringing down " + r + " but actually running "
                     + found);
+
+            //throw new IllegalStateException("Bringing down " + r + " but actually running "
+            //        + found);
         }
         smap.mServicesByIntent.remove(r.intent);
         r.totalRestartCount = 0;
