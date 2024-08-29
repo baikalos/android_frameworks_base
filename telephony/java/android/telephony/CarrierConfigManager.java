@@ -6687,7 +6687,7 @@ public class CarrierConfigManager {
             defaults.putBoolean(KEY_OIP_SOURCE_FROM_HEADER_BOOL, false);
             defaults.putBoolean(KEY_PRACK_SUPPORTED_FOR_18X_BOOL, false);
             defaults.putBoolean(KEY_VOICE_QOS_PRECONDITION_SUPPORTED_BOOL, true);
-            defaults.putBoolean(KEY_VOICE_ON_DEFAULT_BEARER_SUPPORTED_BOOL, false);
+            defaults.putBoolean(KEY_VOICE_ON_DEFAULT_BEARER_SUPPORTED_BOOL, true);
 
             defaults.putInt(KEY_SESSION_REFRESHER_TYPE_INT, SESSION_REFRESHER_TYPE_UAC);
             defaults.putInt(KEY_SESSION_PRIVACY_TYPE_INT, SESSION_PRIVACY_TYPE_HEADER);
@@ -8829,7 +8829,7 @@ public class CarrierConfigManager {
         sDefaults.putBoolean(KEY_EDITABLE_WFC_MODE_BOOL, true);
         sDefaults.putStringArray(KEY_WFC_OPERATOR_ERROR_CODES_STRING_ARRAY, null);
         sDefaults.putInt(KEY_WFC_SPN_FORMAT_IDX_INT, 0);
-        sDefaults.putInt(KEY_WFC_DATA_SPN_FORMAT_IDX_INT, 0);
+        sDefaults.putInt(KEY_WFC_DATA_SPN_FORMAT_IDX_INT, 6);
         sDefaults.putInt(KEY_WFC_FLIGHT_MODE_SPN_FORMAT_IDX_INT, -1);
         sDefaults.putBoolean(KEY_WFC_SPN_USE_ROOT_LOCALE, false);
         sDefaults.putString(KEY_WFC_EMERGENCY_ADDRESS_CARRIER_APP_STRING, "");
@@ -9023,7 +9023,7 @@ public class CarrierConfigManager {
         sDefaults.putBoolean(KEY_SHOW_OPERATOR_NAME_IN_STATUSBAR_BOOL, false);
         sDefaults.putBoolean(KEY_CARRIER_CONFIG_APPLIED_BOOL, false);
         sDefaults.putBoolean(KEY_CHECK_PRICING_WITH_CARRIER_FOR_DATA_ROAMING_BOOL, false);
-        sDefaults.putBoolean(KEY_SHOW_DATA_CONNECTED_ROAMING_NOTIFICATION_BOOL, false);
+        sDefaults.putBoolean(KEY_SHOW_DATA_CONNECTED_ROAMING_NOTIFICATION_BOOL, true);
         sDefaults.putIntArray(KEY_LTE_RSRP_THRESHOLDS_INT_ARRAY,
                 new int[] {
                         -128, /* SIGNAL_STRENGTH_POOR */
