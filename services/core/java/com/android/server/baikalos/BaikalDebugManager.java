@@ -184,7 +184,6 @@ public class BaikalDebugManager {
     }
 
     protected void updateConstantsLocked() {
-
         boolean changed = false;
 
         boolean debug = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEBUG, 0) != 0;
