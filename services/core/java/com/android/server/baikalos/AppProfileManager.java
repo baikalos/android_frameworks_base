@@ -1759,7 +1759,7 @@ public class AppProfileManager {
         }
 
         if( permName.equals(READ_PRIVILEGED_PHONE_STATE) ) {
-            if( pkgName.equals("android") ) {
+            if( pkgName.equals("android") || pkgName.equals("vendor.qti.iwlan") ) {
                 //Slog.d(TAG, "checkPermission: READ_PRIVILEGED_PHONE_STATE granted for " + pkgName);
                 return true;
             }
