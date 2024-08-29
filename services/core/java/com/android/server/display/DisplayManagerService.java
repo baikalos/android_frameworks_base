@@ -854,7 +854,7 @@ public final class DisplayManagerService extends SystemService {
              mLogicalDisplayMapper.forEachLocked(
                         display -> {
                             Slog.i(TAG, "updateSettingsLocked()");
-                            handleLogicalDisplaySettingsChangedLocked(display);
+                            //handleLogicalDisplaySettingsChangedLocked(display);
                         });
         }
 
