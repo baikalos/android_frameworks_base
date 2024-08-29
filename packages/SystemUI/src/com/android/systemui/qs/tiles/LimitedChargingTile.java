@@ -80,7 +80,7 @@ public class LimitedChargingTile extends QSTileImpl<BooleanState> {
         if( !BaikalConstants.isKernelCompatible() ) return;
         isAvailable = true;
 
-        mBPCEnabled = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_LIMITED_CHARGE_SCREEN_ON, 0) == 1;
+        mBPCEnabled = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0) == 1;
     }
 
     @Override
@@ -98,7 +98,7 @@ public class LimitedChargingTile extends QSTileImpl<BooleanState> {
     @Override
     public void handleClick(@Nullable View view) {
         mBPCEnabled = !mBPCEnabled;
-        Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_LIMITED_CHARGE_SCREEN_ON,mBPCEnabled ? 1 : 0);
+        Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE,mBPCEnabled ? 1 : 0);
         refreshState();
     }
 
@@ -156,7 +156,7 @@ public class LimitedChargingTile extends QSTileImpl<BooleanState> {
             mListening = listening;
             if (listening) {
                 mContext.getContentResolver().registerContentObserver(
-                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_LIMITED_CHARGE_SCREEN_ON), false, mObserver);
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE), false, mObserver);
             } else {
                 mContext.getContentResolver().unregisterContentObserver(mObserver);
             }
