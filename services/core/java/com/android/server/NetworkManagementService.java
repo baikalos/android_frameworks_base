@@ -503,7 +503,12 @@ public class NetworkManagementService extends INetworkManagementService.Stub {
                 final SparseIntArray local = mUidCleartextPolicy;
                 mUidCleartextPolicy = new SparseIntArray();
                 for (int i = 0; i < local.size(); i++) {
-                    setUidCleartextNetworkPolicy(local.keyAt(i), local.valueAt(i));
+                    try {
+                        setUidCleartextNetworkPolicy(local.keyAt(i), local.valueAt(i));
+                    } catch(Exception e) {
+                        Slog.d(TAG, "Failed to pushing cleartext policiy for UID " + local.keyAt(i));
+                    }
+
                 }
             }
 
