@@ -66,6 +66,7 @@ import java.util.Objects;
 final class LocalDisplayAdapter extends DisplayAdapter {
     private static final String TAG = "LocalDisplayAdapter";
     private static final boolean DEBUG = false;
+    private static final boolean DEBUG_1 = false;
 
     private static final String UNIQUE_ID_PREFIX = "local:";
 
@@ -1364,22 +1365,29 @@ final class LocalDisplayAdapter extends DisplayAdapter {
 
         @Override
         public void onModeChanged(long timestampNanos, long physicalDisplayId, int modeId) {
-            if (DEBUG) {
+            if (DEBUG_1) {
                 Slog.d(TAG, "onModeChanged("
                         + "timestampNanos=" + timestampNanos
                         + ", physicalDisplayId=" + physicalDisplayId
-                        + ", modeId=" + modeId + ")");
+                        + ", modeId=" + modeId + ") - entry");
             }
             synchronized (getSyncRoot()) {
                 LocalDisplayDevice device = mDevices.get(physicalDisplayId);
                 if (device == null) {
-                    if (DEBUG) {
+                    if (DEBUG_1) {
                         Slog.d(TAG, "Received mode change for unhandled physical display: "
                                 + "physicalDisplayId=" + physicalDisplayId);
                     }
                     return;
                 }
                 device.onActiveDisplayModeChangedLocked(modeId);
+            }
+
+            if (DEBUG_1) {
+                Slog.d(TAG, "onModeChanged("
+                        + "timestampNanos=" + timestampNanos
+                        + ", physicalDisplayId=" + physicalDisplayId
+                        + ", modeId=" + modeId + ") - exit");
             }
         }
 
