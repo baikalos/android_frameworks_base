@@ -546,6 +546,8 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
     volatile boolean mUnrestrictedNetworkingMode;
     @GuardedBy("mUidRulesFirstLock")
     volatile boolean mLowPowerStandbyActive;
+    @GuardedBy("mUidRulesFirstLock")
+    volatile static boolean mFullDataSaverMode;
 
     private final boolean mSuppressDefaultPolicy;
 
@@ -764,6 +766,10 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_UNRESTRICTED_NET),
                     false, this);
 
+            mContext.getContentResolver().registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_FULL_DATA_SAVER),
+                    false, this);
+
         }
 
         public boolean isRestrictedModeEnabled() {
@@ -777,13 +783,19 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
         }
 
 
+        public boolean isFullDataSaverEnabled() {
+            return Settings.Global.getInt(mContext.getContentResolver(),
+                    Settings.Global.BAIKALOS_FULL_DATA_SAVER, 0) != 0;
+        }
+
+
         @Override
         public void onChange(boolean selfChange) {
-            mListener.onChange(isRestrictedModeEnabled(), isUnrestrictedModeEnabled());
+            mListener.onChange(isRestrictedModeEnabled(), isUnrestrictedModeEnabled(), isFullDataSaverEnabled());
         }
 
         public interface RestrictedModeListener {
-            void onChange(boolean enabled, boolean disabled);
+            void onChange(boolean enabled, boolean disabled, boolean fulldatasaver);
         }
     }
 
@@ -1039,15 +1051,17 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                             ServiceType.NETWORK_FIREWALL).batterySaverEnabled;
 
                     mRestrictedModeObserver = new RestrictedModeObserver(mContext,
-                            (enabled, disabled) -> {
+                            (enabled, disabled, fulldatasaver) -> {
                                 synchronized (mUidRulesFirstLock) {
                                     mRestrictedNetworkingMode = enabled;
                                     mUnrestrictedNetworkingMode = disabled;
+                                    mFullDataSaverMode = fulldatasaver;
                                     updateRestrictedModeAllowlistUL();
                                 }
                             });
                     mRestrictedNetworkingMode = mRestrictedModeObserver.isRestrictedModeEnabled();
                     mUnrestrictedNetworkingMode = mRestrictedModeObserver.isUnrestrictedModeEnabled();
+                    mFullDataSaverMode = mRestrictedModeObserver.isFullDataSaverEnabled();
 
                     mSystemReady = true;
 
@@ -5441,7 +5455,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
         newBlockedReasons |= (isDenied ? BLOCKED_METERED_REASON_USER_RESTRICTED : 0);
 
         newAllowedReasons |= (isSystem(uid) ? ALLOWED_METERED_REASON_SYSTEM : 0);
-        newAllowedReasons |= (isForeground ? ALLOWED_METERED_REASON_FOREGROUND : 0);
+        newAllowedReasons |= (!mFullDataSaverMode && isForeground ? ALLOWED_METERED_REASON_FOREGROUND : 0);
         newAllowedReasons |= (isAllowed ? ALLOWED_METERED_REASON_USER_EXEMPTED : 0);
 
         final int oldEffectiveBlockedReasons;
@@ -6810,7 +6824,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                 effectiveBlockedReasons &= ~BLOCKED_REASON_APP_STANDBY;
             }
             if ((allowedReasons & ALLOWED_METERED_REASON_FOREGROUND) != 0) {
-                effectiveBlockedReasons &= ~BLOCKED_METERED_REASON_DATA_SAVER;
+                if(!mFullDataSaverMode) effectiveBlockedReasons &= ~BLOCKED_METERED_REASON_DATA_SAVER;
                 effectiveBlockedReasons &= ~BLOCKED_METERED_REASON_USER_RESTRICTED;
             }
             if ((allowedReasons & ALLOWED_REASON_TOP) != 0) {
