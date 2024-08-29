@@ -35,10 +35,16 @@ import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 final class AppsFilterUtils {
     public static boolean requestsQueryAllPackages(@NonNull AndroidPackage pkg) {
         // we're not guaranteed to have permissions yet analyzed at package add, so we inspect the
         // package directly
+        if( BaikalSpoofer.disableApplicationFilter() ) {
+            return true;
+        }
+
         return pkg.getRequestedPermissions().contains(
                 Manifest.permission.QUERY_ALL_PACKAGES);
     }
