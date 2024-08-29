@@ -16,6 +16,8 @@
 
 package android.media;
 
+import static android.os.Process.myUid;
+
 import android.annotation.CallbackExecutor;
 import android.annotation.FloatRange;
 import android.annotation.IntDef;
@@ -764,6 +766,8 @@ public class AudioTrack extends PlayerBase
 
         mConfiguredAudioAttributes = attributes; // object copy not needed, immutable.
 
+        Log.i(TAG, "AudioTrack: myUid()=" + myUid() + ", ContentType=" + AudioAttributes.contentTypeToString(mConfiguredAudioAttributes.getContentType()));
+
         if (format == null) {
             throw new IllegalArgumentException("Illegal null AudioFormat");
         }
@@ -873,6 +877,8 @@ public class AudioTrack extends PlayerBase
         // "final"s
         mNativeTrackInJavaObj = 0;
         mJniData = 0;
+
+        Log.i(TAG, "AudioTrack: myUid()=" + myUid() + ", ContentType=" + AudioAttributes.contentTypeToString(mConfiguredAudioAttributes.getContentType()));
 
         // remember which looper is associated with the AudioTrack instantiation
         Looper looper;
@@ -1061,6 +1067,7 @@ public class AudioTrack extends PlayerBase
             }
             // keep reference, we only copy the data when building
             mAttributes = attributes;
+            Log.i(TAG, "setAudioAttributes: myUid()=" + myUid() + ", ContentType=" + AudioAttributes.contentTypeToString(mAttributes.getContentType()));
             return this;
         }
 
@@ -1316,6 +1323,9 @@ public class AudioTrack extends PlayerBase
                         .setUsage(AudioAttributes.USAGE_MEDIA)
                         .build();
             }
+
+            Log.i(TAG, "AudioTrack build(): myUid()=" + myUid() + ", ContentType=" + AudioAttributes.contentTypeToString(mAttributes.getContentType()));
+
             switch (mPerformanceMode) {
             case PERFORMANCE_MODE_LOW_LATENCY:
                 mAttributes = new AudioAttributes.Builder(mAttributes)

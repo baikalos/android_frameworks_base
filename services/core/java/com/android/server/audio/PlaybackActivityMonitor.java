@@ -209,7 +209,10 @@ public final class PlaybackActivityMonitor
 
     public int trackPlayer(PlayerBase.PlayerIdCard pic) {
         final int newPiid = AudioSystem.newAudioPlayerId();
+        final int binderUid = Binder.getCallingUid();
         if (DEBUG) { Log.v(TAG, "trackPlayer() new piid=" + newPiid); }
+
+
         final AudioPlaybackConfiguration apc =
                 new AudioPlaybackConfiguration(pic, newPiid,
                         Binder.getCallingUid(), Binder.getCallingPid());
@@ -219,6 +222,7 @@ public final class PlaybackActivityMonitor
             if (mAllowedCapturePolicies.containsKey(uid)) {
                 updateAllowedCapturePolicy(apc, mAllowedCapturePolicies.get(uid));
             }
+            Log.e(TAG, "trackPlayer() uid=" + uid + ", binderUid=" + binderUid + ", attr=" + pic.mAttributes.toString());
         }
         sEventLogger.log(new NewPlayerEvent(apc));
         synchronized(mPlayerLock) {
@@ -250,6 +254,8 @@ public final class PlaybackActivityMonitor
         if (change) {
             dispatchPlaybackChange(false);
         }
+
+        Log.e(TAG, "playerAttributes() uid=" + binderUid + ", attr=" + attr.toString());
     }
 
     /**

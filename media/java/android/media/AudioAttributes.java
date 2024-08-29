@@ -16,6 +16,8 @@
 
 package android.media;
 
+import static android.os.Process.myUid;
+
 import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.RequiresPermission;
@@ -781,7 +783,7 @@ public final class AudioAttributes implements Parcelable {
         @SuppressWarnings("unchecked") // for cloning of mTags
         public Builder(AudioAttributes aa) {
             mUsage = BaikalSpoofer.overrideAudioUsage(aa.mUsage);
-            mContentType = aa.mContentType;
+            mContentType = BaikalSpoofer.overrideAudioContentType(aa.mContentType);
             mSource = aa.mSource;
             mFlags = BaikalSpoofer.overrideAudioFlags(aa.getAllFlags());
             mTags = (HashSet<String>) aa.mTags.clone();
@@ -817,6 +819,9 @@ public final class AudioAttributes implements Parcelable {
                             "Cannot set both usage and system usage on same builder");
                 }
             }
+
+            aa.mUsage = BaikalSpoofer.overrideAudioUsage(aa.mUsage);
+            aa.mContentType = BaikalSpoofer.overrideAudioContentType(aa.mContentType);
 
             // handle deprecation of notification usages by remapping to USAGE_NOTIFICATION
             switch (aa.mUsage) {
@@ -866,6 +871,8 @@ public final class AudioAttributes implements Parcelable {
                     && (mFlags & FLAG_HW_HOTWORD) == FLAG_HW_HOTWORD) {
                 aa.mFlags &= ~FLAG_HW_HOTWORD;
             }
+
+            aa.mFlags = BaikalSpoofer.overrideAudioFlags(aa.mFlags);
             return aa;
         }
 
@@ -948,12 +955,14 @@ public final class AudioAttributes implements Parcelable {
          * @return the same Builder instance.
          */
         public Builder setContentType(@AttributeContentType int contentType) {
+            contentType = BaikalSpoofer.overrideAudioContentType(contentType);
             switch (contentType) {
                 case CONTENT_TYPE_UNKNOWN:
                 case CONTENT_TYPE_MOVIE:
                 case CONTENT_TYPE_MUSIC:
                 case CONTENT_TYPE_SONIFICATION:
                 case CONTENT_TYPE_SPEECH:
+                case CONTENT_TYPE_ULTRASOUND:
                     mContentType = contentType;
                     break;
                 default:
@@ -971,6 +980,7 @@ public final class AudioAttributes implements Parcelable {
          */
         @SystemApi
         public @NonNull Builder setInternalContentType(@AttrInternalContentType int contentType) {
+            contentType = BaikalSpoofer.overrideAudioContentType(contentType);
             switch (contentType) {
                 case CONTENT_TYPE_ULTRASOUND:
                     mContentType = contentType;
@@ -1081,6 +1091,7 @@ public final class AudioAttributes implements Parcelable {
          */
         public Builder replaceFlags(int flags) {
             mFlags = flags & AudioAttributes.FLAG_ALL;
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1160,13 +1171,18 @@ public final class AudioAttributes implements Parcelable {
         public Builder setInternalLegacyStreamType(int streamType) {
             mContentType = CONTENT_TYPE_UNKNOWN;
             mUsage = USAGE_UNKNOWN;
+
+            mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
+            mContentType = BaikalSpoofer.overrideAudioContentType(mContentType);
+            //streamType = BaikalSpoofer.overrideAudioStreamType(streamType);
+
             if (AudioProductStrategy.getAudioProductStrategies().size() > 0) {
                 AudioAttributes attributes =
                         AudioProductStrategy.getAudioAttributesForStrategyWithLegacyStreamType(
                                 streamType);
                 if (attributes != null) {
                     mUsage = BaikalSpoofer.overrideAudioUsage(attributes.mUsage);
-                    mContentType = attributes.mContentType;
+                    mContentType = BaikalSpoofer.overrideAudioContentType(attributes.mContentType);
                     mFlags = BaikalSpoofer.overrideAudioFlags(attributes.getAllFlags());
                     mMuteHapticChannels = attributes.areHapticChannelsMuted();
                     mIsContentSpatialized = attributes.isContentSpatialized();
@@ -1183,6 +1199,7 @@ public final class AudioAttributes implements Parcelable {
                         break;
                     case AudioSystem.STREAM_SYSTEM_ENFORCED:
                         mFlags |= FLAG_AUDIBILITY_ENFORCED;
+                        Log.e(TAG, "Stream type STREAM_SYSTEM_ENFORCED");
                         // intended fall through, attributes in common with STREAM_SYSTEM
                     case AudioSystem.STREAM_SYSTEM:
                         mContentType = CONTENT_TYPE_SONIFICATION;
@@ -1223,7 +1240,12 @@ public final class AudioAttributes implements Parcelable {
             if (mUsage == USAGE_UNKNOWN) {
                 mUsage = usageForStreamType(streamType);
                 mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
+                mContentType = BaikalSpoofer.overrideAudioContentType(mContentType);
             }
+
+            mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
+            mContentType = BaikalSpoofer.overrideAudioContentType(mContentType);
+
             return this;
         }
 
@@ -1345,6 +1367,10 @@ public final class AudioAttributes implements Parcelable {
     private final static int ALL_PARCEL_FLAGS = FLATTEN_TAGS;
     @Override
     public void writeToParcel(Parcel dest, int flags) {
+
+        mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
+        mContentType = BaikalSpoofer.overrideAudioContentType(mContentType);
+
         dest.writeInt(mUsage);
         dest.writeInt(mContentType);
         dest.writeInt(mSource);
@@ -1367,7 +1393,7 @@ public final class AudioAttributes implements Parcelable {
 
     private AudioAttributes(Parcel in) {
         mUsage = BaikalSpoofer.overrideAudioUsage(in.readInt());
-        mContentType = in.readInt();
+        mContentType = BaikalSpoofer.overrideAudioContentType(in.readInt());
         mSource = in.readInt();
         mFlags = BaikalSpoofer.overrideAudioFlags(in.readInt());
         boolean hasFlattenedTags = ((in.readInt() & FLATTEN_TAGS) == FLATTEN_TAGS);
@@ -1614,7 +1640,12 @@ public final class AudioAttributes implements Parcelable {
 
     /** @hide */
     public String contentTypeToString() {
-        switch(mContentType) {
+        return contentTypeToString(mContentType);
+    }
+
+    @NonNull
+    public static String contentTypeToString(int contentType) {
+        switch(contentType) {
             case CONTENT_TYPE_UNKNOWN:
                 return new String("CONTENT_TYPE_UNKNOWN");
             case CONTENT_TYPE_SPEECH: return new String("CONTENT_TYPE_SPEECH");
@@ -1622,7 +1653,7 @@ public final class AudioAttributes implements Parcelable {
             case CONTENT_TYPE_MOVIE: return new String("CONTENT_TYPE_MOVIE");
             case CONTENT_TYPE_SONIFICATION: return new String("CONTENT_TYPE_SONIFICATION");
             case CONTENT_TYPE_ULTRASOUND: return new String("CONTENT_TYPE_ULTRASOUND");
-            default: return new String("unknown content type " + mContentType);
+            default: return new String("unknown content type " + contentType);
         }
     }
 

@@ -341,10 +341,25 @@ public class FocusRequester {
     @GuardedBy("MediaFocusControl.mAudioFocusLock")
     void handleFocusGain(int focusGain) {
         try {
-            mFocusLossReceived = AudioManager.AUDIOFOCUS_NONE;
-            mFocusLossFadeLimbo = false;
+
             mFocusController.notifyExtPolicyFocusGrant_syncAf(toAudioFocusInfo(),
                     AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+
+            AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(mPackageName);
+
+            if( (mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS || 
+                mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK )
+                && profile != null && profile.mBAFRecv ) {
+                Log.v(TAG, "blocked dispatching " + focusChangeToString(mFocusLossReceived) + " to "
+                    + mClientId + ", app=" + mCallingUid + "/" + mPackageName);
+                mFocusLossReceived = AudioManager.AUDIOFOCUS_NONE;
+                return;                
+            }
+
+
+            mFocusLossReceived = AudioManager.AUDIOFOCUS_NONE;
+            mFocusLossFadeLimbo = false;
+
             final IAudioFocusDispatcher fd = mFocusDispatcher;
             if (fd != null) {
                 if (DEBUG) {
@@ -385,10 +400,10 @@ public class FocusRequester {
                         && mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK
                         && (mGrantFlags
                                 & AudioManager.AUDIOFOCUS_FLAG_PAUSES_ON_DUCKABLE_LOSS) == 0) {
-                    if (DEBUG) {
+                    //if (DEBUG) {
                         Log.v(TAG, "NOT dispatching " + focusChangeToString(mFocusLossReceived)
                                 + " to " + mClientId + ", to be handled externally");
-                    }
+                    //}
                     mFocusController.notifyExtPolicyFocusLoss_syncAf(
                             toAudioFocusInfo(), false /* wasDispatched */);
                     return;

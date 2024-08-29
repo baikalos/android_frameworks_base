@@ -1159,7 +1159,7 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
                     }
                     notifyExtPolicyFocusGrant_syncAf(nfr.toAudioFocusInfo(),
                             AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
-                    Log.w(TAG, "requestAudioFocus(1) granted=" + !blocked);
+                    Log.w(TAG, "requestAudioFocus(1) granted=" + !blocked + " from " + callingPackageName);
                     return AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
                 }
             }
@@ -1192,7 +1192,7 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
             }
         }//synchronized(mAudioFocusLock)
 
-        Log.w(TAG, "requestAudioFocus(2) granted=" + !blocked);
+        Log.w(TAG, "requestAudioFocus(2) granted=" + !blocked + " from " + callingPackageName);
         return AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
     }
 
