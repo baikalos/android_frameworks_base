@@ -112,9 +112,9 @@ public class HotspotTile extends QSTileImpl<BooleanState> {
     @Override
     protected void handleClick(@Nullable View view) {
         final boolean isEnabled = mState.value;
-        if (!isEnabled && mDataSaverController.isDataSaverEnabled()) {
-            return;
-        }
+        //if (!isEnabled && mDataSaverController.isDataSaverEnabled()) {
+        //    return;
+        //}
         // Immediately enter transient enabling state when turning hotspot on.
         refreshState(isEnabled ? null : ARG_SHOW_TRANSIENT_ENABLING);
         mHotspotController.setHotspotEnabled(!isEnabled);
@@ -143,7 +143,7 @@ public class HotspotTile extends QSTileImpl<BooleanState> {
         } else {
             state.value = transientEnabling || mHotspotController.isHotspotEnabled();
             numConnectedDevices = mHotspotController.getNumConnectedDevices();
-            isDataSaverEnabled = mDataSaverController.isDataSaverEnabled();
+            isDataSaverEnabled = false; // mDataSaverController.isDataSaverEnabled();
         }
 
         state.label = mContext.getString(R.string.quick_settings_hotspot_label);
@@ -207,7 +207,7 @@ public class HotspotTile extends QSTileImpl<BooleanState> {
 
         @Override
         public void onDataSaverChanged(boolean isDataSaving) {
-            mCallbackInfo.isDataSaverEnabled = isDataSaving;
+            mCallbackInfo.isDataSaverEnabled = false; // isDataSaving;
             refreshState(mCallbackInfo);
         }
 
