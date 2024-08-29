@@ -69,6 +69,8 @@ public class AppProfileBase extends ContentObserver {
 
     PowerWhitelistBackend mBackend;
 
+    protected String mLoadedProfileString = "invalid";
+
     private final TextUtils.StringSplitter mSplitter = new TextUtils.SimpleStringSplitter('|');
 
     HashMap<String, AppProfile> _profilesByPackageName = new HashMap<String,AppProfile> ();
@@ -211,6 +213,7 @@ public class AppProfileBase extends ContentObserver {
     }
 
     void loadProfiles(String appSettingsString) {
+
         mBackend.refreshList();
 
         synchronized(this) {
@@ -284,12 +287,15 @@ public class AppProfileBase extends ContentObserver {
                             }
                         }
     
-                        if(!profile.mStamina && isStaminaWl(uid,profile.mPackageName)) {
+                        if(!profile.mStaminaEnforced && isStaminaWl(uid,profile.mPackageName)) {
                             Slog.e(TAG, "Enforce stamina(0) on " + profile.mPackageName);
-                            profile.mStamina = true;
+                            profile.mStaminaEnforced = true;
                         }
                     }
                 }
+
+                mLoadedProfileString = appProfiles;
+
             } catch (IllegalArgumentException e) {
                 Slog.e(TAG, "Bad profiles settings", e);
                 selfUpdate = false;
@@ -311,9 +317,9 @@ public class AppProfileBase extends ContentObserver {
                     Slog.e(TAG, "Enforce mSystemApp on " + pkgName);
                     profile.mSystemApp = true;
                 }
-                if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                if(!profile.mStaminaEnforced && isStaminaWl(uid,pkgName)) {
                     Slog.e(TAG, "Enforce stamina(1) on " + pkgName);
-                    profile.mStamina = true;
+                    profile.mStaminaEnforced = true;
                 }
             }
 
@@ -325,9 +331,9 @@ public class AppProfileBase extends ContentObserver {
                     Slog.e(TAG, "Enforce mSystemWhitelisted on " + pkgName);
                     profile.mSystemWhitelisted = true;
                 }
-                if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                if(!profile.mStaminaEnforced && isStaminaWl(uid,pkgName)) {
                     Slog.e(TAG, "Enforce stamina(2) on " + pkgName);
-                    profile.mStamina = true;
+                    profile.mStaminaEnforced = true;
                 }
             }
 
@@ -339,9 +345,9 @@ public class AppProfileBase extends ContentObserver {
                     Slog.e(TAG, "Enforce mImportantApp on " + pkgName);
                     profile.mImportantApp = true;
                 }
-                if(!profile.mStamina && isStaminaWl(uid,pkgName)) {
+                if(!profile.mStaminaEnforced && isStaminaWl(uid,pkgName)) {
                     Slog.e(TAG, "Enforce stamina(3) on " + pkgName);
-                    profile.mStamina = true;
+                    profile.mStaminaEnforced = true;
                 }
             }
 
@@ -361,7 +367,9 @@ public class AppProfileBase extends ContentObserver {
         _mAppsForDebug = newAppsForDebug;
 
         Slog.e(TAG, "Loaded " + _profilesByPackageName.size() + " AppProfiles");
-        //saveLocked();
+
+        selfUpdate = true;
+        saveLocked();
 
         sIsLoaded = true;
         selfUpdate = false;
@@ -372,7 +380,7 @@ public class AppProfileBase extends ContentObserver {
         if( isSysWhitelistedLocked(from.mPackageName) ) to.mSystemWhitelisted = true;
         if( to.mBackgroundMode > from.mBackgroundMode ) to.mBackgroundMode = from.mBackgroundMode;
         if( from.mSystemApp ) to.mSystemApp = true;
-        //if( from.mStamina ) to.mStamina = true;
+        if( from.mStaminaEnforced ) to.mStaminaEnforced = true;
         if( from.mImportantApp ) to.mImportantApp = true;
         if( from.mAllowWhileIdle ) to.mAllowWhileIdle = true;
         return to;
@@ -392,6 +400,7 @@ public class AppProfileBase extends ContentObserver {
         //}
 
         if(/* profile == null &&*/ oldProfiles.containsKey(pkgName) && !newProfiles.containsKey(pkgName) ) {
+            Slog.e(TAG, "Found removed profile for:" + pkgName);
             AppProfile old_profile = oldProfiles.get(pkgName);
             old_profile.clear();
             profile = old_profile;
@@ -407,7 +416,6 @@ public class AppProfileBase extends ContentObserver {
                 newProfilesByUid.put(profile.mUid, profile);
             }
         }
-
 
         if( profile == null ) {
             int uid = getAppUidLocked(pkgName);
@@ -439,29 +447,31 @@ public class AppProfileBase extends ContentObserver {
 
         for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
             if( entry.getValue().isDefault() ) { 
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Skip saving default profile for packageName=" + entry.getValue().mPackageName);
+                Slog.i(TAG, "Skip saving default profile for packageName=" + entry.getValue().mPackageName);
                 continue;
             }
             int uid = getAppUidLocked(entry.getValue().mPackageName);
             if( uid == -1 ) { 
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Skip saving profile for packageName=" + entry.getValue().mPackageName + ". Seems app deleted");
+                Slog.i(TAG, "Skip saving profile for packageName=" + entry.getValue().mPackageName + ". Seems app deleted");
                 continue;
             }
 
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Save profile for packageName=" + entry.getValue().mPackageName);
+            //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Save profile for packageName=" + entry.getValue().mPackageName);
             String entryString = entry.getValue().serialize();
             if( entryString != null ) val += entryString + "|";
         } 
 
         if( !val.equals(appProfiles) ) {
-            //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) { 
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) { 
                 Slog.i(TAG, "Write new profile data string :" + val);
                 Slog.i(TAG, "Old profile data string :" + appProfiles);
-            //}
+            }
             Settings.Global.putString(mResolver,
                 Settings.Global.BAIKALOS_APP_PROFILES,val);
+
+            mLoadedProfileString = val;
         } else {
-                Slog.i(TAG, "Skip writing new profile data string :" + val);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Skip writing new profile data string :" + val);
         }
     }
 
@@ -603,24 +613,7 @@ public class AppProfileBase extends ContentObserver {
     }
 
     int getAppUidLocked(String packageName) {
-	    int uid = -1;
-
-        final PackageManager pm = mContext.getPackageManager();
-
-        try {
-            ApplicationInfo ai = pm.getApplicationInfo(packageName,
-                    PackageManager.MATCH_ALL);
-            if( ai != null ) {
-                if( ai.uid == 0 ) {
-                    Slog.i(TAG,"Package " + packageName + " has invalid uid=0!!");
-                    return -1;
-                }
-                return ai.uid;
-            }
-        } catch(Exception e) {
-            Slog.i(TAG,"Package " + packageName + " not found on this device");
-        }
-        return uid;
+        return getAppUid(packageName, mContext);
     }
 
     public void save() {
@@ -646,6 +639,76 @@ public class AppProfileBase extends ContentObserver {
         //synchronized(this) {
             return getProfileLocked(uid);
         //}
+    }
+
+    public static int getAppUid(String packageName, Context context) {
+	    int uid = -1;
+
+        final PackageManager pm = context.getPackageManager();
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(packageName,
+                    PackageManager.MATCH_ALL);
+            if( ai != null ) {
+                if( ai.uid == 0 ) {
+                    Slog.i(TAG,"Package " + packageName + " has invalid uid=0!!");
+                    return -1;
+                }
+                return ai.uid;
+            }
+        } catch(Exception e) {
+            Slog.i(TAG,"Package " + packageName + " not found on this device", e);
+        }
+        return uid;
+    }
+
+    public static HashMap<Integer, AppProfile> updateProfileUids(HashMap<String, AppProfile> profilesByPackageName, Context context) {
+        HashMap<Integer, AppProfile> profilesByUid = new HashMap<Integer,AppProfile> ();
+
+        for(Map.Entry<String, AppProfile> entry : profilesByPackageName.entrySet()) {
+            if( entry.getValue().isDefault() ) { 
+                continue;
+            }
+            if( entry.getValue().mUid > 0 ) {
+                profilesByUid.put(entry.getValue().mUid,entry.getValue());
+            }
+        }
+
+        return profilesByUid;
+    }
+
+    public static HashMap<String, AppProfile> loadCachedProfiles(Context context) {
+
+        HashMap<String, AppProfile> profilesByPackageName = new HashMap<String,AppProfile> ();
+
+        try {
+            String appProfiles = Settings.Global.getString(context.getContentResolver(),
+                    Settings.Global.BAIKALOS_APP_PROFILES);
+
+            if( appProfiles == null ) {
+                Slog.e(TAG, "Empty profiles settings");
+                return null;
+            }
+
+            TextUtils.StringSplitter splitter = new TextUtils.SimpleStringSplitter('|');
+
+            try {
+                splitter.setString(appProfiles);
+            } catch (IllegalArgumentException e) {
+                Slog.e(TAG, "Bad profiles settings", e);
+                return null;
+            }
+
+            for(String profileString:splitter) {
+                AppProfile profile = AppProfile.deserializeProfile(profileString);
+                if( profile != null  ) {
+                    profilesByPackageName.put(profile.mPackageName, updateProfileFromSystemApplist(profile,context));
+                }
+            }
+        } catch (Exception e) {
+            Slog.e(TAG, "Bad BaikalService settings", e);
+        } 
+        return profilesByPackageName;
     }
 
     public static AppProfile loadSingleProfile(String packageName, int uid, Context context) {

@@ -94,6 +94,9 @@ public class AppProfileBackend extends AppProfileBase {
         if( "android".equals(profile.mPackageName) || "system".equals(profile.mPackageName) ) return profile;
         AppProfile newProfile = profile;
         if( !_profilesByPackageName.containsKey(profile.mPackageName) ) {
+            if( profile.isDefault() ) {
+                return newProfile;
+            }
             _profilesByPackageName.put(profile.mPackageName, profile);
             newProfile = profile;
         } else {

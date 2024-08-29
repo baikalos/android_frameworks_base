@@ -66,8 +66,6 @@ public class AppProfileSettings extends AppProfileBase {
     private static boolean sSuperSaverAvailable = false;
 
     private boolean mAutorevokeDisabled;
-    private String mLoadedProfilesString;
-
 
     private AppProfileSettings(Handler handler,Context context) {
         super(handler,context);
@@ -107,22 +105,24 @@ public class AppProfileSettings extends AppProfileBase {
     public void onChange(boolean selfChange, Uri uri) {
         if( !mIsReady ) return;
         Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading");
+
+        String appProfileString = "";
+
         synchronized(this) {
             Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading locked");
             updateConstantsLocked();
             Slog.i(TAG, "Preferences changed. Reloading - done locked");
 
-            String appProfileString = Settings.Global.getString(mResolver,
+            appProfileString = Settings.Global.getString(mResolver,
                     Settings.Global.BAIKALOS_APP_PROFILES);
 
-            if( mLoadedProfilesString != null && mLoadedProfilesString.equals(appProfileString) ) {
+            if( mLoadedProfileString != null && mLoadedProfileString.equals(appProfileString) ) {
                 Slog.i(TAG,"updateConstantsLocked: Not changed. Ignore");
                 return;
             }
-            mLoadedProfilesString = appProfileString;
         }
         mBackend.refreshList();
-        loadProfiles(mLoadedProfilesString);
+        loadProfiles(appProfileString);
 
         Slog.i(TAG, "Preferences changed. Reloading - done");
     }
@@ -263,7 +263,9 @@ public class AppProfileSettings extends AppProfileBase {
             //if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
             //if( !runInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
 
-            if( /*isSystem ||*/ profile.mAllowWhileIdle || profile.isHome() || profile.mImportantApp ) {
+            int backgroundMode = profile.getBackgroundMode(forceAllAppsStandby);
+
+            if( backgroundMode < 1 && ( /*isSystem ||*/ profile.mAllowWhileIdle || profile.isHome() || profile.mImportantApp ) ) {
                 if( restricted ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: unrestrict system or allowed packageName=" + info.packageName + "/" + info.applicationInfo.uid);
                     backgroundRestrictedUidPackages.remove(pair);
@@ -271,7 +273,6 @@ public class AppProfileSettings extends AppProfileBase {
                 continue;
             }
 
-            int backgroundMode = profile.getBackgroundMode(forceAllAppsStandby);
             if( backgroundMode >= 2 ) {
                 if( runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_IGNORED); 
                 if( restricted ) continue;

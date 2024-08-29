@@ -84,6 +84,9 @@ public class AppProfile {
     public boolean mStamina;
 
     @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mStaminaEnforced;
+
+    @SuppressLint({"MutableBareField","InternalField"})
     public boolean mRequireGms;
 
     @SuppressLint({"MutableBareField","InternalField"})
@@ -372,6 +375,28 @@ public class AppProfile {
         mOldLinks = false;
         mPriviledgedPhoneState = false;
 
+        mBrightness = 0;
+        mReader = 0;
+        mPinned = false;
+        mDoNotClose = false;
+        mStamina = false;
+        mRequireGms = false;
+        mBootDisabled = false;
+        mBackgroundMode = 0;
+        mIgnoreAudioFocus = false;
+        mKeepOn = false;
+        mPreventHwKeyAttestation = false;
+        mHideDevMode = false;
+        mDisableWakeup = false;
+        mDisableJobs = false;
+        mDisableFreezer = false;
+        mForcedScreenshot = false;
+        mFullScreen = false;
+        mBAFRecv = false;
+        mBAFSend = false;
+        mSonification = 0;
+        mBypassCharging = false;
+
         mSystemApp = false;
         mImportantApp = false;
         mAllowWhileIdle = false;
@@ -417,7 +442,7 @@ public class AppProfile {
             !mIsInitialized) && mUid >=0 && mUid < 10000 ) {
             mImportantApp = true;
             // mAllowWhileIdle = true;
-            mStamina = true;
+            mStaminaEnforced = true;
             mIsInitialized = true;
             isInvalidated = false;
         }
@@ -434,11 +459,11 @@ public class AppProfile {
         
             if( (mIsGms && mIsGmsPersistent) || !mIsGms) {
                 mSystemWhitelisted = true;
-                mStamina = true;
+                mStaminaEnforced = true;
                 mImportantApp = true;
             } else {
                 mSystemWhitelisted = false;
-                mStamina = false;
+                mStaminaEnforced = false;
                 mImportantApp = false;
             }
             // mAllowWhileIdle = true;
@@ -506,7 +531,7 @@ public class AppProfile {
             return mBackgroundMode;
         }
 
-        if( mStamina ) {
+        if( mStamina || mStaminaEnforced ) {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(8) mStamina:" + mBackgroundMode);
             return mBackgroundMode;
         }
@@ -560,7 +585,7 @@ public class AppProfile {
 
     public boolean getStamina() {
         //if( VERBOSE || mDebug ) Slog.d(TAG, "AppProfile getStamina " + mPackageName + "/" + mUid + ":" + (mStamina || mImportantApp || mSystemWhitelisted));
-        return mStamina || mImportantApp || mSystemWhitelisted;
+        return mStamina || mStaminaEnforced || mImportantApp || mSystemWhitelisted;
     }
 
     public boolean isHeavy() {
@@ -638,6 +663,7 @@ public class AppProfile {
         this.mPinned = profile.mPinned;
         this.mDoNotClose = profile.mDoNotClose;
         this.mStamina = profile.mStamina;
+        this.mStaminaEnforced = profile.mStaminaEnforced;
         this.mRequireGms = profile.mRequireGms;
         this.mBootDisabled = profile.mBootDisabled;
         this.mMaxFrameRate = profile.mMaxFrameRate;
@@ -696,6 +722,7 @@ public class AppProfile {
     public @Nullable String serialize() {
         if( mPackageName == null || "".equals(mPackageName) ) return null;
         String result =  "pn=" + mPackageName;
+        result += "," + "uid=" + mUid;
         if( mBrightness != 0 ) result += "," + "br=" + mBrightness;
         if( mPerfProfile != 0 ) result += "," + "pp=" + mPerfProfile;
         if( mThermalProfile != 0 ) result += "," + "tp=" + mThermalProfile;
@@ -704,7 +731,7 @@ public class AppProfile {
         if( mDoNotClose ) result +=  "," + "dnc=" + mDoNotClose;
         if( mMaxFrameRate != 0 ) result +=  "," + "fr=" + mMaxFrameRate;
         if( mMinFrameRate != 0 ) result +=  "," + "mfr=" + mMinFrameRate;
-        if( mStamina ) result +=  "," + "as=" + mStamina;
+        if( mStamina ) result +=  "," + "sta=" + mStamina;
         if( mBackgroundMode != 0 ) result +=  "," + "bk=" + mBackgroundMode;
         if( mRequireGms ) result +=  "," + "gms=" + mRequireGms;
         if( mBootDisabled ) result +=  "," + "bt=" + mBootDisabled;
@@ -764,12 +791,15 @@ public class AppProfile {
 
         mPackageName = parser.getString("pn",null);
         if( mPackageName == null || mPackageName.equals("") ) throw new IllegalArgumentException();
+
+
         try {
+            mUid = parser.getInt("uid",-1);
             mBrightness = parser.getInt("br",0);
             mPerfProfile = parser.getInt("pp",0);
             mThermalProfile = parser.getInt("tp",0);
             mPinned = parser.getBoolean("pd",false);
-            mStamina = parser.getBoolean("as",false);
+            mStamina = parser.getBoolean("sta",false);
             mMaxFrameRate = parser.getInt("fr",0);
             mBackgroundMode = parser.getInt("bk",0);
             mRequireGms = parser.getBoolean("gms",false);
