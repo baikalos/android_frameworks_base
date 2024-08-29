@@ -17368,6 +17368,13 @@ public final class Settings {
         public static final String BAIKALOS_UNRESTRICTED_NET = "baikalos_unrestricted_net";
 
         /**
+         * This preference enables Hide GMS powersave option.
+         * @hide
+         */
+        public static final String BAIKALOS_FULL_DATA_SAVER = "baikalos_full_data_saver";
+
+
+        /**
          * This preference holds SBC priority option.
          * @hide
          */
@@ -17681,6 +17688,16 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_DISABLE_GMS_SPOOF = "baikalos_disable_gms_spoof";
 
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_DISABLE_CERTIFICATE_SPOOF = "baikalos_disable_certificate_spoof";
+
+
         /**
          * This preference holds autorevoke option.
          * @hide
@@ -17689,8 +17706,12 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_APP_VOLUMES = "baikalos_app_volumes";
 
-
-
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_RESET_PERSISTENT_MAC = "baikalos_reset_persistent_mac";
 
         /* End of BaikalOS Global Settings */
 
