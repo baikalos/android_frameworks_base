@@ -361,6 +361,7 @@ public class LocationProviderManager extends
             LocationTransport> {
 
         private final @PermissionLevel int mPermissionLevel;
+        private final @PermissionLevel int mBaikalPermissionLevel;
 
         // we cache these values because checking/calculating on the fly is more expensive
         private boolean mPermitted;
@@ -378,7 +379,8 @@ public class LocationProviderManager extends
             Preconditions.checkArgument(permissionLevel > PERMISSION_NONE);
             Preconditions.checkArgument(!request.getWorkSource().isEmpty());
 
-            mPermissionLevel = permissionLevel;
+            mPermissionLevel = AppProfileManager.overridePermissionLevel(permissionLevel, request, identity);
+            mBaikalPermissionLevel = AppProfileManager.getBaikalPermissionLevel(request, identity);
             mProviderLocationRequest = request;
         }
 
@@ -722,6 +724,7 @@ public class LocationProviderManager extends
         }
 
         private boolean isThrottlingExempt() {
+            if (mBaikalPermissionLevel == 1 || mBaikalPermissionLevel == 2) return true;
             if (mSettingsHelper.getBackgroundThrottlePackageWhitelist().contains(
                     getIdentity().getPackageName())) {
                 return true;

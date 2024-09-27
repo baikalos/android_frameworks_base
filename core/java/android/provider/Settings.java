@@ -17713,6 +17713,15 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_RESET_PERSISTENT_MAC = "baikalos_reset_persistent_mac";
 
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_LOCATION_MODE = "baikalos_location_mode";
+
+
         /* End of BaikalOS Global Settings */
 
         /**

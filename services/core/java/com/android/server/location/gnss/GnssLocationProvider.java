@@ -302,6 +302,8 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     private int mC2KServerPort;
     private boolean mSuplEsEnabled = false;
 
+    private boolean mBaikalLocationMode = true;
+
     private final LocationExtras mLocationExtras = new LocationExtras();
     private final NtpTimeHelper mNtpTimeHelper;
     private final GnssSatelliteBlocklistHelper mGnssSatelliteBlocklistHelper;
@@ -427,6 +429,9 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         // Construct internal handler
         mHandler = FgThread.getHandler();
 
+        mBaikalLocationMode = (Settings.Global.getInt(mContext.getContentResolver(),
+                            Settings.Global.BAIKALOS_LOCATION_MODE, 1) != 0);
+
         // Load GPS configuration and register listeners in the background:
         // some operations, such as opening files and registering broadcast receivers, can take a
         // relative long time, so the ctor() is kept to create objects needed by this instance,
@@ -502,6 +507,20 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
                 new ContentObserver(mHandler) {
                     @Override
                     public void onChange(boolean selfChange) {
+                        updateEnabled();
+                    }
+                }, UserHandle.USER_ALL);
+
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Global.getUriFor(Settings.Global.BAIKALOS_LOCATION_MODE),
+                true,
+                new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        mBaikalLocationMode =
+                            (Settings.Global.getInt(mContext.getContentResolver(),
+                            Settings.Global.BAIKALOS_LOCATION_MODE, 1) != 0);
+                        Log.d(TAG, "GPS:BaikalOS location mode changed: " + mBaikalLocationMode);
                         updateEnabled();
                     }
                 }, UserHandle.USER_ALL);
@@ -816,7 +835,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     }
 
     private void handleEnable() {
-        if (DEBUG) Log.d(TAG, "handleEnable");
+        /*if (DEBUG)*/ Log.d(TAG, "GPS:handleEnable");
 
         boolean inited = mGnssNative.init();
 
@@ -845,7 +864,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     }
 
     private void handleDisable() {
-        if (DEBUG) Log.d(TAG, "handleDisable");
+        /*if (DEBUG)*/ Log.d(TAG, "GPS:handleDisable");
 
         setGpsEnabled(false);
         updateClientUids(new WorkSource());
@@ -869,6 +888,8 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         enabled |= (mProviderRequest != null
                 && mProviderRequest.isActive()
                 && mProviderRequest.isBypass());
+
+        enabled &= mBaikalLocationMode;
 
         // .. disable if automotive device needs to go into suspend
         synchronized (mLock) {
