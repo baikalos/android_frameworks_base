@@ -121,7 +121,11 @@ import com.android.server.utils.quota.Categorizer;
 import com.android.server.utils.quota.Category;
 import com.android.server.utils.quota.CountQuotaTracker;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.BaikalConstants;
+import com.android.server.baikalos.AppProfileManager;
 
 import dalvik.annotation.optimization.NeverCompile;
 
@@ -2951,6 +2955,14 @@ public class JobSchedulerService extends com.android.server.SystemService
                 : 0;
 
         bucket = standbyBucketToBucketIndex(bucket);
+
+        AppProfile srcProfile = AppProfileManager.getInstance().getProfile(packageName,-1);
+        if( srcProfile != null ) {
+            if( srcProfile.getBackgroundMode(false) < 0 ) bucket = EXEMPTED_INDEX;
+            if( srcProfile.mAllowWhileIdle ) bucket = EXEMPTED_INDEX;
+            if( srcProfile.getBackgroundMode(false) > 0 ) bucket = RESTRICTED_INDEX;
+            if( srcProfile.mDisableJobs ) bucket = RESTRICTED_INDEX;
+        }
 
         if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
             Slog.v(TAG, packageName + "-" + userId + " standby bucket index: " + bucket);

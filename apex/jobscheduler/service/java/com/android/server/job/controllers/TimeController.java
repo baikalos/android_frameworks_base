@@ -407,27 +407,29 @@ public final class TimeController extends StateController {
         if( opPackageName != null ) {
             AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName,opUid);
 
-            if( profile.mDisableWakeup ) {
-                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: alarms disabled opPackageName=" + opPackageName);
-                return 2;
-            }
-            if( profile.mDisableJobs ) {
-                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: jobs disabled opPackageName=" + opPackageName);
-                return 1;
-            }
+            if( profile != null ) {
+                if( profile.mDisableWakeup ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: alarms disabled opPackageName=" + opPackageName);
+                    return 2;
+                }
+                if( profile.mDisableJobs ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: jobs disabled opPackageName=" + opPackageName);
+                    return 2;
+                }
 
-            if( profile.mAllowWhileIdle ) {
-                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: allow while idle opPackageName=" + opPackageName);
-                return -1;
-            }
+                if( profile.mAllowWhileIdle ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: allow while idle opPackageName=" + opPackageName);
+                    return -1;
+                }
 
-            int backgroundMode = profile.getBackgroundMode(false);
-            if( backgroundMode < 0 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName);
-            } else {
-                if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: regular opPackageName=" + opPackageName + ", bg=" + backgroundMode);
+                int backgroundMode = profile.getBackgroundMode(false);
+                if( backgroundMode < 0 ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName);
+                } else {
+                    if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: regular opPackageName=" + opPackageName + ", bg=" + backgroundMode);
+                }
+                return backgroundMode;
             }
-            return backgroundMode;
         }
 
         if( BaikalConstants.BAIKAL_DEBUG_JOBS ) Slog.d(TAG, "isWhitelisted: default opPackageName=" + opPackageName + ", bg=0");

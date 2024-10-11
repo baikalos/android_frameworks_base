@@ -75,7 +75,11 @@ import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 import com.android.server.utils.AlarmQueue;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.BaikalConstants;
+import com.android.server.baikalos.AppProfileManager;
 
 import dalvik.annotation.optimization.NeverCompile;
 
@@ -644,6 +648,13 @@ public final class QuotaController extends StateController {
             // Top jobs won't count towards quota so there's no need to involve the Timer.
             return;
         }
+        if(isAllowedWhileIdleLocked(jobStatus)) {
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
+                Slog.d(TAG, jobStatus.toShortString() + " is allow while idle started job");
+            }
+            // Top jobs won't count towards quota so there's no need to involve the Timer.
+            return;
+        }
 
         final int userId = jobStatus.getSourceUserId();
         final String packageName = jobStatus.getSourcePackageName();
@@ -794,6 +805,7 @@ public final class QuotaController extends StateController {
             if (mService.isBatteryCharging()
                     || mTopAppCache.get(jobStatus.getSourceUid())
                     || isTopStartedJobLocked(jobStatus)
+                    || isAllowedWhileIdleLocked(jobStatus)
                     || isUidInForeground(jobStatus.getSourceUid())) {
                 return mConstants.RUNTIME_FREE_QUOTA_MAX_LIMIT_MS;
             }
@@ -803,6 +815,9 @@ public final class QuotaController extends StateController {
 
         // Expedited job.
         if (mService.isBatteryCharging()) {
+            return mConstants.RUNTIME_FREE_QUOTA_MAX_LIMIT_MS;
+        }
+        if(isAllowedWhileIdleLocked(jobStatus)) {
             return mConstants.RUNTIME_FREE_QUOTA_MAX_LIMIT_MS;
         }
         if (jobStatus.getEffectiveStandbyBucket() == EXEMPTED_INDEX) {
@@ -867,7 +882,9 @@ public final class QuotaController extends StateController {
             return true;
         }
 
-        if( jobStatus.canRunInExtreme() ) return true;
+        if( isAllowedWhileIdleLocked(jobStatus) ) {
+            return true;
+        }
 
         return 0 < getRemainingEJExecutionTimeLocked(
                 jobStatus.getSourceUserId(), jobStatus.getSourcePackageName());
@@ -893,7 +910,8 @@ public final class QuotaController extends StateController {
             return true;
         }
 
-        if( jobStatus.canRunInExtreme() ) return true;
+        //if( jobStatus.canRunInExtreme() ) return true;
+        
 
         final int standbyBucket = jobStatus.getEffectiveStandbyBucket();
         // A job is within quota if one of the following is true:
@@ -902,6 +920,7 @@ public final class QuotaController extends StateController {
         //   3. the app overall is within its quota
         return isTopStartedJobLocked(jobStatus)
                 || isUidInForeground(jobStatus.getSourceUid())
+                || isAllowedWhileIdleLocked(jobStatus)
                 || isWithinQuotaLocked(
                 jobStatus.getSourceUserId(), jobStatus.getSourcePackageName(), standbyBucket);
     }
@@ -1921,10 +1940,10 @@ public final class QuotaController extends StateController {
             // If the job started as an EJ, then we should only consider EJ quota for the constraint
             // satisfaction.
             isSatisfied = isWithinEjQuota;
-        } else if (jobStatus.canRunInExtreme()) {
+        } else if( isAllowedWhileIdleLocked(jobStatus) ) {
             isSatisfied = true;
             boolean result = jobStatus.setQuotaConstraintSatisfied(nowElapsed, isSatisfied);
-            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.w(TAG, "canRunInExtreme=true, " + jobStatus);
+            if (BaikalConstants.BAIKAL_DEBUG_JOBS) Slog.w(TAG, "allowWhileIdle=true, " + jobStatus);
             return result;
         } else if (mService.isCurrentlyRunningLocked(jobStatus)) {
             // Job is running but didn't start as an EJ, so only the regular quota should be
@@ -2179,7 +2198,7 @@ public final class QuotaController extends StateController {
                 final int standbyBucket = JobSchedulerService.standbyBucketForPackage(
                         mPkg.packageName, mPkg.userId, nowElapsed);
                 if (mRunningBgJobs.remove(jobStatus) && mRunningBgJobs.size() == 0
-                        && !jobStatus.canRunInExtreme() 
+                        && !isAllowedWhileIdleLocked(jobStatus)
                         && !isQuotaFreeLocked(standbyBucket)) {
                     emitSessionLocked(nowElapsed);
                     cancelCutoff();
@@ -4764,4 +4783,16 @@ public final class QuotaController extends StateController {
     public void dumpConstants(ProtoOutputStream proto) {
         mQcConstants.dump(proto);
     }
+
+    boolean isAllowedWhileIdleLocked(JobStatus job) {
+
+        AppProfile srcProfile = AppProfileManager.getInstance().getProfile(job.getSourcePackageName(),job.getSourceUid());
+        if( srcProfile != null ) {
+            if( srcProfile.getBackgroundMode(false) < 0 ) return true;
+            if( srcProfile.mAllowWhileIdle ) return true;
+        }
+
+        return false;
+    }
+
 }

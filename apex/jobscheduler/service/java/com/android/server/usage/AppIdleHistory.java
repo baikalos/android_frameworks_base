@@ -419,11 +419,17 @@ public class AppIdleHistory {
     public boolean isIdle(String packageName, int userId, long elapsedRealtime) {
 
         AppProfile profile = AppProfileManager.getProfile(packageName,-1);
-        if( profile != null && 
-            profile.getBackgroundMode(false) < 0 || 
-            profile.mAllowWhileIdle ) {
-            if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle forced -> STANDBY_BUCKET_EXEMPTED > 1 :" + packageName);
-            return false;
+        if( profile != null ) {
+            if( profile.getBackgroundMode(false) < 0 || 
+                profile.mAllowWhileIdle ) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle forced -> STANDBY_BUCKET_EXEMPTED > 1 :" + packageName);
+                return false;
+            } else {
+                if( profile.getBackgroundMode(false) > 0 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle forced -> STANDBY_BUCKET_RESTRICTED > 1 :" + packageName);
+                return true;
+                }
+            }
         } 
 
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);

@@ -684,26 +684,29 @@ public class AppStateTrackerImpl implements AppStateTracker {
             Set<Pair<Integer, String>> emptyUidPkgs = new ArraySet<>();
             AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(emptyUidPkgs, mForceAllAppsStandby);
             mBackgroundRestrictedUidPackages = Collections.unmodifiableSet(emptyUidPkgs);
-            for (Pair<Integer, String> entry : mBackgroundRestrictedUidPackages) {
-                Slog.d(TAG, "mBackgroundRestrictedUidPackages: (1) " 
-                    + entry.second + "/" + entry.first);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+                for (Pair<Integer, String> entry : mBackgroundRestrictedUidPackages) {
+                    Slog.d(TAG, "mBackgroundRestrictedUidPackages: (1) " 
+                        + entry.second + "/" + entry.first);
+                }
             }
             return;
         }
         Set<Pair<Integer, String>> fasUidPkgs = new ArraySet<>();
         for (int i = 0, size = mRunAnyRestrictedPackages.size(); i < size; i++) {
             fasUidPkgs.add(mRunAnyRestrictedPackages.valueAt(i));
-            Slog.d(TAG, "mBackgroundRestrictedUidPackages: (2) " 
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.d(TAG, "mBackgroundRestrictedUidPackages: (2) " 
                 + mRunAnyRestrictedPackages.valueAt(i).second + "/" + mRunAnyRestrictedPackages.valueAt(i).first);
         }
         AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(fasUidPkgs, mForceAllAppsStandby);
         mBackgroundRestrictedUidPackages = Collections.unmodifiableSet(fasUidPkgs);
 
-        for (Pair<Integer, String> entry:mBackgroundRestrictedUidPackages) {
-            Slog.d(TAG, "mBackgroundRestrictedUidPackages: (3) " 
-                + entry.second + "/" + entry.first);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+            for (Pair<Integer, String> entry:mBackgroundRestrictedUidPackages) {
+                Slog.d(TAG, "mBackgroundRestrictedUidPackages: (3) " 
+                    + entry.second + "/" + entry.first);
+            }
         }
-
     }
 
     private void updateForceAllAppStandbyState() {

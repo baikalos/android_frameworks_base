@@ -19,13 +19,18 @@ package com.android.server.job;
 import static android.net.NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED;
 import static android.net.NetworkCapabilities.TRANSPORT_TEST;
 
+import static android.content.pm.PackageManager.MATCH_ALL;
+
 import static com.android.server.job.JobSchedulerService.sElapsedRealtimeClock;
 import static com.android.server.job.JobSchedulerService.sSystemClock;
 
 import android.annotation.Nullable;
+import android.app.AppGlobals;
 import android.app.job.JobInfo;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.net.NetworkRequest;
 import android.os.Environment;
 import android.os.Handler;
@@ -52,7 +57,11 @@ import com.android.server.IoThread;
 import com.android.server.job.JobSchedulerInternal.JobStorePersistStats;
 import com.android.server.job.controllers.JobStatus;
 
+import android.baikalos.AppProfile;
+import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
+import com.android.server.baikalos.AppProfileManager;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -214,6 +223,13 @@ public final class JobStore {
         boolean replaced = mJobSet.remove(jobStatus);
         mJobSet.add(jobStatus);
         if (jobStatus.isPersisted()) {
+            AppProfileManager appProfileManager = AppProfileManager.getInstance();
+        
+            AppProfile profile = appProfileManager != null ? appProfileManager.getAppProfile(jobStatus.getSourcePackageName(),jobStatus.getSourceUid()) : null;
+            if( profile != null ) {
+                if( profile.mBackgroundMode > 0 ) jobStatus.setPersisted(false); 
+            }
+
             maybeWriteStatusToDiskAsync();
         }
         if (BaikalConstants.BAIKAL_DEBUG_JOBS) {
@@ -560,6 +576,7 @@ public final class JobStore {
                     String.valueOf(jobStatus.getLastSuccessfulRunTime()));
             out.attribute(null, "lastFailedRunTime",
                     String.valueOf(jobStatus.getLastFailedRunTime()));
+            out.attribute(null, "sourceUid", String.valueOf(jobStatus.getSourceUid()));
         }
 
         private void writeBundleToXml(PersistableBundle extras, XmlSerializer out)
@@ -872,7 +889,45 @@ public final class JobStore {
             }
 
             String sourcePackageName = parser.getAttributeValue(null, "sourcePackageName");
+            String sourceUidString = parser.getAttributeValue(null, "sourceUid");
+            int sourceUid = -1;
+            if( sourceUidString != null && !"".equals(sourceUidString)) {
+                try {
+                    sourceUid = Integer.valueOf(sourceUidString);
+                } catch(Exception suidex) {}
+            }
+
+            int tempSourceUid = -1;
+            try {
+                ApplicationInfo ai = mContext.getPackageManager().getApplicationInfo(sourcePackageName,
+                    PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS |
+                    PackageManager.MATCH_ALL |
+                    PackageManager.MATCH_ANY_USER );
+                if( ai != null ) {
+                    if( ai.uid == 0 ) {
+                        Slog.d(TAG, "Error reading job, package not exist:" + sourcePackageName);
+                        return null;
+                    }
+                    tempSourceUid = ai.uid;
+                }
+                if( tempSourceUid == -1 ) {
+                    Slog.d(TAG, "Error reading job, package not exist:" + sourcePackageName);
+                    return null;
+                }
+            } catch (Exception ex) {
+                Slog.d(TAG, "Error reading job, package not exist:" + sourcePackageName);
+                return null;
+            }
+
+    
             final String sourceTag = parser.getAttributeValue(null, "sourceTag");
+
+            AppProfileManager appProfileManager = AppProfileManager.getInstance();
+        
+            AppProfile profile = appProfileManager != null ? appProfileManager.getAppProfile(sourcePackageName,sourceUid) : null;
+            if( profile != null ) {
+                if( profile.mBackgroundMode > 0 ) jobBuilder.setPersisted(false); 
+            }
 
             int eventType;
             // Read out constraints tag.

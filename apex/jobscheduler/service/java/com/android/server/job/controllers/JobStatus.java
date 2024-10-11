@@ -1123,6 +1123,10 @@ public final class JobStatus {
         return job.isPersisted();
     }
 
+    public void setPersisted(boolean persist) {
+        job.setPersisted(persist);
+    }
+
     public long getEarliestRunTime() {
         return earliestRunTimeElapsedMillis;
     }

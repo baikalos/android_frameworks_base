@@ -210,7 +210,7 @@ public final class DeviceIdleJobsController extends StateController {
         //if( dstProfile.getBackgroundMode() < 0 ) return true;
 
         AppProfile srcProfile = AppProfileManager.getInstance().getAppProfile(job.getSourcePackageName(),job.getSourceUid());
-        if( srcProfile.getBackgroundMode(false) < 0 ) return true;
+        if( srcProfile != null && srcProfile.getBackgroundMode(false) < 0 ) return true;
 
         final int appId = UserHandle.getAppId(job.getSourceUid());
         return Arrays.binarySearch(mDeviceIdleWhitelistAppIds, appId) >= 0
@@ -223,8 +223,10 @@ public final class DeviceIdleJobsController extends StateController {
     boolean isAllowedWhileIdleLocked(JobStatus job) {
 
         AppProfile srcProfile = AppProfileManager.getInstance().getProfile(job.getSourcePackageName(),job.getSourceUid());
-        if( srcProfile.getBackgroundMode(false) < 0 ) return true;
-        if( srcProfile.mAllowWhileIdle ) return true;
+        if( srcProfile != null ) {
+            if( srcProfile.getBackgroundMode(false) < 0 ) return true;
+            if( srcProfile.mAllowWhileIdle ) return true;
+        }
 
         return false;
     }

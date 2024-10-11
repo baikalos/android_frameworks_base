@@ -426,7 +426,7 @@ public class JobInfo implements Parcelable {
     private final long minLatencyMillis;
     private final long maxExecutionDelayMillis;
     private final boolean isPeriodic;
-    private final boolean isPersisted;
+    private boolean isPersisted;
     private final long intervalMillis;
     private final long flexMillis;
     private final long initialBackoffMillis;
@@ -664,6 +664,10 @@ public class JobInfo implements Parcelable {
      */
     public boolean isPersisted() {
         return isPersisted;
+    }
+
+    public void setPersisted(boolean persisted) {
+        isPersisted = persisted;
     }
 
     /**
