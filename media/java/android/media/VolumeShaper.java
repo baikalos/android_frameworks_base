@@ -972,8 +972,9 @@ public final class VolumeShaper implements AutoCloseable {
              */
             public @NonNull Builder setDuration(long durationMillis) {
                 if (durationMillis <= 0) {
-                    throw new IllegalArgumentException(
-                            "duration: " + durationMillis + " not positive");
+                    //throw new IllegalArgumentException(
+                    //        "duration: " + durationMillis + " not positive");
+                    mDurationMs = 1000.0;
                 }
                 mDurationMs = (double) durationMillis;
                 return this;
