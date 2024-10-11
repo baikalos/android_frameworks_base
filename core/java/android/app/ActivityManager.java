@@ -3770,6 +3770,23 @@ public class ActivityManager {
     }
 
     /**
+     * Return the importance of a given package name, based on the processes that are
+     * currently running.  The return value is one of the importance constants defined
+     * in {@link RunningAppProcessInfo}, giving you the highest importance of all the
+     * processes that this package has code running inside of.  If there are no processes
+     * running its code, {@link RunningAppProcessInfo#IMPORTANCE_GONE} is returned.
+     * @hide
+     */
+    @SystemApi
+    public int getBaikalPackageOption(String packageName, int uid, int opCode,int def) {
+        try {
+            return getService().getBaikalPackageOption(packageName,uid,opCode,def);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Return the importance of a given uid, based on the processes that are
      * currently running.  The return value is one of the importance constants defined
      * in {@link RunningAppProcessInfo}, giving you the highest importance of all the

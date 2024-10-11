@@ -3062,11 +3062,21 @@ public class ActivityManagerService extends IActivityManager.Stub
     }
 
     @Override
+    public int getBaikalPackageOption(String packageName, int uid, int opCode,int def) {
+        if( mAppProfileManager == null ) return def;
+        return mAppProfileManager.getPackageOptionFromActivityManager(packageName,uid,opCode,def);
+    }
+
+    @Override
     public int getPackageProcessState(String packageName, String callingPackage) {
         if (!hasUsageStatsPermission(callingPackage)) {
             enforceCallingPermission(android.Manifest.permission.PACKAGE_USAGE_STATS,
                     "getPackageProcessState");
         }
+
+        /*if( packageName != null && mAppProfileManager != null && packageName.contains(";baikal;") ) {
+            return  mAppProfileManager.getPackageOptionFromProcessState(packageName);
+        }*/
 
         final int[] procState = {PROCESS_STATE_NONEXISTENT};
         synchronized (mProcLock) {
@@ -6109,7 +6119,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
         int mode = appProfile.getBackgroundMode();
 
-        if( mode < 0 /*|| appProfile.mAllowWhileIdle*/ ) {
+        if( mode < 0 || appProfile.mAllowWhileIdle ) {
             if (DEBUG_BACKGROUND_CHECK) {
                 Slog.i(TAG, "App " + uid + "/" + packageName
                         + " is whitelisted; not restricted in background");
@@ -17519,8 +17529,14 @@ public class ActivityManagerService extends IActivityManager.Stub
                             Slog.i(TAG,"Baikal.AppProfile: startProcess blocked for background restricted app for:" + info);
                             return;
                         } else {
-                            Slog.i(TAG,"Baikal.AppProfile: startProcess on top for background restricted:" + info, new Throwable());
+                            Slog.i(TAG,"Baikal.AppProfile: startProcess on top for background restricted:" + info);
+
                         }
+                    }
+
+                    AppProfile appProfile = mAppProfileManager.getAppProfile(info.packageName, info.uid);
+                    if( appProfile != null ) {
+                        appProfile.setLastTopTimeNow();
                     }
 
                     startProcessLocked(processName, info, knownToBeDead, 0 /* intentFlags */,

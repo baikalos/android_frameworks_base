@@ -512,6 +512,9 @@ interface IActivityManager {
     void noteAlarmFinish(in IIntentSender sender, in WorkSource workSource, int sourceUid, in String tag);
     @UnsupportedAppUsage
     int getPackageProcessState(in String packageName, in String callingPackage);
+    @UnsupportedAppUsage
+    int getBaikalPackageOption(String packageName, int uid, int opCode, int def);
+
 
     // Start of N transactions
     // Start Binder transaction tracking for all applications.
