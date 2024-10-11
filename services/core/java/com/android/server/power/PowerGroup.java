@@ -257,7 +257,7 @@ public class PowerGroup {
     }
 
     boolean dozeLocked(long eventTime, int uid, @PowerManager.GoToSleepReason int reason) {
-        if (eventTime < getLastWakeTimeLocked() || !isInteractive(mWakefulness)) {
+        if (eventTime < mLastWakeTime || mWakefulness != WAKEFULNESS_AWAKE) {
             return false;
         }
 
