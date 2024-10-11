@@ -507,7 +507,7 @@ public final class AudioAttributes implements Parcelable {
             | FLAG_NO_SYSTEM_CAPTURE | FLAG_CAPTURE_PRIVATE | FLAG_CONTENT_SPATIALIZED
             | FLAG_NEVER_SPATIALIZE | FLAG_CALL_REDIRECTION;
     private final static int FLAG_ALL_PUBLIC = FLAG_AUDIBILITY_ENFORCED |
-            FLAG_HW_AV_SYNC | FLAG_LOW_LATENCY;
+            FLAG_HW_AV_SYNC | FLAG_LOW_LATENCY | FLAG_BEACON;
     /* mask of flags that can be set by SDK and System APIs through the Builder */
     private static final int FLAG_ALL_API_SET = FLAG_ALL_PUBLIC
             | FLAG_BYPASS_INTERRUPTION_POLICY
@@ -784,8 +784,8 @@ public final class AudioAttributes implements Parcelable {
         public Builder(AudioAttributes aa) {
             mUsage = BaikalSpoofer.overrideAudioUsage(aa.mUsage);
             mContentType = BaikalSpoofer.overrideAudioContentType(aa.mContentType);
-            mSource = aa.mSource;
             mFlags = BaikalSpoofer.overrideAudioFlags(aa.getAllFlags());
+            mSource = aa.mSource;
             mTags = (HashSet<String>) aa.mTags.clone();
             mMuteHapticChannels = aa.areHapticChannelsMuted();
             mIsContentSpatialized = aa.isContentSpatialized();
@@ -873,6 +873,22 @@ public final class AudioAttributes implements Parcelable {
             }
 
             aa.mFlags = BaikalSpoofer.overrideAudioFlags(aa.mFlags);
+
+            /*if( aa.mUsage == USAGE_NOTIFICATION ) {
+                switch(BaikalSpoofer.getNotificationSonification()) {
+                    case 1:
+                        aa.mFlags |= AudioAttributes.FLAG_AUDIBILITY_ENFORCED;
+                        aa.mUsage = USAGE_UNKNOWN;
+                        aa.mContentType = CONTENT_TYPE_UNKNOWN;
+                    break;
+                    case 2:
+                        aa.mFlags &= ~AudioAttributes.FLAG_AUDIBILITY_ENFORCED;
+                        aa.mUsage = USAGE_ALARM;
+                        aa.mContentType = CONTENT_TYPE_UNKNOWN;
+                    break;
+                }
+            }*/
+
             return aa;
         }
 
@@ -1051,6 +1067,7 @@ public final class AudioAttributes implements Parcelable {
          */
         public @NonNull Builder setAllowedCapturePolicy(@CapturePolicy int capturePolicy) {
             mFlags = capturePolicyToFlags(capturePolicy, mFlags);
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             return this;
         }
 
@@ -1174,6 +1191,7 @@ public final class AudioAttributes implements Parcelable {
 
             mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
             mContentType = BaikalSpoofer.overrideAudioContentType(mContentType);
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
             //streamType = BaikalSpoofer.overrideAudioStreamType(streamType);
 
             if (AudioProductStrategy.getAudioProductStrategies().size() > 0) {
@@ -1245,6 +1263,7 @@ public final class AudioAttributes implements Parcelable {
 
             mUsage = BaikalSpoofer.overrideAudioUsage(mUsage);
             mContentType = BaikalSpoofer.overrideAudioContentType(mContentType);
+            mFlags = BaikalSpoofer.overrideAudioFlags(mFlags);
 
             return this;
         }
