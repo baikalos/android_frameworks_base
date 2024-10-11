@@ -265,8 +265,10 @@ public class BaikalDebugManager {
         if( (debugMask&BaikalConstants.DEBUG_MASK_NETWORK) !=0 ) BaikalConstants.BAIKAL_DEBUG_NETWORK = true;
 
 
+        AppProfile.DEBUG = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
         AppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
-        AppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_OOM_RAW && BaikalConstants.BAIKAL_DEBUG_RAW;
+        AppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+
         NetworkManagementService.DBG = BaikalConstants.BAIKAL_DEBUG_NETWORK;
         NetworkManagementService.DBGB = BaikalConstants.BAIKAL_DEBUG_NETWORK;
 
