@@ -26,5 +26,5 @@
 
     <java-symbol type="bool" name="config_superSaverAvailable" />
     <java-symbol type="bool" name="config_validLayoutRequesters" />
-
+    <java-symbol type="bool" name="config_certificateSpooferAvailable" />
 </resources>

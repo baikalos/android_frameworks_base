@@ -248,6 +248,8 @@ public class BaikalPowerSaveManager {
                 .setForceBackgroundCheck(false)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_ALL_ENABLED)
                 .setLocationMode(PowerManager.LOCATION_MODE_NO_CHANGE)
+                .setLessRestrictiveBackgroundPolicy(true)
+                .setDisableBackgroundByDefault(false)
                 .setkillBgRestrictedCachedIdleSettleTime(600);
 
             mCurrentPolicy = mDefaultPolicies[POWERSAVER_POLICY_NONE];
@@ -271,6 +273,8 @@ public class BaikalPowerSaveManager {
                 .setForceBackgroundCheck(false)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_ALL_ENABLED)
                 .setLocationMode(PowerManager.LOCATION_MODE_NO_CHANGE)
+                .setLessRestrictiveBackgroundPolicy(false)
+                .setDisableBackgroundByDefault(false)
                 .setkillBgRestrictedCachedIdleSettleTime(600);
 
 
@@ -293,6 +297,8 @@ public class BaikalPowerSaveManager {
                 .setForceBackgroundCheck(true)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_CRITICAL_ONLY)
                 .setLocationMode(PowerManager.LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF)
+                .setLessRestrictiveBackgroundPolicy(false)
+                .setDisableBackgroundByDefault(false)
                 .setkillBgRestrictedCachedIdleSettleTime(300);
 
             mDefaultPolicies[POWERSAVER_POLICY_AGGRESSIVE] = (new PowerSaverPolicyConfig("aggressive",POWERSAVER_POLICY_AGGRESSIVE))
@@ -314,6 +320,8 @@ public class BaikalPowerSaveManager {
                 .setForceBackgroundCheck(true)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_ALL_DISABLED)
                 .setLocationMode(PowerManager.LOCATION_MODE_FOREGROUND_ONLY)
+                .setLessRestrictiveBackgroundPolicy(false)
+                .setDisableBackgroundByDefault(true)
                 .setkillBgRestrictedCachedIdleSettleTime(60);
 
             mDefaultPolicies[POWERSAVER_POLICY_EXTREME] = (new PowerSaverPolicyConfig("extreme",POWERSAVER_POLICY_EXTREME))
@@ -335,6 +343,8 @@ public class BaikalPowerSaveManager {
                 .setForceBackgroundCheck(true)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_ALL_DISABLED)
                 .setLocationMode(PowerManager.LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF)
+                .setLessRestrictiveBackgroundPolicy(false)
+                .setDisableBackgroundByDefault(true)
                 .setkillBgRestrictedCachedIdleSettleTime(30);
 
             mDefaultPolicies[POWERSAVER_POLICY_BATTERY_SAVER] = (new PowerSaverPolicyConfig("batterysaver",POWERSAVER_POLICY_BATTERY_SAVER))
@@ -356,6 +366,8 @@ public class BaikalPowerSaveManager {
                 .setForceBackgroundCheck(true)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_ALL_DISABLED)
                 .setLocationMode(PowerManager.LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF)
+                .setLessRestrictiveBackgroundPolicy(false)
+                .setDisableBackgroundByDefault(true)
                 .setkillBgRestrictedCachedIdleSettleTime(30);
 
             mDefaultPolicies[POWERSAVER_POLICY_STAMINA] = (new PowerSaverPolicyConfig("stamina",POWERSAVER_POLICY_STAMINA))
@@ -377,6 +389,8 @@ public class BaikalPowerSaveManager {
                 .setForceBackgroundCheck(true)
                 .setSoundTriggerMode(PowerManager.SOUND_TRIGGER_MODE_ALL_DISABLED)
                 .setLocationMode(PowerManager.LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF)
+                .setLessRestrictiveBackgroundPolicy(false)
+                .setDisableBackgroundByDefault(true)
                 .setkillBgRestrictedCachedIdleSettleTime(15);
 
             mLevels[POWERSAVER_POLICY_NONE] = mDefaultPolicies[POWERSAVER_POLICY_NONE].getBatterySaverPolicyConfig();
@@ -585,6 +599,7 @@ public class BaikalPowerSaveManager {
             if( powerSaverLevel >= POWERSAVER_POLICY_NONE && powerSaverLevel < POWERSAVER_POLICY_MAX ) {
                 if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
                 mCurrentPolicy = mPolicies[powerSaverLevel];
+                AppProfile.setDefaultBackgroundMode(mCurrentPolicy.disableBackgroundByDefault ? 2:0);
                 activateCurrentPolicy();
                 mPowerManager.setAdaptivePowerSavePolicy(mLevels[powerSaverLevel]);
                 mPowerManager.setAdaptivePowerSaveEnabled(true);
@@ -598,7 +613,7 @@ public class BaikalPowerSaveManager {
     }
 
     private void activateCurrentPolicy() {
-
+        PowerSaverPolicyConfig.setCurrentPowerSaverPolicyConfig(mCurrentPolicy);
     }
 
     public boolean getUnrestrictedNetwork() {

@@ -26,4 +26,5 @@
 
     <bool name="config_superSaverAvailable">false</bool>
     <bool name="config_validLayoutRequesters">true</bool>
+    <bool name="config_certificateSpooferAvailable">true</bool>
 </resources>

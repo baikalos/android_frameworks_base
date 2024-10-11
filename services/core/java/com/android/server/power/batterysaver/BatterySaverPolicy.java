@@ -63,7 +63,7 @@ public class BatterySaverPolicy extends ContentObserver implements
         DeviceConfig.OnPropertiesChangedListener {
     private static final String TAG = "BatterySaverPolicy";
 
-    static final boolean DEBUG = true; // DO NOT SUBMIT WITH TRUE.
+    static final boolean DEBUG = false; // DO NOT SUBMIT WITH TRUE.
 
     @VisibleForTesting
     static final String KEY_LOCATION_MODE = "location_mode";

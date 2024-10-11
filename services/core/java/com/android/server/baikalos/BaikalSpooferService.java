@@ -44,12 +44,15 @@ public class BaikalSpooferService {
     }
 
     public static int getScalingFactor(String packageName,int uid) {
+        /*
         AppProfile profile = AppProfileManager.getProfile(packageName, uid);
         if( profile != null ) {
             if( profile.mScaleFactor != 0 ) Log.w(TAG, "getScalingFactor:" + packageName + "/" + uid + " - " + profile.mScaleFactor ); 
             return profile.mScaleFactor;
         }           
+        */
         return 0;
+        
     }
 
 

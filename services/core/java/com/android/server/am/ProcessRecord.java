@@ -295,6 +295,12 @@ class ProcessRecord implements WindowProcessListener {
     private long mLastActivityTime;
 
     /**
+     * For managing the LRU list.
+     */
+    @CompositeRWLock({"mService", "mProcLock"})
+    private long mLastTopTime;
+
+    /**
      * Set to true when process was launched with a wrapper attached.
      */
     @GuardedBy("mService")
@@ -603,6 +609,8 @@ class ProcessRecord implements WindowProcessListener {
         mProfile.init(now);
         mOptRecord.init(now);
         mState.init(now);
+        setLastTopTime(now);
+        mAppProfile.setLastTopTime(now);
         mWindowProcessController = new WindowProcessController(
                 mService.mActivityTaskManager, info, processName, uid, userId, this, this);
         mPkgList.put(_info.packageName, new ProcessStats.ProcessStateHolder(_info.longVersionCode));
@@ -965,9 +973,19 @@ class ProcessRecord implements WindowProcessListener {
         return mLastActivityTime;
     }
 
+    @GuardedBy(anyOf = {"mService", "mProcLock"})
+    long getLastTopTime() {
+        return mLastTopTime;
+    }
+
     @GuardedBy({"mService", "mProcLock"})
     void setLastActivityTime(long lastActivityTime) {
         mLastActivityTime = lastActivityTime;
+    }
+
+    @GuardedBy({"mService", "mProcLock"})
+    void setLastTopTime(long lastTopTime) {
+        mLastTopTime = lastTopTime;
     }
 
     @GuardedBy("mService")

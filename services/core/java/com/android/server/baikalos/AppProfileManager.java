@@ -62,6 +62,11 @@ import static android.location.LocationRequest.QUALITY_HIGH_ACCURACY;
 import static android.location.LocationRequest.QUALITY_LOW_POWER;
 import static android.location.LocationRequest.PASSIVE_INTERVAL;
 
+import static com.android.server.location.LocationPermissions.PERMISSION_COARSE;
+import static com.android.server.location.LocationPermissions.PERMISSION_FINE;
+import static com.android.server.location.LocationPermissions.PERMISSION_NONE;
+
+
 import android.util.Slog;
 
 import android.content.Context;
@@ -140,6 +145,8 @@ import android.location.util.identity.CallerIdentity;
 
 import com.android.server.location.provider.LocationProviderManager;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -275,6 +282,10 @@ public class AppProfileManager {
 
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_BPCHARGE_FORCE),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE),
                     false, this);
 
                 mResolver.registerContentObserver(
@@ -462,6 +473,7 @@ public class AppProfileManager {
             Settings.Global.putInt(mResolver, Settings.Global.BAIKALOS_STAMINA_ENABLED, 0);
             Settings.Global.putInt(mResolver, Settings.Global.BAIKALOS_EXTREME_IDLE, 0);
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0);
+            Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0);
 
 
             mObserver = new AppProfileContentObserver(mHandler);
@@ -1284,8 +1296,20 @@ public class AppProfileManager {
 
 
     public AppProfile getAppProfile(String packageName, int uid) {
-        AppProfile profile = mAppSettings != null ? mAppSettings.getProfile(packageName) : null;
-        
+        if( mAppSettings == null ) return new AppProfile(packageName,uid);
+
+        AppProfile profile = null;
+
+        if( packageName == null ) {
+            if( uid == -1 ) {
+                Slog.d(TAG,"getAppProfile(null,-1) : profile not found",new Throwable());
+                return new AppProfile(packageName,uid);
+            }
+            profile = mAppSettings.getProfile(uid);
+        } else {
+            profile = mAppSettings.getProfile(packageName);
+        }
+
         if( profile != null ) return profile;
         if( uid == -1 ) uid = BaikalConstants.getUidByPackage(mContext, packageName);
         if( uid == -1 ) {
@@ -1352,12 +1376,10 @@ public class AppProfileManager {
         if( uid < Process.FIRST_APPLICATION_UID ) return false;
         if( profile == null ) {
             if( packageName == null ) {
-                packageName = BaikalConstants.getPackageByUid(mContext, uid);
-                if( packageName == null ) {
-                    return false;
-                }
+                profile = mAppSettings.getProfile(uid);
+            } else {
+                profile = mAppSettings.getProfile(packageName);
             }
-            profile = mAppSettings.getProfile(packageName);
         }
         return isBlocked(profile);
     }
@@ -1423,6 +1445,34 @@ public class AppProfileManager {
         return def;
     }
 
+
+    public int getPackageOptionFromActivityManager(String packageName, int uid, int opCode,int def) {
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def);
+        try {
+            AppProfile profile = null;
+            if( packageName != null ) profile = mAppSettings.getProfile(packageName);
+            else profile = mAppSettings.getProfile(uid);
+            if( profile == null ) return def;
+
+            switch(opCode) {
+    
+                case AppProfile.OPCODE_LOCATION:
+                    return profile.mLocationLevel;
+                
+                case AppProfile.OPCODE_HIDE_HMS:
+                    return profile.mHideHMS ? 1 : 0;
+
+                case AppProfile.OPCODE_HIDE_GMS:
+                    return profile.mHideGMS ? 1 : 0;
+
+                case AppProfile.OPCODE_HIDE_3P:
+                    return profile.mHide3P ? 1 : 0;
+            }
+        } catch(Exception ex) {
+            Slog.w(TAG, "getPackageOptionFromActivityManager: exception", ex);
+        }
+        return def;
+    }
 
     boolean mAwake;
     public void setAwake(boolean awake) {
@@ -1500,26 +1550,67 @@ public class AppProfileManager {
             return false;
         }
 
-        boolean bypassEnabled = mSmartBypassChargingEnabled | mCurrentProfile.mBypassCharging | mBypassChargingForced | (mBypassChargingScreenOn && mScreenMode);
-        boolean limitedEnabled = !"none".equals(mPowerInputLimitValue) && (mLimitedChargingForced || (mLimitedChargingScreenOn && mScreenMode));
+        boolean bypassEnabled = mSmartBypassChargingEnabled | mCurrentProfile.mBypassCharging | mBypassChargingForced | (mBypassChargingScreenOn && (mWakefulness == WAKEFULNESS_AWAKE));
+        boolean limitedEnabled = !"none".equals(mPowerInputLimitValue) && (mLimitedChargingForced || (mLimitedChargingScreenOn && (mWakefulness == WAKEFULNESS_AWAKE)));
 
         try {
             if( !bypassEnabled && limitedEnabled ) {
-                if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Limited charging " + limitedEnabled);
-                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputLimitValue);
-                Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,2);
+                final File file = new File(mPowerInputSuspendSysfsNode);
+                if (!file.exists()) {
+                    if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Limited charging failed. Kernel node not ready!");
+                    return false;
+                }
+
+                String currentValue = FileUtils.readTextFile(file,0,null);
+                int currentSetting = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,0);
+
+                if( currentValue == null || currentSetting != 2 || !currentValue.startsWith(mPowerInputLimitValue)) {
+                    if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Limited charging " + limitedEnabled);
+                    FileUtils.stringToFile(mPowerInputSuspendSysfsNode, mPowerInputLimitValue);
+                    Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,2);
+                }
+
             } else {
-                if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Bypass charging " + bypassEnabled);
-                FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
-                SystemPropertiesSet("baikal.charging.mode", bypassEnabled ? "1" : "0");
-                Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,bypassEnabled ? 1 : 0);
+
+                final File file = new File(mPowerInputSuspendSysfsNode);
+                if (!file.exists()) {
+                    if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Limited charging failed. Kernel node not ready!");
+                    return false;
+                }
+
+                String currentValue = FileUtils.readTextFile(file,0,null);
+                int currentSetting = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,0);
+
+                if( currentValue == null 
+                    || currentSetting != (bypassEnabled ? 1 : 0) 
+                    || !currentValue.startsWith(bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue)) {
+                    if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.w(TAG, "Update Bypass charging " + bypassEnabled);
+                    FileUtils.stringToFile(mPowerInputSuspendSysfsNode, bypassEnabled ? mPowerInputSuspendValue : mPowerInputResumeValue);
+                    SystemPropertiesSet("baikal.charging.mode", bypassEnabled ? "1" : "0");
+                    Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_CHARGING_MODE,bypassEnabled ? 1 : 0);
+                }
             }
         } catch(Exception e) {
-            Slog.w(TAG, "Can't enable bypass charging!", e);
+            Slog.e(TAG, "Couldn't set bypass or limited charging!", e);
         } 
 
         return bypassEnabled;
     }
+
+    private static String readFileContents(String path) {
+        final File file = new File(path);
+        if (!file.exists()) {
+            return null;
+        }
+
+        try {
+            return FileUtils.readTextFile(file, 0 /* max */, null /* ellipsis */);
+        } catch (IOException e) {
+            Slog.e(TAG, "Failed to read file:", e);
+            return null;
+        }
+    }
+
 
     public boolean isAodOnChargerEnabled() {
         return mAodOnCharger & mOnCharger;
@@ -1656,6 +1747,8 @@ public class AppProfileManager {
 
         int uid = identity.getUid(); //Binder.getCallingUid();
 
+        if( source == null ) return source;
+
         LocationRequest request = source.build();
 
         LocationRequest.Builder sanitized = new LocationRequest.Builder(request);
@@ -1696,13 +1789,65 @@ public class AppProfileManager {
                 return sanitized;
 
             case 2: // COARSE BLOCK
-                sanitized.setQuality(QUALITY_BALANCED_POWER_ACCURACY);
+                sanitized.setQuality(QUALITY_HIGH_ACCURACY);
+                sanitized.setMinUpdateIntervalMillis(0);
+                sanitized.setMinUpdateDistanceMeters(0);
                 return sanitized;
 
         }
         return sanitized;
     }
 
+    public static int overridePermissionLevel(int permissionLevel, LocationRequest request, CallerIdentity identity) {
+
+        int level = getBaikalPermissionLevel(request,identity);
+
+        switch(level) {
+            case 1:
+            case 2:
+                return PERMISSION_FINE;
+            case 3:
+            case 4:
+                return PERMISSION_COARSE;
+            case 5:
+                if( permissionLevel == PERMISSION_NONE ) return PERMISSION_NONE;
+                return PERMISSION_COARSE;
+        }
+        return permissionLevel;
+    }
+
+    public static int getBaikalPermissionLevel(LocationRequest request, CallerIdentity identity) {
+        return getBaikalPermissionLevel(0,request,identity);
+    }
+
+    public static int getBaikalPermissionLevel(int def, LocationRequest request, CallerIdentity identity) {
+
+        int uid = identity.getUid(); //Binder.getCallingUid();
+
+        if( request != null ) {
+            WorkSource workSource = new WorkSource(request.getWorkSource());
+            if (workSource != null && !workSource.isEmpty()) {
+                WorkChain workChain = getFirstNonEmptyWorkChain(workSource);
+                if (workChain != null) {
+                    uid = workChain.getAttributionUid();
+                } else {
+                    uid = workSource.getUid(0);
+                }
+            }
+        }
+
+        return getBaikalPermissionLevel(def, uid);
+    }
+
+    public static int getBaikalPermissionLevel(int def, int uid) {
+        if( mInstance == null ) return def;
+
+        if( mInstance.isGmsUid(uid) ) return def;
+
+        AppProfile profile = mInstance.getAppProfile(uid);
+        if( profile == null ) return def;
+        return profile.mLocationLevel;    
+    }
 
     public static int getLocationLevel(int uid) {
 

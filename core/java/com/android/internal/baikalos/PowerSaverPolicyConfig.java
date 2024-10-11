@@ -64,6 +64,19 @@ import android.util.KeyValueListParser;
         public int killBgRestrictedCachedIdleSettleTime;
         public boolean killInBackground;
         public boolean autoLimitBackground;
+        public boolean lessRestrictiveBackgroundPolicy;
+        public boolean disableBackgroundByDefault;
+
+        private static PowerSaverPolicyConfig currentPowerSaverPolicyConfig_ = new PowerSaverPolicyConfig("boot",-1);
+
+        public static PowerSaverPolicyConfig getCurrentPowerSaverPolicyConfig() {  
+            return currentPowerSaverPolicyConfig_;
+        }
+
+        public static void setCurrentPowerSaverPolicyConfig(PowerSaverPolicyConfig currentPowerSaverPolicyConfig) {  
+            currentPowerSaverPolicyConfig_ = currentPowerSaverPolicyConfig;
+        }
+        
 
         public PowerSaverPolicyConfig(String name, int number) {
             policyName = name;
@@ -88,6 +101,8 @@ import android.util.KeyValueListParser;
             locationMode = 0;
             killBgRestrictedCachedIdleSettleTime = 600;
             killInBackground = false;
+            lessRestrictiveBackgroundPolicy = false;
+            disableBackgroundByDefault = false;
         }
 
         public static PowerSaverPolicyConfig deserialize(String policyString) {
@@ -131,7 +146,8 @@ import android.util.KeyValueListParser;
                 policy.locationMode = parser.getInt("loc",0);
                 policy.killBgRestrictedCachedIdleSettleTime = parser.getInt("kbt",600);
                 policy.killInBackground = parser.getBoolean("kill",false);
-
+                policy.lessRestrictiveBackgroundPolicy = parser.getBoolean("lrbp",false);
+                policy.disableBackgroundByDefault = parser.getBoolean("dbbd",false);
                 return policy;
 
             } catch( Exception e ) {
@@ -164,6 +180,8 @@ import android.util.KeyValueListParser;
             if( locationMode != 0 ) seralized += "," + "loc=" +  locationMode;
             if( killBgRestrictedCachedIdleSettleTime != 600 ) seralized += "," + "kbt=" +  killBgRestrictedCachedIdleSettleTime;
             if( killInBackground ) seralized += "," + "kill=" +  killInBackground;
+            if( lessRestrictiveBackgroundPolicy ) seralized += "," + "lrbp=" +  lessRestrictiveBackgroundPolicy;
+            if( disableBackgroundByDefault ) seralized += "," + "dbbd=" +  disableBackgroundByDefault;
             return seralized;
         }
 
@@ -222,7 +240,6 @@ import android.util.KeyValueListParser;
             return this;
         }
 
-
         public PowerSaverPolicyConfig setEnableAdjustBrightness(boolean enable) {
             enableAdjustBrightness = enable;
             return this;
@@ -258,7 +275,6 @@ import android.util.KeyValueListParser;
             return this;
         }
 
-
         public PowerSaverPolicyConfig setLocationMode(int mode) {
             locationMode = mode;
             return this;
@@ -276,6 +292,16 @@ import android.util.KeyValueListParser;
 
         public PowerSaverPolicyConfig setKillInBackground(boolean enable) {
             killInBackground = enable;
+            return this;
+        }
+
+        public PowerSaverPolicyConfig setLessRestrictiveBackgroundPolicy(boolean enable) {
+            lessRestrictiveBackgroundPolicy = enable;
+            return this;
+        }
+
+        public PowerSaverPolicyConfig setDisableBackgroundByDefault(boolean enable) {
+            disableBackgroundByDefault = enable;
             return this;
         }
 

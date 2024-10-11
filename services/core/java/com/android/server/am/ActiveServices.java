@@ -2896,7 +2896,7 @@ public final class ActiveServices {
             Slog.w(TAG, "Exception checking component:" + s.name, e);
         }
 
-        Slog.w(TAG, "bindServiceLocked: from " + callingPackage + "/" + callingUid + ":" + callingPid + " " + s.name + ", state=" + enableState);
+        if( DEBUG_SERVICE ) Slog.i(TAG, "bindServiceLocked: from " + callingPackage + "/" + callingUid + ":" + callingPid + " " + s.name + ", state=" + enableState);
 
         if( enableState != PackageManager.COMPONENT_ENABLED_STATE_ENABLED && enableState != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT ) {
             Slog.w(TAG, "Background service start disabled by baikal component name from:" + callerApp + " for: " + s);
@@ -4232,7 +4232,7 @@ public final class ActiveServices {
             return null;
         }
 
-        if (true /*DEBUG_SERVICE*/) {
+        if (DEBUG_SERVICE) {
             Slog.v(TAG_SERVICE, "Bringing up " + r + " " + r.intent + " fg=" + r.fgRequired);
         }
 
@@ -4240,7 +4240,7 @@ public final class ActiveServices {
         try {
             IPackageManager pm = AppGlobals.getPackageManager();
             enableState = pm.getComponentEnabledSetting(r.name, 0);
-            Slog.w(TAG, "Service component:" + r.name + ", state=" + enableState);
+            if( DEBUG_SERVICE ) Slog.w(TAG, "Service component:" + r.name + ", state=" + enableState);
         } catch (Exception e) {
             Slog.w(TAG, "Exception checking component:" + r.name, e);
         }
@@ -4350,7 +4350,7 @@ public final class ActiveServices {
             if( !mAm.mAppProfileManager.isTopAppUid(r.appInfo.uid,r.appInfo.packageName) ) {
                 AppProfile appProfile = mAm.mAppProfileManager.getAppProfile(r.appInfo.packageName,r.appInfo.uid);
                 if( appProfile != null ) {
-                    if( !(appProfile.getBackgroundMode() < 0) && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) && !appProfile.mAllowWhileIdle) {
+                    if( !(appProfile.getBackgroundMode() < 0) && !appProfile.mAllowWhileIdle && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
                         String msg = "Unable to launch app "
                             + r.appInfo.packageName + "/"
                             + r.appInfo.uid

@@ -116,6 +116,7 @@ import com.android.server.wm.ActivityServiceConnectionsHolder;
 import com.android.server.wm.WindowProcessController;
 
 import com.android.internal.baikalos.BaikalConstants;
+import com.android.internal.baikalos.PowerSaverPolicyConfig;
 import com.android.server.baikalos.AppProfileManager;
 import com.android.server.baikalos.BaikalPowerSaveManager;
 
@@ -1077,9 +1078,9 @@ public class OomAdjuster {
         }
 
         final long oldTimeActive =  now - timeout * 1000;
-        final long oldTimeLimited = now - timeout * 1000;
+        final long oldTimeLimited = now - 15 * 1000;
         final long oldTimeExtreme = now - timeout * 1000;
-        final long oldTimeStamina = now - timeout * 1000;
+        final long oldTimeStamina = now - 15 * 1000;
         final long oldTimeStartup = now - 90 * 1000;
 
 
@@ -1116,6 +1117,12 @@ public class OomAdjuster {
                     applyOomAdjLSP(app, true, now, nowElapsed, oomAdjReason);
                 }
 
+                if( state.getCurProcState() <= ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE ) {
+                    app.setLastTopTime(now);
+                    app.setLastActivityTime(now);
+                    app.mAppProfile.setLastTopTime(now);
+                }
+
                 final ProcessServiceRecord psr = app.mServices;
 
                 if( !app.mAppProfile.mPinned ) {
@@ -1128,7 +1135,7 @@ public class OomAdjuster {
                             long timeoutExtreme = app.getLastActivityTime() - oldTimeExtreme;
                             long timeoutActive = app.getLastActivityTime() - oldTimeActive;
                             long timeoutStamina = app.getLastActivityTime() - oldTimeStamina;
-                            long timeoutLimited = app.getLastActivityTime() - oldTimeLimited;
+                            long timeoutLimited = app.getLastTopTime() - oldTimeLimited;
                             long timeoutStartup = app.getLastActivityTime() - oldTimeStartup;
 
                             Slog.d(TAG_OOM_ADJ, "OOM app check packageName=" + app.mAppProfile.mPackageName + "/" + app.mAppProfile.mUid +
@@ -1170,7 +1177,7 @@ public class OomAdjuster {
                         && appLimited
                         && state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_BACKGROUND
                         && state.getCurAdj() > ProcessList.PERCEPTIBLE_APP_ADJ
-                        && app.getLastActivityTime() < oldTimeLimited ) {
+                        && app.getLastTopTime() < oldTimeLimited ) {
                             app.killLocked("baikalos - disabled background process",
                             "baikalos - disabled background process",
                             ApplicationExitInfo.REASON_OTHER,
@@ -3318,6 +3325,11 @@ public class OomAdjuster {
             if( uidRec.getAppProfile().mPinned ) continue;
             if( uidRec.getAppProfile().mAllowWhileIdle ) continue;
             if( uidRec.getAppProfile().mBackgroundMode < -1 ) continue;
+
+            if( PowerSaverPolicyConfig.getCurrentPowerSaverPolicyConfig().lessRestrictiveBackgroundPolicy ) {
+                if( uidRec.getAppProfile().mBackgroundMode <= -1 ) continue;
+                if( uidRec.getAppProfile().mSystemWhitelisted ) continue;
+            }
             /*if( uidRec.getAppProfile().mBackgroundMode <= 0 &&  
                 uidRec.getAppProfile().mSystemWhitelisted ) continue;*/
 

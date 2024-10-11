@@ -78,12 +78,14 @@ public class AppProfileBase extends ContentObserver {
 
     static HashSet<Integer> _mAppsForDebug = new HashSet<Integer>();
 
+    static HashSet<String> _allAppsByPackageName = new HashSet<String>(); 
     static HashSet<String> _systemAppsByPackageName = new HashSet<String>(); 
     static HashSet<String> _systemImportantByPackageName = new HashSet<String>(); 
     static HashSet<String> _systemWhitelistedByPackageName = new HashSet<String>(); 
 
     //AppProfile mSystemProfile;
     //AppProfile mAndroidProfile;
+    AppProfile mNotFoundProfile;
 
     boolean isChanged = false;
 
@@ -109,7 +111,14 @@ public class AppProfileBase extends ContentObserver {
         mSystemProfile.mSystemApp = true;
         mSystemProfile.mImportantApp = true;
         mSystemProfile.mSystemWhitelisted = true;*/
-
+        
+        mNotFoundProfile = new AppProfile("NotFound",-1);
+        /*mNotFoundProfile.mBootDisabled = true;
+        mNotFoundProfile.mBackgroundModeConfig = 2;
+        mNotFoundProfile.mBackgroundMode = 2;
+        mNotFoundProfile.mDisableWakeup = true;
+        mNotFoundProfile.mDisableJobs = true;*/
+        
         mContext = context;
         mIsReady = true;
     }
@@ -120,7 +129,7 @@ public class AppProfileBase extends ContentObserver {
         mResolver = mContext.getContentResolver();
         mBackend = PowerWhitelistBackend.getInstance(mContext);
         mBackend.refreshList();
-        updateSystemAppsLocked();
+        updateAllAppsLocked();
         updateSystemWhitelistedAppsLocked();
         updateImportantAppsLocked();
     }
@@ -181,13 +190,22 @@ public class AppProfileBase extends ContentObserver {
         }
     }
 
-    void updateSystemAppsLocked() {
+    void updateAllAppsLocked() {
 
         _systemAppsByPackageName.clear();
+        _allAppsByPackageName.clear();
 
-        Slog.e(TAG, "Updating system app list");
+        Slog.e(TAG, "Updating app list");
 
-        List<PackageInfo> installedAppInfo = mPackageManager.getInstalledPackages(/*PackageManager.GET_PERMISSIONS*/0);
+        List<PackageInfo> installedAppInfo = mPackageManager.getInstalledPackages(
+                PackageManager.MATCH_DISABLED_COMPONENTS | 
+                PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS |
+                PackageManager.MATCH_APEX |
+                PackageManager.MATCH_ALL |
+                PackageManager.MATCH_UNINSTALLED_PACKAGES |
+                PackageManager.MATCH_INSTANT |
+                PackageManager.MATCH_ANY_USER
+                );
         for (PackageInfo info : installedAppInfo) {
             boolean isSystem = (info.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
 
@@ -197,8 +215,13 @@ public class AppProfileBase extends ContentObserver {
                     _systemAppsByPackageName.add(info.packageName);
                 }
             }
-        }
+
+            if( !_allAppsByPackageName.contains(info.packageName) ) {
+                _allAppsByPackageName.add(info.packageName);
+            }
+        } 
     }
+
 
     private static boolean selfUpdate;
     public void loadProfiles() {
@@ -351,9 +374,29 @@ public class AppProfileBase extends ContentObserver {
                 }
             }
 
+            for(String pkgName : _allAppsByPackageName) {
+                int uid = getAppUidLocked(pkgName);
+                if( uid == -1 ) continue;
+                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+            }
+
+            AppProfile android = oldProfiles.containsKey("android") ? oldProfiles.get("android") : new AppProfile("android",1000);
+            android.mSystemWhitelisted = true;
+            android.mStaminaEnforced = true;
+            android.mImportantApp = true;
+            android.mSystemApp = true;
+            android.mBackgroundMode = -1;
+            newProfilesByPackageName.put("android",android);
+            newProfilesByUid.put(1000,android);
+
             for(Map.Entry<String, AppProfile> entry : oldProfiles.entrySet()) {
                 entry.getValue().isInvalidated = true;
             }
+
+            for(Map.Entry<String, AppProfile> entry : newProfilesByPackageName.entrySet()) {
+                updateSystemSettingsLocked(entry.getValue());
+            }
+
         } catch (Exception e) {
             Slog.e(TAG, "Bad BaikalService settings", e);
             selfUpdate = false;
@@ -418,7 +461,7 @@ public class AppProfileBase extends ContentObserver {
         }
 
         if( profile == null ) {
-            int uid = getAppUidLocked(pkgName);
+            int uid = pkgName.equals("android") ? 1000 : getAppUidLocked(pkgName);
             profile = new AppProfile(pkgName, uid);
         }
                
@@ -487,7 +530,7 @@ public class AppProfileBase extends ContentObserver {
 
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateSystemSettingsLocked packageName=" + profile.mPackageName);
 
-        int uid = getAppUidLocked(profile.mPackageName);
+        int uid = profile.mUid > 0 ? profile.mUid : getAppUidLocked(profile.mPackageName);
         if( uid == -1 )  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Can't get uid for " + profile.mPackageName);
             return null;
@@ -592,24 +635,32 @@ public class AppProfileBase extends ContentObserver {
 
     public AppProfile getProfileLocked(String packageName) {
         if( packageName != null ) {
-            //if( "android".equals(packageName) ) return mAndroidProfile; 
-            //if( "system".equals(packageName) ) return mSystemProfile;
-	        return _profilesByPackageName.get(packageName);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
+                Slog.d(TAG,"getProfileLocked(" + packageName + ")", new Throwable());
+            }
+            AppProfile profile = _profilesByPackageName.get(packageName);
+            if( profile != null ) return profile;
         }
-        return null;
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
+            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found",new Throwable());
+        } else {
+            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found");
+        }
+        return "android".equals(packageName) ? null : (new AppProfile(packageName,-1).update(mNotFoundProfile));
     }
 
     public AppProfile getProfileLocked(int uid) {
-        //if( uid < 5000 ) return mAndroidProfile;
-        //if( uid < 10000 ) return mSystemProfile;
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
             Slog.d(TAG,"getProfileLocked(" + uid + ")", new Throwable());
         }
         AppProfile profile = _profilesByUid.get(uid);
         if( profile != null ) return profile;
-        //if( uid < 5000 ) return mAndroidProfile;
-        //if( uid < 10000 ) return mSystemProfile;
-        return null;
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
+            Slog.d(TAG,"getProfileLocked(" + uid + ") : profile not found",new Throwable());
+        } else {
+            Slog.d(TAG,"getProfileLocked(" + uid + ") : profile not found");
+        }
+        return uid < 10000 ? null : (new AppProfile("not found",-1).update(mNotFoundProfile));
     }
 
     int getAppUidLocked(String packageName) {
@@ -648,7 +699,13 @@ public class AppProfileBase extends ContentObserver {
 
         try {
             ApplicationInfo ai = pm.getApplicationInfo(packageName,
-                    PackageManager.MATCH_ALL);
+                PackageManager.MATCH_DISABLED_COMPONENTS | 
+                PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS |
+                PackageManager.MATCH_APEX |
+                PackageManager.MATCH_ALL |
+                PackageManager.MATCH_UNINSTALLED_PACKAGES |
+                PackageManager.MATCH_INSTANT |
+                PackageManager.MATCH_ANY_USER );
             if( ai != null ) {
                 if( ai.uid == 0 ) {
                     Slog.i(TAG,"Package " + packageName + " has invalid uid=0!!");

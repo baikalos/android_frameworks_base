@@ -21,11 +21,18 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SuppressLint;
 import android.os.Process;
+import android.os.SystemClock;
 
 import android.util.Slog;
 import android.util.KeyValueListParser;
 
 public class AppProfile {
+
+    public static final int OPCODE_LOCATION = 0;
+    public static final int OPCODE_HIDE_HMS = 1;
+    public static final int OPCODE_HIDE_GMS = 2;
+    public static final int OPCODE_HIDE_3P = 3;
+
 
     private static final String TAG = "Baikal.AppProfile";
 
@@ -70,6 +77,9 @@ public class AppProfile {
 
     @SuppressLint({"MutableBareField","InternalField"})
     public int mBackgroundMode;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public int mBackgroundModeConfig;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mDisableWakeup;
@@ -222,7 +232,8 @@ public class AppProfile {
     public boolean mIsInitialized;
 
 
-    private int mCurAdj = 0;
+    private int mCurAdj = 900;
+    private long mLastTopTime = 0;
 
     private static boolean sDebug;
     private static @Nullable String sPackageName = "unknown";
@@ -231,12 +242,21 @@ public class AppProfile {
     private static boolean sStaminaActive;
     private static boolean sScreenOn = true;
     private static int sHomeUid = -1;
+    private static int mDefaultBackgroundMode = 0;
 
     private static boolean sAutoLimit = false;
 
     private static int sTopUid = -1;
     private static @Nullable String  sTopPackageName = "unknown";
     private static AppProfile sTopAppProfile = new AppProfile("top",-1);
+
+    public static void setDefaultBackgroundMode(int mode) {
+        mDefaultBackgroundMode = mode;
+    }
+
+    public static int getDefaultBackgroundMode() {
+        return mDefaultBackgroundMode;
+    }
 
     public static void updateHomeProcess(int uid) {
         if( uid == 1000 ) sHomeUid = -1;
@@ -383,6 +403,7 @@ public class AppProfile {
         mRequireGms = false;
         mBootDisabled = false;
         mBackgroundMode = 0;
+        mBackgroundModeConfig = 0;
         mIgnoreAudioFocus = false;
         mKeepOn = false;
         mPreventHwKeyAttestation = false;
@@ -445,6 +466,10 @@ public class AppProfile {
             mStaminaEnforced = true;
             mIsInitialized = true;
             isInvalidated = false;
+            if( mUid == 1000 && mPackageName != null && 
+                mPackageName.equals("android") ) {
+                mSystemWhitelisted = true;
+            }
         }
 
         if( (isInvalidated ||
@@ -487,7 +512,7 @@ public class AppProfile {
         //if( TRACE && mDebug ) Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid, new Throwable());
 
         if( mIsGms && !mIsGmsPersistent /*&& !mIsGmsUnstable*/ ) {
-            int rc = 0; // mSystemWhitelisted ? -1 : mBackgroundMode >=0 ? ;
+            int rc = mBackgroundMode; // mSystemWhitelisted ? -1 : mBackgroundMode >=0 ? ;
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(-2) non important gms: " + rc);
             return rc;
         }
@@ -536,7 +561,7 @@ public class AppProfile {
             return mBackgroundMode;
         }
 
-        if( mBackgroundMode > 1 )  {
+        if( mBackgroundMode > 0 )  {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9) mBackgroundMode:" + mBackgroundMode);
             return mBackgroundMode;
         }
@@ -579,7 +604,21 @@ public class AppProfile {
             }
         } */
 
-        if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) default:" + mBackgroundMode);
+        if( mBackgroundModeConfig > 99 ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) overriden default:" + 0);
+            return 0;
+        }
+
+        if( mBackgroundMode >= 0 && mDefaultBackgroundMode > mBackgroundMode ) {
+            final long now = SystemClock.uptimeMillis();
+            final long timeout = now - 30 * 1000;
+            if( mLastTopTime < timeout ) {
+                if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) overriden auto:" + mDefaultBackgroundMode);
+                return mDefaultBackgroundMode;
+            }
+        }
+
+        if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(15) default:" + mBackgroundMode);
         return mBackgroundMode;
     }
 
@@ -608,6 +647,7 @@ public class AppProfile {
             mMaxFrameRate == 0 &&
             mMinFrameRate == 0 &&
             mBackgroundMode == 0 &&
+            mBackgroundModeConfig == 0 &&
             !mIgnoreAudioFocus &&
             mRotation == 0 &&
             mAudioMode == 0 &&
@@ -650,10 +690,10 @@ public class AppProfile {
         return false;
     }
 
-    public void update(@Nullable AppProfile profile) {
+    public @Nullable AppProfile update(@Nullable AppProfile profile) {
         if( profile == null ) {
             Slog.e(TAG, "Invalid profile assignment", new Throwable());
-            return;
+            return null;
         }
 
         this.mPackageName = profile.mPackageName;
@@ -669,6 +709,7 @@ public class AppProfile {
         this.mMaxFrameRate = profile.mMaxFrameRate;
         this.mMinFrameRate = profile.mMinFrameRate;
         this.mBackgroundMode = profile.mBackgroundMode;
+        this.mBackgroundModeConfig = profile.mBackgroundModeConfig;
         this.mIgnoreAudioFocus = profile.mIgnoreAudioFocus;
         this.mRotation = profile.mRotation;
         this.mAudioMode = profile.mAudioMode;
@@ -716,6 +757,7 @@ public class AppProfile {
         this.mIsGmsPersistent = profile.mIsGmsPersistent;
         this.mIsGmsUnstable = profile.mIsGmsUnstable;
         if( TRACE || mDebug ) Slog.d(TAG, "AppProfile updated :" + profile.serialize());
+        return this;
     }
 
 
@@ -732,7 +774,7 @@ public class AppProfile {
         if( mMaxFrameRate != 0 ) result +=  "," + "fr=" + mMaxFrameRate;
         if( mMinFrameRate != 0 ) result +=  "," + "mfr=" + mMinFrameRate;
         if( mStamina ) result +=  "," + "sta=" + mStamina;
-        if( mBackgroundMode != 0 ) result +=  "," + "bk=" + mBackgroundMode;
+        if( mBackgroundModeConfig != 0 ) result +=  "," + "bk=" + mBackgroundModeConfig;
         if( mRequireGms ) result +=  "," + "gms=" + mRequireGms;
         if( mBootDisabled ) result +=  "," + "bt=" + mBootDisabled;
         if( mIgnoreAudioFocus ) result +=  "," + "af=" + mIgnoreAudioFocus;
@@ -773,8 +815,6 @@ public class AppProfile {
         if( mLocationLevel != 0 ) result +=  "," + "llv=" + mLocationLevel;
         if( mPriviledgedPhoneState ) result +=  "," + "pvps=" + mPriviledgedPhoneState;
 
-
-
         return result;
     }
 
@@ -801,7 +841,7 @@ public class AppProfile {
             mPinned = parser.getBoolean("pd",false);
             mStamina = parser.getBoolean("sta",false);
             mMaxFrameRate = parser.getInt("fr",0);
-            mBackgroundMode = parser.getInt("bk",0);
+            mBackgroundModeConfig = parser.getInt("bk",0);
             mRequireGms = parser.getBoolean("gms",false);
             mBootDisabled = parser.getBoolean("bt",false);
             mIgnoreAudioFocus = parser.getBoolean("af",false);
@@ -845,11 +885,27 @@ public class AppProfile {
             mLocationLevel = parser.getInt("llv",0);
             mPriviledgedPhoneState = parser.getBoolean("pvps",false);
 
+            if( mBackgroundModeConfig > 99 ) {
+                mBackgroundMode = mBackgroundModeConfig - 100;
+            } else {
+                mBackgroundMode = mBackgroundModeConfig;
+            }
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
     }
 
+    public void setLastTopTimeNow() {
+        mLastTopTime = SystemClock.uptimeMillis();
+    }
+
+    public void setLastTopTime(long time) {
+        mLastTopTime = time;
+    }
+
+    public long getLastTopTime(long time) {
+        return mLastTopTime;
+    }
 
     public static @Nullable AppProfile deserializeProfile(@Nullable String profileString) {
         AppProfile profile = new AppProfile();
