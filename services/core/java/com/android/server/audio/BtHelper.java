@@ -967,6 +967,10 @@ public class BtHelper {
                 return "ENCODING_APTX_HD";
             case BluetoothCodecConfig.SOURCE_CODEC_TYPE_LDAC:
                 return "ENCODING_LDAC";
+            case BluetoothCodecConfig.SOURCE_CODEC_TYPE_LHDCV3:
+                return "ENCODING_LHDCV3";
+            case BluetoothCodecConfig.SOURCE_CODEC_TYPE_LHDCV5:
+                return "ENCODING_LHDCV5";
             case SOURCE_CODEC_TYPE_OPUS: // TODO update in U
                 return "ENCODING_OPUS";
             default:
