@@ -130,7 +130,7 @@ public class NetworkManagementService extends INetworkManagementService.Stub {
 
     private static final String TAG = "NetworkManagement";
     public static boolean DBG = false;
-    public static boolean DBGB = true;
+    public static boolean DBGB = false;
 
     private static final int MAX_UID_RANGES_PER_COMMAND = 10;
 
