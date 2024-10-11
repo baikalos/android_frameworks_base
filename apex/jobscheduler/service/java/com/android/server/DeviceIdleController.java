@@ -106,7 +106,8 @@ import com.android.server.net.NetworkPolicyManagerInternal;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
 
-//import android.baikalos.AppProfile;
+import android.baikalos.AppProfile;
+import com.android.server.baikalos.AppProfileManager;
 //import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.BaikalConstants;
@@ -323,7 +324,9 @@ public class DeviceIdleController extends SystemService
     private Intent mIdleIntent;
     private Intent mLightIdleIntent;
     private AnyMotionDetector mAnyMotionDetector;
+    private AppProfileManager mAppProfileManager;
     private final AppStateTrackerImpl mAppStateTracker;
+
     @GuardedBy("this")
     private boolean mLightEnabled;
     @GuardedBy("this")
@@ -341,7 +344,7 @@ public class DeviceIdleController extends SystemService
     @GuardedBy("this")
     private boolean mCharging;
     @GuardedBy("this")
-    private boolean mNotMoving;
+    private boolean mNotMoving = true;
     @GuardedBy("this")
     private boolean mLocating;
     @GuardedBy("this")
@@ -796,7 +799,7 @@ public class DeviceIdleController extends SystemService
     @GuardedBy("this")
     private boolean isStationaryLocked() {
         //if( mAggressiveDeviceIdleMode || (AppProfile.getPowerMode() >= 3 ) ) return true;
-
+        if( mAggressiveDeviceIdleMode ) return true;
         final long now = mInjector.getElapsedRealtime();
         return mMotionListener.active
                 // Listening for motion for long enough and last motion was long enough ago.
@@ -809,9 +812,14 @@ public class DeviceIdleController extends SystemService
         synchronized (this) {
             if (!mStationaryListeners.add(listener)) {
                 // Listener already registered.
+                if( mAggressiveDeviceIdleMode ) unregisterStationaryListener(listener);
                 return;
             }
-            //if( mAggressiveDeviceIdleMode ) return;
+
+            if( mAggressiveDeviceIdleMode ) {
+                unregisterStationaryListener(listener);
+                return;
+            }
             //if( AppProfile.getPowerMode() >= 3 ) return;
 
             postStationaryStatus(listener);
@@ -1345,6 +1353,9 @@ public class DeviceIdleController extends SystemService
 
         @Override
         public void onChange(boolean selfChange, Uri uri) {
+
+            mNotMoving = true;
+
             onPropertiesChanged(DeviceConfig.getProperties(DeviceConfig.NAMESPACE_DEVICE_IDLE));
             
             mAggressiveDeviceIdleMode = Settings.Global.getInt(mResolver,
@@ -1697,7 +1708,7 @@ public class DeviceIdleController extends SystemService
     @Override
     public void onAnyMotionResult(int result) {
 
-        //if( mAggressiveDeviceIdleMode || AppProfile.getPowerMode() >= 3 ) result = AnyMotionDetector.RESULT_STATIONARY;
+        if( mAggressiveDeviceIdleMode /*|| AppProfile.getPowerMode() >= 3*/ ) result = AnyMotionDetector.RESULT_STATIONARY;
 
         if (DEBUG) Slog.d(TAG, "onAnyMotionResult(" + result + ")");
         synchronized (this) {
@@ -2536,6 +2547,8 @@ public class DeviceIdleController extends SystemService
 
                 mAppStateTracker.onSystemServicesReady();
 
+                mAppProfileManager = AppProfileManager.getInstance();
+
                 mIdleIntent = new Intent(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED);
                 mIdleIntent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY
                         | Intent.FLAG_RECEIVER_FOREGROUND);
@@ -2687,16 +2700,30 @@ public class DeviceIdleController extends SystemService
                     numErrors++;
                     continue;
                 }
-                try {
-                    ApplicationInfo ai = getContext().getPackageManager().getApplicationInfo(name,
-                            PackageManager.MATCH_ANY_USER);
-                    if (mPowerSaveWhitelistUserApps.put(name, UserHandle.getAppId(ai.uid))
+                if( "android".equals(name) ) {
+                    if (mPowerSaveWhitelistUserApps.put(name, UserHandle.getAppId(1000))
                             == null) {
                         numAdded++;
                     }
-                } catch (PackageManager.NameNotFoundException e) {
-                    Slog.e(TAG, "Tried to add unknown package to power save whitelist: " + name);
-                    numErrors++;
+                } else {
+                    try {
+                        ApplicationInfo ai = getContext().getPackageManager().getApplicationInfo(name,
+                            PackageManager.MATCH_DISABLED_COMPONENTS | 
+                            PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS |
+                            PackageManager.MATCH_APEX |
+                            PackageManager.MATCH_ALL |
+                            PackageManager.MATCH_UNINSTALLED_PACKAGES |
+                            PackageManager.MATCH_INSTANT |
+                            PackageManager.MATCH_ANY_USER
+                        );
+                        if (mPowerSaveWhitelistUserApps.put(name, UserHandle.getAppId(ai.uid))
+                                == null) {
+                            numAdded++;
+                        }
+                    } catch (PackageManager.NameNotFoundException e) {
+                        Slog.e(TAG, "Tried to add unknown package to power save whitelist: " + name);
+                        numErrors++;
+                    }
                 }
             }
             if (numAdded > 0) {
@@ -3023,6 +3050,18 @@ public class DeviceIdleController extends SystemService
         final long timeNow = SystemClock.elapsedRealtime();
         boolean informWhitelistChanged = false;
         int appId = UserHandle.getAppId(uid);
+
+        if( mAppProfileManager != null ) {
+            AppProfile profile = mAppProfileManager.getAppProfile(uid);
+            int bMode = profile.getBackgroundMode();
+            if( bMode != 0 ) {
+                if (DEBUG) {
+                    Slog.d(TAG, "Ignore Adding AppId " + appId + " to temp whitelist. mode=" + bMode );
+                }
+                return;
+            }
+        }
+
         synchronized (this) {
             duration = Math.min(duration, mConstants.MAX_TEMP_APP_ALLOWLIST_DURATION_MS);
             Pair<MutableLong, String> entry = mTempWhitelistAppIdEndTimes.get(appId);
@@ -4077,7 +4116,7 @@ public class DeviceIdleController extends SystemService
 
     void startMonitoringMotionLocked() {
         if (DEBUG) Slog.d(TAG, "startMonitoringMotionLocked()");
-        if (mMotionSensor != null && !mMotionListener.active /*&& !mAggressiveDeviceIdleMode && (AppProfile.getPowerMode() < 3)*/ ) {
+        if (mMotionSensor != null && !mMotionListener.active && !mAggressiveDeviceIdleMode /*&& (AppProfile.getPowerMode() < 3)*/ ) {
             mMotionListener.registerLocked();
         }
     }
@@ -4088,7 +4127,7 @@ public class DeviceIdleController extends SystemService
      */
     private void maybeStopMonitoringMotionLocked() {
         if (DEBUG) Slog.d(TAG, "maybeStopMonitoringMotionLocked()");
-        if (mMotionSensor != null && (mStationaryListeners.size() == 0 /*|| mAggressiveDeviceIdleMode || AppProfile.getPowerMode() >= 3*/)) {
+        if (mMotionSensor != null && (mStationaryListeners.size() == 0 || mAggressiveDeviceIdleMode /*|| AppProfile.getPowerMode() >= 3*/)) {
             if (mMotionListener.active) {
                 mMotionListener.unregisterLocked();
                 cancelMotionTimeoutAlarmLocked();
