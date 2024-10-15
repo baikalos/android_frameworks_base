@@ -364,13 +364,19 @@ public class A2dpProfile implements LocalBluetoothProfile {
             case SOURCE_CODEC_TYPE_OPUS: // TODO update in U
                 index = 7;
                 break;
+            case BluetoothCodecConfig.SOURCE_CODEC_TYPE_LHDCV3:
+                index = 8;
+                break;
+            case BluetoothCodecConfig.SOURCE_CODEC_TYPE_LHDCV5:
+                index = 9;
+                break;
            }
 
         if (index < 0) {
             return mContext.getString(unknownCodecId);
         }
         return mContext.getString(R.string.bluetooth_profile_a2dp_high_quality,
-                mContext.getResources().getStringArray(R.array.bluetooth_a2dp_codec_titles)[index]);
+                mContext.getResources().getStringArray(R.array.bluetooth_a2dp_codec_lhdc_titles)[index]);
     }
 
     public String toString() {
