@@ -3063,7 +3063,10 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     @Override
     public int getBaikalPackageOption(String packageName, int uid, int opCode,int def) {
-        if( mAppProfileManager == null ) return def;
+        if( mAppProfileManager == null ) { 
+            Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
+            return def;
+        }
         return mAppProfileManager.getPackageOptionFromActivityManager(packageName,uid,opCode,def);
     }
 

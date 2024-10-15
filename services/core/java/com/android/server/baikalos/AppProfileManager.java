@@ -1447,31 +1447,50 @@ public class AppProfileManager {
 
 
     public int getPackageOptionFromActivityManager(String packageName, int uid, int opCode,int def) {
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def);
+
+        int result = def;
+        //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def);
         try {
             AppProfile profile = null;
             if( packageName != null ) profile = mAppSettings.getProfile(packageName);
             else profile = mAppSettings.getProfile(uid);
-            if( profile == null ) return def;
+            if( profile == null )  {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", profile=null" + ", result=" + def);
+                return def;
+            }
 
             switch(opCode) {
     
                 case AppProfile.OPCODE_LOCATION:
-                    return profile.mLocationLevel;
+                    result = profile.mLocationLevel;
                 
                 case AppProfile.OPCODE_HIDE_HMS:
-                    return profile.mHideHMS ? 1 : 0;
+                    result = profile.mHideHMS ? 1 : 0;
 
                 case AppProfile.OPCODE_HIDE_GMS:
-                    return profile.mHideGMS ? 1 : 0;
+                    result = profile.mHideGMS ? 1 : 0;
 
                 case AppProfile.OPCODE_HIDE_3P:
-                    return profile.mHide3P ? 1 : 0;
+                    result = profile.mHide3P ? 1 : 0;
+
+                case AppProfile.OPCODE_BLOCK_CONTACTS:
+                    result = profile.mBlockContacts ? 1 : 0;
+
+                case AppProfile.OPCODE_BLOCK_CALLLOG:
+                    result = profile.mBlockCalllog ? 1 : 0;
+
+                case AppProfile.OPCODE_BLOCK_CALENDAR:
+                    result = profile.mBlockCalendar ? 1 : 0;
+
+                case AppProfile.OPCODE_BLOCK_MEDIA:
+                    result = profile.mBlockMedia ? 1 : 0;
+
             }
         } catch(Exception ex) {
             Slog.w(TAG, "getPackageOptionFromActivityManager: exception", ex);
         }
-        return def;
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", result=" + result);
+        return result;
     }
 
     boolean mAwake;

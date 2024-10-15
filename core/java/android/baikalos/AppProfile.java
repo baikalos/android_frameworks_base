@@ -32,7 +32,10 @@ public class AppProfile {
     public static final int OPCODE_HIDE_HMS = 1;
     public static final int OPCODE_HIDE_GMS = 2;
     public static final int OPCODE_HIDE_3P = 3;
-
+    public static final int OPCODE_BLOCK_CONTACTS = 4;
+    public static final int OPCODE_BLOCK_CALLLOG = 5;
+    public static final int OPCODE_BLOCK_CALENDAR = 6;
+    public static final int OPCODE_BLOCK_MEDIA = 7;
 
     private static final String TAG = "Baikal.AppProfile";
 
@@ -210,6 +213,19 @@ public class AppProfile {
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mPriviledgedPhoneState;
 
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBlockContacts;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBlockCalllog;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBlockCalendar;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mBlockMedia;
+
+    // internal
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mSystemApp;
 
@@ -417,6 +433,11 @@ public class AppProfile {
         mBAFSend = false;
         mSonification = 0;
         mBypassCharging = false;
+        
+        mBlockContacts = false;
+        mBlockCalllog = false;
+        mBlockCalendar = false;
+        mBlockMedia = false;
 
         mSystemApp = false;
         mImportantApp = false;
@@ -686,6 +707,10 @@ public class AppProfile {
             mPerfProfile == 0 &&
             mLocationLevel == 0 &&
             !mPriviledgedPhoneState &&
+            !mBlockContacts &&
+            !mBlockCalllog &&
+            !mBlockCalendar &&
+            !mBlockMedia &&
             mThermalProfile == 0 ) return true;
         return false;
     }
@@ -753,6 +778,11 @@ public class AppProfile {
         this.mOldLinks = profile.mOldLinks;
         this.mLocationLevel = profile.mLocationLevel;
         this.mPriviledgedPhoneState = profile.mPriviledgedPhoneState;
+        this.mBlockContacts = profile.mBlockContacts;
+        this.mBlockCalllog = profile.mBlockCalllog;
+        this.mBlockCalendar = profile.mBlockCalendar;
+        this.mBlockMedia = profile.mBlockMedia;
+        
         this.mIsGms = profile.mIsGms;
         this.mIsGmsPersistent = profile.mIsGmsPersistent;
         this.mIsGmsUnstable = profile.mIsGmsUnstable;
@@ -814,6 +844,10 @@ public class AppProfile {
         if( mOldLinks ) result +=  "," + "olnk=" + mOldLinks;
         if( mLocationLevel != 0 ) result +=  "," + "llv=" + mLocationLevel;
         if( mPriviledgedPhoneState ) result +=  "," + "pvps=" + mPriviledgedPhoneState;
+        if( mBlockContacts ) result +=  "," + "blcn=" + mBlockContacts;
+        if( mBlockCalllog ) result +=  "," + "blcl=" + mBlockCalllog;
+        if( mBlockCalendar ) result +=  "," + "blcd=" + mBlockCalendar;
+        if( mBlockMedia ) result +=  "," + "blmd=" + mBlockMedia;
 
         return result;
     }
@@ -884,6 +918,11 @@ public class AppProfile {
             mOldLinks = parser.getBoolean("olnk",false);
             mLocationLevel = parser.getInt("llv",0);
             mPriviledgedPhoneState = parser.getBoolean("pvps",false);
+
+            mBlockContacts = parser.getBoolean("blcn",false);
+            mBlockCalllog = parser.getBoolean("blcl",false);
+            mBlockCalendar = parser.getBoolean("blcd",false);
+            mBlockMedia = parser.getBoolean("blmd",false);
 
             if( mBackgroundModeConfig > 99 ) {
                 mBackgroundMode = mBackgroundModeConfig - 100;
