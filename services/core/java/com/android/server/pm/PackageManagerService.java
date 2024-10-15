@@ -4247,6 +4247,11 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             mLegacyPermissionManager.scheduleReadDefaultPermissionExceptions();
         }
 
+        for (int i = 0; i < livingUserCount; i++) {
+            final int userId = livingUsers.get(i).id;
+            mLegacyPermissionManager.grantDefaultPermissionsBaikalModules(userId);
+        }
+
         if (mInstantAppResolverConnection != null) {
             mContext.registerReceiver(new BroadcastReceiver() {
                 @Override

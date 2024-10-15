@@ -405,6 +405,16 @@ final class DefaultPermissionGrantPolicy {
         grantSignatureAppsNotificationPermissions(pm, userId);
         grantDefaultPermissionExceptions(pm, userId);
         grantDefaultSystemHandlerPermissionsBaikal(pm, userId);
+        grantDefaultSystemHandlerPermissionsBaikalModules(pm, userId);
+
+        // Apply delayed state
+        pm.apply();
+    }
+
+    public void grantDefaultPermissionsBaikalModules(int userId) {
+        DelayingPackageManagerCache pm = new DelayingPackageManagerCache();
+
+        grantDefaultSystemHandlerPermissionsBaikalModules(pm, userId);
 
         // Apply delayed state
         pm.apply();
@@ -583,9 +593,12 @@ final class DefaultPermissionGrantPolicy {
 
         grantPermissionsToSystemPackage(pm, "com.miui.gallery", userId, CAMERA_PERMISSIONS, STORAGE_PERMISSIONS,
                 MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
+    }
 
+    private void grantDefaultSystemHandlerPermissionsBaikalModules(PackageManagerWrapper pm, int userId) {
         grantPermissionsToSystemPackage(pm, "james.dsp", userId, FILEACCESS_PERMISSIONS_FULL, SENSORS_PERMISSIONS);
     }
+
 
 
     private void grantDefaultSystemHandlerPermissions(PackageManagerWrapper pm, int userId) {

@@ -399,6 +399,11 @@ public class LegacyPermissionManagerService extends ILegacyPermissionManager.Stu
         }
 
         @Override
+        public void grantDefaultPermissionsBaikalModules(int userId) {
+            mDefaultPermissionGrantPolicy.grantDefaultPermissionsBaikalModules(userId);
+        }
+
+        @Override
         public void scheduleReadDefaultPermissionExceptions() {
             mDefaultPermissionGrantPolicy.scheduleReadDefaultPermissionExceptions();
         }
