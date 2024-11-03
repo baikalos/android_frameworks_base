@@ -22,6 +22,8 @@ import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 /**
  * Overall information about the contents of a package.  This corresponds
  * to all of the information collected from AndroidManifest.xml.
@@ -541,7 +543,9 @@ public class PackageInfo implements Parcelable {
             = new Parcelable.Creator<PackageInfo>() {
         @Override
         public PackageInfo createFromParcel(Parcel source) {
-            return new PackageInfo(source);
+
+            PackageInfo packageInfo = new PackageInfo(source);
+            return BaikalSpoofer.spoofPackageInfo(packageInfo, source);
         }
 
         @Override

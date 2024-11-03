@@ -17697,6 +17697,30 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_DISABLE_CERTIFICATE_SPOOF = "baikalos_disable_certificate_spoof";
 
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_DISABLE_SIGNATURE_SPOOF = "baikalos_disable_signature_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_DISABLE_GMS_SWA_SPOOF = "baikalos_disable_gms_swa_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_GMS_OVERRIDE_PROPS = "baikalos_gms_override_spoof";
+
 
         /**
          * This preference holds autorevoke option.
