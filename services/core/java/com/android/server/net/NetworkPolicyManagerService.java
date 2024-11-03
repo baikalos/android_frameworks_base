@@ -1337,21 +1337,16 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
             final int uid = intent.getIntExtra(EXTRA_UID, -1);
             if (uid == -1) return;
 
-            if (intent.getBooleanExtra(EXTRA_REPLACING, false)) {
-                if (LOGV) Slog.v(TAG, "ACTION_PACKAGE_ADDED Not new app, skip it uid=" + uid);
-                return;
-            }
-
             if (ACTION_PACKAGE_ADDED.equals(action)) {
                 // update rules for UID, since it might be subject to
                 // global background data policy
                 // Clear the cache for the app
                 synchronized (mUidRulesFirstLock) {
+                    mInternetPermissionMap.delete(uid);
                     if (!hasInternetPermissionUL(uid) && !isSystemApp(uid)) {
                         Slog.i(TAG, "ACTION_PACKAGE_ADDED for uid=" + uid + ", no INTERNET");
                         addUidPolicy(uid, POLICY_REJECT_ALL);
                     }
-                    mInternetPermissionMap.delete(uid);
                     updateRestrictionRulesForUidUL(uid);
                 }
             }
@@ -4649,8 +4644,9 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
 
     @GuardedBy("mUidRulesFirstLock")
     private int updateBlockedReasonsForRestrictedModeUL(int uid) {
+        final boolean isBlockedOnAllNetworks = isUidBlockedOnAllNetworks(uid);
         final boolean hasRestrictedModeAccess = hasRestrictedModeAccess(uid)
-                || !isUidBlockedOnAllNetworks(uid);
+                || !isBlockedOnAllNetworks;
         final int oldEffectiveBlockedReasons;
         final int newEffectiveBlockedReasons;
         final int uidRules;
@@ -4680,6 +4676,9 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
                     newEffectiveBlockedReasons, oldEffectiveBlockedReasons);
 
             postUidRulesChangedMsg(uid, uidRules);
+        }
+        if (isBlockedOnAllNetworks) {
+            return BLOCKED_REASON_RESTRICTED_MODE;
         }
         return newEffectiveBlockedReasons;
     }
