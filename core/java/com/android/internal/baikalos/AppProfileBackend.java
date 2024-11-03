@@ -115,4 +115,8 @@ public class AppProfileBackend extends AppProfileBase {
 
         return newProfile;
     }
+
+    public static boolean isLoaded() {
+        return sIsLoaded;
+    }
 }

@@ -872,10 +872,6 @@ public class AppProfileBase extends ContentObserver {
         return _mAppsForDebug.contains(uid);
     }
 
-    public static boolean isLoaded() {
-        return sIsLoaded;
-    }
-
     public boolean isStaminaWl(int uid, String packageName) {
         //if( uid < Process.FIRST_APPLICATION_UID ) return true;
         if( packageName == null ) return false;

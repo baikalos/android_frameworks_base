@@ -402,5 +402,7 @@ public class AppProfileSettings extends AppProfileBase {
         sScreenMode = on;
     }
 
-
+    public static boolean isLoaded() {
+        return sIsLoaded && sInstance != null;
+    }
 }
