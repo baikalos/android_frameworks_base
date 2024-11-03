@@ -4223,6 +4223,16 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
 
         mPermissionManager.onSystemReady();
 
+        boolean forcedRestore = false;
+        boolean forciblyRestored = false;
+
+        if (SystemProperties.getBoolean("persist.baikal.restore_system_permissions", false)) {
+            SystemProperties.set("persist.baikal.restore_system_permissions", "0"); 
+            forcedRestore = true;
+            Log.i(TAG, "systemReady: Forcibly restore system permissions");
+        }
+        
+
         int[] grantPermissionsUserIds = EMPTY_INT_ARRAY;
         final List<UserInfo> livingUsers = mInjector.getUserManagerInternal().getUsers(
                 /* excludePartial= */ true,
@@ -4231,7 +4241,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
         final int livingUserCount = livingUsers.size();
         for (int i = 0; i < livingUserCount; i++) {
             final int userId = livingUsers.get(i).id;
-            if (mSettings.isPermissionUpgradeNeeded(userId)) {
+            if (forcedRestore | mSettings.isPermissionUpgradeNeeded(userId)) {
                 grantPermissionsUserIds = ArrayUtils.appendInt(
                         grantPermissionsUserIds, userId);
             }
@@ -4240,17 +4250,31 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
         for (int userId : grantPermissionsUserIds) {
             mLegacyPermissionManager.grantDefaultPermissions(userId);
         }
-        if (grantPermissionsUserIds == EMPTY_INT_ARRAY) {
+
+        for (int i = 0; i < livingUserCount; i++) {
+            final int userId = livingUsers.get(i).id;
+            mLegacyPermissionManager.grantDefaultPermissionsBaikalModules(userId);
+        }
+
+        if (SystemProperties.getBoolean("persist.baikal.restore_gms_permissions", false)) {
+            SystemProperties.set("persist.baikal.restore_gms_permissions", "0");
+
+            Log.i(TAG, "systemReady: Forcibly restore Google Apps permissions");
+
+            for (int i = 0; i < livingUserCount; i++) {
+                final int userId = livingUsers.get(i).id;
+                mLegacyPermissionManager.grantDefaultGmsPermissionsBaikal(userId);
+                forciblyRestored = true;
+            }
+        }
+
+        if (grantPermissionsUserIds == EMPTY_INT_ARRAY | forciblyRestored) {
             // If we did not grant default permissions, we preload from this the
             // default permission exceptions lazily to ensure we don't hit the
             // disk on a new user creation.
             mLegacyPermissionManager.scheduleReadDefaultPermissionExceptions();
         }
 
-        for (int i = 0; i < livingUserCount; i++) {
-            final int userId = livingUsers.get(i).id;
-            mLegacyPermissionManager.grantDefaultPermissionsBaikalModules(userId);
-        }
 
         if (mInstantAppResolverConnection != null) {
             mContext.registerReceiver(new BroadcastReceiver() {
@@ -4268,6 +4292,10 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent == null) {
+                    return;
+                }
+                final String action = intent.getAction();
+                if (action == null) {
                     return;
                 }
                 Uri data = intent.getData();

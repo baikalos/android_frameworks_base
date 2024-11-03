@@ -404,6 +404,11 @@ public class LegacyPermissionManagerService extends ILegacyPermissionManager.Stu
         }
 
         @Override
+        public void grantDefaultGmsPermissionsBaikal(int userId) {
+            mDefaultPermissionGrantPolicy.grantDefaultGmsPermissionsBaikal(userId);
+        }
+
+        @Override
         public void scheduleReadDefaultPermissionExceptions() {
             mDefaultPermissionGrantPolicy.scheduleReadDefaultPermissionExceptions();
         }

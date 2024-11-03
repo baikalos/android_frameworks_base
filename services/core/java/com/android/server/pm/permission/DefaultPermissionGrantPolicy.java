@@ -46,6 +46,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.os.Process;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.storage.StorageManager;
 import android.permission.PermissionManager;
@@ -242,6 +243,181 @@ final class DefaultPermissionGrantPolicy {
         SUSPEND_APP_PERMISSIONS.add(Manifest.permission.SUSPEND_APPS);
     }
 
+    private static final Set<String> GMS_PERMISSIONS = new ArraySet<>();
+    static {
+        GMS_PERMISSIONS.add(Manifest.permission.USE_CREDENTIALS);
+        GMS_PERMISSIONS.add(Manifest.permission.SYSTEM_ALERT_WINDOW);
+        GMS_PERMISSIONS.add(Manifest.permission.RECEIVE_BOOT_COMPLETED);
+        GMS_PERMISSIONS.add(Manifest.permission.OBSERVE_GRANT_REVOKE_PERMISSIONS);
+        GMS_PERMISSIONS.add(Manifest.permission.GET_PACKAGE_SIZE);
+        GMS_PERMISSIONS.add(Manifest.permission.WRITE_EMBEDDED_SUBSCRIPTIONS);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_SOUND_TRIGGER);
+        GMS_PERMISSIONS.add(Manifest.permission.FOREGROUND_SERVICE);
+        GMS_PERMISSIONS.add(Manifest.permission.START_ACTIVITIES_FROM_BACKGROUND);
+        GMS_PERMISSIONS.add(Manifest.permission.QUERY_ALL_PACKAGES);
+        GMS_PERMISSIONS.add(Manifest.permission.RENOUNCE_PERMISSIONS);
+        //GMS_PERMISSIONS.add(Manifest.permission.READ_SYSTEM_GRAMMATICAL_GENDER);
+        GMS_PERMISSIONS.add(Manifest.permission.SUBSCRIBED_FEEDS_READ);
+        GMS_PERMISSIONS.add(Manifest.permission.SUBSCRIBED_FEEDS_WRITE);
+        GMS_PERMISSIONS.add(Manifest.permission.CAPTURE_VIDEO_OUTPUT);
+        GMS_PERMISSIONS.add(Manifest.permission.CAPTURE_AUDIO_OUTPUT);
+        GMS_PERMISSIONS.add(Manifest.permission.REMOTE_DISPLAY_PROVIDER);
+        GMS_PERMISSIONS.add(Manifest.permission.KILL_BACKGROUND_PROCESSES);
+        GMS_PERMISSIONS.add(Manifest.permission.FORCE_STOP_PACKAGES);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_FPS_COUNTER);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_GAME_ACTIVITY);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_GAME_MODE);
+        //GMS_PERMISSIONS.add(Manifest.permission.MODIFY_ADSERVICES_STATE);
+        //GMS_PERMISSIONS.add(Manifest.permission.ACCESS_ADSERVICES_STATE);
+        //GMS_PERMISSIONS.add(Manifest.permission.MODIFY_ADSERVICES_STATE_COMPAT);
+        //GMS_PERMISSIONS.add(Manifest.permission.ACCESS_ADSERVICES_STATE_COMPAT);
+        //GMS_PERMISSIONS.add(Manifest.permission.UPDATE_PRIVILEGED_AD_ID);
+        //GMS_PERMISSIONS.add(Manifest.permission.UPDATE_PRIVILEGED_AD_ID_COMPAT);
+        //GMS_PERMISSIONS.add(Manifest.permission.READ_DROPBOX_DATA);
+        GMS_PERMISSIONS.add(Manifest.permission.RECOVERY);
+        GMS_PERMISSIONS.add(Manifest.permission.VIBRATE);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_DREAM_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_SYNC_SETTINGS);
+        GMS_PERMISSIONS.add(Manifest.permission.RECEIVE_DATA_ACTIVITY_CHANGE);
+        GMS_PERMISSIONS.add(Manifest.permission.AUTHENTICATE_ACCOUNTS);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_ACCOUNTS);
+        GMS_PERMISSIONS.add(Manifest.permission.NFC);
+        GMS_PERMISSIONS.add(Manifest.permission.PROVIDE_TRUST_AGENT);
+        GMS_PERMISSIONS.add(Manifest.permission.WAKE_LOCK);
+        GMS_PERMISSIONS.add(Manifest.permission.DISPATCH_PROVISIONING_MESSAGE);
+        GMS_PERMISSIONS.add(Manifest.permission.RECOVER_KEYSTORE);
+        //GMS_PERMISSIONS.add(Manifest.permission.PRE_FACTORY_RESET);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_FACTORY_RESET_PROTECTION);
+        //GMS_PERMISSIONS.add(Manifest.permission.CHECK_REMOTE_LOCKSCREEN);
+        //GMS_PERMISSIONS.add(Manifest.permission.CONFIGURE_FACTORY_RESET_PROTECTION);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_NETWORK_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
+        //GMS_PERMISSIONS.add(Manifest.permission.CREDENTIAL_MANAGER_SET_ORIGIN);
+        //GMS_PERMISSIONS.add(Manifest.permission.SET_BIOMETRIC_DIALOG_ADVANCED);
+        GMS_PERMISSIONS.add(Manifest.permission.CONNECTIVITY_USE_RESTRICTED_NETWORKS);
+        GMS_PERMISSIONS.add(Manifest.permission.ALLOCATE_AGGRESSIVE);
+        GMS_PERMISSIONS.add(Manifest.permission.USE_FINGERPRINT);
+        GMS_PERMISSIONS.add(Manifest.permission.USE_BIOMETRIC);
+        GMS_PERMISSIONS.add(Manifest.permission.SEND_SMS_NO_CONFIRMATION);
+        GMS_PERMISSIONS.add(Manifest.permission.FLASHLIGHT);
+        //GMS_PERMISSIONS.add(Manifest.permission.PREPARE_FACTORY_RESET);
+        GMS_PERMISSIONS.add(Manifest.permission.PACKAGE_USAGE_STATS);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_CONTEXT_HUB);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_LOCATION_EXTRA_COMMANDS);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_VIBRATOR_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.LOCATION_BYPASS);
+        GMS_PERMISSIONS.add(Manifest.permission.LOCATION_HARDWARE);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_WIFI_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.CHANGE_WIFI_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.GET_APP_OPS_STATS);
+        //GMS_PERMISSIONS.add(Manifest.permission.TURN_SCREEN_ON);
+        GMS_PERMISSIONS.add(Manifest.permission.UPDATE_APP_OPS_STATS);
+        GMS_PERMISSIONS.add(Manifest.permission.BROADCAST_CLOSE_SYSTEM_DIALOGS);
+        GMS_PERMISSIONS.add(Manifest.permission.INSTALL_LOCATION_TIME_ZONE_PROVIDER_SERVICE);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_NOTIFICATION_POLICY);
+        GMS_PERMISSIONS.add(Manifest.permission.MODIFY_DEFAULT_AUDIO_EFFECTS);
+        GMS_PERMISSIONS.add(Manifest.permission.SUBSTITUTE_NOTIFICATION_APP_NAME);
+        GMS_PERMISSIONS.add(Manifest.permission.SUBSTITUTE_SHARE_TARGET_APP_NAME_AND_ICON);
+        GMS_PERMISSIONS.add(Manifest.permission.BLUETOOTH_ADMIN);
+        GMS_PERMISSIONS.add(Manifest.permission.CAPTURE_AUDIO_HOTWORD);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_VOICE_KEYPHRASES);
+        GMS_PERMISSIONS.add(Manifest.permission.CHANGE_WIFI_MULTICAST_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.COMPANION_APPROVE_WIFI_CONNECTIONS);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_WIFI_INTERFACES);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_WIFI_NETWORK_SELECTION);
+        GMS_PERMISSIONS.add(Manifest.permission.USE_FULL_SCREEN_INTENT);
+        GMS_PERMISSIONS.add(Manifest.permission.UWB_PRIVILEGED);
+        GMS_PERMISSIONS.add(Manifest.permission.TETHER_PRIVILEGED);
+        GMS_PERMISSIONS.add(Manifest.permission.CONTROL_DISPLAY_SATURATION);
+        GMS_PERMISSIONS.add(Manifest.permission.SET_TIME_ZONE);
+        GMS_PERMISSIONS.add(Manifest.permission.GET_TASKS);
+        GMS_PERMISSIONS.add(Manifest.permission.REAL_GET_TASKS);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_PROFILE);
+        GMS_PERMISSIONS.add(Manifest.permission.WRITE_PROFILE);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_DEVICE_ADMINS);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_OEM_UNLOCK_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_NETWORK_CONDITIONS);
+        GMS_PERMISSIONS.add(Manifest.permission.SCORE_NETWORKS);
+        GMS_PERMISSIONS.add(Manifest.permission.OVERRIDE_WIFI_CONFIG);
+        GMS_PERMISSIONS.add(Manifest.permission.MODIFY_PHONE_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.CONTROL_INCALL_EXPERIENCE);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_USB);
+        GMS_PERMISSIONS.add(Manifest.permission.CALL_PRIVILEGED);
+        GMS_PERMISSIONS.add(Manifest.permission.BLUETOOTH_PRIVILEGED);
+        GMS_PERMISSIONS.add(Manifest.permission.DISABLE_KEYGUARD);
+        GMS_PERMISSIONS.add(Manifest.permission.CHANGE_NETWORK_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.USER_ACTIVITY);
+        GMS_PERMISSIONS.add(Manifest.permission.MODIFY_AUDIO_ROUTING);
+        GMS_PERMISSIONS.add(Manifest.permission.MODIFY_DAY_NIGHT_MODE);
+        GMS_PERMISSIONS.add(Manifest.permission.START_TASKS_FROM_RECENTS);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_ACTIVITY_STACKS);
+        GMS_PERMISSIONS.add(Manifest.permission.REORDER_TASKS);
+        GMS_PERMISSIONS.add(Manifest.permission.ACTIVITY_EMBEDDING);
+        GMS_PERMISSIONS.add(Manifest.permission.CAPTURE_SECURE_VIDEO_OUTPUT);
+        //GMS_PERMISSIONS.add(Manifest.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION);
+        GMS_PERMISSIONS.add(Manifest.permission.PROVIDE_RESOLVER_RANKER_SERVICE);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_LOGS);
+        GMS_PERMISSIONS.add(Manifest.permission.MODIFY_NETWORK_ACCOUNTING);
+        //GMS_PERMISSIONS.add(Manifest.permission.FOREGROUND_SERVICE_DATA_SYNC);
+        GMS_PERMISSIONS.add(Manifest.permission.INTENT_FILTER_VERIFICATION_AGENT);
+        GMS_PERMISSIONS.add(Manifest.permission.DOMAIN_VERIFICATION_AGENT);
+        GMS_PERMISSIONS.add(Manifest.permission.LOCAL_MAC_ADDRESS);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_BROADCAST_RESPONSE_STATS);
+        GMS_PERMISSIONS.add(Manifest.permission.CHANGE_DEVICE_IDLE_TEMP_WHITELIST);
+        GMS_PERMISSIONS.add(Manifest.permission.INTERACT_ACROSS_USERS);
+        //GMS_PERMISSIONS.add(Manifest.permission.SET_LOW_POWER_STANDBY_PORTS);
+        GMS_PERMISSIONS.add(Manifest.permission.SCHEDULE_PRIORITIZED_ALARM);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_WIFI_CREDENTIAL);
+        //GMS_PERMISSIONS.add(Manifest.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE);
+        GMS_PERMISSIONS.add(Manifest.permission.MODIFY_AUDIO_SETTINGS);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_SUBSCRIPTION_PLANS);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_DEVICE_CONFIG);
+        GMS_PERMISSIONS.add(Manifest.permission.WRITE_DEVICE_CONFIG);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_TIME_AND_ZONE_DETECTION);
+        //GMS_PERMISSIONS.add(Manifest.permission.EMERGENCY_INSTALL_PACKAGES);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_ROLLBACKS);
+        GMS_PERMISSIONS.add(Manifest.permission.REQUEST_DELETE_PACKAGES);
+        GMS_PERMISSIONS.add(Manifest.permission.UPDATE_FONTS);
+        GMS_PERMISSIONS.add(Manifest.permission.LAUNCH_MULTI_PANE_SETTINGS_DEEP_LINK);
+        GMS_PERMISSIONS.add(Manifest.permission.MEDIA_CONTENT_CONTROL);
+        GMS_PERMISSIONS.add(Manifest.permission.SEND_SAFETY_CENTER_UPDATE);
+        //GMS_PERMISSIONS.add(Manifest.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED);
+        //GMS_PERMISSIONS.add(Manifest.permission.FOREGROUND_SERVICE_MICROPHONE);
+        GMS_PERMISSIONS.add(Manifest.permission.CALL_AUDIO_INTERCEPTION);
+        //GMS_PERMISSIONS.add(Manifest.permission.THREAD_NETWORK_PRIVILEGED);
+        //GMS_PERMISSIONS.add(Manifest.permission.WRITE_VERIFICATION_STATE_E2EE_CONTACT_KEYS);
+        //GMS_PERMISSIONS.add(Manifest.permission.SATELLITE_COMMUNICATION);
+        //GMS_PERMISSIONS.add(Manifest.permission.PROVIDE_DEFAULT_ENABLED_CREDENTIAL_SERVICE);
+        //GMS_PERMISSIONS.add(Manifest.permission.PROVIDE_REMOTE_CREDENTIALS);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_NEARBY_STREAMING_POLICY);
+        GMS_PERMISSIONS.add(Manifest.permission.BACKUP);
+        GMS_PERMISSIONS.add(Manifest.permission.NOTIFY_PENDING_SYSTEM_UPDATE);
+        GMS_PERMISSIONS.add(Manifest.permission.NFC_TRANSACTION_EVENT);
+        GMS_PERMISSIONS.add(Manifest.permission.RESET_PASSWORD);
+        GMS_PERMISSIONS.add(Manifest.permission.LOCK_DEVICE);
+        GMS_PERMISSIONS.add(Manifest.permission.CONTROL_KEYGUARD_SECURE_NOTIFICATIONS);
+        GMS_PERMISSIONS.add(Manifest.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS);
+        GMS_PERMISSIONS.add(Manifest.permission.ACCESS_CACHE_FILESYSTEM);
+        //GMS_PERMISSIONS.add(Manifest.permission.ACCESS_DOWNLOAD_MANAGER);
+        //GMS_PERMISSIONS.add(Manifest.permission.ACCESS_DOWNLOAD_MANAGER_ADVANCED);
+        GMS_PERMISSIONS.add(Manifest.permission.BROADCAST_STICKY);
+        GMS_PERMISSIONS.add(Manifest.permission.CHANGE_COMPONENT_ENABLED_STATE);
+        GMS_PERMISSIONS.add(Manifest.permission.CONTROL_KEYGUARD);
+        GMS_PERMISSIONS.add(Manifest.permission.DUMP);
+        GMS_PERMISSIONS.add(Manifest.permission.INVOKE_CARRIER_SETUP);
+        GMS_PERMISSIONS.add(Manifest.permission.MANAGE_USERS);
+        GMS_PERMISSIONS.add(Manifest.permission.MASTER_CLEAR);
+        GMS_PERMISSIONS.add(Manifest.permission.PERSISTENT_ACTIVITY);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_NETWORK_USAGE_HISTORY);
+        GMS_PERMISSIONS.add(Manifest.permission.READ_SYNC_STATS);
+        GMS_PERMISSIONS.add(Manifest.permission.REBOOT);
+        GMS_PERMISSIONS.add(Manifest.permission.SET_TIME);
+        GMS_PERMISSIONS.add(Manifest.permission.STATUS_BAR);
+        GMS_PERMISSIONS.add(Manifest.permission.UPDATE_DEVICE_STATS);
+        GMS_PERMISSIONS.add(Manifest.permission.WRITE_GSERVICES);
+        GMS_PERMISSIONS.add(Manifest.permission.WRITE_SECURE_SETTINGS);
+    }
+
     private static final int MSG_READ_DEFAULT_PERMISSION_EXCEPTIONS = 1;
 
     private static final String ACTION_TRACK = "com.android.fitness.TRACK";
@@ -406,6 +582,7 @@ final class DefaultPermissionGrantPolicy {
         grantDefaultPermissionExceptions(pm, userId);
         grantDefaultSystemHandlerPermissionsBaikal(pm, userId);
         grantDefaultSystemHandlerPermissionsBaikalModules(pm, userId);
+        grantDefaultSystemHandlerGmsPermissionsBaikal(pm, userId);
 
         // Apply delayed state
         pm.apply();
@@ -415,6 +592,15 @@ final class DefaultPermissionGrantPolicy {
         DelayingPackageManagerCache pm = new DelayingPackageManagerCache();
 
         grantDefaultSystemHandlerPermissionsBaikalModules(pm, userId);
+
+        // Apply delayed state
+        pm.apply();
+    }
+
+    public void grantDefaultGmsPermissionsBaikal(int userId) {
+        DelayingPackageManagerCache pm = new DelayingPackageManagerCache();
+
+        grantDefaultSystemHandlerGmsPermissionsBaikal(pm, userId);
 
         // Apply delayed state
         pm.apply();
@@ -547,6 +733,7 @@ final class DefaultPermissionGrantPolicy {
     private final void grantPermissionsToSystemPackage(PackageManagerWrapper pm, String packageName,
             int userId, boolean systemFixed, Set<String>... permissionGroups) {
         if (!pm.isSystemPackage(packageName)) {
+            Log.i(TAG, "Not a system package " + packageName);
             return;
         }
         grantPermissionsToPackage(pm, pm.getSystemPackageInfo(packageName),
@@ -568,6 +755,7 @@ final class DefaultPermissionGrantPolicy {
             int userId, boolean systemFixed, boolean ignoreSystemPackage,
             boolean whitelistRestrictedPermissions, Set<String>... permissionGroups) {
         if (packageInfo == null) {
+            Log.e(TAG, "packageInfo = null");
             return;
         }
         if (doesPackageSupportRuntimePermissions(packageInfo)) {
@@ -595,8 +783,81 @@ final class DefaultPermissionGrantPolicy {
                 MICROPHONE_PERMISSIONS, SENSORS_PERMISSIONS, ALWAYS_LOCATION_PERMISSIONS);
     }
 
+    private void grantGmsPermissions(PackageManagerWrapper pm, String packageName, int userId) {
+        Log.i(TAG, "Granting default permissions to gms for user " + userId);
+        grantSystemFixedPermissionsToSystemPackage(pm, packageName, userId, 
+            FILEACCESS_PERMISSIONS_FULL,
+            PHONE_PERMISSIONS,
+            CONTACTS_PERMISSIONS,
+            ALWAYS_LOCATION_PERMISSIONS,
+            FOREGROUND_LOCATION_PERMISSIONS,
+            COARSE_BACKGROUND_LOCATION_PERMISSIONS,
+            ACTIVITY_RECOGNITION_PERMISSIONS,
+            CALENDAR_PERMISSIONS,
+            SMS_PERMISSIONS,
+            MICROPHONE_PERMISSIONS,
+            CAMERA_PERMISSIONS,
+            SENSORS_PERMISSIONS,
+            STORAGE_PERMISSIONS,
+            FILEACCESS_PERMISSIONS_FULL,
+            NEARBY_DEVICES_PERMISSIONS,
+            NOTIFICATION_PERMISSIONS,
+            SUSPEND_APP_PERMISSIONS,
+            GMS_PERMISSIONS);
+
+        grantPermissionsToSystemPackage(pm, packageName, userId, 
+            FILEACCESS_PERMISSIONS_FULL,
+            PHONE_PERMISSIONS,
+            CONTACTS_PERMISSIONS,
+            ALWAYS_LOCATION_PERMISSIONS,
+            FOREGROUND_LOCATION_PERMISSIONS,
+            COARSE_BACKGROUND_LOCATION_PERMISSIONS,
+            ACTIVITY_RECOGNITION_PERMISSIONS,
+            CALENDAR_PERMISSIONS,
+            SMS_PERMISSIONS,
+            MICROPHONE_PERMISSIONS,
+            CAMERA_PERMISSIONS,
+            SENSORS_PERMISSIONS,
+            STORAGE_PERMISSIONS,
+            FILEACCESS_PERMISSIONS_FULL,
+            NEARBY_DEVICES_PERMISSIONS,
+            NOTIFICATION_PERMISSIONS,
+            SUSPEND_APP_PERMISSIONS,
+            GMS_PERMISSIONS);
+
+        grantPermissionsToPackage(pm, packageName, userId,
+                false /* ignoreSystemPackage */, true /*whitelistRestrictedPermissions*/,
+
+            FILEACCESS_PERMISSIONS_FULL,
+            PHONE_PERMISSIONS,
+            CONTACTS_PERMISSIONS,
+            ALWAYS_LOCATION_PERMISSIONS,
+            FOREGROUND_LOCATION_PERMISSIONS,
+            COARSE_BACKGROUND_LOCATION_PERMISSIONS,
+            ACTIVITY_RECOGNITION_PERMISSIONS,
+            CALENDAR_PERMISSIONS,
+            SMS_PERMISSIONS,
+            MICROPHONE_PERMISSIONS,
+            CAMERA_PERMISSIONS,
+            SENSORS_PERMISSIONS,
+            STORAGE_PERMISSIONS,
+            FILEACCESS_PERMISSIONS_FULL,
+            NEARBY_DEVICES_PERMISSIONS,
+            NOTIFICATION_PERMISSIONS,
+            SUSPEND_APP_PERMISSIONS,
+            GMS_PERMISSIONS);
+
+    }
+
+    private void grantDefaultSystemHandlerGmsPermissionsBaikal(PackageManagerWrapper pm, int userId) {
+        grantGmsPermissions(pm, "com.google.android.gms", userId);
+        grantGmsPermissions(pm, "com.google.android.gsf", userId);
+        grantGmsPermissions(pm, "com.google.android.syncadapters.contacts", userId);
+        grantGmsPermissions(pm, "com.google.android.syncadapters.calendar", userId);
+    }
+
     private void grantDefaultSystemHandlerPermissionsBaikalModules(PackageManagerWrapper pm, int userId) {
-        grantPermissionsToSystemPackage(pm, "james.dsp", userId, FILEACCESS_PERMISSIONS_FULL, SENSORS_PERMISSIONS);
+        grantPermissionsToSystemPackage(pm, "james.dsp", userId, FILEACCESS_PERMISSIONS_FULL, SENSORS_PERMISSIONS, STORAGE_PERMISSIONS);
     }
 
 
