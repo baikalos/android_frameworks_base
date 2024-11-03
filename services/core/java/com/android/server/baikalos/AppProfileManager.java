@@ -470,8 +470,8 @@ public class AppProfileManager {
 
             mResolver = mContext.getContentResolver();
 
-            Settings.Global.putInt(mResolver, Settings.Global.BAIKALOS_STAMINA_ENABLED, 0);
-            Settings.Global.putInt(mResolver, Settings.Global.BAIKALOS_EXTREME_IDLE, 0);
+            Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_STAMINA_ENABLED, 0);
+            Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_EXTREME_IDLE, 0);
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0);
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0);
 
