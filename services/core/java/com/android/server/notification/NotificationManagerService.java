@@ -1814,7 +1814,9 @@ public class NotificationManagerService extends SystemService {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-
+            if (action == null) {
+                return;
+            }
             if (action.equals(Intent.ACTION_SCREEN_ON)) {
                 // Keep track of screen on/off state, but do not turn off the notification light
                 // until user passes through the lock screen or views the notification.

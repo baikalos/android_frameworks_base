@@ -1402,7 +1402,11 @@ public class BlobStoreManagerService extends SystemService {
             if (LOGV) {
                 Slog.v(TAG, "Received " + intent);
             }
-            switch (intent.getAction()) {
+            final String action = intent.getAction();
+            if (action == null) {
+                return;
+            }
+            switch (action) {
                 case Intent.ACTION_PACKAGE_FULLY_REMOVED:
                 case Intent.ACTION_PACKAGE_DATA_CLEARED:
                     final String packageName = intent.getData().getSchemeSpecificPart();
