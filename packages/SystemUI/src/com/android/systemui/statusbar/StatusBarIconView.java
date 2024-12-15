@@ -945,7 +945,12 @@ public class StatusBarIconView extends AnimatedImageView implements StatusIconDi
 
     public void setDozing(boolean dozing, boolean fade, long delay) {
         mDozer.setDozing(f -> {
-            mDozeAmount = f;
+
+            if( Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_COLOR_DOZE, 0) != 0 ) {
+                mDozeAmount = 0;
+            } else {
+                mDozeAmount = f;
+            }
             updateDecorColor();
             updateIconColor();
             updateAllowAnimation();
