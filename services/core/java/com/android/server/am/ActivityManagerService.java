@@ -3070,6 +3070,23 @@ public class ActivityManagerService extends IActivityManager.Stub
         return mAppProfileManager.getPackageOptionFromActivityManager(packageName,uid,opCode,def);
     }
 
+    public int getBaikalOption(int opCode, int def, int callingUid, String callingPackage) {
+        if( mAppProfileManager == null ) { 
+            Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
+            return def;
+        }
+        return mAppProfileManager.getBaikalOptionFromActivityManager(opCode,def,callingUid,callingPackage,null);
+    }
+
+    @Override
+    public int getBaikalOption(int opCode, int def, int callingUid, String callingPackage, Bundle bundle) {
+        if( mAppProfileManager == null ) { 
+            Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
+            return def;
+        }
+        return mAppProfileManager.getBaikalOptionFromActivityManager(opCode,def,callingUid,callingPackage,bundle);
+    }
+
     @Override
     public int getPackageProcessState(String packageName, String callingPackage) {
         if (!hasUsageStatsPermission(callingPackage)) {
@@ -11970,6 +11987,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             final long lostRAM = memInfo.getTotalSizeKb()
                     - (ss[INDEX_TOTAL_PSS] - ss[INDEX_TOTAL_SWAP_PSS])
                     - memInfo.getFreeSizeKb() - memInfo.getCachedSizeKb()
+                    + memInfo.getShmemSizeKb()
                     - kernelUsed - memInfo.getZramTotalSizeKb();
             if (!opts.isCompact) {
                 pw.print(" Used RAM: "); pw.print(stringifyKBSize(ss[INDEX_TOTAL_PSS] - cachedPss
@@ -12491,6 +12509,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             long lostRAM = memInfo.getTotalSizeKb()
                     - (ss[INDEX_TOTAL_PSS] - ss[INDEX_TOTAL_SWAP_PSS])
                     - memInfo.getFreeSizeKb() - memInfo.getCachedSizeKb()
+                    + memInfo.getShmemSizeKb()
                     - memInfo.getKernelUsedSizeKb() - memInfo.getZramTotalSizeKb();
             proto.write(MemInfoDumpProto.USED_PSS_KB, ss[INDEX_TOTAL_PSS] - cachedPss);
             proto.write(MemInfoDumpProto.USED_KERNEL_KB, memInfo.getKernelUsedSizeKb());

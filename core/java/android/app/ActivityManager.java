@@ -102,6 +102,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.Executor;
@@ -3781,6 +3782,40 @@ public class ActivityManager {
     public int getBaikalPackageOption(String packageName, int uid, int opCode,int def) {
         try {
             return getService().getBaikalPackageOption(packageName,uid,opCode,def);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Return the importance of a given package name, based on the processes that are
+     * currently running.  The return value is one of the importance constants defined
+     * in {@link RunningAppProcessInfo}, giving you the highest importance of all the
+     * processes that this package has code running inside of.  If there are no processes
+     * running its code, {@link RunningAppProcessInfo#IMPORTANCE_GONE} is returned.
+     * @hide
+     */
+    @SystemApi
+    public int getBaikalOption(int opCode,int def, int callingUid, String callingPackage) {
+        try {
+            return getService().getBaikalOption(opCode,def,callingUid,callingPackage,null);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * Return the importance of a given package name, based on the processes that are
+     * currently running.  The return value is one of the importance constants defined
+     * in {@link RunningAppProcessInfo}, giving you the highest importance of all the
+     * processes that this package has code running inside of.  If there are no processes
+     * running its code, {@link RunningAppProcessInfo#IMPORTANCE_GONE} is returned.
+     * @hide
+     */
+    @SystemApi
+    public int getBaikalOption(int opCode,int def, int callingUid, String callingPackage, Bundle params) {
+        try {
+            return getService().getBaikalOption(opCode,def,callingUid,callingPackage,params);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
         }

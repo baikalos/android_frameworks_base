@@ -21,6 +21,16 @@ MissingGetterMatchingBuilder: android.telephony.mbms.DownloadRequest.Builder#set
     android.telephony.mbms.DownloadRequest does not declare a `getServiceId()` method matching method android.telephony.mbms.DownloadRequest.Builder.setServiceId(String)
 
 
+MissingNullability: android.app.ActivityManager#getBaikalOption(int, int, int, String) parameter #3:
+    Missing nullability on parameter `callingPackage` in method `getBaikalOption`
+MissingNullability: android.app.ActivityManager#getBaikalOption(int, int, int, String, Bundle) parameter #4:
+    Missing nullability on parameter `params` in method `getBaikalOption`
+MissingNullability: android.app.ActivityManager#getBaikalOption(int, int, int, String, android.os.Bundle) parameter #3:
+    Missing nullability on parameter `callingPackage` in method `getBaikalOption`
+MissingNullability: android.app.ActivityManager#getBaikalOption(int, int, int, String, android.os.Bundle) parameter #4:
+    Missing nullability on parameter `params` in method `getBaikalOption`
+MissingNullability: android.app.ActivityManager#getBaikalPackageOption(String, int, int, int) parameter #0:
+    Missing nullability on parameter `packageName` in method `getBaikalPackageOption`
 MissingNullability: android.media.soundtrigger.SoundTriggerDetectionService#onUnbind(android.content.Intent) parameter #0:
     Missing nullability on parameter `intent` in method `onUnbind`
 MissingNullability: android.media.tv.TvRecordingClient.RecordingCallback#onEvent(String, String, android.os.Bundle) parameter #0:
@@ -59,8 +69,7 @@ MissingNullability: android.telephony.mbms.DownloadRequest.Builder#setServiceId(
     Missing nullability on method `setServiceId` return
 MissingNullability: android.telephony.mbms.DownloadRequest.Builder#setServiceId(String) parameter #0:
     Missing nullability on parameter `serviceId` in method `setServiceId`
-MissingNullability: android.app.ActivityManager#getBaikalPackageOption(String, int, int, int) parameter #0:
-    Missing nullability on parameter `packageName` in method `getBaikalPackageOption`
+
 
 ProtectedMember: android.printservice.recommendation.RecommendationService#attachBaseContext(android.content.Context):
     Protected methods not allowed; must be public: method android.printservice.recommendation.RecommendationService.attachBaseContext(android.content.Context)}

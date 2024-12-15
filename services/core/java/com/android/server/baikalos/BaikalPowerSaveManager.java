@@ -151,7 +151,7 @@ public class BaikalPowerSaveManager {
     public static PowerSaverPolicyConfig getCurrentPolicy() {
         if( mCurrentPolicy == null ) {
             Slog.i(TAG,"mCurrentPolicy=null");
-            return new PowerSaverPolicyConfig("<unknown>",0);
+            mCurrentPolicy = new PowerSaverPolicyConfig("<unknown>",0);
         }
         return mCurrentPolicy;
     }
@@ -237,6 +237,8 @@ public class BaikalPowerSaveManager {
                 .setEnableAnimation(true)
                 .setEnableAod(true)
                 .setEnableLaunchBoost(true)
+                .setEnableInteractionBoost(true)
+                .setEnableRenderingBoost(true)
                 .setEnableOptionalSensors(true)
                 .setEnableVibration(true)
                 .setEnableAdjustBrightness(true)
@@ -262,6 +264,8 @@ public class BaikalPowerSaveManager {
                 .setEnableAnimation(true)
                 .setEnableAod(true)
                 .setEnableLaunchBoost(true)
+                .setEnableInteractionBoost(true)
+                .setEnableRenderingBoost(true)
                 .setEnableOptionalSensors(true)
                 .setEnableVibration(true)
                 .setEnableAdjustBrightness(true)
@@ -286,6 +290,8 @@ public class BaikalPowerSaveManager {
                 .setEnableAnimation(true)
                 .setEnableAod(true)
                 .setEnableLaunchBoost(true)
+                .setEnableInteractionBoost(true)
+                .setEnableRenderingBoost(false)
                 .setEnableOptionalSensors(false)
                 .setEnableVibration(true)
                 .setEnableAdjustBrightness(true)
@@ -309,6 +315,8 @@ public class BaikalPowerSaveManager {
                 .setEnableAnimation(true)
                 .setEnableAod(true)
                 .setEnableLaunchBoost(false)
+                .setEnableInteractionBoost(false)
+                .setEnableRenderingBoost(false)
                 .setEnableOptionalSensors(false)
                 .setEnableVibration(true)
                 .setEnableAdjustBrightness(true)
@@ -332,6 +340,8 @@ public class BaikalPowerSaveManager {
                 .setEnableAnimation(false)
                 .setEnableAod(false)
                 .setEnableLaunchBoost(false)
+                .setEnableInteractionBoost(false)
+                .setEnableRenderingBoost(false)
                 .setEnableOptionalSensors(false)
                 .setEnableVibration(false)
                 .setEnableAdjustBrightness(true)
@@ -355,6 +365,8 @@ public class BaikalPowerSaveManager {
                 .setEnableAnimation(false)
                 .setEnableAod(false)
                 .setEnableLaunchBoost(false)
+                .setEnableInteractionBoost(false)
+                .setEnableRenderingBoost(false)
                 .setEnableOptionalSensors(false)
                 .setEnableVibration(false)
                 .setEnableAdjustBrightness(true)
@@ -378,6 +390,8 @@ public class BaikalPowerSaveManager {
                 .setEnableAnimation(false)
                 .setEnableAod(false)
                 .setEnableLaunchBoost(false)
+                .setEnableInteractionBoost(false)
+                .setEnableRenderingBoost(false)
                 .setEnableOptionalSensors(false)
                 .setEnableVibration(false)
                 .setEnableAdjustBrightness(true)

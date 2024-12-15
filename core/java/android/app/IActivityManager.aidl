@@ -513,7 +513,9 @@ interface IActivityManager {
     @UnsupportedAppUsage
     int getPackageProcessState(in String packageName, in String callingPackage);
     @UnsupportedAppUsage
-    int getBaikalPackageOption(String packageName, int uid, int opCode, int def);
+    int getBaikalPackageOption(in String packageName, int uid, int opCode, int def);
+    @UnsupportedAppUsage
+    int getBaikalOption(int opCode, int def, int callingUid, in String callingPackage, in Bundle params);
 
 
     // Start of N transactions

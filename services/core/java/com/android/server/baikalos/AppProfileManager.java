@@ -75,6 +75,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.UserHandle;
 import android.os.WorkSource;
 import android.os.WorkSource.WorkChain;
@@ -132,7 +133,9 @@ import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 import com.android.internal.baikalos.AppVolumeDB;
+import com.android.internal.baikalos.PowerSaverPolicyConfig;
 
+import com.android.server.audio.AudioService;
 import com.android.server.LocalServices;
 import com.android.server.am.ActivityManagerConstants;
 
@@ -223,6 +226,16 @@ public class AppProfileManager {
     private boolean mKillInBackground = false;
     private boolean mAllowDowngrade = false;
 
+    private boolean mInteractionBoost = true;
+    private boolean mDisplayBoost = false;
+    private boolean mRenderingBoost = true;
+
+    private int mInteractionBoostValue = 0;
+    private int mDisplayBoostValue = 0;
+    private int mRenderingBoostValue = 0;
+
+    private boolean mBlockIfBusy = false;
+
     private int mBrightnessCurve = 0;
 
     private boolean mPhoneCall = false;
@@ -239,10 +252,15 @@ public class AppProfileManager {
     static BaikalBoostManager mBoostManager;
     static BaikalPowerSaveManager mBaikalPowerSaveManager;
     static AppVolumeDB mAppVolumeDB;
+    static AudioService mAudioService = null;
 
 
     private PowerManagerInternal mPowerManagerInternal;
     private ActivityManagerConstants mAmConstants;
+
+    public static void setAudioService(AudioService service) {
+        mAudioService = service;
+    }
 
     public static AppProfile getCurrentProfile() {
         return mCurrentProfile;
@@ -359,6 +377,18 @@ public class AppProfileManager {
                 mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_AUTO_LIMIT),
                     false, this);
+
+                mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_INTERACTION), false, this);
+
+                mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT), false, this);
+
+                mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BOOST_RENDERING), false, this);
+
+                mResolver.registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_BLOCK_IF_BUSY), false, this);
 
             } catch( Exception e ) {
             }
@@ -601,6 +631,27 @@ public class AppProfileManager {
         boolean autoLimit = false; //Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AUTO_LIMIT, 0) != 0;
         changed |= AppProfile.setAutoLimit(autoLimit);
 
+
+        boolean interactionBoost = Settings.Global.getInt(mResolver,Settings.Global.BAIKALOS_BOOST_INTERACTION, 1) == 1;
+        if( interactionBoost != mInteractionBoost ) {
+            mInteractionBoost = interactionBoost;
+            changed = true;
+        }
+
+        boolean displayBoost = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT, 0) == 1;
+        if( displayBoost != mDisplayBoost ) {
+            mDisplayBoost = displayBoost;
+            changed = true;
+        }
+
+        boolean renderingBoost = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BOOST_RENDERING, 1) == 1;
+        if( renderingBoost != mRenderingBoost ) {
+            mRenderingBoost = renderingBoost;
+            changed = true;
+        }
+
+        mBlockIfBusy = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_IF_BUSY, 0) == 1; 
+
         if( changed || mForcedUpdate ) {
             activateCurrentProfileLocked(mForcedUpdate,false);
             mForcedUpdate = false;
@@ -763,6 +814,7 @@ public class AppProfileManager {
                                                                       ", mDeviceIdleMode=" + mDeviceIdleMode +
                                                                       ", mWakefulness=" + mWakefulness);
             activateIdleProfileLocked(force);
+            updateBoostValuesIfNeededLocked();
             updateBypassChargingIfNeededLocked();
             updateStaminaIfNeededLocked();
             return;
@@ -812,8 +864,73 @@ public class AppProfileManager {
             Settings.Global.putInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_BLOCK_OVERLAYS, profile.mBlockOverlays ? 1:0 );
         }
 
+        updateBoostValuesIfNeededLocked();
         updateBypassChargingIfNeededLocked();
         updateStaminaIfNeededLocked();
+    }
+
+
+    private void updateBoostValuesIfNeededLocked() {
+        boolean changed = false; 
+
+        boolean interactionBoost = false;
+        boolean displayBoost = false;
+        boolean renderingBoost = false;
+
+        if( mWakefulness == WAKEFULNESS_AWAKE ) {
+            if( mDisplayBoost ) displayBoost = true;
+            if( mInteractionBoost ) {
+                switch(mCurrentProfile.mBoostControl) {
+
+                    case 1:
+                        interactionBoost = true;
+                        renderingBoost = true;    
+                        break;
+
+                    case 2:
+                        interactionBoost = true;
+                        renderingBoost = false;    
+                        break;
+
+                    case 3:
+                        interactionBoost = false;
+                        renderingBoost = false;    
+                        break;
+
+                    case 0:
+                    default:
+                        PowerSaverPolicyConfig policy = BaikalPowerSaveManager.getCurrentPolicy();
+                        if( policy.enableInteractionBoost ) interactionBoost = true;
+                        if( policy.enableRenderingBoost ) renderingBoost = true;    
+                        break;
+                }
+            }
+        }
+
+        int interactionBoostValue = interactionBoost ? -1001 : -1000;
+        int displayBoostValue = displayBoost ? -1001 : -1000;
+        int renderingBoostValue = renderingBoost ? -1003 : -1002;
+
+        try {
+            if( interactionBoostValue != mInteractionBoostValue ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Interaction boost=" + interactionBoost);
+                mPowerManager.setPowerBoost(BOOST_INTERACTION,interactionBoostValue);
+                mInteractionBoostValue = interactionBoostValue;
+            }
+
+            if( renderingBoostValue != mRenderingBoostValue ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Rendering boost=" + renderingBoost);
+                mPowerManager.setPowerBoost(BOOST_INTERACTION,renderingBoostValue);
+                mRenderingBoostValue = renderingBoostValue;
+            }
+
+            if( displayBoostValue != mDisplayBoostValue ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Display boost=" + displayBoost);
+                mPowerManager.setPowerBoost(BOOST_DISPLAY_UPDATE_IMMINENT,displayBoostValue);
+                mDisplayBoostValue = displayBoostValue;
+            }
+        } catch(Exception e) {
+        }
     }
 
     public void wakeUp() {
@@ -1445,8 +1562,26 @@ public class AppProfileManager {
         return def;
     }
 
+    public int getBaikalOptionFromActivityManager(int opCode, int def, int callingUid, String callingPackage, Bundle bundle) {
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getBaikalOptionFromActivityManager:" + callingPackage + "/" + callingUid + ", opCode=" + opCode + ", def=" + def + ", profile=null" + ", result=" + def);                
 
-    public int getPackageOptionFromActivityManager(String packageName, int uid, int opCode,int def) {
+        switch(opCode) {
+            case 0:
+                if( !mBlockIfBusy ) return def;
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) 
+                    Slog.w(TAG, "getBaikalOptionFromActivityManager filterIncomingCall: " + bundle.getString("callerDisplayName") + ", " + bundle.getString("contactDisplayName"));
+                if ( mAudioService != null ) {
+                    if( mAudioService.getVoicePlaybackActive() ) {
+                        Slog.w(TAG, "getBaikalOptionFromActivityManager VoicePlaybackActive: block call " + bundle.getString("callerDisplayName") + ", " + bundle.getString("contactDisplayName"));
+                        return 1;
+                    }
+                }
+                return 0;
+        }
+        return def;
+    }
+
+    public int getPackageOptionFromActivityManager(String packageName, int uid, int opCode, int def) {
 
         int result = def;
         //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def);
@@ -1463,28 +1598,38 @@ public class AppProfileManager {
     
                 case AppProfile.OPCODE_LOCATION:
                     result = profile.mLocationLevel;
+                    break;
                 
                 case AppProfile.OPCODE_HIDE_HMS:
                     result = profile.mHideHMS ? 1 : 0;
+                    break;
 
                 case AppProfile.OPCODE_HIDE_GMS:
                     result = profile.mHideGMS ? 1 : 0;
+                    break;
 
                 case AppProfile.OPCODE_HIDE_3P:
                     result = profile.mHide3P ? 1 : 0;
+                    break;
 
                 case AppProfile.OPCODE_BLOCK_CONTACTS:
                     result = profile.mBlockContacts ? 1 : 0;
+                    break;
 
                 case AppProfile.OPCODE_BLOCK_CALLLOG:
                     result = profile.mBlockCalllog ? 1 : 0;
+                    break;
 
                 case AppProfile.OPCODE_BLOCK_CALENDAR:
                     result = profile.mBlockCalendar ? 1 : 0;
+                    break;
 
                 case AppProfile.OPCODE_BLOCK_MEDIA:
                     result = profile.mBlockMedia ? 1 : 0;
+                    break;
 
+                default:
+                    Slog.w(TAG, "getPackageOptionFromActivityManager: invalid opcode:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", result=" + result);
             }
         } catch(Exception ex) {
             Slog.w(TAG, "getPackageOptionFromActivityManager: exception", ex);
@@ -1934,7 +2079,7 @@ public class AppProfileManager {
                     return true;
                 }
             } 
-            Slog.d(TAG, "checkPermission: READ_PRIVILEGED_PHONE_STATE denied for " + pkgName);
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.d(TAG, "checkPermission: READ_PRIVILEGED_PHONE_STATE denied for " + pkgName);
         }
         return false;
     }
