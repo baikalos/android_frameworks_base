@@ -20,8 +20,12 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SuppressLint;
+import android.app.ActivityThread;
+import android.content.Context;
+import android.content.ContentResolver;
 import android.os.Process;
 import android.os.SystemClock;
+import android.provider.Settings;
 
 import android.util.Slog;
 import android.util.KeyValueListParser;
@@ -118,7 +122,7 @@ public class AppProfile {
     public int mSpoofDevice;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mKeepOn;
+    public int mKeepOn;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mPreventHwKeyAttestation;
@@ -131,6 +135,9 @@ public class AppProfile {
 
     @SuppressLint({"MutableBareField","InternalField"})
     public int mPerformanceLevel;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public int mBoostControl;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public int mMicrophone;
@@ -224,6 +231,12 @@ public class AppProfile {
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mBlockMedia;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mFilterFS;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public int mDarkMode;
 
     // internal
     @SuppressLint({"MutableBareField","InternalField"})
@@ -388,6 +401,7 @@ public class AppProfile {
         mSpoofDevice = 0;
         mCamera = 0;
         mPerformanceLevel = 0;
+        mBoostControl = 0;
         mMicrophone = 0;
         mFreezerMode = 0;
         mSystemWhitelisted = false;
@@ -421,7 +435,7 @@ public class AppProfile {
         mBackgroundMode = 0;
         mBackgroundModeConfig = 0;
         mIgnoreAudioFocus = false;
-        mKeepOn = false;
+        mKeepOn = 0;
         mPreventHwKeyAttestation = false;
         mHideDevMode = false;
         mDisableWakeup = false;
@@ -433,6 +447,8 @@ public class AppProfile {
         mBAFSend = false;
         mSonification = 0;
         mBypassCharging = false;
+        mFilterFS = false;
+        mDarkMode = 0;
         
         mBlockContacts = false;
         mBlockCalllog = false;
@@ -674,10 +690,11 @@ public class AppProfile {
             mAudioMode == 0 &&
             mSpoofDevice == 0 &&
             mCamera == 0 &&
-            !mKeepOn &&
+            mKeepOn == 0 &&
             !mPreventHwKeyAttestation &&
             !mHideDevMode &&
             mPerformanceLevel == 0 &&
+            mBoostControl == 0 &&
             mMicrophone == 0 &&
             mFreezerMode == 0 &&
             !mDisableWakeup &&
@@ -711,6 +728,8 @@ public class AppProfile {
             !mBlockCalllog &&
             !mBlockCalendar &&
             !mBlockMedia &&
+            !mFilterFS &&
+            mDarkMode == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
     }
@@ -744,6 +763,7 @@ public class AppProfile {
         this.mPreventHwKeyAttestation = profile.mPreventHwKeyAttestation;
         this.mHideDevMode = profile.mHideDevMode;
         this.mPerformanceLevel = profile.mPerformanceLevel;
+        this.mBoostControl = profile.mBoostControl;
         this.mMicrophone = profile.mMicrophone;
         this.mFreezerMode = profile.mFreezerMode;
         this.mPerfProfile = profile.mPerfProfile;
@@ -782,6 +802,8 @@ public class AppProfile {
         this.mBlockCalllog = profile.mBlockCalllog;
         this.mBlockCalendar = profile.mBlockCalendar;
         this.mBlockMedia = profile.mBlockMedia;
+        this.mFilterFS = profile.mFilterFS;
+        this.mDarkMode = profile.mDarkMode;
         
         this.mIsGms = profile.mIsGms;
         this.mIsGmsPersistent = profile.mIsGmsPersistent;
@@ -811,7 +833,7 @@ public class AppProfile {
         if( mRotation != 0 ) result +=  "," + "ro=" + mRotation;
         if( mAudioMode != 0 ) result +=  "," + "am=" + mAudioMode;
         if( mSpoofDevice != 0 ) result +=  "," + "sd=" + mSpoofDevice;
-        if( mKeepOn ) result +=  "," + "ko=" + mKeepOn;
+        if( mKeepOn != 0 ) result +=  "," + "koi=" + mKeepOn;
         if( mPreventHwKeyAttestation ) result +=  "," + "pka=" + mPreventHwKeyAttestation;
         if( mCamera != 0 ) result +=  "," + "cm=" + mCamera;
         if( mPerformanceLevel != 0 ) result +=  "," + "pl=" + mPerformanceLevel;
@@ -848,7 +870,9 @@ public class AppProfile {
         if( mBlockCalllog ) result +=  "," + "blcl=" + mBlockCalllog;
         if( mBlockCalendar ) result +=  "," + "blcd=" + mBlockCalendar;
         if( mBlockMedia ) result +=  "," + "blmd=" + mBlockMedia;
-
+        if( mBoostControl != 0 ) result +=  "," + "bcl=" + mBoostControl;
+        if( mFilterFS ) result += "," + "ffs=" + mFilterFS;
+        if( mDarkMode != 0 ) result += "," + "dkm=" + mDarkMode;
         return result;
     }
 
@@ -882,7 +906,7 @@ public class AppProfile {
             mRotation = parser.getInt("ro",0);
             mAudioMode = parser.getInt("am",0);
             mSpoofDevice = parser.getInt("sd",0);
-            mKeepOn = parser.getBoolean("ko",false);
+            mKeepOn = parser.getInt("koi",0);
             mPreventHwKeyAttestation = parser.getBoolean("pka",false);
             mCamera = parser.getInt("cm",0);
             mPerformanceLevel = parser.getInt("pl",0);
@@ -923,6 +947,12 @@ public class AppProfile {
             mBlockCalllog = parser.getBoolean("blcl",false);
             mBlockCalendar = parser.getBoolean("blcd",false);
             mBlockMedia = parser.getBoolean("blmd",false);
+
+            mBoostControl = parser.getInt("bcl",0);
+
+            mFilterFS = parser.getBoolean("ffs",false);
+            mDarkMode = parser.getInt("dkm",0);
+
 
             if( mBackgroundModeConfig > 99 ) {
                 mBackgroundMode = mBackgroundModeConfig - 100;
@@ -978,4 +1008,31 @@ public class AppProfile {
         return sPackageName;
     }
 
+    public static boolean isCameraEnabled(boolean cameraMode) {
+        Context applicationContext = ActivityThread.currentApplication().getApplicationContext();
+        ContentResolver resolver = applicationContext.getContentResolver();
+
+        boolean frontDisabled = Settings.Global.getInt(resolver,
+                        Settings.Global.BAIKALOS_CAMERA_DISABLE_FRONT,0) != 0;
+
+        boolean backDisabled = Settings.Global.getInt(resolver,
+                        Settings.Global.BAIKALOS_CAMERA_DISABLE_BACK,0) != 0;
+
+        AppProfile profile = getCurrentAppProfile();
+
+        int mode = 0;
+        if( profile != null ) {
+            mode = profile.mCamera;
+        }
+
+        if( mode == 4 ) return false;
+        if( mode == 1 && !cameraMode ) return true;
+        if( mode == 2 && cameraMode ) return true;
+        if( mode == 3 ) return true;
+
+        if( !frontDisabled && cameraMode ) return true;
+        if( !backDisabled && !cameraMode ) return true;
+
+        return false;
+    }
 }

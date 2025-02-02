@@ -16,6 +16,8 @@
 
 package com.android.server.location.provider;
 
+import static com.android.server.location.LocationManagerService.TAG;
+
 import android.annotation.Nullable;
 import android.location.LocationResult;
 import android.location.provider.ProviderProperties;
@@ -23,6 +25,7 @@ import android.location.provider.ProviderRequest;
 import android.location.util.identity.CallerIdentity;
 import android.os.Binder;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.android.internal.util.Preconditions;
 
@@ -306,6 +309,7 @@ public abstract class AbstractLocationProvider {
      * Call this method to report a new location.
      */
     protected void reportLocation(LocationResult locationResult) {
+        Log.d(TAG, "reportLocation:" + locationResult);
         Listener listener = mInternalState.get().listener;
         if (listener != null) {
             final long identity = Binder.clearCallingIdentity();

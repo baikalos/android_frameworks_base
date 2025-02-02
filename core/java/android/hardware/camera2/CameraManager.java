@@ -25,6 +25,7 @@ import android.annotation.SystemService;
 import android.annotation.TestApi;
 import android.app.ActivityThread;
 import android.app.compat.CompatChanges;
+import android.baikalos.AppProfile;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
 import android.compat.annotation.Overridable;
@@ -739,12 +740,14 @@ public final class CameraManager {
 
         String cameraId = BaikalSpoofer.overrideCameraId(oCameraId,1);
 
-        Log.v(TAG, "openCameraDeviceUserAsync cameraId " + cameraId);
-
         CameraCharacteristics characteristics = getCameraCharacteristics(cameraId);
         CameraDevice device = null;
         Map<String, CameraCharacteristics> physicalIdsToChars =
                 getPhysicalIdToCharsMap(characteristics);
+
+
+        if( !AppProfile.isCameraEnabled(characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) ) return null; 
+
         synchronized (mLock) {
 
             ICameraDeviceUser cameraUser = null;
@@ -769,6 +772,10 @@ public final class CameraManager {
                 }
 
                 boolean overrideToPortrait = shouldOverrideToPortrait(mContext);
+
+                Log.i(TAG, "openCameraDeviceUserAsync: from " + ActivityThread.currentOpPackageName() + " to " + cameraId + ", op=" + overrideToPortrait + ", cp=" + AppProfile.getCurrentAppProfile().toString());
+
+
                 cameraUser = cameraService.connectDevice(callbacks, cameraId,
                     mContext.getOpPackageName(), mContext.getAttributionTag(), uid,
                     oomScoreOffset, mContext.getApplicationInfo().targetSdkVersion,

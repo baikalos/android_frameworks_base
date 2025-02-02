@@ -800,10 +800,19 @@ public class DeviceIdleController extends SystemService
         mHandler.sendEmptyMessage(MSG_REPORT_STATIONARY_STATUS);
     }
 
+    
+    
+    @GuardedBy("this")
+    private boolean isAggressivelyIdleLocked() {
+        if( mAggressiveDeviceIdleMode && 
+            (mState == STATE_IDLE || mState == LIGHT_STATE_IDLE || 
+             mState == STATE_INACTIVE || mQuickDozeActivated) ) return true;
+        return false; 
+    }
+
     @GuardedBy("this")
     private boolean isStationaryLocked() {
-        //if( mAggressiveDeviceIdleMode || (AppProfile.getPowerMode() >= 3 ) ) return true;
-        if( mAggressiveDeviceIdleMode ) return true;
+        if( isAggressivelyIdleLocked() ) return true;
         final long now = mInjector.getElapsedRealtime();
         return mMotionListener.active
                 // Listening for motion for long enough and last motion was long enough ago.
@@ -816,17 +825,11 @@ public class DeviceIdleController extends SystemService
         synchronized (this) {
             if (!mStationaryListeners.add(listener)) {
                 // Listener already registered.
-                if( mAggressiveDeviceIdleMode ) unregisterStationaryListener(listener);
                 return;
             }
-
-            if( mAggressiveDeviceIdleMode ) {
-                unregisterStationaryListener(listener);
-                return;
-            }
-            //if( AppProfile.getPowerMode() >= 3 ) return;
 
             postStationaryStatus(listener);
+
             if (mMotionListener.active) {
                 if (!isStationaryLocked() && mStationaryListeners.size() == 1) {
                     // First listener to be registered and the device isn't stationary, so we
@@ -842,7 +845,8 @@ public class DeviceIdleController extends SystemService
 
     private void unregisterStationaryListener(DeviceIdleInternal.StationaryListener listener) {
         synchronized (this) {
-            if (mStationaryListeners.remove(listener) && mStationaryListeners.size() == 0
+            mStationaryListeners.remove(listener);
+            if (mStationaryListeners.size() == 0
                     // Motion detection is started when transitioning from INACTIVE to IDLE_PENDING
                     // and so doesn't need to be on for ACTIVE or INACTIVE states.
                     // Motion detection isn't needed when idling due to Quick Doze.
@@ -4042,6 +4046,7 @@ public class DeviceIdleController extends SystemService
     @GuardedBy("this")
     void motionLocked() {
         if (DEBUG) Slog.d(TAG, "motionLocked()");
+        if ( isAggressivelyIdleLocked() ) return;
         mLastMotionEventElapsed = mInjector.getElapsedRealtime();
         handleMotionDetectedLocked(mConstants.MOTION_INACTIVE_TIMEOUT, "motion");
     }

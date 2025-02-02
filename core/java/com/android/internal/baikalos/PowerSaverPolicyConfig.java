@@ -50,6 +50,8 @@ import android.util.KeyValueListParser;
         public boolean enableAnimation;
         public boolean enableAod;
         public boolean enableLaunchBoost;
+        public boolean enableInteractionBoost;
+        public boolean enableRenderingBoost;
         public boolean enableOptionalSensors;
         public boolean enableVibration;
         public boolean enableAdjustBrightness;
@@ -88,6 +90,8 @@ import android.util.KeyValueListParser;
             enableAnimation = true;
             enableAod = true;
             enableLaunchBoost = true;
+            enableInteractionBoost = true;
+            enableRenderingBoost = true;
             enableOptionalSensors = true;
             enableVibration = true;
             enableAdjustBrightness = true;
@@ -133,6 +137,8 @@ import android.util.KeyValueListParser;
                 policy.enableAnimation = parser.getBoolean("ean",true);
                 policy.enableAod = parser.getBoolean("eaod",true);
                 policy.enableLaunchBoost = parser.getBoolean("elb",true);
+                policy.enableInteractionBoost = parser.getBoolean("eib",true);
+                policy.enableRenderingBoost = parser.getBoolean("erb",true);
                 policy.enableOptionalSensors = parser.getBoolean("eos",true);
                 policy.enableVibration = parser.getBoolean("evb",true);
                 policy.enableAdjustBrightness = parser.getBoolean("eab",true);
@@ -167,6 +173,8 @@ import android.util.KeyValueListParser;
             if( !enableAnimation ) seralized += "," + "ean=" +  enableAnimation;
             if( !enableAod ) seralized += "," + "eaod=" +  enableAod;
             if( !enableLaunchBoost ) seralized += "," + "elb=" +  enableLaunchBoost;
+            if( !enableInteractionBoost ) seralized += "," + "eib=" +  enableInteractionBoost;
+            if( !enableRenderingBoost ) seralized += "," + "erb=" +  enableRenderingBoost;
             if( !enableOptionalSensors ) seralized += "," + "eos=" +  enableOptionalSensors;
             if( !enableVibration ) seralized += "," + "evb=" +  enableVibration;
             if( !enableAdjustBrightness ) seralized += "," + "eab=" +  enableAdjustBrightness;
@@ -227,6 +235,16 @@ import android.util.KeyValueListParser;
 
         public PowerSaverPolicyConfig setEnableLaunchBoost(boolean enable) {
             enableLaunchBoost = enable;
+            return this;
+        }
+
+        public PowerSaverPolicyConfig setEnableInteractionBoost(boolean enable) {
+            enableInteractionBoost = enable;
+            return this;
+        }
+
+        public PowerSaverPolicyConfig setEnableRenderingBoost(boolean enable) {
+            enableRenderingBoost = enable;
             return this;
         }
 

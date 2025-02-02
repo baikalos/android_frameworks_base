@@ -797,9 +797,8 @@ public final class ActiveServices {
             }
         }
 
-
-        if( !mAm.mAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
-            (bgLaunch && mAm.mAppProfileManager.isAppBlocked(null, r.packageName, r.appInfo.uid)) ) {
+        if( bgLaunch && !mAm.mAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
+            mAm.mAppProfileManager.isAppBlocked(null, r.packageName, r.appInfo.uid) ) {
             Slog.w(TAG, "App service execution blocked: service "
                     + service + " to " + r.shortInstanceName
                     + " from pid=" + callingPid + " uid=" + callingUid
@@ -809,6 +808,20 @@ public final class ActiveServices {
             return null;
         }
 
+
+        if( bgLaunch && !mAm.mAppProfileManager.isTopAppUid(callingUid,callingPackage) ) {
+            AppProfile appProfile = mAm.mAppProfileManager.getAppProfile(r.appInfo.packageName,r.appInfo.uid);
+            if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) {
+                Slog.w(TAG, "startForegroundService not allowed by baikalos settings: service "
+                        + service + " to " + r.shortInstanceName
+                        + " from pid=" + callingPid + " uid=" + callingUid
+                        + " pkg=" + callingPackage);
+
+                fgRequired = false;
+                forceSilentAbort = true;
+            }
+        }
+        
         // If this isn't a direct-to-foreground start, check our ability to kick off an
         // arbitrary service
         if ( !mAm.mAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
@@ -4346,11 +4359,11 @@ public final class ActiveServices {
             }
         }
 
-        if (!isolated && app == null && !permissionsReviewRequired && !packageFrozen && !r.fgRequired) {
+        if (/*!isolated &&*/ app == null /*&& !permissionsReviewRequired && !packageFrozen*/ && !r.fgRequired) {
             if( !mAm.mAppProfileManager.isTopAppUid(r.appInfo.uid,r.appInfo.packageName) ) {
                 AppProfile appProfile = mAm.mAppProfileManager.getAppProfile(r.appInfo.packageName,r.appInfo.uid);
                 if( appProfile != null ) {
-                    if( !(appProfile.getBackgroundMode() < 0) && !appProfile.mAllowWhileIdle && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
+                    if( /*!(appProfile.getBackgroundMode() < 0) &&*/ !appProfile.mAllowWhileIdle && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
                         String msg = "Unable to launch app "
                             + r.appInfo.packageName + "/"
                             + r.appInfo.uid
@@ -4394,7 +4407,7 @@ public final class ActiveServices {
         }
 
         if (r.fgRequired) {
-            if (DEBUG_FOREGROUND_SERVICE) {
+            if (/*DEBUG_FOREGROUND_SERVICE*/true) {
                 Slog.v(TAG, "Allowlisting " + UserHandle.formatUid(r.appInfo.uid)
                         + " for fg-service launch");
             }

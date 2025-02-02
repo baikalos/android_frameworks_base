@@ -202,8 +202,12 @@ public class AppStateTrackerImpl implements AppStateTracker {
 
     @Override
     public boolean isAppBackgroundRestricted(int uid, @NonNull String packageName) {
-        final Set<Pair<Integer, String>> bgRestrictedUidPkgs = mBackgroundRestrictedUidPackages;
-        return bgRestrictedUidPkgs.contains(Pair.create(uid, packageName));
+        //final Set<Pair<Integer, String>> bgRestrictedUidPkgs = mBackgroundRestrictedUidPackages;
+        //return bgRestrictedUidPkgs.contains(Pair.create(uid, packageName));
+        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName,uid) : null;
+        int backgroundMode = profile != null ? profile.getBackgroundMode(true) : 0;
+        if( backgroundMode > 0 ) return true;
+        return false;
     }
 
     interface Stats {

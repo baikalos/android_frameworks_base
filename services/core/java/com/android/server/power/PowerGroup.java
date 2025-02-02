@@ -66,6 +66,8 @@ public class PowerGroup {
     private final DisplayManagerInternal mDisplayManagerInternal;
     private final boolean mSupportsSandman;
     private final int mGroupId;
+    private final PowerManagerService mPMService;
+
     /** True if DisplayManagerService has applied all the latest display states that were requested
      *  for this group. */
     private boolean mReady;
@@ -92,7 +94,7 @@ public class PowerGroup {
 
     PowerGroup(int groupId, PowerGroupListener wakefulnessListener, Notifier notifier,
             DisplayManagerInternal displayManagerInternal, int wakefulness, boolean ready,
-            boolean supportsSandman, long eventTime) {
+            boolean supportsSandman, long eventTime, PowerManagerService service) {
         mGroupId = groupId;
         mWakefulnessListener = wakefulnessListener;
         mNotifier = notifier;
@@ -102,10 +104,11 @@ public class PowerGroup {
         mSupportsSandman = supportsSandman;
         mLastWakeTime = eventTime;
         mLastSleepTime = eventTime;
+        mPMService = service;
     }
 
     PowerGroup(int wakefulness, PowerGroupListener wakefulnessListener, Notifier notifier,
-            DisplayManagerInternal displayManagerInternal, long eventTime) {
+            DisplayManagerInternal displayManagerInternal, long eventTime, PowerManagerService service) {
         mGroupId = Display.DEFAULT_DISPLAY_GROUP;
         mWakefulnessListener = wakefulnessListener;
         mNotifier = notifier;
@@ -115,6 +118,7 @@ public class PowerGroup {
         mSupportsSandman = true;
         mLastWakeTime = eventTime;
         mLastSleepTime = eventTime;
+        mPMService = service;
     }
 
     long getLastWakeTimeLocked() {
@@ -461,7 +465,8 @@ public class PowerGroup {
 
         if ((wakeLockSummary & WAKE_LOCK_SCREEN_BRIGHT) != 0
                 || !bootCompleted
-                || (AppProfileManager.getCurrentProfile().mKeepOn && getWakefulnessLocked() == WAKEFULNESS_AWAKE)
+                //|| (AppProfileManager.getCurrentProfile().mKeepOn && getWakefulnessLocked() == WAKEFULNESS_AWAKE)
+                || mPMService.isKeepOn()
                 || (getUserActivitySummaryLocked() & USER_ACTIVITY_SCREEN_BRIGHT) != 0
                 || screenBrightnessBoostInProgress) {
             return DisplayPowerRequest.POLICY_BRIGHT;

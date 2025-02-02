@@ -437,7 +437,7 @@ public class MediaControlPanel {
                     mTurbulenceNoiseAnimationConfig = createTurbulenceNoiseAnimation();
                 }
                 // Color will be correctly updated in ColorSchemeTransition.
-                mTurbulenceNoiseController.play(mTurbulenceNoiseAnimationConfig);
+                // mTurbulenceNoiseController.play(mTurbulenceNoiseAnimationConfig);
                 mMainExecutor.executeDelayed(
                         mTurbulenceNoiseController::finish, TURBULENCE_NOISE_PLAY_DURATION);
             };

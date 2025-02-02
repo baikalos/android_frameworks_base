@@ -80,6 +80,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+
+import com.android.internal.baikalos.BaikalConstants;
+
 /**
  * The Typeface class specifies the typeface and intrinsic style of a font.
  * This is used in the paint, along with optionally Paint settings like
@@ -89,6 +92,12 @@ import java.util.Objects;
 public class Typeface {
 
     private static String TAG = "Typeface";
+
+    private static void dLog(String func, String text) {
+        if( BaikalConstants.BAIKAL_DEBUG_RAW && (AppProfile.getCurrentAppProfile().mDebug /*|| BaikalConstants.BAIKAL_DEBUG_APP_PROFILE*/) ) {
+            Log.d(TAG, func + ":" + text);
+        }
+    }
 
     /** @hide */
     public static final boolean ENABLE_LAZY_TYPEFACE_INITIALIZATION = true;
@@ -246,6 +255,7 @@ public class Typeface {
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
     private static void setDefault(Typeface t) {
         synchronized (SYSTEM_FONT_MAP_LOCK) {
+            dLog("setDefault"," typeface=" + t);
             sDefaultTypeface = t;
             nativeSetDefault(t.native_instance);
         }
@@ -299,6 +309,8 @@ public class Typeface {
     @Nullable
     public static Typeface createFromResources(
             FamilyResourceEntry entry, AssetManager mgr, String path) {
+
+        dLog("createFromResources", path + ", fallback=" + sFallbackName);
         if (entry instanceof ProviderResourceEntry) {
             final ProviderResourceEntry providerEntry = (ProviderResourceEntry) entry;
 
@@ -306,10 +318,12 @@ public class Typeface {
             
             if (systemFontFamilyName != null && sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
                 //Log.e(TAG, "createFromResources: ProviderResourceEntry:" + systemFontFamilyName + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
+                dLog("createFromResources", path + ", forced fallback=" + sFallbackName);
                 return Typeface.create(sFallbackName, NORMAL);
             }  
  
             if (systemFontFamilyName != null && hasFontFamily(systemFontFamilyName)) {
+                dLog("createFromResources", path + ", systemFontFamilyName=" + sFallbackName);
                 return Typeface.create(systemFontFamilyName, NORMAL);
             }
             // Downloadable font
@@ -335,6 +349,7 @@ public class Typeface {
 
         //Log.e(TAG, "createFromResources: " + path + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
         if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            dLog("createFromResources", path + ", forced fallback=" + sFallbackName);
             return Typeface.create(sFallbackName, NORMAL);
         }
 
@@ -411,6 +426,7 @@ public class Typeface {
                     DEFAULT_FAMILY);
             Typeface typeface = sDynamicTypefaceCache.get(key);
             if (typeface != null) {
+                dLog("findFromCache", "from cache path=" + path);
                 return typeface;
             }
         }
@@ -916,8 +932,10 @@ public class Typeface {
      */
     public static Typeface create(String familyName, @Style int style) {
         if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            dLog("create", " sFallbackName=" + sFallbackName);
             return create(getSystemOverrideTypeface(sFallbackName), style); 
         }
+        dLog("create", " familyName=" + familyName);
         return create(getSystemOverrideTypeface(familyName), style);
     }
 
@@ -940,9 +958,17 @@ public class Typeface {
      */
     public static Typeface create(Typeface family, @Style int style) {
 
-        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        dLog("create",AppProfile.getCurrentAppProfile().toString());
+        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
             family = getDefault();
+            dLog("create", " getDefault=" + family);
+            //return family;
         }
+
+        /*if( sFallbackName == null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            family = getDefault();
+            dLog("create", " getDefault(null)=" + family);
+        }*/
 
         if ((style & ~STYLE_MASK) != 0) {
             style = NORMAL;
@@ -953,6 +979,7 @@ public class Typeface {
 
         // Return early if we're asked for the same face/style
         if (family.mStyle == style) {
+            dLog("create", " family=" + family);
             return family;
         }
 
@@ -968,6 +995,7 @@ public class Typeface {
             } else {
                 typeface = styles.get(style);
                 if (typeface != null) {
+                    dLog("create", " get=" + typeface);
                     return typeface;
                 }
             }
@@ -975,6 +1003,7 @@ public class Typeface {
             typeface = new Typeface(nativeCreateFromTypeface(ni, style));
             styles.put(style, typeface);
         }
+        dLog("create", " return=" + typeface);
         return typeface;
     }
 
@@ -1016,20 +1045,23 @@ public class Typeface {
     public static @NonNull Typeface create(@Nullable Typeface family,
             @IntRange(from = 1, to = 1000) int weight, boolean italic) {
         Preconditions.checkArgumentInRange(weight, 0, 1000, "weight");
-
-        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
-            family = getDefault();
-        }
-
-        if (family == null) {
-            family = getDefault();
-        }
         return createWeightStyle(family, weight, italic);
     }
 
     private static @NonNull Typeface createWeightStyle(@NonNull Typeface base,
             @IntRange(from = 1, to = 1000) int weight, boolean italic) {
         final int key = (weight << 1) | (italic ? 1 : 0);
+
+        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            base = getDefault();
+            dLog("createWeightStyle", " getDefault=" + base);
+            //return base;
+        }
+
+        if (base == null) {
+            base = getDefault();
+            dLog("createWeightStyle", " getDefault(null)=" + base);
+        }
 
         Typeface typeface;
         synchronized(sWeightCacheLock) {
@@ -1044,10 +1076,12 @@ public class Typeface {
                 }
             }
 
+
             typeface = new Typeface(
                     nativeCreateFromTypefaceWithExactStyle(base.native_instance, weight, italic));
             innerCache.put(key, typeface);
         }
+        dLog("createWeightStyle", " return=" + typeface);
         return typeface;
     }
 
@@ -1056,9 +1090,11 @@ public class Typeface {
             @NonNull List<FontVariationAxis> axes) {
         Typeface base = family == null ? Typeface.DEFAULT : family;
 
-        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
             base = Typeface.DEFAULT;
         }
+
+        dLog("createFromTypefaceWithVariation", " typeface=" + family);
 
         return new Typeface(nativeCreateFromTypefaceWithVariation(base.native_instance, axes));
     }
@@ -1084,6 +1120,9 @@ public class Typeface {
     public static Typeface createFromAsset(AssetManager mgr, String path) {
         Preconditions.checkNotNull(path); // for backward compatibility
         Preconditions.checkNotNull(mgr);
+
+
+        dLog("createFromTypefaceWithVariation", " path=" + path);
 
         Typeface typeface = new Builder(mgr, path).build();
         if (typeface != null) return typeface;
@@ -1118,6 +1157,13 @@ public class Typeface {
         // For the compatibility reasons, leaving possible NPE here.
         // See android.graphics.cts.TypefaceTest#testCreateFromFileByFileReferenceNull
 
+        dLog("createFromFile", " path=" + file);
+
+        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            dLog("createFromFile", " default=" + Typeface.DEFAULT);
+            return Typeface.DEFAULT;
+        }
+
         Typeface typeface = new Builder(file).build();
         if (typeface != null) return typeface;
 
@@ -1149,6 +1195,9 @@ public class Typeface {
     @Deprecated
     @UnsupportedAppUsage(trackingBug = 123768928)
     private static Typeface createFromFamilies(android.graphics.FontFamily[] families) {
+
+        dLog("createFromFamilies", " 1 ");
+
         long[] ptrArray = new long[families.length];
         for (int i = 0; i < families.length; i++) {
             ptrArray[i] = families[i].mNativePtr;
@@ -1164,6 +1213,9 @@ public class Typeface {
      * @param families array of font families
      */
     private static Typeface createFromFamilies(@Nullable FontFamily[] families) {
+
+        dLog("createFromFamilies", " 2 ");
+
         final long[] ptrArray = new long[families.length];
         for (int i = 0; i < families.length; ++i) {
             ptrArray[i] = families[i].getNativePtr();
@@ -1203,6 +1255,9 @@ public class Typeface {
     @Deprecated
     private static Typeface createFromFamiliesWithDefault(android.graphics.FontFamily[] families,
                 String fallbackName, int weight, int italic) {
+
+        dLog("createFromFamiliesWithDefault", " 1 ");
+
         final Typeface fallbackTypeface = getSystemDefaultTypeface(fallbackName);
         long[] ptrArray = new long[families.length];
         for (int i = 0; i < families.length; i++) {
@@ -1455,7 +1510,7 @@ public class Typeface {
                 return;
             }
 
-            //Log.e(TAG, "Update default font to :" + familyName);
+            Log.e(TAG, "Update default font to :" + familyName);
 
             setDefault(typeface);
 

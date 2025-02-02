@@ -95,8 +95,10 @@ public class AppProfileBackend extends AppProfileBase {
         AppProfile newProfile = profile;
         if( !_profilesByPackageName.containsKey(profile.mPackageName) ) {
             if( profile.isDefault() ) {
+                Slog.i(TAG, "Profile not found. But is default: " + profile.toString());
                 return newProfile;
             }
+            Slog.i(TAG, "Profile not found. Creating new: " + profile.toString());
             _profilesByPackageName.put(profile.mPackageName, profile);
             newProfile = profile;
         } else {

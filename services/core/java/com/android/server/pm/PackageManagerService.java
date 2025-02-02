@@ -4268,7 +4268,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             }
         }
 
-        if (grantPermissionsUserIds == EMPTY_INT_ARRAY | forciblyRestored) {
+        if (grantPermissionsUserIds == EMPTY_INT_ARRAY || forciblyRestored) {
             // If we did not grant default permissions, we preload from this the
             // default permission exceptions lazily to ensure we don't hit the
             // disk on a new user creation.

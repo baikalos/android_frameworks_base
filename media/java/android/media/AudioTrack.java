@@ -772,12 +772,13 @@ public class AudioTrack extends PlayerBase
 
         // Check if we should enable deep buffer mode
         if (shouldEnablePowerSaving(mAttributes, format, bufferSizeInBytes, mode)) {
+            Log.w(TAG, "Force deep_buffer 1");
             mAttributes = new AudioAttributes.Builder(mAttributes)
                 .replaceFlags((mAttributes.getAllFlags()
                         | AudioAttributes.FLAG_DEEP_BUFFER)
                         & ~AudioAttributes.FLAG_LOW_LATENCY)
                 .build();
-        }
+        } 
 
         // remember which looper is associated with the AudioTrack instantiation
         Looper looper;
@@ -1331,8 +1332,12 @@ public class AudioTrack extends PlayerBase
                 if (!shouldEnablePowerSaving(mAttributes, mFormat, mBufferSizeInBytes, mMode)) {
                     break; // do not enable deep buffer mode.
                 }
+                Log.w(TAG, "Force deep_buffer 2");
+
                 // permitted to fall through to enable deep buffer
             case PERFORMANCE_MODE_POWER_SAVING:
+            Log.w(TAG, "Force deep_buffer 3");
+
                 mAttributes = new AudioAttributes.Builder(mAttributes)
                 .replaceFlags((mAttributes.getAllFlags()
                         | AudioAttributes.FLAG_DEEP_BUFFER)
@@ -1758,7 +1763,7 @@ public class AudioTrack extends PlayerBase
         // A buffer size of 0 is always compatible with deep buffer (when called from the Builder)
         // but for app compatibility we only use deep buffer power saving for large buffer sizes.
         if (bufferSizeInBytes != 0) {
-            final long BUFFER_TARGET_MODE_STREAM_MS = 100;
+            final long BUFFER_TARGET_MODE_STREAM_MS = 500;
             final int MILLIS_PER_SECOND = 1000;
             final long bufferTargetSize =
                     BUFFER_TARGET_MODE_STREAM_MS
@@ -1770,6 +1775,8 @@ public class AudioTrack extends PlayerBase
                 return false;
             }
         }
+
+        Log.w(TAG, "Force deep_buffer 4: shouldEnablePowerSaving = true, flags=" + (flags&AudioAttributes.FLAG_DEEP_BUFFER) );
 
         return true;
     }

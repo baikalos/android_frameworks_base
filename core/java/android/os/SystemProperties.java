@@ -355,9 +355,10 @@ public class SystemProperties {
         if( "init.svc.adbd".equals(key) ||
             "sys.usb.state".equals(key) ||
             "sys.usb.config".equals(key) ) {
+            Log.d(TAG, key + ": for " + Process.myUid() + " system property " + key + " def " + def);
             if( AppProfile.getCurrentAppProfile().mHideDevMode ) {
                 try {
-                    Log.d(TAG, key + ": for " + Process.myUid() + " system property " + key + " def " + def);
+                    Log.d(TAG, "Hide:" + key + ": for " + Process.myUid() + " system property " + key + " return def " + def);
                     return true;
                 } catch(Exception e)  {
                 }

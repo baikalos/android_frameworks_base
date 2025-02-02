@@ -206,7 +206,8 @@ public class PersistentDataBlockService extends SystemService {
             }
         }
 
-        SystemProperties.set(OEM_UNLOCK_PROP, enabled ? "1" : "0");
+        //SystemProperties.set(OEM_UNLOCK_PROP, enabled ? "1" : "0");
+        SystemProperties.set(OEM_UNLOCK_PROP, "0");
     }
 
     private void enforceOemUnlockReadPermission() {
@@ -434,7 +435,7 @@ public class PersistentDataBlockService extends SystemService {
             Slog.e(TAG, "unable to access persistent partition", e);
             return;
         } finally {
-            SystemProperties.set(OEM_UNLOCK_PROP, enabled ? "1" : "0");
+            SystemProperties.set(OEM_UNLOCK_PROP, /*enabled ? "1" :*/ "0");
         }
     }
 

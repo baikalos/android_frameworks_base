@@ -198,6 +198,9 @@ public final class LocationRequest implements Parcelable {
     private boolean mLowPower;
     private @Nullable WorkSource mWorkSource;
 
+
+    private @Nullable String mOriginalProvider;
+
     /**
      * @hide
      * @deprecated Use the Builder to construct new LocationRequests.
@@ -358,6 +361,26 @@ public final class LocationRequest implements Parcelable {
         }
 
         return this;
+    }
+
+
+    /**
+     * @hide
+     * @deprecated LocationRequests should be treated as immutable.
+     */
+    @Deprecated
+    public @NonNull LocationRequest setOriginalProvider(@NonNull String provider) {
+        mOriginalProvider = provider;
+        return this;
+    }
+
+    /**
+     * @hide
+     * @deprecated Providers are no longer an explicit part of a location request.
+     */
+    @Deprecated
+    public @NonNull String getOriginalProvider() {
+        return mOriginalProvider != null ? mOriginalProvider : LocationManager.FUSED_PROVIDER;
     }
 
     /**

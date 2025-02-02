@@ -132,7 +132,7 @@ public final class BaikalAppManagerService extends SystemService {
         return new BaikalAppManagerEntry[] {
             new BaikalAppManagerEntry("gms", "gms_enabled", null, GMS_PACKAGES, false, true, false),
             new BaikalAppManagerEntry("hms", "hms_enabled", null, HMS_PACKAGES, false, false, false),
-            new BaikalAppManagerEntry("dolby", "dolby_enabled", "persist.baikal.srv.dolby", DOLBY_PACKAGES, false, true, true),
+            new BaikalAppManagerEntry("dolby", "dolby_enabled", "persist.baikal.srv.dolby", DOLBY_PACKAGES, false, false, true),
             new BaikalAppManagerEntry("jdsp", "jdsp_enabled", "persist.baikal.srv.jdsp", JDSP_PACKAGES, false, false, true),
             new BaikalAppManagerEntry("afx", "afx_enabled", "persist.baikal.srv.afx", AFX_PACKAGES, false, true, true),
             new BaikalAppManagerEntry("fu", "fu_enabled", "persist.face_unlock_service.enabled", FU_PACKAGES, false, true, true),

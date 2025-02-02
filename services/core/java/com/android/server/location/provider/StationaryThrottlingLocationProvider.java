@@ -54,7 +54,7 @@ import java.io.PrintWriter;
 public final class StationaryThrottlingLocationProvider extends DelegateLocationProvider
         implements DeviceIdleHelper.DeviceIdleListener, DeviceIdleInternal.StationaryListener {
 
-    private static final long MAX_STATIONARY_LOCATION_AGE_MS = 30000;
+    private static final long MAX_STATIONARY_LOCATION_AGE_MS = 3600000;
     private static final long MIN_INTERVAL_MS = 1000;
 
     final Object mLock = new Object();
@@ -66,7 +66,7 @@ public final class StationaryThrottlingLocationProvider extends DelegateLocation
     @GuardedBy("mLock")
     private boolean mDeviceIdle = false;
     @GuardedBy("mLock")
-    private boolean mDeviceStationary = false;
+    private boolean mDeviceStationary = true;
     @GuardedBy("mLock")
     private long mDeviceStationaryRealtimeMs = Long.MIN_VALUE;
     @GuardedBy("mLock")

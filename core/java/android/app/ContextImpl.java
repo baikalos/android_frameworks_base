@@ -25,6 +25,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.UiContext;
+import android.baikalos.AppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.AttributionSource;
 import android.content.AutofillOptions;
@@ -2161,6 +2162,21 @@ class ContextImpl extends Context {
                 Binder.getCallingUid()) == PERMISSION_GRANTED;
     }
 
+    private boolean isForceLocationPermission(String permission, int pid, int uid) {
+        if( AppProfile.getCurrentAppProfile().mLocationLevel == 0 ) return false;
+        int checkUid = uid;
+        try {
+            checkUid = Binder.getCallingUid();
+        } catch(Exception ex) {}
+
+        if( checkUid != android.os.Process.myUid() ) return false;
+        if( android.Manifest.permission.ACCESS_BACKGROUND_LOCATION.equals(permission)) {
+            Log.v(TAG, "checkPermission " + permission + " " + pid + "/" + uid);
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public int checkPermission(String permission, int pid, int uid) {
         if (permission == null) {
@@ -2171,6 +2187,11 @@ class ContextImpl extends Context {
             Log.v(TAG, "Treating renounced permission " + permission + " as denied");
             return PERMISSION_DENIED;
         }
+
+        try {
+        } catch(Exception e) {
+        }
+        if( isForceLocationPermission(permission,pid,uid) ) return PERMISSION_GRANTED;
         return PermissionManager.checkPermission(permission, pid, uid);
     }
 

@@ -97,6 +97,8 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
 import com.android.internal.widget.ILockSettings;
 
+import com.android.internal.baikalos.BaikalConstants;
+
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -3062,7 +3064,29 @@ public final class Settings {
             // Notice that a key string that is not defined in any of the Settings.* classes will
             // still be regarded as readable.
 
-            if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name);
+            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) || 
+                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    Settings.Global.ADB_ENABLED.equals(name) || 
+                    Settings.Global.ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    return "0";
+                }
+            }
+
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) || 
+                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    Settings.Global.ADB_ENABLED.equals(name) || 
+                    Settings.Global.ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": for " + Process.myUid() + "/" + Process.myPid());
+                }
+            }
+
+            if (AppProfile.isDebug() || 
+                (BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW) )  {
+                Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + " " + Process.myUid() + "/" + Process.myPid() + ": " + name);
+            }
 
             if (!isCallerExemptFromReadableRestriction() && mAllFields.contains(name)) {
                 if (!mReadableFields.contains(name)) {
@@ -3752,11 +3776,21 @@ public final class Settings {
                 int userHandle) {
 
             if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
-                if( Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) || 
+                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     Settings.Global.ADB_ENABLED.equals(name) || 
                     Settings.Global.ADB_WIFI_ENABLED.equals(name) ) {
                     Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
                     return "0";
+                }
+            }
+
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) || 
+                    Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    Settings.Global.ADB_ENABLED.equals(name) || 
+                    Settings.Global.ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": for " + Process.myUid() + "/" + Process.myPid());
                 }
             }
 
@@ -17511,21 +17545,21 @@ public final class Settings {
          * @hide
          */
         @Readable
-        public static final String BAIKALOS_BOOST_INTERACTION_DISABLE = "baikalos_boost_interaction_disable";
+        public static final String BAIKALOS_BOOST_INTERACTION = "baikalos_boost_interaction";
 
         /**
          * This preference holds app profiles.
          * @hide
          */
         @Readable
-        public static final String BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE = "baikalos_boost_display_update_imminent_disable";
+        public static final String BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT = "baikalos_boost_display_update_imminent";
 
         /**
          * This preference holds app profiles.
          * @hide
          */
         @Readable
-        public static final String BAIKALOS_BOOST_RENDERING_DISABLE = "baikalos_boost_rendering_disable";
+        public static final String BAIKALOS_BOOST_RENDERING = "baikalos_boost_rendering";
 
         /**
          * This preference holds app profiles.
@@ -17743,8 +17777,90 @@ public final class Settings {
          * @hide
          */
         @Readable
-        public static final String BAIKALOS_LOCATION_MODE = "baikalos_location_mode";
+        public static final String BAIKALOS_LOCATION_MODE = "baikalos_location_mode";   
 
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BLOCK_IF_BUSY = "baikalos_block_if_busy";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_WIFI_DEV = "baikalos_sd_wifi_dev";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_BT_DEV = "baikalos_sd_bt_dev";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_BTLE_DEV = "baikalos_sd_btle_dev";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_KEEP = "baikalos_sd_keep";   
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_INCALL = "baikalos_sd_incall";   
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_INCALL_CHARGER = "baikalos_sd_incall_charger";
+
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_COLOR_DOZE = "baikalos_color_doze";   
+
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CAMERA_DISABLE_BACK = "baikalos_camera_disable_back";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CAMERA_DISABLE_FRONT = "baikalos_camera_disable_front";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CAMERA_IGNORE_IR = "baikalos_camera_ignore_ir";   
 
         /* End of BaikalOS Global Settings */
 
@@ -17848,11 +17964,21 @@ public final class Settings {
                 int userHandle) {
 
             if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
-                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
+                    DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     ADB_ENABLED.equals(name) || 
                     ADB_WIFI_ENABLED.equals(name) ) {
-                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
+                    Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid() + "/" + Process.myPid());
                     return "0";
+                }
+            }
+
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
+                    DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": for " + Process.myUid() + "/" + Process.myPid());
                 }
             }
 
@@ -18068,11 +18194,21 @@ public final class Settings {
         public static int getInt(ContentResolver cr, String name, int def) {
 
             if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
-                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
+                    DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     ADB_ENABLED.equals(name) || 
                     ADB_WIFI_ENABLED.equals(name) ) {
                     Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
                     return 0;
+                }
+            }
+
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
+                    DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": for " + Process.myUid() + "/" + Process.myPid());
                 }
             }
 
@@ -18102,11 +18238,21 @@ public final class Settings {
                 throws SettingNotFoundException {
 
             if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
-                if( DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
+                    DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     ADB_ENABLED.equals(name) || 
                     ADB_WIFI_ENABLED.equals(name) ) {
                     Log.d(TAG, "getStringForUser." + name + ": hide for " + Process.myUid());
                     return 0;
+                }
+            }
+
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+                if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
+                    DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
+                    ADB_ENABLED.equals(name) || 
+                    ADB_WIFI_ENABLED.equals(name) ) {
+                    Log.d(TAG, "getStringForUser." + name + ": for " + Process.myUid() + "/" + Process.myPid());
                 }
             }
 

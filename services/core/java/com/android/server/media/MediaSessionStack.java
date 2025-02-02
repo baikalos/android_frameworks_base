@@ -106,7 +106,7 @@ class MediaSessionStack {
         Slog.i(TAG, TextUtils.formatSimple(
                 "removeSession | record: %s",
                 record
-        ));
+        ), new Throwable());
         mSessions.remove(record);
         if (mMediaButtonSession == record) {
             // When the media button session is removed, nullify the media button session and do not

@@ -237,7 +237,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     }
 
     public static final String TAG = "LocationManagerService";
-    public static final boolean D = Log.isLoggable(TAG, Log.DEBUG);
+    public static final boolean D = true; //Log.isLoggable(TAG, Log.DEBUG);
 
     private static final String ATTRIBUTION_TAG = "LocationService";
 
@@ -268,6 +268,13 @@ public class LocationManagerService extends ILocationManager.Stub implements
     // hold lock for writes, no lock necessary for simple reads
     final CopyOnWriteArrayList<LocationProviderManager> mProviderManagers =
             new CopyOnWriteArrayList<>();
+
+    private static boolean mMockProviderEnabled = false;
+
+    public static boolean isMockProviderEnabled() {
+        return mMockProviderEnabled;
+    }
+
 
     @GuardedBy("mLock")
     @Nullable LocationPackageTagsListener mLocationTagsChangedListener;
@@ -322,7 +329,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
 
         for (LocationProviderManager manager : mProviderManagers) {
             if (providerName.equals(manager.getName())) {
-                if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
+                //if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
                 return manager;
             }
         }
@@ -334,7 +341,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
         synchronized (mProviderManagers) {
             for (LocationProviderManager manager : mProviderManagers) {
                 if (providerName.equals(manager.getName())) {
-                    if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
+                    //if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
                     return manager;
                 }
             }
@@ -610,7 +617,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
 
     @Override
     public boolean hasProvider(String provider) {
-        if( !AppProfileManager.isLocationProviderEnabled(provider) ) return false;
+        //if( !AppProfileManager.isLocationProviderEnabled(provider) ) return false;
         return getLocationProviderManager(provider) != null;
     }
 
@@ -618,7 +625,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     public List<String> getAllProviders() {
         ArrayList<String> providers = new ArrayList<>(mProviderManagers.size());
         for (LocationProviderManager manager : mProviderManagers) {
-            if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
+            //if( !AppProfileManager.isLocationProviderEnabled(manager.getName()) ) continue;
             providers.add(manager.getName());
         }
         return providers;
@@ -642,7 +649,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
                         manager.getProperties(), criteria)) {
                     continue;
                 }
-                if( !AppProfileManager.isLocationProviderEnabled(name) ) continue;
+                //if( !AppProfileManager.isLocationProviderEnabled(name) ) continue;
                 providers.add(name);
             }
             return providers;
@@ -692,7 +699,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
 
     @Nullable
     @Override
-    public ICancellationSignal getCurrentLocation(String provider, LocationRequest request,
+    public ICancellationSignal getCurrentLocation(String provider_, LocationRequest request,
             ILocationCallback consumer, String packageName, @Nullable String attributionTag,
             String listenerId) {
         CallerIdentity identity = CallerIdentity.fromBinder(mContext, packageName, attributionTag,
@@ -705,17 +712,19 @@ public class LocationManagerService extends ILocationManager.Stub implements
         // clients in the system process must have an attribution tag set
         Preconditions.checkState(identity.getPid() != Process.myPid() || attributionTag != null);
 
-        request = validateLocationRequest(provider, request, identity);
-        provider = AppProfileManager.overrideProvider(provider, request, identity);
+        String provider = AppProfileManager.overrideProvider(provider_, request, identity);
 
         if( provider == null ) {
             return CancellationSignal.createTransport();
         }
 
+        request = validateLocationRequest(provider, request, identity);
+
         LocationProviderManager manager = getLocationProviderManager(provider);
         Preconditions.checkArgument(manager != null,
                 "provider \"" + provider + "\" does not exist");
 
+        //Log.i(TAG,"getCurrentLocation: provider_=" + provider_ + " provider=" + provider + " pkg=" + packageName + "/" + identity.getUid());
         return manager.getCurrentLocation(request, identity, permissionLevel, consumer);
     }
 
@@ -736,10 +745,12 @@ public class LocationManagerService extends ILocationManager.Stub implements
                     new IllegalArgumentException());
         }
 
-        request = validateLocationRequest(provider, request, identity);
 
         provider = AppProfileManager.overrideProvider(provider, request, identity);
         if( provider == null ) return;
+
+        request = validateLocationRequest(provider, request, identity);
+
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         Preconditions.checkArgument(manager != null,
@@ -777,10 +788,10 @@ public class LocationManagerService extends ILocationManager.Stub implements
             }
         }
 
-        request = validateLocationRequest(provider, request, identity);
-
         provider = AppProfileManager.overrideProvider(provider, request, identity);
         if( provider == null ) return;
+
+        request = validateLocationRequest(provider, request, identity);
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         Preconditions.checkArgument(manager != null,
@@ -905,7 +916,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     }
 
     @Override
-    public Location getLastLocation(String provider, LastLocationRequest request,
+    public Location getLastLocation(String provider_, LastLocationRequest request,
             String packageName, @Nullable String attributionTag) {
         CallerIdentity identity = CallerIdentity.fromBinder(mContext, packageName, attributionTag);
         int permissionLevel = LocationPermissions.getPermissionLevel(mContext, identity.getUid(),
@@ -913,26 +924,38 @@ public class LocationManagerService extends ILocationManager.Stub implements
         LocationPermissions.enforceLocationPermission(identity.getUid(), permissionLevel,
                 PERMISSION_COARSE);
 
-        //Log.i(TAG,"getLastLocation pkg=" + packageName + "/" + identity.getUid());
 
         // clients in the system process must have an attribution tag set
         Preconditions.checkArgument(identity.getPid() != Process.myPid() || attributionTag != null);
 
-        request = validateLastLocationRequest(provider, request, identity);
-
-        provider = AppProfileManager.overrideProvider(provider, null, identity);
+        String provider = AppProfileManager.overrideProvider(provider_, null, identity);
 
         if( provider == null ) {
-            //Log.i(TAG,"getLastLocation rejected pkg=" + packageName + "/" + identity.getUid());
+            Log.e(TAG,"getLastLocation rejected pkg=" + packageName + "/" + identity.getUid());
             return null;
         }
+
+        request = validateLastLocationRequest(provider, request, identity);
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         if (manager == null) {
             return null;
         }
+        Location location = null;
 
-        return manager.getLastLocation(request, identity, permissionLevel);
+
+        location = manager.getLastLocation(request, identity, permissionLevel);
+        //Log.i(TAG,"getLastLocation: provider_=" + provider_ + " provider=" + provider + " pkg=" + packageName + "/" + identity.getUid() + " " + location);
+        if( mMockProviderEnabled && !manager.isMockProviderEnabled() ) {
+            Log.e(TAG,"getLastLocation: not current mock provider. ignore");
+            return null;
+        }
+
+        if( location != null && location.isMock() ) {
+            location.setMock(false);
+        }
+
+        return location;
     }
 
     private LastLocationRequest validateLastLocationRequest(String provider,
@@ -983,7 +1006,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     public void injectLocation(Location location) {
         mContext.enforceCallingPermission(permission.LOCATION_HARDWARE, null);
         mContext.enforceCallingPermission(ACCESS_FINE_LOCATION, null);
-
+        
         Preconditions.checkArgument(location.isComplete());
 
         int userId = UserHandle.getCallingUserId();
@@ -1338,9 +1361,25 @@ public class LocationManagerService extends ILocationManager.Stub implements
         }
     }
 
+
+    private boolean updateMockEnable() {
+        for (LocationProviderManager manager : mProviderManagers) {
+            if( manager.isMockProviderEnabled() ) {
+                mMockProviderEnabled = true;
+                return true;
+            }
+        }
+        mMockProviderEnabled = false;
+        return false;
+    }
+
+
     @Override
     public void addTestProvider(String provider, ProviderProperties properties,
             List<String> extraAttributionTags, String packageName, String attributionTag) {
+
+        //Log.e(TAG, "addTestProvider: provider " + provider);
+
         // unsafe is ok because app ops will verify the package name
         CallerIdentity identity = CallerIdentity.fromBinderUnsafe(packageName, attributionTag);
         if (!mInjector.getAppOpsHelper().noteOp(AppOpsManager.OP_MOCK_LOCATION, identity)) {
@@ -1350,10 +1389,14 @@ public class LocationManagerService extends ILocationManager.Stub implements
         final LocationProviderManager manager = getOrAddLocationProviderManager(provider);
         manager.setMockProvider(new MockLocationProvider(properties, identity,
                 new ArraySet<>(extraAttributionTags)));
+        updateMockEnable();
     }
 
     @Override
     public void removeTestProvider(String provider, String packageName, String attributionTag) {
+
+        //Log.e(TAG, "removeTestProvider: provider " + provider);
+
         // unsafe is ok because app ops will verify the package name
         CallerIdentity identity = CallerIdentity.fromBinderUnsafe(packageName, attributionTag);
         if (!mInjector.getAppOpsHelper().noteOp(AppOpsManager.OP_MOCK_LOCATION, identity)) {
@@ -1371,6 +1414,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
                 removeLocationProviderManager(manager);
             }
         }
+        updateMockEnable();
     }
 
     @Override
@@ -1397,12 +1441,18 @@ public class LocationManagerService extends ILocationManager.Stub implements
     @Override
     public void setTestProviderEnabled(String provider, boolean enabled, String packageName,
             String attributionTag) {
+
+        //Log.e(TAG, "setTestProviderEnabled for provider " + provider + " mMockProviderEnabled=" + enabled);
+        //mMockProviderEnabled = enabled;
+
         // unsafe is ok because app ops will verify the package name
         CallerIdentity identity = CallerIdentity.fromBinderUnsafe(packageName,
                 attributionTag);
         if (!mInjector.getAppOpsHelper().noteOp(AppOpsManager.OP_MOCK_LOCATION, identity)) {
             return;
         }
+
+        //LocationProviderManager.setMockEnabled(enabled);
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         if (manager == null) {

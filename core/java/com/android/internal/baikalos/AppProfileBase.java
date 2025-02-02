@@ -411,11 +411,25 @@ public class AppProfileBase extends ContentObserver {
 
         Slog.e(TAG, "Loaded " + _profilesByPackageName.size() + " AppProfiles");
 
+        updateSystemProperties();
+
         selfUpdate = true;
         saveLocked();
 
         sIsLoaded = true;
         selfUpdate = false;
+    }
+
+    private void updateSystemProperties() {
+        String prop = "999999";
+        for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
+            AppProfile profile = entry.getValue();
+                
+            if( profile.mFilterFS && profile.mUid >= 10000 ) {
+                prop += "," + profile.mUid;
+            }
+        }
+        SystemProperties.set("persist.baikal.filter_uids", prop);
     }
 
     private AppProfile merge(AppProfile existing, AppProfile from) {    
@@ -632,6 +646,21 @@ public class AppProfileBase extends ContentObserver {
         return profile;
     }
 
+    public AppProfile getProfileWithNullLocked(String packageName) {
+        if( packageName != null ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
+                Slog.d(TAG,"getProfileLocked(" + packageName + ")", new Throwable());
+            }
+            AppProfile profile = _profilesByPackageName.get(packageName);
+            if( profile != null ) return profile;
+        }
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
+            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found",new Throwable());
+        } else {
+            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found");
+        }
+        return null;
+    }
 
     public AppProfile getProfileLocked(String packageName) {
         if( packageName != null ) {
@@ -678,6 +707,12 @@ public class AppProfileBase extends ContentObserver {
             if( isChanged ) saveLocked();
             isChanged = false;
         }
+    }
+
+    public AppProfile getProfileWithNull(String packageName) {
+        //synchronized(this) {
+            return getProfileWithNullLocked(packageName);
+        //}
     }
 
     public AppProfile getProfile(String packageName) {
@@ -854,7 +889,11 @@ public class AppProfileBase extends ContentObserver {
     }
 
     void setBackgroundMode(int op, int uid, String packageName, int mode) {
-        BaikalConstants.Logi(BaikalConstants.BAIKAL_DEBUG_APP_PROFILE, uid, TAG, "Set AppOp " + op + " for packageName=" + packageName + ", uid=" + uid + " to " + mode);
+        if( BaikalConstants.BAIKAL_DEBUG_RAW && BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
+            Slog.i(TAG, "Set AppOp " + op + " for packageName=" + packageName + ", uid=" + uid + " to " + mode, new Throwable());
+        } else {
+            BaikalConstants.Logi(BaikalConstants.BAIKAL_DEBUG_APP_PROFILE, uid, TAG, "Set AppOp " + op + " for packageName=" + packageName + ", uid=" + uid + " to " + mode);
+        }
         if( uid != -1 ) {
             getAppOpsManager().setMode(op, uid, packageName, mode);
         }

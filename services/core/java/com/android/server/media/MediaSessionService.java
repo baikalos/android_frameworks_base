@@ -107,7 +107,7 @@ import java.util.List;
  */
 public class MediaSessionService extends SystemService implements Monitor {
     private static final String TAG = "MediaSessionService";
-    static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    static final boolean DEBUG = true; //Log.isLoggable(TAG, Log.DEBUG);
     // Leave log for key event always.
     static final boolean DEBUG_KEY_EVENT = true;
 
@@ -261,6 +261,7 @@ public class MediaSessionService extends SystemService implements Monitor {
     }
 
     void onSessionActiveStateChanged(MediaSessionRecordImpl record) {
+        Log.w(TAG, "onSessionActiveStateChanged:", new Throwable());
         synchronized (mLock) {
             FullUserRecord user = getFullUserRecordLocked(record.getUserId());
             if (user == null) {
@@ -297,7 +298,7 @@ public class MediaSessionService extends SystemService implements Monitor {
                     // Otherwise, it can be the media button session regardless of the active state
                     // because it or other system components might have been the lastly played media
                     // app.
-                    user.mPriorityStack.removeSession(record);
+                    // user.mPriorityStack.removeSession(record); //sdv
                 }
             }
         }
@@ -505,7 +506,7 @@ public class MediaSessionService extends SystemService implements Monitor {
      */
     private void destroySessionLocked(MediaSessionRecordImpl session) {
         if (DEBUG) {
-            Log.d(TAG, "Destroying " + session);
+            Log.d(TAG, "Destroying " + session, new Throwable());
         }
         if (session.isClosed()) {
             Log.w(TAG, "Destroying already destroyed session. Ignoring.");

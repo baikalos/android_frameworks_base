@@ -190,6 +190,7 @@ import com.android.server.audio.AudioServiceEvents.DeviceVolumeEvent;
 import com.android.server.audio.AudioServiceEvents.PhoneStateEvent;
 import com.android.server.audio.AudioServiceEvents.VolChangedBroadcastEvent;
 import com.android.server.audio.AudioServiceEvents.VolumeEvent;
+import com.android.server.baikalos.AppProfileManager;
 import com.android.server.pm.UserManagerInternal;
 import com.android.server.pm.UserManagerInternal.UserRestrictionsListener;
 import com.android.server.pm.UserManagerService;
@@ -923,6 +924,7 @@ public class AudioService extends IAudioService.Stub
         public Lifecycle(Context context) {
             super(context);
             mService = new AudioService(context);
+            AppProfileManager.setAudioService(mService);
         }
 
         @Override
@@ -4150,6 +4152,10 @@ public class AudioService extends IAudioService.Stub
         return getBluetoothContextualVolumeStream(mMode.get());
     }
 
+    public boolean getVoicePlaybackActive() {
+        return mVoicePlaybackActive.get();
+    }
+
     private int getBluetoothContextualVolumeStream(int mode) {
         switch (mode) {
             case AudioSystem.MODE_IN_COMMUNICATION:
@@ -4197,6 +4203,7 @@ public class AudioService extends IAudioService.Stub
             }
         }
         if (mVoicePlaybackActive.getAndSet(voiceActive) != voiceActive) {
+
             updateHearingAidVolumeOnVoiceActivityUpdate();
         }
         if (mMediaPlaybackActive.getAndSet(mediaActive) != mediaActive && mediaActive) {

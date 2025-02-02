@@ -1804,7 +1804,7 @@ public final class BroadcastQueue {
             Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(r.intent.getAction()) ||
             Intent.ACTION_MEDIA_MOUNTED.equals(r.intent.getAction()) ||
             Intent.ACTION_PRE_BOOT_COMPLETED.equals(r.intent.getAction()) )  {
-            if( !(appProfile.getBackgroundMode() < 0) && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
+            if( /*!(appProfile.getBackgroundMode() < 0) &&*/ (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
                 Slog.i(TAG,"Skipping delivery: Autostart disabled " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
                 skip = true;
             }
@@ -1876,7 +1876,7 @@ public final class BroadcastQueue {
 
         if( !skip && callerBackground && !appProcessReady ) {
             if( mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE ) {
-                if( backgroundMode > 1 ) {
+                if( backgroundMode > 1 || appProfile.mBootDisabled ) {
                     Slog.w(TAG, "Skipping delivery: Background execution disabled by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
@@ -1895,7 +1895,7 @@ public final class BroadcastQueue {
                     skip = true;
                 }
             } else {
-                if( backgroundMode > 0 ) {
+                if( backgroundMode > 0 || appProfile.mBootDisabled ) {
                     Slog.w(TAG, "Skipping delivery: Background execution limited by baikalos: "
                             + "appProfile=" + appProfile.toString() 
                             + ", mQueueName=" + mQueueName
@@ -1960,7 +1960,7 @@ public final class BroadcastQueue {
             }
         }
         
-        if (!skip && !appProcessReady) {
+        if (!skip /*&& !appProcessReady*/) {
             final int allowed = mService.getAppStartModeLOSP(
                     info.activityInfo.applicationInfo.uid, info.activityInfo.packageName,
                     info.activityInfo.applicationInfo.targetSdkVersion, -1, true, false, false);
@@ -2142,7 +2142,7 @@ public final class BroadcastQueue {
         if (skip) {
             if (/*DEBUG_BROADCAST*/ true)  Slog.v(TAG_BROADCAST,
                     "Skipping delivery of ordered [" + mQueueName + "] "
-                    + r + " for reason described above");
+                    + r + " to " + targetProcess + " for reason described above");
             r.delivery[recIdx] = BroadcastRecord.DELIVERY_SKIPPED;
             r.receiver = null;
             r.curFilter = null;
@@ -2218,7 +2218,7 @@ public final class BroadcastQueue {
         }
 
         // Not running -- get it started, to be executed when the app comes up.
-        if (DEBUG_BROADCAST)  Slog.v(TAG_BROADCAST,
+        if (/*DEBUG_BROADCAST*/ true)  Slog.v(TAG_BROADCAST,
                 "Need to start app ["
                 + mQueueName + "] " + targetProcess + " for broadcast " + r);
         r.curApp = mService.startProcessLocked(targetProcess,

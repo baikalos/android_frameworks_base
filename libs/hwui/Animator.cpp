@@ -146,7 +146,8 @@ void BaseRenderNodeAnimator::resolveStagingRequest(Request request) {
             mPendingActionUponFinish = Action::End;
             break;
         default:
-            LOG_ALWAYS_FATAL("Invalid staging request: %d", static_cast<int>(request));
+            //LOG_ALWAYS_FATAL("Invalid staging request: %d", static_cast<int>(request));
+            ALOGE("Invalid staging request: %d", static_cast<int>(request));
     };
 }
 

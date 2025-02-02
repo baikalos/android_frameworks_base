@@ -163,9 +163,9 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     private static final int TCP_MAX_PORT = 0xffff;
 
     // 1 second, or 1 Hz frequency.
-    private static final long LOCATION_UPDATE_MIN_TIME_INTERVAL_MILLIS = 1000;
+    private static final long LOCATION_UPDATE_MIN_TIME_INTERVAL_MILLIS = 500;
     // Default update duration in milliseconds for REQUEST_LOCATION.
-    private static final long LOCATION_UPDATE_DURATION_MILLIS = 10 * 1000;
+    private static final long LOCATION_UPDATE_DURATION_MILLIS = 1 * 1000;
     // Update duration extension multiplier for emergency REQUEST_LOCATION.
     private static final int EMERGENCY_LOCATION_UPDATE_DURATION_MULTIPLIER = 3;
     // maximum length gnss batching may go for (1 day)
@@ -216,7 +216,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     }
 
     // stop trying if we do not receive a fix within 60 seconds
-    private static final int NO_FIX_TIMEOUT = 60 * 1000;
+    private static final int NO_FIX_TIMEOUT = 120 * 1000;
 
     // if the fix interval is below this we leave GPS on,
     // if above then we cycle the GPS driver.
@@ -226,19 +226,19 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     // how long to wait if we have a network error in NTP or PSDS downloading
     // the initial value of the exponential backoff
     // current setting - 5 minutes
-    private static final long RETRY_INTERVAL = 5 * 60 * 1000;
+    private static final long RETRY_INTERVAL = 1 * 60 * 1000;
     // how long to wait if we have a network error in NTP or PSDS downloading
     // the max value of the exponential backoff
     // current setting - 4 hours
-    private static final long MAX_RETRY_INTERVAL = 4 * 60 * 60 * 1000;
+    private static final long MAX_RETRY_INTERVAL = 1 * 60 * 60 * 1000;
 
     // Timeout when holding wakelocks for downloading PSDS data.
     private static final long DOWNLOAD_PSDS_DATA_TIMEOUT_MS = 60 * 1000;
-    private static final long WAKELOCK_TIMEOUT_MILLIS = 30 * 1000;
+    private static final long WAKELOCK_TIMEOUT_MILLIS = 60 * 1000;
 
     // threshold for delay in GNSS engine turning off before warning & error
     private static final long LOCATION_OFF_DELAY_THRESHOLD_WARN_MILLIS = 2 * 1000;
-    private static final long LOCATION_OFF_DELAY_THRESHOLD_ERROR_MILLIS = 15 * 1000;
+    private static final long LOCATION_OFF_DELAY_THRESHOLD_ERROR_MILLIS = 5 * 1000;
 
     private final Object mLock = new Object();
 

@@ -1272,6 +1272,7 @@ public final class MediaSessionManager {
         private final IActiveSessionsListener.Stub mStub = new IActiveSessionsListener.Stub() {
             @Override
             public void onActiveSessionsChanged(final List<MediaSession.Token> tokens) {
+                Log.i(TAG, "onActiveSessionsChanged:", new Throwable());
                 if (mExecutor != null) {
                     final Executor executor = mExecutor;
                     executor.execute(() -> callOnActiveSessionsChangedListener(tokens));

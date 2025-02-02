@@ -24,6 +24,7 @@ import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.app.ActivityThread;
 import android.app.AppOpsManager;
+import android.baikalos.AppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
 import android.content.res.Resources;
@@ -566,6 +567,14 @@ public class Camera {
         boolean overrideToPortrait = CameraManager.shouldOverrideToPortrait(
                 ActivityThread.currentApplication().getApplicationContext());
         boolean forceSlowJpegMode = shouldForceSlowJpegMode();
+
+        Log.i(TAG, "cameraInit: from " + ActivityThread.currentOpPackageName() + " to " + cameraId + ", op=" + overrideToPortrait + ", fsjm=" + forceSlowJpegMode + ", cp=" + AppProfile.getCurrentAppProfile().toString());
+
+        CameraInfo cameraInfo = new CameraInfo();
+        getCameraInfo(cameraId, cameraInfo);
+
+        if( !AppProfile.isCameraEnabled(cameraInfo.facing == CameraInfo.CAMERA_FACING_FRONT) ) return -EACCESS; 
+
         return native_setup(new WeakReference<Camera>(this), cameraId,
                 ActivityThread.currentOpPackageName(), overrideToPortrait, forceSlowJpegMode);
     }

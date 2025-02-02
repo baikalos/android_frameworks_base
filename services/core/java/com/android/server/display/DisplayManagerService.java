@@ -1635,7 +1635,6 @@ public final class DisplayManagerService extends SystemService {
             final String uniqueId = device.getUniqueId();
             HighBrightnessModeMetadata hbmMetadata = mHighBrightnessModeMetadataMap.get(uniqueId);
             dpc.onDisplayChanged(hbmMetadata);
-            Slog.i(TAG, "onDisplayChanged()");
         }
     }
 

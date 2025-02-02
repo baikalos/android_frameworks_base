@@ -147,6 +147,7 @@ import com.android.internal.baikalos.AppProfileSettings;
 import com.android.internal.baikalos.Actions;
 import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalSpecialDevices;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -338,6 +339,7 @@ public final class PowerManagerService extends SystemService
     private LogicalLight mAttentionLight;
     private LogicalLight mButtonsLight;
     private LogicalLight mKeyboardLight;
+    private BaikalSpecialDevices mBaikalDevices;
 
     private int mButtonTimeout;
     private float mButtonBrightness;
@@ -782,7 +784,8 @@ public final class PowerManagerService extends SystemService
                         WAKEFULNESS_AWAKE,
                         /* ready= */ false,
                         supportsSandman,
-                        mClock.uptimeMillis());
+                        mClock.uptimeMillis(),
+                        PowerManagerService.this);
                 mPowerGroups.append(groupId, powerGroup);
                 onPowerGroupEventLocked(DISPLAY_GROUP_ADDED, powerGroup);
             }
@@ -900,17 +903,7 @@ public final class PowerManagerService extends SystemService
             mResolver.registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.POWER_MANAGER_CONSTANTS), false, this);
 
-            mResolver.registerContentObserver(Settings.Global.getUriFor(
-                    Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE), false, this);
-
-            mResolver.registerContentObserver(Settings.Global.getUriFor(
-                    Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE), false, this);
-
-            mResolver.registerContentObserver(Settings.Global.getUriFor(
-                    Settings.Global.BAIKALOS_BOOST_RENDERING_DISABLE), false, this);
-
             updateConstants();
-
         }
 
         @Override
@@ -925,19 +918,6 @@ public final class PowerManagerService extends SystemService
                     mParser.setString(Settings.Global.getString(mResolver,
                             Settings.Global.POWER_MANAGER_CONSTANTS));
 
-                    boolean interactionDisabled = Settings.Global.getInt(mResolver,
-                            Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE, 1) != 1;
-
-                    boolean displayDisabled = Settings.Global.getInt(mResolver,
-                            Settings.Global.BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT_DISABLE, 1) != 1;
-
-                    boolean renderingDisabled = Settings.Global.getInt(mResolver,
-                            Settings.Global.BAIKALOS_BOOST_RENDERING_DISABLE, 1) != 1;
-
-                    setPowerBoostInternal(Boost.INTERACTION, interactionDisabled? -1000 : -1001);
-                    setPowerBoostInternal(Boost.DISPLAY_UPDATE_IMMINENT, displayDisabled? -1000 : -1001);
-                    setPowerBoostInternal(Boost.INTERACTION, renderingDisabled? -1002 : -1003);
-                    
 
                 } catch (IllegalArgumentException e) {
                     // Failed to parse the settings string, log this and move on
@@ -945,11 +925,10 @@ public final class PowerManagerService extends SystemService
                     Slog.e(TAG, "Bad alarm manager settings", e);
                 }
 
-
                 NO_CACHED_WAKE_LOCKS = mParser.getBoolean(KEY_NO_CACHED_WAKE_LOCKS,
                         DEFAULT_NO_CACHED_WAKE_LOCKS);
             }
-        }
+        }        
 
         void dump(PrintWriter pw) {
             pw.println("  Settings " + Settings.Global.POWER_MANAGER_CONSTANTS + ":");
@@ -1380,7 +1359,7 @@ public final class PowerManagerService extends SystemService
 
             mPowerGroups.append(Display.DEFAULT_DISPLAY_GROUP,
                     new PowerGroup(WAKEFULNESS_AWAKE, mPowerGroupWakefulnessChangeListener,
-                            mNotifier, mDisplayManagerInternal, mClock.uptimeMillis()));
+                            mNotifier, mDisplayManagerInternal, mClock.uptimeMillis(), this));
             DisplayGroupPowerChangeListener displayGroupPowerChangeListener =
                     new DisplayGroupPowerChangeListener();
             mDisplayManagerInternal.registerDisplayGroupListener(displayGroupPowerChangeListener);
@@ -2769,10 +2748,38 @@ public final class PowerManagerService extends SystemService
     private boolean isProfileBeingKeptAwakeLocked(ProfilePowerState profile, long now) {
         return (profile.mLastUserActivityTime + profile.mScreenOffTimeout > now)
                 || (profile.mWakeLockSummary & WAKE_LOCK_STAY_AWAKE) != 0
-                || (AppProfileManager.getCurrentProfile().mKeepOn && getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE)
+                || isKeepOn()
                 || (mProximityPositive &&
                     (profile.mWakeLockSummary & WAKE_LOCK_PROXIMITY_SCREEN_OFF) != 0);
     }
+
+    public boolean isKeepOn() {
+        if( !(getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE) ) return false;
+        if( mBaikalDevices == null ) {
+            try {
+                mBaikalDevices = new BaikalSpecialDevices(mHandler,mContext);
+            } catch(Exception e) {
+            }
+        }
+        if( mBaikalDevices == null ) return false;
+        if( mBaikalDevices.isActive() ) return true;
+        switch( AppProfileManager.getCurrentProfile().mKeepOn ) {
+            case 1:
+                return true;
+            case 2:
+                if( mIsPowered ) return true;
+                break;
+            case 3:
+                if( mBaikalDevices.isDeviceActive() ) return true;
+                break;
+            case 4:
+                if( mBaikalDevices.isDeviceActive() && mIsPowered ) return true;
+                break;
+        
+        }
+        return false;
+    }
+
 
     /**
      * Updates the value of mIsPowered.
@@ -3733,7 +3740,8 @@ public final class PowerManagerService extends SystemService
                 || (powerGroup.getWakeLockSummaryLocked() & WAKE_LOCK_STAY_AWAKE) != 0
                 || (powerGroup.getUserActivitySummaryLocked() & (
                         USER_ACTIVITY_SCREEN_BRIGHT | USER_ACTIVITY_SCREEN_DIM)) != 0
-                || (AppProfileManager.getCurrentProfile().mKeepOn && getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE)
+                //|| (AppProfileManager.getCurrentProfile().mKeepOn && getGlobalWakefulnessLocked() == WAKEFULNESS_AWAKE)
+                || isKeepOn()
                 || mScreenBrightnessBoostInProgress;
     }
 

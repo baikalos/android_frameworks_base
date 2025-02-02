@@ -80,7 +80,7 @@ public class BoostTile extends QSTileImpl<BooleanState> {
         if( !BaikalConstants.isKernelCompatible() ) return;
         isAvailable = true;
 
-        mListening = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE, 0) == 1;
+        mListening = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_BOOST_INTERACTION, 1) == 1;
     }
 
     @Override
@@ -98,7 +98,7 @@ public class BoostTile extends QSTileImpl<BooleanState> {
     @Override
     public void handleClick(@Nullable View view) {
         mBoostEnabled = !mBoostEnabled;
-        Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE, mBoostEnabled ? 1 : 0);
+        Settings.Global.putInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_BOOST_INTERACTION, mBoostEnabled ? 1 : 0);
         refreshState();
     }
 
@@ -119,7 +119,7 @@ public class BoostTile extends QSTileImpl<BooleanState> {
         if (state.slash == null) {
             state.slash = new SlashState();
         }
-        mBoostEnabled = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE, 0) == 1;
+        mBoostEnabled = Settings.Global.getInt(mContext.getContentResolver(),Settings.Global.BAIKALOS_BOOST_INTERACTION, 1) == 1;
         state.value = mBoostEnabled;
         state.slash.isSlashed = !state.value;
         state.icon = mIcon;
@@ -156,7 +156,7 @@ public class BoostTile extends QSTileImpl<BooleanState> {
             mListening = listening;
             if (listening) {
                 mContext.getContentResolver().registerContentObserver(
-                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BOOST_INTERACTION_DISABLE), false, mObserver);
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BOOST_INTERACTION), false, mObserver);
             } else {
                 mContext.getContentResolver().unregisterContentObserver(mObserver);
             }

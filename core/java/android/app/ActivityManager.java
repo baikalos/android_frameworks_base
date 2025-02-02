@@ -3590,11 +3590,12 @@ public class ActivityManager {
      * @return true if user has enforced background restrictions for this app, false otherwise.
      */
     public boolean isBackgroundRestricted() {
-        try {
+        /*try {
             return getService().isBackgroundRestricted(mContext.getOpPackageName());
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
-        }
+        }*/
+        return false;
     }
 
     /**

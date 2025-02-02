@@ -402,6 +402,7 @@ public final class MediaSession {
             return;
         }
         try {
+            Log.wtf(TAG, "setActive:", new Throwable());
             mBinder.setActive(active);
             mActive = active;
         } catch (RemoteException e) {

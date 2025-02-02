@@ -5117,7 +5117,7 @@ public final class ProcessList {
                 || !app.isCached() || app.mState.shouldNotKillOnBgRestrictedAndIdle()
                 || !killInBackground || lastCanKillTime == 0) {
 
-            if( BaikalConstants.BAIKAL_DEBUG_POWER ) {
+            /*if( BaikalConstants.BAIKAL_DEBUG_POWER ) {
                 if( !app.isKilled() && app.getThread() != null && uidRec != null ) {
                     Slog.i(TAG, "KillApp : " + app.mAppProfile.mPackageName);
                     Slog.i(TAG, "KillApp : isCached = " + app.isCached());
@@ -5127,7 +5127,7 @@ public final class ProcessList {
                     Slog.i(TAG, "KillApp : lastCanKillTime = " + lastCanKillTime);
                     Slog.i(TAG, "KillApp : mKillBgRestrictedAndCachedIdle = " + mService.mConstants.mKillBgRestrictedAndCachedIdle);
                 }
-            }
+            } */
             return 0;
         }
 
@@ -5140,10 +5140,23 @@ public final class ProcessList {
                 return 0;
             }
 
+            if( BaikalConstants.BAIKAL_DEBUG_POWER ) {
+                if( !app.isKilled() && app.getThread() != null && uidRec != null ) {
+                    Slog.i(TAG, "KillApp : " + app.mAppProfile.mPackageName);
+                    Slog.i(TAG, "KillApp : isCached = " + app.isCached());
+                    Slog.i(TAG, "KillApp : shouldNotKill = " + app.mState.shouldNotKillOnBgRestrictedAndIdle());
+                    Slog.i(TAG, "KillApp : isBackgroundRestricted = " + app.isBackgroundRestricted());
+                    Slog.i(TAG, "KillApp : killInBackground = " + BaikalPowerSaveManager.getCurrentPolicy().killInBackground);
+                    Slog.i(TAG, "KillApp : lastCanKillTime = " + lastCanKillTime);
+                    Slog.i(TAG, "KillApp : mKillBgRestrictedAndCachedIdle = " + mService.mConstants.mKillBgRestrictedAndCachedIdle);
+                }
+            }
+
             app.killLocked("KillApp : cached idle & background restricted",
                     ApplicationExitInfo.REASON_OTHER,
                     ApplicationExitInfo.SUBREASON_CACHED_IDLE_FORCED_APP_STANDBY,
                     true);
+
             return 0;
 
         }

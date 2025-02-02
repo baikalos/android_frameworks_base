@@ -411,7 +411,7 @@ public class AppProfileManager {
         mLooper = looper;
         mHandler = new AppProfileManagerHandler(mLooper);
         mAmConstants = amConstants;
-        mAppVolumeDB = new AppVolumeDB(mContext);
+        mAppVolumeDB = AppVolumeDB.getInstance(mContext);
 
         final Resources resources = mContext.getResources();
 
@@ -987,7 +987,9 @@ public class AppProfileManager {
     }
 
     protected void activateThermalProfile(int profile) {
-        SystemPropertiesSet("baikal.power.thermal",Integer.toString(profile));
+        if( profile != SystemProperties.getInt("baikal.power.thermal",-99999) ) {
+            SystemPropertiesSet("baikal.power.thermal",Integer.toString(profile));
+        }
     	mActiveThermProfile = profile;
     }
 
@@ -1797,6 +1799,18 @@ public class AppProfileManager {
         return null; // new AppProfile(packageName,uid);
     }
 
+    public static int getBackgroundMode(String packageName, int uid) {
+        AppProfile profile = null;
+        if( mInstance != null ) { 
+            profile = mInstance.getAppProfile(packageName, uid);
+            return profile != null ? profile.getBackgroundMode() : 0;
+        }
+        Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
+    
+        return 0; 
+    }
+
+
     public static boolean isAppBlocked(AppProfile profile, String packageName, int uid) {
         if( mInstance != null ) return mInstance.isBlocked(profile, packageName, uid);
         Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
@@ -1877,17 +1891,23 @@ public class AppProfileManager {
         int level = getLocationLevel(uid);
         if( level < 2 ) return provider;
         if( level > 4 ) {
-            //Slog.i(TAG, "overrideProvider: NONE Using uid=" + uid);
+            Slog.i(TAG, "overrideProvider: from " + provider + " to NONE Using uid=" + uid);
+            request.setOriginalProvider(null);
             return null;
         } else if( level > 3 ) {
-            //Slog.i(TAG, "overrideProvider: PASSIVE Using uid=" + uid);
+            Slog.i(TAG, "overrideProvider: from " + provider + " to PASSIVE Using uid=" + uid);
+            request.setOriginalProvider(provider);
+            request.setProvider(PASSIVE_PROVIDER);
             return PASSIVE_PROVIDER;
         } else {
-            if( GPS_PROVIDER.equals(provider) ) {
-                //Slog.i(TAG, "overrideProvider: NETWORK Using uid=" + uid);
+            if( GPS_PROVIDER.equals(provider) || FUSED_PROVIDER.equals(provider) ) {
+                Slog.i(TAG, "overrideProvider: from " + provider + " to NETWORK Using uid=" + uid);
+                request.setOriginalProvider(provider);
+                request.setProvider(NETWORK_PROVIDER);
                 return NETWORK_PROVIDER;
             }
         }
+        Slog.i(TAG, "overrideProvider: " + provider + " using uid=" + uid);
         return provider;
     }
 

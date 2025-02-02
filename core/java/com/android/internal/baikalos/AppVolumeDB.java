@@ -75,10 +75,16 @@ public class AppVolumeDB {
 
     HashMap<String, Float> _volumeByPackageName = new HashMap<String,Float> ();
 
-    public AppVolumeDB(Context context) {
+    private AppVolumeDB(Context context) {
         mContext = context;
         mResolver = mContext.getContentResolver();
-        _instance = this;
+    }
+
+    public static AppVolumeDB getInstance(Context context) {
+        if( _instance == null ) {
+            _instance = new AppVolumeDB(context);
+        }
+        return _instance;
     }
 
     public void loadVolumes(boolean apply) {
@@ -90,13 +96,13 @@ public class AppVolumeDB {
 
     void loadVolumesLocked(String appVolumesString, boolean apply) {
 
-        //Slog.e(TAG, "Loading appVolumes");
+        Slog.e(TAG, "Loading appVolumes");
 
         HashMap<String,Float> newVolumesByPackageName = new HashMap<String,Float> ();
 
         try {
             if( appVolumesString == null ) {
-                Slog.e(TAG, "Empty profiles settings");
+                Slog.e(TAG, "Empty appVolumes settings");
                 appVolumesString = "";
             }
 
@@ -112,13 +118,13 @@ public class AppVolumeDB {
                     try {
                         parser.setString(volumeString);
                     } catch (IllegalArgumentException e) {
-                        Slog.e(TAG, "Bad appVolume settings :" + volumeString, e);
+                        Slog.e(TAG, "Bad appVolumes settings :" + volumeString, e);
                         continue;
                     }
 
                     String packageName = parser.getString("pn",null);
                     if( packageName == null || packageName.equals("") ) {
-                        Slog.e(TAG, "Bad appVolume settings :" + volumeString);
+                        Slog.e(TAG, "Bad appVolumes settings :" + volumeString);
                         continue;
                     }
                     Float volume  = parser.getFloat("vol",0.0F);
@@ -128,10 +134,10 @@ public class AppVolumeDB {
                     if( apply ) AudioSystem.setAppVolume(packageName,volume);
                 }
             } catch (Exception e) {
-                Slog.e(TAG, "Bad appVolume settings", e);
+                Slog.e(TAG, "Bad appVolumes settings", e);
             }
         } catch (Exception e) {
-            Slog.e(TAG, "Bad appVolume settings", e);
+            Slog.e(TAG, "Bad appVolumes settings", e);
         }
 
         _volumeByPackageName = newVolumesByPackageName;
@@ -187,9 +193,23 @@ public class AppVolumeDB {
     }
 
     public static Float getAppVolume(String packageName) {
-        if( _instance == null ) return 1.0F;
+        if( _instance == null ) {
+            Slog.e(TAG, "AppVolumeDB not initialized");
+            return 1.0F;
+        }
         Float volume = _instance._volumeByPackageName.get(packageName);
         if( volume == null ) return 1.0F;
         return volume;
+    }
+
+    public static void applyAppVolume(String packageName) {
+        if( _instance == null ) {
+            Slog.e(TAG, "AppVolumeDB not initialized");
+            return;
+        }
+        _instance.loadVolumes(false);
+        Float volume = _instance._volumeByPackageName.get(packageName);
+        if( volume == null ) return;
+        AudioSystem.setAppVolume(packageName,volume);
     }
 }

@@ -94,6 +94,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
 import com.android.server.FgThread;
 import com.android.server.LocalServices;
+import com.android.server.location.LocationManagerService;
 import com.android.server.location.LocationPermissions;
 import com.android.server.location.LocationPermissions.PermissionLevel;
 import com.android.server.location.fudger.LocationFudger;
@@ -145,26 +146,26 @@ public class LocationProviderManager extends
     private static final long TEMPORARY_APP_ALLOWLIST_DURATION_MS = 10 * 1000;
 
     // fastest interval at which clients may receive coarse locations
-    private static final long MIN_COARSE_INTERVAL_MS = 10 * 60 * 1000;
+    private static final long MIN_COARSE_INTERVAL_MS = 1 * 60 * 1000;
 
     // max interval to be considered "high power" request
-    private static final long MAX_HIGH_POWER_INTERVAL_MS = 5 * 60 * 1000;
+    private static final long MAX_HIGH_POWER_INTERVAL_MS = 30 * 1000;
 
     // max age of a location before it is no longer considered "current"
-    private static final long MAX_CURRENT_LOCATION_AGE_MS = 30 * 1000;
+    private static final long MAX_CURRENT_LOCATION_AGE_MS = 15 * 1000;
 
     // max timeout allowed for getting the current location
-    private static final long MAX_GET_CURRENT_LOCATION_TIMEOUT_MS = 30 * 1000;
+    private static final long MAX_GET_CURRENT_LOCATION_TIMEOUT_MS = 15 * 1000;
 
     // max jitter allowed for min update interval as a percentage of the interval
-    private static final float FASTEST_INTERVAL_JITTER_PERCENTAGE = .10f;
+    private static final float FASTEST_INTERVAL_JITTER_PERCENTAGE = .20f;
 
     // max absolute jitter allowed for min update interval evaluation
-    private static final int MAX_FASTEST_INTERVAL_JITTER_MS = 30 * 1000;
+    private static final int MAX_FASTEST_INTERVAL_JITTER_MS = 60 * 1000;
 
     // minimum amount of request delay in order to respect the delay, below this value the request
     // will just be scheduled immediately
-    private static final long MIN_REQUEST_DELAY_MS = 30 * 1000;
+    private static final long MIN_REQUEST_DELAY_MS = 10 * 1000;
 
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({STATE_STARTED, STATE_STOPPING, STATE_STOPPED})
@@ -173,6 +174,17 @@ public class LocationProviderManager extends
     private static final int STATE_STARTED = 0;
     private static final int STATE_STOPPING = 1;
     private static final int STATE_STOPPED = 2;
+
+    private boolean mMockProviderEnabled = false;
+    private static boolean mMockEnabled = false;
+
+    public static void setMockEnabled(boolean enabled) {
+        mMockEnabled = enabled;
+    }
+
+    public boolean isMockProviderEnabled() {
+        return mMockProviderEnabled;
+    }
 
     public interface StateChangedListener {
         void onStateChanged(String provider, AbstractLocationProvider.State oldState,
@@ -904,9 +916,18 @@ public class LocationProviderManager extends
                 Preconditions.checkState(Thread.holdsLock(mLock));
             }
 
-            if (D) {
+            if (/*D*/true) {
                 Log.d(TAG, mName + " acceptLocationChange " + getIdentity() + ", workSource=" + getIdentity().getWorkSource() );
             }
+
+            
+            if( LocationManagerService.isMockProviderEnabled() ) {
+                if( !mMockProviderEnabled ) {
+                    Log.e(TAG, "acceptLocationChange: not current mock provider. Ignore.");
+                    return null;
+                }
+            }
+
             // check expiration time - alarm is not guaranteed to go off at the right time,
             // especially for short intervals
             if (SystemClock.elapsedRealtime() >= mExpirationRealtimeMs) {
@@ -1270,6 +1291,13 @@ public class LocationProviderManager extends
                 Preconditions.checkState(Thread.holdsLock(mLock));
             }
 
+            if( LocationManagerService.isMockProviderEnabled() ) {
+                if( !mMockProviderEnabled ) {
+                    Log.e(TAG, "acceptLocationChange: (2) not current mock provider. Ignore.");
+                    return null;
+                }
+            }
+
             // check expiration time - alarm is not guaranteed to go off at the right time,
             // especially for short intervals
             if (SystemClock.elapsedRealtime() >= mExpirationRealtimeMs) {
@@ -1616,6 +1644,7 @@ public class LocationProviderManager extends
                 Binder.restoreCallingIdentity(identity);
             }
 
+            mMockProviderEnabled = provider == null ? false : true;
             // when removing a mock provider, also clear any mock last locations and reset the
             // location fudger. the mock provider could have been used to infer the current
             // location fudger offsets.
@@ -1635,6 +1664,8 @@ public class LocationProviderManager extends
             if (!mProvider.isMock()) {
                 throw new IllegalArgumentException(mName + " provider is not a test provider");
             }
+            
+            //mMockProviderEnabled = enabled;
 
             final long identity = Binder.clearCallingIdentity();
             try {
@@ -1696,6 +1727,11 @@ public class LocationProviderManager extends
             location = new Location(location);
         }
 
+        Log.e(TAG, "getLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
+
+        if( location != null && location.isMock() ) {
+            location.setMock(false);
+        }
         return location;
     }
 
@@ -1805,6 +1841,23 @@ public class LocationProviderManager extends
         } else if (userId == USER_CURRENT) {
             setLastLocation(location, mUserHelper.getCurrentUserId());
             return;
+        }
+
+
+        Log.e(TAG, "setLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
+        /*if( GPS_PROVIDER.equals(mName) && !mMockProviderEnabled ) {
+            Log.e(TAG, "setLastLocation: ", new Throwable());
+        }*/
+
+        if( LocationManagerService.isMockProviderEnabled() ) {
+            if( !mMockProviderEnabled ) {
+                Log.e(TAG, "setLastLocation: not current mock provider. Ignore.");
+                return;
+            }
+        }
+
+        if( location != null && location.isMock() ) {
+            location.setMock(false);
         }
 
         Preconditions.checkArgument(userId >= 0);
@@ -2547,6 +2600,14 @@ public class LocationProviderManager extends
             // passive provider should get already filtered results as input
             filtered = locationResult;
         }
+
+        if( LocationManagerService.isMockProviderEnabled() ) {
+            if( !mMockProviderEnabled ) {
+                Log.e(TAG, "onReportLocation: not current mock provider. Ignore.");
+                return;
+            }
+        }
+
 
         Location last = getLastLocationUnsafe(USER_CURRENT, PERMISSION_FINE, true, Long.MAX_VALUE);
         if (last != null && locationResult.get(0).getElapsedRealtimeNanos()

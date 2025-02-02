@@ -104,6 +104,7 @@ import android.app.ICompatCameraControlCallback;
 import android.app.ResourcesManager;
 import android.app.WindowConfiguration;
 import android.app.compat.CompatChanges;
+import android.baikalos.AppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ClipData;
 import android.content.ClipDescription;
@@ -1657,18 +1658,22 @@ public final class ViewRootImpl implements ViewParent,
     private void updateForceDarkMode() {
         if (mAttachInfo.mThreadedRenderer == null) return;
 
+        boolean forceDark = AppProfile.getCurrentAppProfile().mDarkMode == 2;
         boolean useAutoDark = getNightMode() == Configuration.UI_MODE_NIGHT_YES;
 
-        if (useAutoDark) {
+        if (!forceDark && useAutoDark) {
             boolean forceDarkAllowedDefault =
-                    SystemProperties.getBoolean(ThreadedRenderer.DEBUG_FORCE_DARK, false);
+                    SystemProperties.getBoolean(ThreadedRenderer.DEBUG_FORCE_DARK, 
+                    AppProfile.getCurrentAppProfile().mDarkMode == 1);
             TypedArray a = mContext.obtainStyledAttributes(R.styleable.Theme);
             useAutoDark = a.getBoolean(R.styleable.Theme_isLightTheme, true)
                     && a.getBoolean(R.styleable.Theme_forceDarkAllowed, forceDarkAllowedDefault);
             a.recycle();
         }
 
-        if (mAttachInfo.mThreadedRenderer.setForceDark(useAutoDark)) {
+        Slog.d(mTag, "updateForceDarkMode: " + mBasePackageName + "/" + Process.myUid() + ", ua=" + useAutoDark + ", fd=" + forceDark + ", " + AppProfile.getCurrentAppProfile().toString());
+
+        if (mAttachInfo.mThreadedRenderer.setForceDark(useAutoDark || forceDark)) {
             // TODO: Don't require regenerating all display lists to apply this setting
             invalidateWorld(mView);
         }

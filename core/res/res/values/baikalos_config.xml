@@ -29,4 +29,5 @@
 
     <bool name="config_certificateSpooferAvailable">false</bool>
     <bool name="config_signatureSpooferAvailable">true</bool>
+    <bool name="config_irCameraAvailable">false</bool>
 </resources>
