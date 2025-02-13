@@ -84,18 +84,17 @@ public class BaikalSpoofer {
     private static final boolean FORCE_AD_ENABLE_SYSTEM = true;
     private static final boolean FORCE_AD_ENABLE_DEFAULT = true;
 
-    public static String DEF_MANUFACTURER = "Google";
-    public static String DEF_MODEL = "Pixel 6";
-    public static String DEF_FINGERPRINT = "google/oriole_beta/oriole:Baklava/BP21.241121.009/12787338:user/release-keys";
-    public static String DEF_BRAND = "google";
-    public static String DEF_PRODUCT = "oriole_beta";
-    public static String DEF_DEVICE = "oriole";
-    public static String DEF_RELEASE = "15";
-    public static String DEF_ID = "BP21.241121.009";
-    public static String DEF_INCREMENTAL = "12620009";
-    public static String DEF_SECURITY_PATCH = "2024-12-05";
-    public static int DEF_FIRST_API_LEVEL = 21;
-
+    public static String DEF_MANUFACTURER = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.manufacturer","Google");
+    public static String DEF_MODEL = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.model","Pixel 6");
+    public static String DEF_FINGERPRINT = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.fingerprint","google/oriole_beta/oriole:15/BP11.241210.004/12926906:user/release-keys");
+    public static String DEF_BRAND = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.brand","google");
+    public static String DEF_PRODUCT = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.product","oriole_beta");
+    public static String DEF_DEVICE = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.device","oriole");
+    public static String DEF_RELEASE = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.release","15");
+    public static String DEF_ID = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.id","BP11.241210.004");
+    public static String DEF_INCREMENTAL = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.incremental","12926906");
+    public static String DEF_SECURITY_PATCH = SystemPropertiesGetNotNullOrEmpty("persist.spoof.def.security_patch","2025-01-05");
+    public static int DEF_FIRST_API_LEVEL = SystemPropertiesGetNotNullOrEmptyInt("persist.spoof.firs_api_level",21);
 
     public static String MANUFACTURER = DEF_MANUFACTURER; // "Google";
     public static String MODEL = DEF_MODEL; // "Pixel 9";
