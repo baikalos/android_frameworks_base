@@ -143,8 +143,8 @@ public class TrustManagerService extends SystemService {
 
     private static final int TRUST_USUALLY_MANAGED_FLUSH_DELAY = 2 * 60 * 1000;
     private static final String TRUST_TIMEOUT_ALARM_TAG = "TrustManagerService.trustTimeoutForUser";
-    private static final long TRUST_TIMEOUT_IN_MILLIS = 4 * 60 * 60 * 1000;
-    private static final long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = 8 * 60 * 60 * 1000;
+    private static final long TRUST_TIMEOUT_IN_MILLIS = 24 * 60 * 60 * 1000;
+    private static final long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = 24 * 60 * 60 * 1000;
     private static final long TRUSTABLE_TIMEOUT_IN_MILLIS = 24 * 60 * 60 * 1000;
 
     private static final String PRIV_NAMESPACE = "http://schemas.android.com/apk/prv/res/android";
@@ -662,8 +662,9 @@ public class TrustManagerService extends SystemService {
      * unlocking.
      */
     public void lockUser(int userId) {
-        mLockPatternUtils.requireStrongAuth(
-                StrongAuthTracker.SOME_AUTH_REQUIRED_AFTER_TRUSTAGENT_EXPIRED, userId);
+        Slog.d(TAG, "lockUser:", new Throwable());
+        //mLockPatternUtils.requireStrongAuth(
+        //        StrongAuthTracker.SOME_AUTH_REQUIRED_AFTER_TRUSTAGENT_EXPIRED, userId);
         try {
             WindowManagerGlobal.getWindowManagerService().lockNow(null);
         } catch (RemoteException e) {
