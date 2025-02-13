@@ -24,6 +24,8 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.util.Slog;
 
+import java.io.File;
+
 public class BaikalConstants { 
 
     private static final String TAG = "BaikalConstants";
@@ -187,10 +189,13 @@ public class BaikalConstants {
 
     private static String kernelVersion = "";
     private static void initIsKernalCompatible() {
-        if( Os.uname() == null ) { kernelVersion = ""; mIsKernelCompatible = -1; return; }
+        File file = new File("/sys/module/baikalfs");
+        if(file.exists()) mIsKernelCompatible = 1;
+        else mIsKernelCompatible = 0;
+        /*if( Os.uname() == null ) { kernelVersion = ""; mIsKernelCompatible = -1; return; }
         kernelVersion = Os.uname().release;
         if( kernelVersion != null && kernelVersion.contains("baikalos") ) mIsKernelCompatible = 1;
-	    else mIsKernelCompatible = 0;
+	    else mIsKernelCompatible = 0;*/
     } 
 
     private static boolean sAodOnChargerEnabled = false;

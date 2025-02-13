@@ -39,6 +39,7 @@ import android.system.StructUtsname;
 
 import dalvik.system.VMRuntime;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -1253,11 +1254,13 @@ public class Build {
         // Don't care on eng builds.  Incremental build may trigger false negative.
         if (IS_ENG) return true;
 
-        if( Os.uname() == null || Os.uname().release == null || !Os.uname().release.contains("baikalos") ) { 
+        /*if( Os.uname() == null || Os.uname().release == null || !Os.uname().release.contains("baikalos") ) { 
             Slog.e(TAG, "Mismatched kernel version: build requires baikalos compatible kernel");
             return false;
-        }
+        }*/
 
+        File file = new File("/sys/module/baikalfs");
+        if(!file.exists()) return false;
 
         if (IS_TREBLE_ENABLED) {
             // If we can run this code, the device should already pass AVB.
