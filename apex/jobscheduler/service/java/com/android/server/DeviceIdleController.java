@@ -301,7 +301,7 @@ public class DeviceIdleController extends SystemService
         implements AnyMotionDetector.DeviceIdleCallback {
     private static final String TAG = "DeviceIdleController";
 
-    private static boolean DEBUG = true;
+    private static boolean DEBUG = false;
 
     private static final boolean COMPRESS_TIME = false;
 
