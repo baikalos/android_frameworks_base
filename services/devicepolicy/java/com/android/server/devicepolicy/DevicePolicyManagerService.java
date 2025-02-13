@@ -5377,8 +5377,8 @@ public class DevicePolicyManagerService extends BaseIDevicePolicyManager {
                 // Lock all users unless this is a managed profile with a separate challenge
                 final int userToLock = (parent || !isSeparateProfileChallengeEnabled(callingUserId)
                         ? UserHandle.USER_ALL : callingUserId);
-                mLockPatternUtils.requireStrongAuth(
-                        STRONG_AUTH_REQUIRED_AFTER_DPM_LOCK_NOW, userToLock);
+                //mLockPatternUtils.requireStrongAuth(
+                //        STRONG_AUTH_REQUIRED_AFTER_DPM_LOCK_NOW, userToLock);
 
                 // Require authentication for the device or profile
                 if (userToLock == UserHandle.USER_ALL) {
