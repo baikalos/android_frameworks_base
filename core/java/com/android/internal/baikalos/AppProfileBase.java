@@ -679,15 +679,17 @@ public class AppProfileBase extends ContentObserver {
     }
 
     public AppProfile getProfileLocked(int uid) {
+
+        int appId = UserHandle.getAppId(uid);
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-            Slog.d(TAG,"getProfileLocked(" + uid + ")", new Throwable());
+            Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ")", new Throwable());
         }
-        AppProfile profile = _profilesByUid.get(uid);
+        AppProfile profile = _profilesByUid.get(appId);
         if( profile != null ) return profile;
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-            Slog.d(TAG,"getProfileLocked(" + uid + ") : profile not found",new Throwable());
+            Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ") : profile not found",new Throwable());
         } else {
-            Slog.d(TAG,"getProfileLocked(" + uid + ") : profile not found");
+            Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ") : profile not found");
         }
         return uid < 10000 ? null : (new AppProfile("not found",-1).update(mNotFoundProfile));
     }
@@ -746,7 +748,7 @@ public class AppProfileBase extends ContentObserver {
                     Slog.i(TAG,"Package " + packageName + " has invalid uid=0!!");
                     return -1;
                 }
-                return ai.uid;
+                return UserHandle.getAppId(ai.uid);
             }
         } catch(Exception e) {
             Slog.i(TAG,"Package " + packageName + " not found on this device", e);
