@@ -3945,7 +3945,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 synchronized (this) {
                     synchronized (mProcLock) {
                         mProcessList.killPackageProcessesLSP(packageName, appId, targetUserId,
-                                ProcessList.SERVICE_ADJ, ApplicationExitInfo.REASON_USER_REQUESTED,
+                                ProcessList.PERSISTENT_PROC_ADJ, ApplicationExitInfo.REASON_USER_REQUESTED,
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND, "kill background");
                     }
                 }
