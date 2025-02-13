@@ -507,6 +507,19 @@ public class AppProfile {
                 mPackageName.equals("android") ) {
                 mSystemWhitelisted = true;
             }
+            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid);
+
+        }
+
+        if( (isInvalidated ||
+            !mIsInitialized) &&
+            mPackageName != null &&
+            ( mPackageName.startsWith("com.android.vending")  ) ) {
+            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid);
+            mImportantApp = true;
+            mBootDisabled = false;
+            mIsInitialized = true;
+            isInvalidated = false;
         }
 
         if( (isInvalidated ||
@@ -517,7 +530,10 @@ public class AppProfile {
             || mPackageName.startsWith("com.huawei.hwid")
             && ! ( mPackageName.contains("auto_generated_rro_") ) ) ) {
 
+            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid);
+
             if( mPackageName.startsWith("com.google.android.gms") ) mIsGms = true;
+
         
             if( (mIsGms && mIsGmsPersistent) || !mIsGms) {
                 mSystemWhitelisted = true;
@@ -529,6 +545,7 @@ public class AppProfile {
                 mImportantApp = false;
             }
             // mAllowWhileIdle = true;
+            mBootDisabled = false;
             mPriviledgedPhoneState = true;
             mAllowIdleNetwork = true;
             mIsInitialized = true;
@@ -544,6 +561,9 @@ public class AppProfile {
             mPriviledgedPhoneState = true;
             mIsInitialized = true;
             isInvalidated = false;
+
+            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid);
+
         }
 
         //if( TRACE && mDebug ) Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid, new Throwable());
