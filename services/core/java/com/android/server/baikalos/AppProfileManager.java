@@ -177,6 +177,7 @@ public class AppProfileManager {
     private AppProfileSettings mAppSettings;
     private IPowerManager mPowerManager;
 
+    private boolean mAutoUpdate = false;
     private boolean mOnCharger = false;
     private boolean mDeviceIdleMode = false;
     private boolean mScreenMode = true;
@@ -253,7 +254,7 @@ public class AppProfileManager {
     static BaikalPowerSaveManager mBaikalPowerSaveManager;
     static AppVolumeDB mAppVolumeDB;
     static AudioService mAudioService = null;
-
+    static AttestationService mAttestation;
 
     private PowerManagerInternal mPowerManagerInternal;
     private ActivityManagerConstants mAmConstants;
@@ -378,6 +379,10 @@ public class AppProfileManager {
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_AUTO_LIMIT),
                     false, this);
 
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_GMS_SPOOFER_UPDATE),
+                    false, this);
+
                 mResolver.registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.BAIKALOS_BOOST_INTERACTION), false, this);
 
@@ -426,6 +431,8 @@ public class AppProfileManager {
                 com.android.internal.R.string.config_bypassChargingResumeValue);
         mPowerInputLimitValue = resources.getString(
                 com.android.internal.R.string.config_bypassChargingLimitValue);
+
+        mAttestation = new AttestationService(context);
     }
 
     public boolean onMessage(Message msg) {
@@ -498,6 +505,7 @@ public class AppProfileManager {
             mSystemDefaultMinFps = minFps;
             mSystemDefaultMaxFps = maxFps;
 
+
             mResolver = mContext.getContentResolver();
 
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_STAMINA_ENABLED, 0);
@@ -505,10 +513,9 @@ public class AppProfileManager {
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0);
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0);
 
-
-            mObserver = new AppProfileContentObserver(mHandler);
-
+            mAttestation.initialize();
             mGmsUid = BaikalConstants.getUidByPackage(mContext, "com.google.android.gms");
+            mObserver = new AppProfileContentObserver(mHandler);
 
             mBoostManager = BaikalBoostManager.getInstance(mLooper,mContext); 
             mBoostManager.initialize();
@@ -631,6 +638,12 @@ public class AppProfileManager {
         boolean autoLimit = false; //Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AUTO_LIMIT, 0) != 0;
         changed |= AppProfile.setAutoLimit(autoLimit);
 
+
+        boolean autoUpdate = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_GMS_SPOOFER_UPDATE, 0) != 0;
+        if( mAttestation != null && autoUpdate != mAutoUpdate ) {
+            mAutoUpdate = autoUpdate;
+            mAttestation.scheduleIfNeeded(autoUpdate);
+        }
 
         boolean interactionBoost = Settings.Global.getInt(mResolver,Settings.Global.BAIKALOS_BOOST_INTERACTION, 1) == 1;
         if( interactionBoost != mInteractionBoost ) {
@@ -1892,18 +1905,22 @@ public class AppProfileManager {
         if( level < 2 ) return provider;
         if( level > 4 ) {
             Slog.i(TAG, "overrideProvider: from " + provider + " to NONE Using uid=" + uid);
-            request.setOriginalProvider(null);
+            if( request != null ) request.setOriginalProvider(null);
             return null;
         } else if( level > 3 ) {
             Slog.i(TAG, "overrideProvider: from " + provider + " to PASSIVE Using uid=" + uid);
-            request.setOriginalProvider(provider);
-            request.setProvider(PASSIVE_PROVIDER);
+            if( request != null ) {
+                request.setOriginalProvider(provider);
+                request.setProvider(PASSIVE_PROVIDER);
+            }
             return PASSIVE_PROVIDER;
         } else {
             if( GPS_PROVIDER.equals(provider) || FUSED_PROVIDER.equals(provider) ) {
                 Slog.i(TAG, "overrideProvider: from " + provider + " to NETWORK Using uid=" + uid);
-                request.setOriginalProvider(provider);
-                request.setProvider(NETWORK_PROVIDER);
+                if( request != null ) {
+                    request.setOriginalProvider(provider);
+                    request.setProvider(NETWORK_PROVIDER);
+                }
                 return NETWORK_PROVIDER;
             }
         }

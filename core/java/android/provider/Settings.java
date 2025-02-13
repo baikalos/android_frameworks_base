@@ -17755,6 +17755,13 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_GMS_OVERRIDE_PROPS = "baikalos_gms_override_spoof";
 
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_GMS_SPOOFER_UPDATE = "baikalos_gms_spoofer_update";
 
         /**
          * This preference holds autorevoke option.
