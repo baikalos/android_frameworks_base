@@ -35511,6 +35511,8 @@ package android.provider {
     field public static final String ADB_ENABLED = "adb_enabled";
     field public static final String AIRPLANE_MODE_ON = "airplane_mode_on";
     field public static final String AIRPLANE_MODE_RADIOS = "airplane_mode_radios";
+    field public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_BT = "baikalos_airplane_dont_toggle_bt";   
+    field public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_WIFI = "baikalos_airplane_dont_toggle_wifi";
     field public static final String ALWAYS_FINISH_ACTIVITIES = "always_finish_activities";
     field public static final String ANIMATOR_DURATION_SCALE = "animator_duration_scale";
     field @Deprecated public static final String APPLY_RAMPING_RINGER = "apply_ramping_ringer";
