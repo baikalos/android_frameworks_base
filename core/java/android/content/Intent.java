@@ -9378,8 +9378,8 @@ public class Intent implements Parcelable, Cloneable {
     /** @hide */
     @UnsupportedAppUsage
     public boolean isExcludingStopped() {
-        return (mFlags&(FLAG_EXCLUDE_STOPPED_PACKAGES|FLAG_INCLUDE_STOPPED_PACKAGES))
-                == FLAG_EXCLUDE_STOPPED_PACKAGES;
+        return false; //(mFlags&(FLAG_EXCLUDE_STOPPED_PACKAGES|FLAG_INCLUDE_STOPPED_PACKAGES))
+                // == FLAG_EXCLUDE_STOPPED_PACKAGES;
     }
 
     /**
