@@ -945,7 +945,7 @@ public class BatterySaverPolicy extends ContentObserver implements
     public PowerSaveState getBatterySaverPolicy(@ServiceType int type) {
         PowerSaveState state = getBatterySaverPolicyBaikal(type);
         if( DEBUG && type != ServiceType.SCREEN_BRIGHTNESS) {
-            Slog.d(TAG, "getBatterySaverPolicy(" + type + "): " + state.globalBatterySaverEnabled + "," + state.batterySaverEnabled, new Throwable());
+            Slog.d(TAG, "getBatterySaverPolicy(" + type + "): " + state.globalBatterySaverEnabled + "," + state.batterySaverEnabled);
         }
         return state;
     }

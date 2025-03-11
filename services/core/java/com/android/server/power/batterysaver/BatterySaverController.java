@@ -247,7 +247,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
     @Override
     public void onBatterySaverPolicyChanged(BatterySaverPolicy policy) {
         if (!isPolicyEnabled()) {
-            return; // No need to send it if not enabled.
+            //return; // No need to send it if not enabled.
         }
         mHandler.postStateChanged(/*sendBroadcast=*/ true, REASON_POLICY_CHANGED);
     }
@@ -322,7 +322,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
     public boolean isEnabled() {
         boolean result = isEnabledBaikal();
         if (DEBUG) {
-            Slog.d(TAG, "isEnabled: " + result /*, new Throwable()*/);
+            Slog.d(TAG, "isEnabled: " + result);
         }
         return result;
     }
