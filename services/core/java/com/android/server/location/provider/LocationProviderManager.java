@@ -653,9 +653,9 @@ public class LocationProviderManager extends
                 }
 
                 // note that onProviderLocationRequestChanged() is always called
-                return onProviderLocationRequestChanged()
-                        || mLocationPowerSaveModeHelper.getLocationPowerSaveMode()
-                        == LOCATION_MODE_FOREGROUND_ONLY;
+                return onProviderLocationRequestChanged() || true;
+                        //|| mLocationPowerSaveModeHelper.getLocationPowerSaveMode()
+                        //== LOCATION_MODE_FOREGROUND_ONLY;
             }
 
             return false;
@@ -916,7 +916,7 @@ public class LocationProviderManager extends
                 Preconditions.checkState(Thread.holdsLock(mLock));
             }
 
-            if (/*D*/true) {
+            if (D) {
                 Log.d(TAG, mName + " acceptLocationChange " + getIdentity() + ", workSource=" + getIdentity().getWorkSource() );
             }
 
@@ -1727,7 +1727,7 @@ public class LocationProviderManager extends
             location = new Location(location);
         }
 
-        Log.e(TAG, "getLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
+        if(D) Log.d(TAG, "getLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
 
         if( location != null && location.isMock() ) {
             location.setMock(false);
@@ -1844,7 +1844,7 @@ public class LocationProviderManager extends
         }
 
 
-        Log.e(TAG, "setLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
+        if(D) Log.d(TAG, "setLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
         /*if( GPS_PROVIDER.equals(mName) && !mMockProviderEnabled ) {
             Log.e(TAG, "setLastLocation: ", new Throwable());
         }*/
@@ -2236,11 +2236,17 @@ public class LocationProviderManager extends
         }
 
         if (!registration.isPermitted()) {
+            if (D) {
+                Log.d(TAG, mName + " isPermitted: false for " + registration);
+            }
             return false;
         }
 
         boolean isBypass = registration.getRequest().isBypass();
         if (!isActive(isBypass, registration.getIdentity())) {
+            if (D) {
+                Log.d(TAG, mName + " isActive: false for " + registration);
+            }
             return false;
         }
 
@@ -2248,20 +2254,34 @@ public class LocationProviderManager extends
 
         int level = AppProfileManager.getLocationLevel(uid);
         if( level > 4 ) {
+            if (D) {
+                Log.d(TAG, mName + " level: " + level + " for " + registration);
+            }
             return false;
         }
+
+        int mode = (int)mLocationPowerSaveModeHelper.getLocationPowerSaveMode();
 
         if (!isBypass) {
             switch (mLocationPowerSaveModeHelper.getLocationPowerSaveMode()) {
                 case LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF: 
+                    if (D) {
+                        Log.d(TAG, mName + " mode: LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF (" + mode + ") for " + registration);
+                    }
                     return false;
                 case LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF: // Network only
                     if (GPS_PROVIDER.equals(mName)) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF (" + mode + ") for " + registration);
+                        }
                         return false;
                     }
                     break;
                 case LOCATION_MODE_FOREGROUND_ONLY: // ForegroundOnly
                     if (!registration.isForeground()) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: LOCATION_MODE_FOREGROUND_ONLY (" + mode + ") for " + registration);
+                        }
                         return false;
                     }
                     break;
@@ -2270,6 +2290,9 @@ public class LocationProviderManager extends
                         break;
                     }
                     if (GPS_PROVIDER.equals(mName)) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF (" + mode + ") for " + registration);
+                        }
                         return false;
                     }
                     break;
@@ -2278,6 +2301,9 @@ public class LocationProviderManager extends
 
                 case 929292:
                     if (!mScreenInteractiveHelper.isInteractive()) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: 929292 (" + mode + ") for " + registration);
+                        }
                         return false;
                     }
                     break;
@@ -2286,6 +2312,9 @@ public class LocationProviderManager extends
             }
         }
 
+        if (D) {
+            Log.d(TAG, mName + " mode: DEFAULT (" + mode + ") for " + registration);
+        }
         return true;
     }
 
@@ -2470,7 +2499,7 @@ public class LocationProviderManager extends
     private void onScreenInteractiveChanged(boolean screenInteractive) {
         synchronized (mLock) {
             switch (mLocationPowerSaveModeHelper.getLocationPowerSaveMode()) {
-                case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF:
+               case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF:
                     if (!GPS_PROVIDER.equals(mName)) {
                         break;
                     }
@@ -2479,10 +2508,12 @@ public class LocationProviderManager extends
                     // fall through
                 case LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF:
                     updateRegistrations(registration -> true);
-                    break;
+                    //break;
+                    return;
                 default:
                     break;
             }
+            updateRegistrations(registration -> true);
         }
     }
 

@@ -960,6 +960,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
 
             if (mProviderRequest.getIntervalMillis() <= Integer.MAX_VALUE) {
                 mFixInterval = (int) mProviderRequest.getIntervalMillis();
+                if (DEBUG) Log.d(TAG, "mFixInterval: " + mFixInterval);
             } else {
                 Log.w(TAG, "interval overflow: " + mProviderRequest.getIntervalMillis());
                 mFixInterval = Integer.MAX_VALUE;

@@ -207,7 +207,7 @@ public final class StationaryThrottlingLocationProvider extends DelegateLocation
         if (mThrottlingIntervalMs != INTERVAL_DISABLED) {
             if (oldThrottlingIntervalMs == INTERVAL_DISABLED) {
                 if (D) {
-                    Log.d(TAG, mName + " provider stationary throttled");
+                    Log.d(TAG, mName + " provider stationary throttled for " + mIncomingRequest);
                 }
                 EVENT_LOG.logProviderStationaryThrottled(mName, true, mOutgoingRequest);
             }

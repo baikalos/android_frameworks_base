@@ -237,7 +237,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     }
 
     public static final String TAG = "LocationManagerService";
-    public static final boolean D = true; //Log.isLoggable(TAG, Log.DEBUG);
+    public static boolean D = Log.isLoggable(TAG, Log.DEBUG);
 
     private static final String ATTRIBUTION_TAG = "LocationService";
 
@@ -367,6 +367,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
                             mContext.getContentResolver(),
                             Settings.Global.LOCATION_ENABLE_STATIONARY_THROTTLE, 1) != 0;
                     if (enableStationaryThrottling) {
+                        Log.d(TAG, manager.getName() + " provider stationary throttling enabled");
                         realProvider = new StationaryThrottlingLocationProvider(manager.getName(),
                                 mInjector, realProvider);
                     }

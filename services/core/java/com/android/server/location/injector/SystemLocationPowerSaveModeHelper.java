@@ -16,11 +16,15 @@
 
 package com.android.server.location.injector;
 
+import static com.android.server.location.LocationManagerService.D;
+import static com.android.server.location.LocationManagerService.TAG;
+
 import android.content.Context;
 import android.os.PowerManager;
 import android.os.PowerManager.LocationPowerSaveMode;
 import android.os.PowerManagerInternal;
 import android.os.PowerSaveState;
+import android.util.Log;
 
 import com.android.internal.util.Preconditions;
 import com.android.server.FgThread;
@@ -28,6 +32,7 @@ import com.android.server.LocalServices;
 
 import java.util.Objects;
 import java.util.function.Consumer;
+
 
 /**
  * Provides accessors and listeners for location power save mode.
@@ -62,11 +67,11 @@ public class SystemLocationPowerSaveModeHelper extends LocationPowerSaveModeHelp
     @Override
     public void accept(PowerSaveState powerSaveState) {
         int locationPowerSaveMode;
-        if (!powerSaveState.batterySaverEnabled) {
+        /*if (!powerSaveState.batterySaverEnabled) {
             locationPowerSaveMode = PowerManager.LOCATION_MODE_NO_CHANGE;
-        } else {
+        } else { */
             locationPowerSaveMode = powerSaveState.locationMode;
-        }
+        /*}*/
 
         if (locationPowerSaveMode == mLocationPowerSaveMode) {
             return;
@@ -74,6 +79,9 @@ public class SystemLocationPowerSaveModeHelper extends LocationPowerSaveModeHelp
 
         mLocationPowerSaveMode = locationPowerSaveMode;
 
+        if (D) {
+            Log.d(TAG, "locationPowerSaveMode:" + locationPowerSaveMode);
+        }
         // invoked on ui thread, move to fg thread so we don't block the ui thread
         FgThread.getHandler().post(() -> notifyLocationPowerSaveModeChanged(locationPowerSaveMode));
     }

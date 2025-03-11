@@ -154,7 +154,6 @@ public class ComprehensiveCountryDetector extends CountryDetectorBase {
     @Override
     public void stop() {
         // Note: this method in this subclass called only by tests.
-        Slog.i(TAG, "Stop the detector.");
         cancelLocationRefresh();
         removePhoneStateListener();
         stopLocationBasedDetector();

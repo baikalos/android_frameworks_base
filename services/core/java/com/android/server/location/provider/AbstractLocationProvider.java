@@ -309,7 +309,6 @@ public abstract class AbstractLocationProvider {
      * Call this method to report a new location.
      */
     protected void reportLocation(LocationResult locationResult) {
-        Log.d(TAG, "reportLocation:" + locationResult);
         Listener listener = mInternalState.get().listener;
         if (listener != null) {
             final long identity = Binder.clearCallingIdentity();
