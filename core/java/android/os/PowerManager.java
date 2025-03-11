@@ -30,6 +30,7 @@ import android.annotation.SystemApi;
 import android.annotation.SystemService;
 import android.annotation.TestApi;
 import android.app.PropertyInvalidatedCache;
+import android.baikalos.AppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
 import android.service.dreams.Sandman;
@@ -2309,6 +2310,7 @@ public final class PowerManager {
      */
     public boolean isDeviceIdleMode() {
         try {
+            if( AppProfile.getCurrentAppProfile().mHideIdle ) return false;
             return mService.isDeviceIdleMode();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2328,6 +2330,7 @@ public final class PowerManager {
      */
     public boolean isDeviceLightIdleMode() {
         try {
+            if( AppProfile.getCurrentAppProfile().mHideIdle ) return false;
             return mService.isLightDeviceIdleMode();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2453,6 +2456,7 @@ public final class PowerManager {
      * features to the app. Guardrails for extreme cases may still be applied.
      */
     public boolean isIgnoringBatteryOptimizations(String packageName) {
+        if( AppProfile.getCurrentAppProfile().mHideIdle ) return true;
         return getPowerExemptionManager().isAllowListed(packageName, true);
     }
 
