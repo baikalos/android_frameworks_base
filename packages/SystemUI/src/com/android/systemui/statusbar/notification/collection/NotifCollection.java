@@ -168,6 +168,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         if (mBuildListener != null) {
             mBuildListener.onBuildList(mReadOnlyNotificationSet, "asynchronousUpdate");
         }
+        com.android.systemui.clocks.AODLastNotificationsStyle.post(mReadOnlyNotificationSet);
     };
 
     private boolean mAttached = false;
@@ -411,7 +412,6 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
 
     private void onNotificationPosted(StatusBarNotification sbn, RankingMap rankingMap) {
         Assert.isMainThread();
-
         postNotification(sbn, requireRanking(rankingMap, sbn.getKey()));
         applyRanking(rankingMap);
         dispatchEventsAndRebuildList("onNotificationPosted");
@@ -423,6 +423,8 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         mLogger.logNotifGroupPosted(batch.get(0).getSbn().getGroupKey(), batch.size());
 
         for (CoalescedEvent event : batch) {
+            //com.android.systemui.clocks.AODLastNotificationsStyle.post(event.getSbn());
+
             postNotification(event.getSbn(), event.getRanking());
         }
         dispatchEventsAndRebuildList("onNotificationGroupPosted");
@@ -627,6 +629,7 @@ public class NotifCollection implements Dumpable, PipelineDumpable {
         if (mBuildListener != null) {
             mBuildListener.onBuildList(mReadOnlyNotificationSet, reason);
         }
+        com.android.systemui.clocks.AODLastNotificationsStyle.post(mReadOnlyNotificationSet);
         Trace.endSection();
     }
 
