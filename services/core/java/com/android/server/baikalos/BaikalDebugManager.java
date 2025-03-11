@@ -102,9 +102,10 @@ import com.android.internal.baikalos.BaikalConstants;
 import com.android.server.LocalServices;
 import com.android.server.NetworkManagementService;
 
+import com.android.server.am.ActivityManagerDebugConfig;
+import com.android.server.location.LocationManagerService;
 import com.android.server.net.NetworkPolicyLogger;
 import com.android.server.net.NetworkPolicyManagerService;
-import com.android.server.am.ActivityManagerDebugConfig;
 
 //import com.android.server.job.JobSchedulerService;
 
@@ -268,6 +269,8 @@ public class BaikalDebugManager {
         AppProfile.DEBUG = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
         AppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
         AppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+
+        LocationManagerService.D = BaikalConstants.BAIKAL_DEBUG_LOCATION;
 
         NetworkManagementService.DBG = BaikalConstants.BAIKAL_DEBUG_NETWORK;
         NetworkManagementService.DBGB = BaikalConstants.BAIKAL_DEBUG_NETWORK;
