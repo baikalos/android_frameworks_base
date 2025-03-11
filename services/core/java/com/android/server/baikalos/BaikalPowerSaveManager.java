@@ -252,6 +252,7 @@ public class BaikalPowerSaveManager {
                 .setLocationMode(PowerManager.LOCATION_MODE_NO_CHANGE)
                 .setLessRestrictiveBackgroundPolicy(true)
                 .setDisableBackgroundByDefault(false)
+                .setKillInBackground(false)
                 .setkillBgRestrictedCachedIdleSettleTime(600);
 
             mCurrentPolicy = mDefaultPolicies[POWERSAVER_POLICY_NONE];
@@ -279,6 +280,7 @@ public class BaikalPowerSaveManager {
                 .setLocationMode(PowerManager.LOCATION_MODE_NO_CHANGE)
                 .setLessRestrictiveBackgroundPolicy(false)
                 .setDisableBackgroundByDefault(false)
+                .setKillInBackground(false)
                 .setkillBgRestrictedCachedIdleSettleTime(600);
 
 
@@ -305,6 +307,7 @@ public class BaikalPowerSaveManager {
                 .setLocationMode(PowerManager.LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF)
                 .setLessRestrictiveBackgroundPolicy(false)
                 .setDisableBackgroundByDefault(false)
+                .setKillInBackground(true)
                 .setkillBgRestrictedCachedIdleSettleTime(300);
 
             mDefaultPolicies[POWERSAVER_POLICY_AGGRESSIVE] = (new PowerSaverPolicyConfig("aggressive",POWERSAVER_POLICY_AGGRESSIVE))
@@ -330,7 +333,8 @@ public class BaikalPowerSaveManager {
                 .setLocationMode(PowerManager.LOCATION_MODE_FOREGROUND_ONLY)
                 .setLessRestrictiveBackgroundPolicy(false)
                 .setDisableBackgroundByDefault(true)
-                .setkillBgRestrictedCachedIdleSettleTime(60);
+                .setKillInBackground(true)
+                .setkillBgRestrictedCachedIdleSettleTime(30);
 
             mDefaultPolicies[POWERSAVER_POLICY_EXTREME] = (new PowerSaverPolicyConfig("extreme",POWERSAVER_POLICY_EXTREME))
                 .setAdjustBrightnessFactor(50)
@@ -355,7 +359,8 @@ public class BaikalPowerSaveManager {
                 .setLocationMode(PowerManager.LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF)
                 .setLessRestrictiveBackgroundPolicy(false)
                 .setDisableBackgroundByDefault(true)
-                .setkillBgRestrictedCachedIdleSettleTime(30);
+                .setKillInBackground(true)
+                .setkillBgRestrictedCachedIdleSettleTime(15);
 
             mDefaultPolicies[POWERSAVER_POLICY_BATTERY_SAVER] = (new PowerSaverPolicyConfig("batterysaver",POWERSAVER_POLICY_BATTERY_SAVER))
                 .setAdjustBrightnessFactor(50)
@@ -380,6 +385,7 @@ public class BaikalPowerSaveManager {
                 .setLocationMode(PowerManager.LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF)
                 .setLessRestrictiveBackgroundPolicy(false)
                 .setDisableBackgroundByDefault(true)
+                .setKillInBackground(true)
                 .setkillBgRestrictedCachedIdleSettleTime(30);
 
             mDefaultPolicies[POWERSAVER_POLICY_STAMINA] = (new PowerSaverPolicyConfig("stamina",POWERSAVER_POLICY_STAMINA))
@@ -405,6 +411,7 @@ public class BaikalPowerSaveManager {
                 .setLocationMode(PowerManager.LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF)
                 .setLessRestrictiveBackgroundPolicy(false)
                 .setDisableBackgroundByDefault(true)
+                .setKillInBackground(true)
                 .setkillBgRestrictedCachedIdleSettleTime(15);
 
             mLevels[POWERSAVER_POLICY_NONE] = mDefaultPolicies[POWERSAVER_POLICY_NONE].getBatterySaverPolicyConfig();
@@ -559,7 +566,6 @@ public class BaikalPowerSaveManager {
         return initPolicyLocked(type,true,null);
     }
 
-
     private PowerSaverPolicyConfig initPolicyLocked(int type, boolean def, PowerSaverPolicyConfig config) {
         if( type < POWERSAVER_POLICY_NONE || type >= POWERSAVER_POLICY_MAX ) return null;
 
@@ -568,7 +574,6 @@ public class BaikalPowerSaveManager {
         if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.i(TAG,"initPolicyLocked (" + def +"):" + mPolicies[type].serialize());
         return mPolicies[type];
     }
-
 
     private int setEffectiveMode(int current, int mode) {
         if( mode > current ) return mode;
@@ -587,7 +592,6 @@ public class BaikalPowerSaveManager {
         }
         
         int powerSaverLevel = 0;
-
 
         if( mIsPowered ) {
             powerSaverLevel = setEffectiveMode(powerSaverLevel,mPowerLevelOnCharger);
