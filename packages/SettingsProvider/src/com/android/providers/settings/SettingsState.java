@@ -1570,7 +1570,7 @@ final class SettingsState {
             return false;
         }
         // If the system or a special system UID (like telephony), done.
-        if (aInfo.uid < FIRST_APPLICATION_UID) {
+        if (UserHandle.getAppId(aInfo.uid) < FIRST_APPLICATION_UID) {
             return true;
         }
         // If a persistent system app, done.

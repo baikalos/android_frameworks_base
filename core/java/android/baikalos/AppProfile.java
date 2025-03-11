@@ -25,6 +25,7 @@ import android.content.Context;
 import android.content.ContentResolver;
 import android.os.Process;
 import android.os.SystemClock;
+import android.os.UserHandle;
 import android.provider.Settings;
 
 import android.util.Slog;
@@ -288,7 +289,7 @@ public class AppProfile {
     }
 
     public static void updateHomeProcess(int uid) {
-        if( uid == 1000 ) sHomeUid = -1;
+        if( UserHandle.getAppId(uid) == 1000 ) sHomeUid = -1;
         else sHomeUid = uid;
         if( DEBUG ) Slog.d(TAG, "Home app set to :" + sHomeUid);
     }
@@ -497,18 +498,20 @@ public class AppProfile {
     public int getBackgroundModeInternal(boolean disableOnPowerSaver) {
 
         if( (isInvalidated ||
-            !mIsInitialized) && mUid >=0 && mUid < 10000 ) {
+            !mIsInitialized) && mUid >=0 && UserHandle.getAppId(mUid) < 10000 ) {
             mImportantApp = true;
             // mAllowWhileIdle = true;
             mStaminaEnforced = true;
             mIsInitialized = true;
             isInvalidated = false;
-            if( mUid == 1000 && mPackageName != null && 
-                mPackageName.equals("android") ) {
+            if( UserHandle.getAppId(mUid) == 1000 && mPackageName != null && 
+                (mPackageName.equals("android") || mPackageName.equals("system")) ) {
                 mSystemWhitelisted = true;
             }
-            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid);
-
+            if( UserHandle.getAppId(mUid) > 1000 && UserHandle.getAppId(mUid) < 10000 ) {
+                mSystemWhitelisted = true;
+            }
+            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid + ", system=true, wl=" + mSystemWhitelisted);
         }
 
         if( (isInvalidated ||
@@ -530,8 +533,6 @@ public class AppProfile {
             || mPackageName.startsWith("com.huawei.hwid")
             && ! ( mPackageName.contains("auto_generated_rro_") ) ) ) {
 
-            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid);
-
             if( mPackageName.startsWith("com.google.android.gms") ) mIsGms = true;
 
         
@@ -550,6 +551,8 @@ public class AppProfile {
             mAllowIdleNetwork = true;
             mIsInitialized = true;
             isInvalidated = false;
+
+            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid + ", awi=true, wl=" + mSystemWhitelisted);
         }
 
         if( (isInvalidated ||

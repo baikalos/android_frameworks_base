@@ -3973,7 +3973,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         synchronized (mPidsSelfLocked) {
             proc = mPidsSelfLocked.get(callingPid);
         }
-        if (callingUid >= FIRST_APPLICATION_UID
+        if (UserHandle.getAppId(callingUid) >= FIRST_APPLICATION_UID
                 && (proc == null || !proc.info.isSystemApp())) {
             final String msg = "Permission Denial: killAllBackgroundProcesses() from pid="
                     + callingPid + ", uid=" + callingUid + " is not allowed";
@@ -5266,6 +5266,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                                 String data, Bundle extras, boolean ordered,
                                 boolean sticky, int sendingUser) {
                             synchronized (mProcLock) {
+                                mOomAdjuster.mCachedAppOptimizer.compactAllSystem();    
                                 mAppProfiler.requestPssAllProcsLPr(
                                         SystemClock.uptimeMillis(), true, false);
                             }
@@ -6945,12 +6946,11 @@ public class ActivityManagerService extends IActivityManager.Stub
             }
         }
 
-        if ((info.flags & PERSISTENT_MASK) == PERSISTENT_MASK && app.mAppProfile.mBackgroundMode <= 0 ) {
+        if ((info.flags & PERSISTENT_MASK) == PERSISTENT_MASK /*&& app.mAppProfile.mBackgroundMode <= 0*/ ) {
             app.setPersistent(true);
             app.mState.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
-        }
-
-        if( app.mAppProfile != null && app.mAppProfile.mPinned ) {
+            Slog.d(TAG, "Baikal.AppProfile: setPersistent " + info.packageName);
+        } else if( app.mAppProfile != null && app.mAppProfile.mPinned ) {
             //app.setPersistent(true);
             app.mState.setMaxAdj(ProcessList.FOREGROUND_APP_ADJ);
             //app.mState.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
@@ -13888,7 +13888,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
 
         // By default broadcasts do not go to stopped apps.
-        intent.addFlags(Intent.FLAG_EXCLUDE_STOPPED_PACKAGES);
+        // intent.addFlags(Intent.FLAG_EXCLUDE_STOPPED_PACKAGES);
 
         // If we have not finished booting, don't allow this to launch new processes.
         if (!mProcessesReady && (intent.getFlags()&Intent.FLAG_RECEIVER_BOOT_UPGRADE) == 0) {

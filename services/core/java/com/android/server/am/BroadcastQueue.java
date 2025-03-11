@@ -863,7 +863,7 @@ public final class BroadcastQueue {
                     // When there is an app op associated with the permission,
                     // skip when both the permission and the app op are
                     // granted.
-                    if ((filter.receiverList.uid >= Process.FIRST_APPLICATION_UID) && 
+                    if ((UserHandle.getAppId(filter.receiverList.uid) >= Process.FIRST_APPLICATION_UID) && 
                         (!"com.android.systemui".equals(filter.packageName)) &&
                         (perm == PackageManager.PERMISSION_GRANTED) && (
                             mService.getAppOpsManager().checkOpNoThrow(appOp,
@@ -1872,6 +1872,7 @@ public final class BroadcastQueue {
 
         if( !appProcessReady && Intent.ACTION_QUERY_PACKAGE_RESTART.equals(r.intent.getAction()) ) {
             callerBackground = true;
+            skip = true;
         }
 
         if( !skip && callerBackground && !appProcessReady ) {

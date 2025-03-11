@@ -514,7 +514,7 @@ public class AppProfileManager {
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0);
 
             mAttestation.initialize();
-            mGmsUid = BaikalConstants.getUidByPackage(mContext, "com.google.android.gms");
+            mGmsUid = UserHandle.getAppId(BaikalConstants.getUidByPackage(mContext, "com.google.android.gms"));
             mObserver = new AppProfileContentObserver(mHandler);
 
             mBoostManager = BaikalBoostManager.getInstance(mLooper,mContext); 
@@ -1457,7 +1457,7 @@ public class AppProfileManager {
 
     public boolean isAppRestricted(int uid, String packageName) {
         if( mAppSettings == null ) return false;
-        if( uid < Process.FIRST_APPLICATION_UID ) return false;
+        if( UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID ) return false;
         if( packageName == null ) {
             packageName = BaikalConstants.getPackageByUid(mContext, uid);
             if( packageName == null ) return false;
@@ -1505,7 +1505,7 @@ public class AppProfileManager {
 
     public boolean isBlockedInternal(AppProfile profile, String packageName, int uid) {
         if( mAppSettings == null ) return false;
-        if( uid < Process.FIRST_APPLICATION_UID ) return false;
+        if( UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID ) return false;
         if( profile == null ) {
             if( packageName == null ) {
                 profile = mAppSettings.getProfile(uid);
@@ -1518,7 +1518,7 @@ public class AppProfileManager {
 
     public boolean isBlocked(AppProfile profile) {
         if( profile == null ) return false;
-        if( profile.mUid < Process.FIRST_APPLICATION_UID ) return false;
+        if( UserHandle.getAppId(profile.mUid) < Process.FIRST_APPLICATION_UID ) return false;
         if( isStamina() && !profile.getStamina() ) {
             if( profile.getBackgroundMode() > 0 ) {
                 Slog.w(TAG, "Background execution disabled by baikalos stamina (" + 
@@ -1796,7 +1796,7 @@ public class AppProfileManager {
     }
 
     public boolean isGmsUid(int uid) {
-        return uid == mGmsUid;
+        return UserHandle.getAppId(uid) == mGmsUid;
     }
 
 
@@ -1805,7 +1805,7 @@ public class AppProfileManager {
         if( mInstance != null ) { 
             profile =  mInstance.getAppProfile(packageName, uid);
             if( uid == -1 ) return profile;
-            return profile != null ? profile : new AppProfile(packageName,uid);
+            return profile != null ? profile : mInstance.getAppProfile(-1);
         }
         Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
     
@@ -1901,7 +1901,7 @@ public class AppProfileManager {
             }
         }
 
-        int level = getLocationLevel(uid);
+        int level = getLocationLevel(UserHandle.getAppId(uid));
         if( level < 2 ) return provider;
         if( level > 4 ) {
             Slog.i(TAG, "overrideProvider: from " + provider + " to NONE Using uid=" + uid);
@@ -1965,7 +1965,7 @@ public class AppProfileManager {
             //Slog.i(TAG, "sanitizeLocationRequest: Using workSource=" + workSource);
         }
 
-        int level = getLocationLevel(uid);
+        int level = getLocationLevel(UserHandle.getAppId(uid));
         switch(level) {
             case 0:
                 return sanitized;
@@ -2045,7 +2045,7 @@ public class AppProfileManager {
 
         if( mInstance.isGmsUid(uid) ) return def;
 
-        AppProfile profile = mInstance.getAppProfile(uid);
+        AppProfile profile = mInstance.getAppProfile(UserHandle.getAppId(uid));
         if( profile == null ) return def;
         return profile.mLocationLevel;    
     }
@@ -2057,7 +2057,7 @@ public class AppProfileManager {
 
         if( mInstance.isGmsUid(uid) ) return 0;
 
-        AppProfile profile = mInstance.getAppProfile(uid);
+        AppProfile profile = mInstance.getAppProfile(UserHandle.getAppId(uid));
         if( profile == null ) return 0;
         return profile.mLocationLevel;    
     }
@@ -2082,7 +2082,7 @@ public class AppProfileManager {
         if( mInstance == null ) return false;
 
         if( mInstance.mContext != null ) {
-            String packageName = BaikalConstants.getPackageByUid(mInstance.mContext, uid);
+            String packageName = BaikalConstants.getPackageByUid(mInstance.mContext, UserHandle.getAppId(uid));
             return checkPermission(packageName, permission, 0);
         }
         return false;
@@ -2125,7 +2125,7 @@ public class AppProfileManager {
         if( mInstance == null ) return false;
 
         if( mInstance.mContext != null ) {
-            String packageName = BaikalConstants.getPackageByUid(mInstance.mContext, uid);
+            String packageName = BaikalConstants.getPackageByUid(mInstance.mContext, UserHandle.getAppId(uid));
             return checkPermission(packageName, permName, 0);
         }
         return false;

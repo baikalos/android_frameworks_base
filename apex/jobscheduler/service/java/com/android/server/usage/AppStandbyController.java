@@ -1410,6 +1410,7 @@ public class AppStandbyController
     @StandbyBuckets
     private int getAppMinBucket(String packageName, int appId, int userId) {
         if (packageName == null) return STANDBY_BUCKET_NEVER;
+        appId = UserHandle.getAppId(appId);
         // If not enabled at all, of course nobody is ever idle.
         if (!mAppIdleEnabled) {
             if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket mAppIdleEnabled STANDBY_BUCKET_EXEMPTED:" + packageName);
@@ -1438,6 +1439,10 @@ public class AppStandbyController
             }
             if( profile.getBackgroundMode(false) < 0 ) {
                 if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket mBackgroundMode < 0 STANDBY_BUCKET_EXEMPTED:" + packageName);
+                return STANDBY_BUCKET_EXEMPTED;
+            }
+            if( profile.mAllowWhileIdle ) {
+                if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppMinBucket mAllowWhileIdle STANDBY_BUCKET_EXEMPTED:" + packageName);
                 return STANDBY_BUCKET_EXEMPTED;
             }
             // We allow all whitelisted apps, including those that don't want to be whitelisted
@@ -1492,10 +1497,10 @@ public class AppStandbyController
             return STANDBY_BUCKET_ACTIVE;
         }
 
-        if (mPackageManager.checkPermission(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
+        /*if (mPackageManager.checkPermission(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION,
                 packageName) == PERMISSION_GRANTED) {
             return STANDBY_BUCKET_FREQUENT;
-        }
+        }*/
 
         return STANDBY_BUCKET_NEVER;
     }

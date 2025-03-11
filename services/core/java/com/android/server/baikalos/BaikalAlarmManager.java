@@ -155,7 +155,7 @@ public class BaikalAlarmManager {
             return false;
 	    }*/
 
-        if( uid < Process.FIRST_APPLICATION_UID ) {
+        if( UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID ) {
             boolean disable = false;
             if( tag != null ) {
                 if( tag.contains("android.appwidget.action.APPWIDGET_UPDATE") ) disable = true;
@@ -168,7 +168,7 @@ public class BaikalAlarmManager {
 
         if( packageName == null ) {
             try {
-                packageName = BaikalConstants.getPackageByUid(mContext, uid);
+                packageName = BaikalConstants.getPackageByUid(mContext, UserHandle.getAppId(uid));
             } catch(Exception e) {
                 if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". getPackageByUid exception uid=" + uid);
             }

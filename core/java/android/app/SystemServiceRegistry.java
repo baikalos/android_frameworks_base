@@ -2018,7 +2018,7 @@ public final class SystemServiceRegistry {
         // We're mostly interested in tracking down long-lived core system
         // components that might stumble if they obtain bad references; just
         // emit a tidy log message for normal apps
-        if (android.os.Process.myUid() < android.os.Process.FIRST_APPLICATION_UID) {
+        if (UserHandle.getAppId(android.os.Process.myUid()) < android.os.Process.FIRST_APPLICATION_UID) {
             Log.wtf(TAG, e.getMessage(), e);
         } else {
             Log.w(TAG, e.getMessage());
