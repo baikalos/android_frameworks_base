@@ -209,7 +209,7 @@ public class DozeParameters implements
     }
 
     public int getPulseVisibleDuration() {
-        Log.d(TAG, "getPulseVisibleDuration: mPulseDuration=" + mPulseDuration, new Throwable());
+        Log.d(TAG, "getPulseVisibleDuration: mPulseDuration=" + mPulseDuration);
         return mPulseDuration; //getInt("doze.pulse.duration.visible", R.integer.doze_pulse_duration_visible);
     }
 
