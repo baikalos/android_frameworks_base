@@ -664,6 +664,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     // (See LineageSettings.Secure.RING_HOME_BUTTON_BEHAVIOR.)
     int mRingHomeBehavior;
 
+    boolean mFpWakeupEnabled;
+
     // Whether to lock the device after the next app transition has finished.
     private boolean mLockAfterAppTransitionFinished;
 
@@ -732,6 +734,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     // Timeout for showing the keyguard after the screen is on, in case no "ready" is received.
     private int mKeyguardDrawnTimeout = 1000;
+
 
     private final List<DeviceKeyHandler> mDeviceKeyHandlers = new ArrayList<>();
 
@@ -1034,6 +1037,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.THREE_FINGER_GESTURE), false, this,
+                    UserHandle.USER_ALL);
+
+            resolver.registerContentObserver(Settings.Secure.getUriFor(
+                    Settings.Secure.BAIKALOS_FP_WAKE_ENABLED), false, this,
                     UserHandle.USER_ALL);
 
             updateSettings();
@@ -3006,6 +3013,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     LineageSettings.System.CAMERA_LAUNCH, 0,
                     UserHandle.USER_CURRENT) == 1;
 
+            mFpWakeupEnabled = Settings.Secure.getIntForUser(resolver,
+                    Settings.Secure.BAIKALOS_FP_WAKE_ENABLED, 0,
+                    UserHandle.USER_CURRENT) == 1;
+
             // Configure wake gesture.
             boolean wakeGestureEnabledSetting = Settings.Secure.getIntForUser(resolver,
                     Settings.Secure.WAKE_GESTURE_ENABLED, 0,
@@ -4612,6 +4623,28 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         // Basic policy based on interactive state.
         int result;
+
+        if( keyCode == KeyEvent.KEYCODE_HELP && !isWakeKeyEnabled(keyCode)  ) {
+            Log.i(TAG, "KEYCODE_HELP:disabled");
+            return 0;
+        }
+
+        if( keyCode == KeyEvent.KEYCODE_HELP && interactive ) {
+            result = 0;
+            mPendingWakeKey = PENDING_KEY_NULL;
+            Log.i(TAG, "KEYCODE_HELP:already interactive");
+            return 0;
+        }
+
+        if( keyCode == KeyEvent.KEYCODE_HELP /*&& interactive*/ ) {
+            if( !down ) {
+                result = 0;
+                mPendingWakeKey = PENDING_KEY_NULL;
+                Log.i(TAG, "KEYCODE_HELP:ignore up code");
+                return 0;
+            }
+        }
+
         if (interactive || (isInjected && !isWakeKey)) {
             // When the device is interactive or the key is injected pass the
             // key to the application.
@@ -4983,7 +5016,13 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
             case KeyEvent.KEYCODE_WAKEUP: {
                 result &= ~ACTION_PASS_TO_USER;
-                isWakeKey = true;
+                isWakeKey = isWakeKeyEnabled(keyCode);
+                break;
+            }
+
+            case KeyEvent.KEYCODE_HELP: {
+                result &= ~ACTION_PASS_TO_USER;
+                isWakeKey = isWakeKeyEnabled(keyCode);
                 break;
             }
 
@@ -5105,7 +5144,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         if (isWakeKey) {
             // Check proximity only on wake key
-            wakeUpFromWakeKey(event, event.getKeyCode() == KeyEvent.KEYCODE_WAKEUP);
+            wakeUpFromWakeKey(event, 
+                    event.getKeyCode() == KeyEvent.KEYCODE_WAKEUP || 
+                    event.getKeyCode() == KeyEvent.KEYCODE_HELP);
         }
 
         if ((result & ACTION_PASS_TO_USER) != 0) {
@@ -5222,6 +5263,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             case KeyEvent.KEYCODE_POWER:
             case KeyEvent.KEYCODE_WAKEUP:
             case KeyEvent.KEYCODE_SLEEP:
+            case KeyEvent.KEYCODE_HELP:
                 return false;
             default:
                 return true;
@@ -5233,7 +5275,13 @@ public class PhoneWindowManager implements WindowManagerPolicy {
      * and is currently enabled by the user in Settings or for another reason.
      */
     private boolean isWakeKeyEnabled(int keyCode) {
+
+        if (DEBUG_WAKEUP) Log.d(TAG, "isWakeKeyEnabled:" + keyCode);
+
         switch (keyCode) {
+            case KeyEvent.KEYCODE_HELP:
+                if(mFpWakeupEnabled) return true;
+                return false; 
             case KeyEvent.KEYCODE_VOLUME_UP:
             case KeyEvent.KEYCODE_VOLUME_DOWN:
             case KeyEvent.KEYCODE_VOLUME_MUTE:
@@ -5263,7 +5311,14 @@ public class PhoneWindowManager implements WindowManagerPolicy {
      * is always considered a wake key.
      */
     private boolean isWakeKeyWhenScreenOff(int keyCode) {
+
+        if (DEBUG_WAKEUP) Log.d(TAG, "isWakeKeyWhenScreenOff:" + keyCode);
+
         switch (keyCode) {
+            case KeyEvent.KEYCODE_HELP:
+                if(mFpWakeupEnabled) return true;
+                return false; 
+
             case KeyEvent.KEYCODE_VOLUME_UP:
             case KeyEvent.KEYCODE_VOLUME_DOWN:
             case KeyEvent.KEYCODE_VOLUME_MUTE:
