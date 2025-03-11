@@ -180,7 +180,7 @@ public final class StrictMode {
      * Quick feature-flag that can be used to disable the defaults provided by {@link
      * #initThreadDefaults(ApplicationInfo)} and {@link #initVmDefaults(ApplicationInfo)}.
      */
-    private static final boolean DISABLE = false;
+    private static final boolean DISABLE = true;
 
     // Only apply VM penalties for the same violation at this interval.
     private static final long MIN_VM_INTERVAL_MS = 1000;
@@ -1443,7 +1443,7 @@ public final class StrictMode {
      */
     public static void initThreadDefaults(ApplicationInfo ai) {
         final ThreadPolicy.Builder builder = new ThreadPolicy.Builder();
-        final int targetSdkVersion =
+        /*final int targetSdkVersion =
                 (ai != null) ? ai.targetSdkVersion : Build.VERSION_CODES.CUR_DEVELOPMENT;
 
         // Starting in HC, we don't allow network usage on the main thread
@@ -1463,7 +1463,8 @@ public final class StrictMode {
                     builder.penaltyFlashScreen();
                 }
             }
-        } else if (Build.IS_ENG) {
+        } else */ 
+        if (Build.IS_ENG) {
             // Detect everything in bundled apps
             if (isBundledSystemApp(ai)) {
                 builder.detectAll();
@@ -2646,7 +2647,7 @@ public final class StrictMode {
      */
     @UnsupportedAppUsage
     public static Span enterCriticalSpan(String name) {
-        if (Build.IS_USER) {
+        if (Build.IS_USER || Build.IS_USERDEBUG) {
             return NO_OP_SPAN;
         }
         if (name == null || name.isEmpty()) {
