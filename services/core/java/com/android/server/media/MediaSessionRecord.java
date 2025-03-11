@@ -87,7 +87,7 @@ public class MediaSessionRecord implements IBinder.DeathRecipient, MediaSessionR
             MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
             MediaMetadata.METADATA_KEY_ART_URI,
             MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI};
-    private static final boolean DEBUG = true; //Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
 
     /**
      * The amount of time we'll send an assumed volume after the last volume
