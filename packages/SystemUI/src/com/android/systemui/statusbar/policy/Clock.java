@@ -40,6 +40,7 @@ import android.text.format.DateFormat;
 import android.text.style.CharacterStyle;
 import android.text.style.RelativeSizeSpan;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Display;
 import android.view.View;
 import android.widget.TextView;
@@ -282,9 +283,9 @@ public class Clock extends TextView implements
         mDateTimePatternGenerator = null;
 
         // Make sure we update to the current time
-        updateShowSeconds();
         updateClock();
         updateClockVisibility();
+        updateShowSeconds();
     }
 
     @Override
@@ -404,19 +405,25 @@ public class Clock extends TextView implements
         boolean visible = shouldBeVisible();
         int visibility = visible ? View.VISIBLE : View.GONE;
         try {
-            autoHideHandler.removeCallbacksAndMessages(null);
+			if (autoHideHandler != null) {
+            	autoHideHandler.removeCallbacksAndMessages(null);
+            }
         } catch (NullPointerException e) {
-            // Do nothing
+            Log.w("Clock", "null pointer exception", e);
         }
         setVisibility(visibility);
         if (!mQsHeader && mClockAutoHide && visible && mScreenOn) {
-            autoHideHandler.postDelayed(()->autoHideClock(), mShowDuration * 1000);
+            if( autoHideHandler != null ) {
+                autoHideHandler.postDelayed(()->autoHideClock(), mShowDuration * 1000);
+            }
         }
     }
 
     private void autoHideClock() {
         setVisibility(View.GONE);
-        autoHideHandler.postDelayed(()->updateClockVisibility(), mHideDuration * 1000);
+        if( autoHideHandler != null ) {
+            autoHideHandler.postDelayed(()->updateClockVisibility(), mHideDuration * 1000);
+        }
     }
 
     final void updateClock(boolean forceTextUpdate) {
