@@ -1314,16 +1314,16 @@
 
     <!-- Display low battery warning when battery level dips to this value.
          Also, the battery stats are flushed to disk when we hit this level.  -->
-    <integer name="config_criticalBatteryWarningLevel">10</integer>
+    <integer name="config_criticalBatteryWarningLevel">5</integer>
 
     <!-- Shutdown if the battery temperature exceeds (this value * 0.1) Celsius. -->
     <integer name="config_shutdownBatteryTemperature">680</integer>
 
     <!-- Display low battery warning when battery level dips to this value -->
-    <integer name="config_lowBatteryWarningLevel">20</integer>
+    <integer name="config_lowBatteryWarningLevel">10</integer>
 
     <!-- The default suggested battery % at which we enable battery saver automatically.  -->
-    <integer name="config_lowBatteryAutoTriggerDefaultLevel">15</integer>
+    <integer name="config_lowBatteryAutoTriggerDefaultLevel">0</integer>
 
     <!-- The app which will handle routine based automatic battery saver, if empty the UI for
          routine based battery saver will be hidden -->
@@ -2692,7 +2692,7 @@
          This value must be greater than zero, otherwise the device will immediately
          fall asleep again as soon as it is awoken.
     -->
-    <integer name="config_minimumScreenOffTimeout">10000</integer>
+    <integer name="config_minimumScreenOffTimeout">15000</integer>
 
     <!-- User activity timeout: Maximum screen dim duration in milliseconds.
 
@@ -2708,7 +2708,7 @@
          This value may be zero in which case the screen will not dim before the
          device goes to sleep.
     -->
-    <integer name="config_maximumScreenDimDuration">7000</integer>
+    <integer name="config_maximumScreenDimDuration">5000</integer>
 
     <!-- User activity timeout: Maximum screen dim duration as a percentage of screen off timeout.
 
@@ -2724,7 +2724,7 @@
          This value must be between 0% and 100%.  If the value is zero, the screen will not
          dim before the device goes to sleep.
     -->
-    <fraction name="config_maximumScreenDimRatio">20%</fraction>
+    <fraction name="config_maximumScreenDimRatio">15%</fraction>
 
     <!-- Minimum size of the scrollbar thumb's touch target. -->
     <dimen name="config_minScrollbarTouchTarget">48dp</dimen>
@@ -6162,6 +6162,10 @@
          components, such as the telephony stack, which require access to the full ServiceState for
          tasks such as network registration. -->
     <string-array name="config_serviceStateLocationAllowedPackages">
+        <item>"com.android.providers.telephony"</item>
+        <item>"com.android.mms.service"</item>
+        <item>"com.android.ons"</item>
+        <item>"com.android.stk"</item>
         <item>"com.android.phone"</item>
     </string-array>
 

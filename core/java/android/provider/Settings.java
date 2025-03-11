@@ -12318,6 +12318,13 @@ public final class Settings {
         public static final String BAIKALOS_EXPAND_ALL_NOTIFICATIONS = "baikalos_expand_all_notifications";
 
 
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_FP_WAKE_ENABLED = "baikalos_fp_wake_enabled";
+
+
         /**
          * Control whether GMS is enabled for this user.
          * @hide
@@ -17868,6 +17875,35 @@ public final class Settings {
          */
         @Readable
         public static final String BAIKALOS_CAMERA_IGNORE_IR = "baikalos_camera_ignore_ir";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL = "baikalos_low_battery_trigger_level";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL = "baikalos_critical_battery_trigger_level";   
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_BT = "baikalos_airplane_dont_toggle_bt";   
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_WIFI = "baikalos_airplane_dont_toggle_wifi";
+
 
         /* End of BaikalOS Global Settings */
 

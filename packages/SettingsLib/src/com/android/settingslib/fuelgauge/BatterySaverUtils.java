@@ -117,6 +117,9 @@ public class BatterySaverUtils {
         if (DEBUG) {
             Log.d(TAG, "Battery saver turning " + (enable ? "ON" : "OFF"));
         }
+
+        enable = false;
+
         final ContentResolver cr = context.getContentResolver();
 
         final Bundle confirmationExtras = new Bundle(1);

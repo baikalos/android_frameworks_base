@@ -245,10 +245,10 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
         if (mInvalidCharger) {
             showInvalidChargerNotification();
             mShowing = SHOWING_INVALID_CHARGER;
-        } /*else if (mWarning) {
+        } else if (mWarning || mShowAutoSaverSuggestion) {
             showWarningNotification();
             mShowing = SHOWING_WARNING;
-        } else if (mShowAutoSaverSuggestion) {
+        } /* else if (mShowAutoSaverSuggestion) {
             // Once we showed the notification, don't show it again until it goes SHOWING_NOTHING.
             // This shouldn't be needed, because we have a delete intent on this notification
             // so when it's dismissed we should notice it and clear mShowAutoSaverSuggestion,
@@ -257,7 +257,7 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
                 showAutoSaverSuggestionNotification();
             }
             mShowing = SHOWING_AUTO_SAVER_SUGGESTION;
-        } */ else {
+        } */else {
             mNoMan.cancelAsUser(TAG_BATTERY, SystemMessage.NOTE_BAD_CHARGER, UserHandle.ALL);
             mNoMan.cancelAsUser(TAG_BATTERY, SystemMessage.NOTE_POWER_LOW, UserHandle.ALL);
             mNoMan.cancelAsUser(TAG_AUTO_SAVER,
@@ -295,15 +295,15 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
             mPlaySound = false;
             return;
         }
-        if (isScheduledByPercentage()) {
+        /*if (isScheduledByPercentage()) {
             return;
-        }
+        }*/
 
         final String percentage = NumberFormat.getPercentInstance()
                 .format((double) mCurrentBatterySnapshot.getBatteryLevel() / 100.0);
-        final String title = mContext.getString(R.string.battery_low_title);
+        final String title = mContext.getString(R.string.battery_low_level_title);
         final String contentText = mContext.getString(
-                R.string.battery_low_description, percentage);
+                R.string.battery_low_level_description, percentage);
 
         final Notification.Builder nb =
                 new Notification.Builder(mContext, NotificationChannels.BATTERY)
@@ -317,9 +317,9 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
                         .setDeleteIntent(pendingBroadcast(ACTION_DISMISSED_WARNING))
                         .setStyle(new Notification.BigTextStyle().bigText(contentText))
                         .setVisibility(Notification.VISIBILITY_PUBLIC);
-        /*if (hasBatterySettings()) {
-            nb.setContentIntent(pendingBroadcast(ACTION_SHOW_BATTERY_SAVER_SETTINGS));
-        }*/
+        if (hasBatterySettings()) {
+            //nb.setContentIntent(pendingBroadcast(ACTION_SHOW_BATTERY_SAVER_SETTINGS));
+        }
         // Make the notification red if the percentage goes below a certain amount or the time
         // remaining estimate is disabled
         if (!mCurrentBatterySnapshot.isHybrid() || mBucket < -1
@@ -329,11 +329,11 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
         }
 
         if (!mPowerMan.isPowerSaveMode()) {
-            nb.addAction(0, mContext.getString(R.string.battery_saver_dismiss_action),
+            nb.addAction(0, mContext.getString(R.string.battery_low_level_dismiss_action),
                     pendingBroadcast(ACTION_DISMISSED_WARNING));
-            nb.addAction(0,
-                    mContext.getString(R.string.battery_saver_start_action),
-                    pendingBroadcast(ACTION_START_SAVER));
+            //nb.addAction(0,
+            //        mContext.getString(R.string.battery_saver_start_action),
+            //        pendingBroadcast(ACTION_START_SAVER));
         }
         nb.setOnlyAlertOnce(!mPlaySound);
         mPlaySound = false;
@@ -621,7 +621,7 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
     public void showLowBatteryWarning(boolean playSound) {
         Slog.i(TAG,
                 "show low battery warning: level=" + mBatteryLevel
-                        + " [" + mBucket + "] playSound=" + playSound);
+                        + " [" + mBucket + "] playSound=" + playSound, new Throwable() );
         logEvent(BatteryWarningEvents.LowBatteryWarningEvent.LOW_BATTERY_NOTIFICATION);
         mPlaySound = playSound;
         mWarning = true;
@@ -646,7 +646,7 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
     }
 
     private void showAutoSaverSuggestion() {
-        mShowAutoSaverSuggestion = false;// true;
+        mShowAutoSaverSuggestion = false;
         updateNotification();
     }
 
@@ -660,15 +660,15 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
         updateNotification();
     }
 
-    private void showStartSaverConfirmation(Bundle extras) {
+    private void dontshowStartSaverConfirmation(Bundle extras) {
         if (mSaverConfirmation != null) return;
         final SystemUIDialog d = new SystemUIDialog(mContext);
-        final boolean confirmOnly = true; //extras.getBoolean(BatterySaverUtils.EXTRA_CONFIRM_TEXT_ONLY);
+        final boolean confirmOnly = extras.getBoolean(BatterySaverUtils.EXTRA_CONFIRM_TEXT_ONLY);
         final int batterySaverTriggerMode =
                 extras.getInt(BatterySaverUtils.EXTRA_POWER_SAVE_MODE_TRIGGER,
                         PowerManager.POWER_SAVE_MODE_TRIGGER_PERCENTAGE);
-        final int batterySaverTriggerLevel = -1;
-                //extras.getInt(BatterySaverUtils.EXTRA_POWER_SAVE_MODE_TRIGGER_LEVEL, 0);
+        final int batterySaverTriggerLevel =
+                extras.getInt(BatterySaverUtils.EXTRA_POWER_SAVE_MODE_TRIGGER_LEVEL, 0);
         d.setMessage(getBatterySaverDescription());
 
         // Sad hack for http://b/78261259 and http://b/78298335. Otherwise "Battery" may be split
@@ -847,8 +847,8 @@ public class PowerNotificationWarnings implements PowerUI.WarningsUI {
                 logEvent(BatteryWarningEvents
                         .LowBatteryWarningEvent.LOW_BATTERY_NOTIFICATION_SETTINGS);
                 dismissLowBatteryNotification();
-                /*mContext.startActivityAsUser(mOpenBatterySaverSettings,
-                        mUserTracker.getUserHandle());*/
+                mContext.startActivityAsUser(mOpenBatterySaverSettings,
+                        mUserTracker.getUserHandle());
             } else if (action.equals(ACTION_START_SAVER)) {
                 logEvent(BatteryWarningEvents
                         .LowBatteryWarningEvent.LOW_BATTERY_NOTIFICATION_TURN_ON);

@@ -166,6 +166,15 @@ public class PowerUI implements CoreStartable, CommandQueue.Callbacks {
         resolver.registerContentObserver(Settings.Global.getUriFor(
                 Settings.Global.LOW_POWER_MODE_TRIGGER_LEVEL),
                 false, obs, UserHandle.USER_ALL);
+
+        resolver.registerContentObserver(Settings.Global.getUriFor(
+                Settings.Global.BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL),
+                false, obs, UserHandle.USER_ALL);
+
+        resolver.registerContentObserver(Settings.Global.getUriFor(
+                Settings.Global.BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL),
+                false, obs, UserHandle.USER_ALL);
+
         updateBatteryWarningLevels();
         mReceiver.init();
         mUserTracker.addCallback(mUserChangedCallback, mContext.getMainExecutor());
@@ -212,10 +221,17 @@ public class PowerUI implements CoreStartable, CommandQueue.Callbacks {
     }
 
     void updateBatteryWarningLevels() {
-        int critLevel = mContext.getResources().getInteger(
-                com.android.internal.R.integer.config_criticalBatteryWarningLevel);
-        int warnLevel = mContext.getResources().getInteger(
-                com.android.internal.R.integer.config_lowBatteryWarningLevel);
+
+        final ContentResolver resolver = mContext.getContentResolver();
+
+        int critLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL, 
+                                        mContext.getResources().getInteger(
+                                            com.android.internal.R.integer.config_criticalBatteryWarningLevel));
+
+
+        int warnLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL, 
+                                        mContext.getResources().getInteger(
+                                            com.android.internal.R.integer.config_lowBatteryWarningLevel));
 
         if (warnLevel < critLevel) {
             warnLevel = critLevel;
