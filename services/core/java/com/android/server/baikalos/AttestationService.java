@@ -47,7 +47,7 @@ public final class AttestationService {
     private static final String DATA_FILE = "gms_certified_props.json";
     private static final long INITIAL_DELAY = 0; // Start immediately on boot
     private static final long INTERVAL = 8; // Interval in hours
-    private static final boolean DEBUG = true; //Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
 
     private final Context mContext;
     private File mDataFile;
