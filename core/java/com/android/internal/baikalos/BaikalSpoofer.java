@@ -42,6 +42,7 @@ import android.os.LocaleList;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.SystemProperties;
+import android.os.UserHandle;
 import android.text.FontConfig;
 import android.util.Base64;
 import android.util.Log;
@@ -1175,18 +1176,18 @@ public class BaikalSpoofer {
         if( sApplicationFilterDisabled ) return false;
 
         if( callingUid == 0 ) callingUid = myUid();
-        if( callingUid < 10000 ) return false;
+        if( UserHandle.getAppId(callingUid) < 10000 ) return false;
 
         if( packageName != null ) {
 
             AppProfile profile = null; 
 
             try {
-                if( callingUid != 1000 && myUid() == callingUid ) {
+                if( UserHandle.getAppId(callingUid) != 1000 && myUid() == callingUid ) {
                     profile = AppProfile.getCurrentAppProfile();
                 } else {
                     if( AppProfileSettings.isLoaded() ) {
-                        profile = AppProfileSettings.getInstance().getProfile(callingUid);
+                        profile = AppProfileSettings.getInstance().getProfile(UserHandle.getAppId(callingUid));
                     } 
                 }
             } catch(Exception le) {

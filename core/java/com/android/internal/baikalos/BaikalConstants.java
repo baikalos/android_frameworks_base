@@ -18,6 +18,7 @@ package com.android.internal.baikalos;
 
 import android.content.Context;
 import android.os.Process;
+import android.os.UserHandle;
 import android.system.Os;
 import android.system.StructUtsname;
 import android.content.pm.ApplicationInfo;
@@ -154,14 +155,18 @@ public class BaikalConstants {
     }
 
     public static String getPackageByUid(Context context, int uid) {
-        if( uid < Process.FIRST_APPLICATION_UID ) {
+        if( UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID ) {
             //if( uid == 1000 ) return "system";           
             //else 
             return "android";
         }
 
-        String[] pkgs = context.getPackageManager().getPackagesForUid(uid);
-        if( pkgs != null && pkgs.length > 0 ) return pkgs[0];
+        try {
+            String[] pkgs = context.getPackageManager().getPackagesForUid(UserHandle.getAppId(uid));
+            if( pkgs != null && pkgs.length > 0 ) return pkgs[0];
+        } catch(Exception e) {
+            Slog.i(TAG,"Packageswith uid " + uid + " not found on this device", e);
+        }
         return null;
     }
 
@@ -172,10 +177,10 @@ public class BaikalConstants {
             ApplicationInfo ai = context.getPackageManager().getApplicationInfo(packageName,
                     PackageManager.MATCH_ALL);
             if( ai != null ) {
-                return ai.uid;
+                return UserHandle.getAppId(ai.uid);
             }
         } catch(Exception e) {
-            Slog.i(TAG,"Package " + packageName + " not found on this device");
+            Slog.i(TAG,"Package " + packageName + " not found on this device", e);
         }
         return uid;
     }

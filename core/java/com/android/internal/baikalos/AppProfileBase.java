@@ -389,6 +389,15 @@ public class AppProfileBase extends ContentObserver {
             newProfilesByPackageName.put("android",android);
             newProfilesByUid.put(1000,android);
 
+            AppProfile empty = oldProfiles.containsKey("empty") ? oldProfiles.get("empty") : new AppProfile("empty",-1);
+            empty.mSystemWhitelisted = false;
+            empty.mStaminaEnforced = false;
+            empty.mImportantApp = false;
+            empty.mSystemApp = false;
+            empty.mBackgroundMode = 0;
+            newProfilesByPackageName.put("empty",empty);
+            newProfilesByUid.put(-1,empty);
+
             for(Map.Entry<String, AppProfile> entry : oldProfiles.entrySet()) {
                 entry.getValue().isInvalidated = true;
             }
@@ -425,7 +434,7 @@ public class AppProfileBase extends ContentObserver {
         for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
             AppProfile profile = entry.getValue();
                 
-            if( profile.mFilterFS && profile.mUid >= 10000 ) {
+            if( profile.mFilterFS && UserHandle.getAppId(profile.mUid) >= 10000 ) {
                 prop += "," + profile.mUid;
             }
         }
@@ -675,7 +684,7 @@ public class AppProfileBase extends ContentObserver {
         } else {
             Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found");
         }
-        return "android".equals(packageName) ? null : (new AppProfile(packageName,-1).update(mNotFoundProfile));
+        return "android".equals(packageName) ? null : _profilesByUid.get(-1);
     }
 
     public AppProfile getProfileLocked(int uid) {
@@ -691,7 +700,8 @@ public class AppProfileBase extends ContentObserver {
         } else {
             Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ") : profile not found");
         }
-        return uid < 10000 ? null : (new AppProfile("not found",-1).update(mNotFoundProfile));
+        
+        return appId < 10000 ? null : _profilesByUid.get(-1);
     }
 
     int getAppUidLocked(String packageName) {
@@ -910,11 +920,11 @@ public class AppProfileBase extends ContentObserver {
     }
 
     public static boolean isDebugUid(int uid) {
-        return _mAppsForDebug.contains(uid);
+        return _mAppsForDebug.contains(UserHandle.getAppId(uid));
     }
 
     public boolean isStaminaWl(int uid, String packageName) {
-        //if( uid < Process.FIRST_APPLICATION_UID ) return true;
+        //if( UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID ) return true;
         if( packageName == null ) return false;
         if( packageName.contains("auto_generated_rro_") ) return false;
         if( packageName.startsWith("com.android.service.ims") ) return true;
