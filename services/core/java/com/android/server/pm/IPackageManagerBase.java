@@ -652,9 +652,9 @@ public abstract class IPackageManagerBase extends IPackageManager.Stub {
     public final String[] getPackagesForUid(int uid) {
         final int callingUid = Binder.getCallingUid();
         final int userId = UserHandle.getUserId(uid);
-        snapshot().enforceCrossUserOrProfilePermission(callingUid, userId,
-                /* requireFullPermission */ false,
-                /* checkShell */ false, "getPackagesForUid");
+        //snapshot().enforceCrossUserOrProfilePermission(callingUid, userId,
+        //        /* requireFullPermission */ false,
+        //        /* checkShell */ false, "getPackagesForUid");
         return snapshot().getPackagesForUid(uid);
     }
 

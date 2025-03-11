@@ -653,7 +653,7 @@ public class PackageUserStateImpl extends WatchableImpl implements PackageUserSt
 
     @DataClass.Generated.Member
     public boolean isStopped() {
-        return mStopped;
+        return false; // mStopped;
     }
 
     @DataClass.Generated.Member

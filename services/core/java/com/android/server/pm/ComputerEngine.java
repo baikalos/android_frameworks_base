@@ -2418,7 +2418,7 @@ public class ComputerEngine implements Computer {
      * </ol>
      */
     public final boolean canViewInstantApps(int callingUid, int userId) {
-        if (callingUid < Process.FIRST_APPLICATION_UID) {
+        if (UserHandle.getAppId(callingUid) < Process.FIRST_APPLICATION_UID) {
             return true;
         }
         if (mContext.checkCallingOrSelfPermission(

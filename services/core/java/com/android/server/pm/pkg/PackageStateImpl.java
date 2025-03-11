@@ -397,7 +397,7 @@ public class PackageStateImpl implements PackageState {
 
         @Override
         public boolean isStopped() {
-            return getBoolean(Booleans.STOPPED);
+            return false; //getBoolean(Booleans.STOPPED);
         }
 
         @Override
