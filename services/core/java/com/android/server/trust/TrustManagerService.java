@@ -114,7 +114,7 @@ import java.util.List;
  */
 public class TrustManagerService extends SystemService {
     private static final String TAG = "TrustManagerService";
-    static final boolean DEBUG = Build.IS_DEBUGGABLE && Log.isLoggable(TAG, Log.VERBOSE);
+    static final boolean DEBUG = true; //Build.IS_DEBUGGABLE && Log.isLoggable(TAG, Log.VERBOSE);
 
     private static final Intent TRUST_AGENT_INTENT =
             new Intent(TrustAgentService.SERVICE_INTERFACE);
@@ -143,9 +143,9 @@ public class TrustManagerService extends SystemService {
 
     private static final int TRUST_USUALLY_MANAGED_FLUSH_DELAY = 2 * 60 * 1000;
     private static final String TRUST_TIMEOUT_ALARM_TAG = "TrustManagerService.trustTimeoutForUser";
-    private static final long TRUST_TIMEOUT_IN_MILLIS = 24 * 60 * 60 * 1000;
-    private static final long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = 24 * 60 * 60 * 1000;
-    private static final long TRUSTABLE_TIMEOUT_IN_MILLIS = 24 * 60 * 60 * 1000;
+    private static final long TRUST_TIMEOUT_IN_MILLIS = 8 * 60 * 60 * 1000;
+    private static final long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = 8 * 60 * 60 * 1000;
+    private static final long TRUSTABLE_TIMEOUT_IN_MILLIS = 8 * 60 * 60 * 1000;
 
     private static final String PRIV_NAMESPACE = "http://schemas.android.com/apk/prv/res/android";
 
@@ -918,6 +918,9 @@ public class TrustManagerService extends SystemService {
 
     private void setDeviceLockedForUser(@UserIdInt int userId, boolean locked) {
         final boolean changed;
+
+        if( locked ) Log.d(TAG, "setDeviceLockedForUser:true", new Throwable());
+        else Log.d(TAG, "setDeviceLockedForUser:false");
         synchronized (mDeviceLockedForUser) {
             changed = isDeviceLockedInner(userId) != locked;
             mDeviceLockedForUser.put(userId, locked);
@@ -1221,6 +1224,7 @@ public class TrustManagerService extends SystemService {
 
     private boolean aggregateIsTrusted(int userId) {
         if (!mStrongAuthTracker.isTrustAllowedForUser(userId)) {
+            Log.d(TAG, "aggregateIsTrusted:false, not allowed by strong auth tracker");
             return false;
         }
 
@@ -1246,6 +1250,7 @@ public class TrustManagerService extends SystemService {
                 }
             }
         }
+        Log.d(TAG, "aggregateIsTrusted:false, not trusted");
         return false;
     }
 
@@ -1255,7 +1260,7 @@ public class TrustManagerService extends SystemService {
             return false;
         }
 
-        if( mBaikalTrust.isTrustable() ) return true;
+        if( mBaikalTrust != null && mBaikalTrust.isTrustable() ) return true;
 
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
@@ -1286,7 +1291,14 @@ public class TrustManagerService extends SystemService {
 
     private List<String> getTrustGrantedMessages(int userId) {
         if (!mStrongAuthTracker.isTrustAllowedForUser(userId)) {
+            Log.d(TAG, "getTrustGrantedMessages:empty, not allowed by strong auth tracker");
             return new ArrayList<>();
+        }
+
+        if( mBaikalTrust != null && mBaikalTrust.isKeepUnlocked() ) {
+            List<String> trustGrantedMessages = new ArrayList<>();
+            trustGrantedMessages.add("Trusted by BaikalOS trust");
+            return trustGrantedMessages;
         }
 
         List<String> trustGrantedMessages = new ArrayList<>();
@@ -1304,8 +1316,15 @@ public class TrustManagerService extends SystemService {
 
     private boolean aggregateIsTrustManaged(int userId) {
         if (!mStrongAuthTracker.isTrustAllowedForUser(userId)) {
+            Log.d(TAG, "aggregateIsTrustManaged:empty, not allowed by strong auth tracker");
             return false;
         }
+
+        if( mBaikalTrust != null && mBaikalTrust.isTrustable() ) {
+            Log.d(TAG, "aggregateIsTrustManaged:managed by baikalos");
+            return true;
+        }
+
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
             if (info.userId == userId) {
