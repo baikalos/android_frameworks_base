@@ -363,7 +363,7 @@ class EdgeLightViewController @Inject constructor(
 
     companion object {
         private const val TAG = "EdgeLightViewController"
-        private val DEBUG = true; // Log.isLoggable(TAG, Log.DEBUG)
+        private val DEBUG = Log.isLoggable(TAG, Log.DEBUG)
 
         private const val COLLAPSE_ANIMATION_DURATION = 700L
 

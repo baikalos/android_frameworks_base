@@ -4,7 +4,7 @@ class FsiDebug {
 
     companion object {
         private const val debugTag = "FsiDebug"
-        private const val debug = true
+        private const val debug = false
 
         fun log(s: Any) {
             if (!debug) {
