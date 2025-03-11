@@ -328,11 +328,11 @@ public class OomAdjuster {
     }
 
     void conditionallyEnableProactiveKills() {
-        File mglru = new File("/sys/kernel/mm/lru_gen/enabled");
+        //File mglru = new File("/sys/kernel/mm/lru_gen/enabled");
         File psi = new File("/proc/pressure/memory");
         File lmk_kernel = new File("/sys/module/lowmemorykiller/parameters/minfree");
 
-        if (!lmk_kernel.exists() && mglru.exists() && psi.exists()) {
+        if (!lmk_kernel.exists() /*&& mglru.exists()*/ && psi.exists()) {
             Slog.i(TAG, "Detected kernel with modern mm setup, enabling Proactive Kills.");
             mProactiveKillsEnabled = true;
         }
@@ -1074,15 +1074,14 @@ public class OomAdjuster {
 
         int timeout = BaikalPowerSaveManager.getCurrentPolicy().killBgRestrictedCachedIdleSettleTime;
         if( timeout == 0 ) {
-            timeout = mService.mAppProfileManager.isStamina() ? 15 * 1000 : 600 * 1000;
+            timeout = mService.mAppProfileManager.isStamina() ? 15 * 1000 : 300 * 1000;
         }
 
         final long oldTimeActive =  now - timeout * 1000;
-        final long oldTimeLimited = now - 15 * 1000;
+        final long oldTimeLimited = now - timeout * 1000;
         final long oldTimeExtreme = now - timeout * 1000;
-        final long oldTimeStamina = now - 15 * 1000;
-        final long oldTimeStartup = now - 90 * 1000;
-
+        final long oldTimeStamina = now - timeout * 1000;
+        final long oldTimeStartup = now - ((timeout > 90) ? timeout : 90) * 1000;
 
         final boolean awake = mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE;
 
@@ -1223,6 +1222,7 @@ public class OomAdjuster {
                                 killed = true;
                         } else if( app.mAppProfile.getBackgroundMode() >= 0 
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
+                            && BaikalPowerSaveManager.getCurrentPolicy().killInBackground
                             && app.getLastActivityTime() < oldTimeExtreme )  {
                                 app.killLocked("baikalos - cached background process - power profile timeout",
                                 "baikalos - cached background process - power profile timeout",
@@ -1292,7 +1292,11 @@ public class OomAdjuster {
                                 } else {
                                     lastCachedGroupUid = lastCachedGroup = 0;
                                 }
-                                if (!app.mAppProfile.mDoNotClose && (numCached - numCachedExtraGroup) > cachedProcessLimit) {
+                                if (!app.mAppProfile.mDoNotClose 
+                                    && !app.mAppProfile.mImportantApp
+                                    && !app.mAppProfile.mAllowWhileIdle
+                                    && app.mAppProfile.getBackgroundMode() >= 0
+                                    && (numCached - numCachedExtraGroup) > cachedProcessLimit) {
                                     app.killLocked("cached #" + numCached,
                                             "too many cached",
                                             ApplicationExitInfo.REASON_OTHER,
@@ -1301,7 +1305,11 @@ public class OomAdjuster {
                                 }
                                 break;
                             case PROCESS_STATE_CACHED_EMPTY:
-                                if (numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
+                                if (!app.mAppProfile.mDoNotClose 
+                                    && !app.mAppProfile.mImportantApp
+                                    && !app.mAppProfile.mAllowWhileIdle
+                                    && app.mAppProfile.getBackgroundMode() >= 0
+                                    && numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
                                         && app.getLastActivityTime() < oldTime) {
                                     app.killLocked("empty for " + ((now
                                             - app.getLastActivityTime()) / 1000) + "s",
@@ -1356,7 +1364,11 @@ public class OomAdjuster {
                 && lruCachedApp != null                         // If no cached app, let LMKD decide
                 // If swap is non-decreasing, give reclaim a chance to catch up
                 && freeSwapPercent < mLastFreeSwapPercent) {
-            if( !lruCachedApp.mAppProfile.mPinned ) {
+            if( !lruCachedApp.mAppProfile.mPinned
+                && !lruCachedApp.mAppProfile.mDoNotClose 
+                && !lruCachedApp.mAppProfile.mImportantApp
+                && !lruCachedApp.mAppProfile.mAllowWhileIdle
+                && lruCachedApp.mAppProfile.getBackgroundMode() >= 0 ) {
             	lruCachedApp.killLocked("swap low and too many cached",
                     ApplicationExitInfo.REASON_OTHER,
                     ApplicationExitInfo.SUBREASON_TOO_MANY_CACHED,
@@ -1733,7 +1745,7 @@ public class OomAdjuster {
 
             state.setAdjType("fixed");
             state.setAdjSeq(mAdjSeq);
-            state.setCurRawAdj(state.getMaxAdj());
+            state.setCurRawAdj(ProcessList.FOREGROUND_APP_ADJ);
             state.setHasForegroundActivities(false);
             state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
             state.setCurCapability(PROCESS_CAPABILITY_ALL);
@@ -1767,8 +1779,8 @@ public class OomAdjuster {
                     state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
                 }
             }
-            state.setCurRawProcState(state.getCurProcState());
-            state.setCurAdj(state.getMaxAdj());
+            state.setCurRawProcState(ActivityManager.PROCESS_STATE_PERSISTENT);
+            state.setCurAdj(ProcessList.FOREGROUND_APP_ADJ);
             state.setCompletedAdjSeq(state.getAdjSeq());
             // if curAdj is less than prevAppAdj, then this process was promoted
             return state.getCurAdj() < prevAppAdj || state.getCurProcState() < prevProcState;
