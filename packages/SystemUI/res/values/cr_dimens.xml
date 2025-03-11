@@ -110,7 +110,13 @@
 
     <!-- QS Header height full -->
     <dimen name="qs_header_height_full">200dp</dimen>
+    <dimen name="qs_header_height">120dp</dimen>
 
     <!-- QS A11 Style -->
     <dimen name="custom_notification_row_padding">16dp</dimen>
+
+    <!-- Lockscreen Clock/AOD -->  
+    <dimen name="custom_aod_image_size">230dp</dimen>
+    <dimen name="custom_clock_frame_margin_top">0dp</dimen>
 </resources>
+

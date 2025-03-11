@@ -18,24 +18,25 @@ package com.android.systemui.clocks;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
+import android.widget.FrameLayout;
 
-import com.android.settingslib.drawable.CircleFramedDrawable;
-
-import com.android.systemui.res.R;
+import com.android.systemui.R;
 import com.android.systemui.Dependency;
 import com.android.systemui.plugins.statusbar.StatusBarStateController;
 import com.android.systemui.tuner.TunerService;
 
-public class AODStyle extends RelativeLayout implements TunerService.Tunable {
+public class AODFsImageStyle extends FrameLayout implements TunerService.Tunable {
+
+    private static final String TAG = "AODFsImageStyle";
 
     private static final String CUSTOM_AOD_IMAGE_URI_KEY = "system:custom_aod_image_uri";
     private static final String CUSTOM_AOD_IMAGE_ENABLED_KEY = "system:custom_aod_image_enabled";
+    private static final String CUSTOM_AOD_FS_IMAGE_ENABLED_KEY = "system:custom_aod_fs_image_enabled";
 
     private final Context mContext;
     private final TunerService mTunerService;
@@ -48,8 +49,8 @@ public class AODStyle extends RelativeLayout implements TunerService.Tunable {
     private String mImagePath;
     private String mCurrImagePath;
     private boolean mAodImageEnabled;
+    private boolean mAodFsImageEnabled;
     private boolean mImageLoaded = false;
-    private boolean mCustomClockEnabled;
 
     // Burn-in protection
     private static final int BURN_IN_PROTECTION_INTERVAL = 10000; // 10 seconds
@@ -87,6 +88,7 @@ public class AODStyle extends RelativeLayout implements TunerService.Tunable {
             mDozing = dozing;
             updateAodImageView();
             if (mDozing) {
+                if( !mAodFsImageEnabled ) return;
                 startBurnInProtection();
             } else {
                 stopBurnInProtection();
@@ -94,11 +96,11 @@ public class AODStyle extends RelativeLayout implements TunerService.Tunable {
         }
     };
 
-    public AODStyle(Context context, AttributeSet attrs) {
+    public AODFsImageStyle(Context context, AttributeSet attrs) {
         super(context, attrs);
         mContext = context;
         mTunerService = Dependency.get(TunerService.class);
-        mTunerService.addTunable(this, ClockStyle.CLOCK_STYLE_KEY, CUSTOM_AOD_IMAGE_URI_KEY, CUSTOM_AOD_IMAGE_ENABLED_KEY);
+        mTunerService.addTunable(this, CUSTOM_AOD_IMAGE_URI_KEY, CUSTOM_AOD_IMAGE_ENABLED_KEY, CUSTOM_AOD_FS_IMAGE_ENABLED_KEY);
         mStatusBarStateController = Dependency.get(StatusBarStateController.class);
         mStatusBarStateController.addCallback(mStatusBarStateListener);
         mStatusBarStateListener.onDozingChanged(mStatusBarStateController.isDozing());
@@ -106,25 +108,37 @@ public class AODStyle extends RelativeLayout implements TunerService.Tunable {
 
     @Override
     protected void onFinishInflate() {
-        super.onFinishInflate();
-        mAodImageView = findViewById(R.id.custom_aod_image_view);
-        loadAodImage();
+        try {
+            super.onFinishInflate();
+            //if( !mAodFsImageEnabled ) return;
+            mAodImageView = findViewById(R.id.custom_aod_fs_image_view);
+            Log.v(TAG, "mAodImageView=" + mAodImageView);
+            loadAodImage();
+        } catch(Exception e) {
+            Log.v(TAG, "onFinishInflate exception:", e);
+        }
     }
     
     @Override
     protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        mStatusBarStateController.removeCallback(mStatusBarStateListener);
-        mTunerService.removeTunable(this);
-        mBurnInProtectionHandler.removeCallbacks(mBurnInProtectionRunnable);
-        if (mAodImageView != null) {
-            mAodImageView.animate().cancel();
-            mAodImageView.setImageDrawable(null);
+        try {
+            super.onDetachedFromWindow();
+            mStatusBarStateController.removeCallback(mStatusBarStateListener);
+            mTunerService.removeTunable(this);
+            mBurnInProtectionHandler.removeCallbacks(mBurnInProtectionRunnable);
+            if (mAodImageView != null) {
+                mAodImageView.animate().cancel();
+                mAodImageView.setImageBitmap(null);
+            }
+        } catch( Exception e ) {
+            Log.v(TAG, "onDetachedFromWindow:", e);
         }
     }
 
     private void startBurnInProtection() {
-        mBurnInProtectionHandler.post(mBurnInProtectionRunnable);
+        if( !mAodFsImageEnabled ) {
+            mBurnInProtectionHandler.post(mBurnInProtectionRunnable);
+        }
     }
 
     private void stopBurnInProtection() {
@@ -138,10 +152,6 @@ public class AODStyle extends RelativeLayout implements TunerService.Tunable {
     @Override
     public void onTuningChanged(String key, String newValue) {
         switch (key) {
-            case ClockStyle.CLOCK_STYLE_KEY:
-                int clockStyle = TunerService.parseInteger(newValue, 0);
-                mCustomClockEnabled = clockStyle != 0;
-                break;
             case CUSTOM_AOD_IMAGE_URI_KEY:
                 mImagePath = newValue;
                 if (mImagePath != null && !mImagePath.isEmpty() 
@@ -153,34 +163,46 @@ public class AODStyle extends RelativeLayout implements TunerService.Tunable {
                 break;
             case CUSTOM_AOD_IMAGE_ENABLED_KEY:
                 mAodImageEnabled = TunerService.parseIntegerSwitch(
-                    newValue, false) && mCustomClockEnabled;
+                    newValue, false); 
+                loadAodImage();
+                break;
+            case CUSTOM_AOD_FS_IMAGE_ENABLED_KEY:
+                mAodFsImageEnabled = TunerService.parseIntegerSwitch(
+                    newValue, false); 
+                loadAodImage();
                 break;
         }
     }
 
     private void updateAodImageView() {
-        if (mAodImageView == null || !mAodImageEnabled) {
+        if (mAodImageView == null || !mAodImageEnabled || !mAodFsImageEnabled ) {
             if (mAodImageView != null) mAodImageView.setVisibility(View.GONE);
             return;
         }
         loadAodImage();
+
+        ImageView aodImageView;
+        aodImageView = mAodImageView;
+
+        if( aodImageView == null ) return;
+
         if (mDozing) {
-            mAodImageView.setVisibility(View.VISIBLE);
-            mAodImageView.setScaleX(0f);
-            mAodImageView.setScaleY(0f);
-            mAodImageView.animate()
+            aodImageView.setVisibility(View.VISIBLE);
+            aodImageView.setScaleX(0f);
+            aodImageView.setScaleY(0f);
+            aodImageView.animate()
                 .scaleX(1f)
                 .scaleY(1f)
                 .setDuration(500)
                 .withEndAction(this::startBurnInProtection)
                 .start();
         } else {
-            mAodImageView.animate()
+            aodImageView.animate()
                 .scaleX(0f)
                 .scaleY(0f)
                 .setDuration(250)
                 .withEndAction(() -> {
-                    mAodImageView.setVisibility(View.GONE);
+                    aodImageView.setVisibility(View.GONE);
                     stopBurnInProtection();
                 })
                 .start();
@@ -188,33 +210,33 @@ public class AODStyle extends RelativeLayout implements TunerService.Tunable {
     }
 
     private void loadAodImage() {
-        if (mAodImageView == null || mCurrImagePath == null || mCurrImagePath.isEmpty() || mImageLoaded) return;
+        if (mAodImageView == null || mCurrImagePath == null || mCurrImagePath.isEmpty() || !mAodFsImageEnabled || mImageLoaded) return;
         Bitmap bitmap = null;
         try {
             bitmap = BitmapFactory.decodeFile(mCurrImagePath);
             if (bitmap != null) {
-                int targetSize = (int) mContext.getResources().getDimension(R.dimen.custom_aod_image_size);
-                Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, targetSize, targetSize, true);
-                try (java.io.ByteArrayOutputStream stream = new java.io.ByteArrayOutputStream()) {
-                    scaledBitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 90, stream);
-                    byte[] byteArray = stream.toByteArray();
-                    Bitmap compressedBitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
-                    Drawable roundedImg = new CircleFramedDrawable(compressedBitmap, targetSize);
-                    mAodImageView.setImageDrawable(roundedImg);
-                    scaledBitmap.recycle();
-                    compressedBitmap.recycle();
+                if( mAodFsImageEnabled ) {
+                    mAodImageView.setImageBitmap(bitmap);
+                    mAodImageView.setTranslationZ(-10);
                     mImageLoaded = true;
+                    Log.v(TAG, "Image loaded:" + mCurrImagePath);
+                } else {
+                    mImageLoaded = false;
+                    Log.e(TAG, "Image not loaded. Disabled");
+                    mAodImageView.setVisibility(View.GONE);
                 }
             } else {
+                Log.e(TAG, "Image not loaded. Not found or can't decode");
                 mImageLoaded = false;
                 mAodImageView.setVisibility(View.GONE);
             }
         } catch (Exception e) {
+            Log.v(TAG, "Can't load image " + mCurrImagePath, e);
             mImageLoaded = false;
             mAodImageView.setVisibility(View.GONE);
         } finally {
             if (bitmap != null) {
-                bitmap.recycle();
+                //bitmap.recycle();
             }
         }
     }

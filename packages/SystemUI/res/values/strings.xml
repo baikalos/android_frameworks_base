@@ -23,8 +23,12 @@
     <!-- When the battery is low, this is displayed to the user in a dialog.  The title of the low battery alert.  [CHAR LIMIT=NONE]-->
     <string name="battery_low_title">Turn on Battery Saver?</string>
 
+    <string name="battery_low_level_title">Battery level is low!</string>
+
     <!-- When the battery is low, this is displayed to the user in a dialog.  The description of the low battery alert.  [CHAR LIMIT=NONE]-->
     <string name="battery_low_description">You have <xliff:g id="percentage" example="20%">%s</xliff:g> battery left. Battery Saver turns on Dark theme, restricts background activity, and delays notifications.</string>
+
+    <string name="battery_low_level_description">You have <xliff:g id="percentage" example="20%">%s</xliff:g> battery left. </string>
 
     <!-- When the battery is low at first time, this is displayed to the user in a dialog.  The description of the low battery alert.  [CHAR LIMIT=NONE]-->
     <string name="battery_low_intro">Battery Saver turns on Dark theme, restricts background activity, and delays notifications.</string>
@@ -70,6 +74,8 @@
 
     <!-- Battery saver notification dismiss action: Do not turn on battery saver. [CHAR LIMIT=NONE]-->
     <string name="battery_saver_dismiss_action">No thanks</string>
+
+    <string name="battery_low_level_dismiss_action">Dismiss</string>
 
     <!-- Name of the button that links to the Settings app. [CHAR LIMIT=NONE] -->
 

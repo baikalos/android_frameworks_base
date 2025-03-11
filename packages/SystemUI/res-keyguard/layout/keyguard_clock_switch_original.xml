@@ -25,7 +25,6 @@
     android:layout_height="wrap_content"
     android:clipChildren="false"
     android:layout_gravity="center_horizontal|top">
-
     <FrameLayout
         android:id="@+id/lockscreen_clock_view"
         android:layout_width="wrap_content"
@@ -62,6 +61,12 @@
                android:layout_height="wrap_content"
                android:visibility="gone" />
 
+      <include 
+        android:id="@+id/aod_ls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        layout="@layout/keyguard_aod_style" />
+
       <com.android.systemui.statusbar.phone.NotificationIconContainer
           android:id="@+id/left_aligned_notification_icon_container"
           android:layout_width="match_parent"
@@ -69,18 +74,5 @@
           android:paddingStart="@dimen/below_clock_padding_start_icons"
           android:visibility="invisible"
           />
-
-      <include 
-        android:id="@+id/aod_ls"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        layout="@layout/keyguard_aod_style" />
-
-      <include 
-        android:id="@+id/aod_notification_ls"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        layout="@layout/keyguard_aod_notification_style" />
-
     </LinearLayout>
 </com.android.keyguard.KeyguardClockSwitch>
