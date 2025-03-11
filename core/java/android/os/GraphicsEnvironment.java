@@ -175,7 +175,7 @@ public class GraphicsEnvironment {
         try {
             final boolean gameModeEnabledAngle =
                     (mGameManager != null) && mGameManager.isAngleEnabled(packageName);
-            Log.v(TAG, "ANGLE GameManagerService for " + packageName + ": " + gameModeEnabledAngle);
+            //Log.v(TAG, "ANGLE GameManagerService for " + packageName + ": " + gameModeEnabledAngle);
             return gameModeEnabledAngle;
         } catch (SecurityException e) {
             Log.e(TAG, "Caught exception while querying GameManagerService if ANGLE is enabled "
@@ -196,8 +196,8 @@ public class GraphicsEnvironment {
         }
 
         final String devOptIn = getDriverForPackage(context, coreSettings, packageName);
-        Log.v(TAG, "ANGLE Developer option for '" + packageName + "' "
-                + "set to: '" + devOptIn + "'");
+        //Log.v(TAG, "ANGLE Developer option for '" + packageName + "' "
+        //        + "set to: '" + devOptIn + "'");
 
         // We only want to use ANGLE if the developer has explicitly chosen something other than
         // default driver.
@@ -675,7 +675,7 @@ public class GraphicsEnvironment {
         final boolean hasPrereleaseDriver = prereleaseDriver != null && !prereleaseDriver.isEmpty();
 
         if (!hasProductionDriver && !hasPrereleaseDriver) {
-            Log.v(TAG, "Neither updatable production driver nor prerelease driver is supported.");
+            //Log.v(TAG, "Neither updatable production driver nor prerelease driver is supported.");
             return null;
         }
 
