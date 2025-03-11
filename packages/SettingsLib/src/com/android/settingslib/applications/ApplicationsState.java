@@ -259,6 +259,7 @@ public class ApplicationsState {
     }
 
     void doResumeIfNeededLocked() {
+        boolean userIsAdmin = false;
         if (mResumed) {
             return;
         }
@@ -282,6 +283,7 @@ public class ApplicationsState {
                                 user.isAdmin() ? mAdminRetrieveFlags : mRetrieveFlags,
                                 user.id);
                 mApplications.addAll(list.getList());
+                if( user.isAdmin() ) userIsAdmin = true;
             } catch (Exception e) {
                 Log.e(TAG, "Error during doResumeIfNeededLocked", e);
             }
@@ -305,7 +307,7 @@ public class ApplicationsState {
             // Need to trim out any applications that are disabled by
             // something different than the user.
             if (!info.enabled) {
-                if (info.enabledSetting != PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
+                if (!userIsAdmin && info.enabledSetting != PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER) {
                     mApplications.remove(i);
                     i--;
                     continue;

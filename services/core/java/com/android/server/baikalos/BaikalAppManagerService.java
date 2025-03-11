@@ -39,6 +39,7 @@ import android.os.SystemProperties;
 import android.provider.Settings;
 
 import com.android.internal.baikalos.BaikalSpoofer;
+import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.server.ServiceThread;
 import com.android.server.SystemService;
@@ -131,7 +132,7 @@ public final class BaikalAppManagerService extends SystemService {
     private BaikalAppManagerEntry[] initAppList(int userId) {
         return new BaikalAppManagerEntry[] {
             new BaikalAppManagerEntry("gms", "gms_enabled", null, GMS_PACKAGES, false, true, false),
-            new BaikalAppManagerEntry("hms", "hms_enabled", null, HMS_PACKAGES, false, false, false),
+            new BaikalAppManagerEntry("hms", "hms_enabled", null, HMS_PACKAGES, false, false, true),
             new BaikalAppManagerEntry("dolby", "dolby_enabled", "persist.baikal.srv.dolby", DOLBY_PACKAGES, false, false, true),
             new BaikalAppManagerEntry("jdsp", "jdsp_enabled", "persist.baikal.srv.jdsp", JDSP_PACKAGES, false, false, true),
             new BaikalAppManagerEntry("afx", "afx_enabled", "persist.baikal.srv.afx", AFX_PACKAGES, false, true, true),
@@ -166,13 +167,17 @@ public final class BaikalAppManagerService extends SystemService {
                 if(userId != 0 && entry.mRootOnly) continue;
                 if(Arrays.stream(entry.mPackages).anyMatch(packageName::equals)) {
                     if( userId != 0 && entry.mRootOnly ) skip = true;
-                    skip = !entry.mEnabled;
+                    else skip = !entry.mEnabled;
+                    //Slog.d(TAG, "shouldHide: app=" + entry.mName + ", skip=" + skip + ", userId=" + userId);
+                    break;
                 }
             }
         }
 
-        skip |= BaikalSpoofer.shouldFilterApplication(packageName, userId);
-       
+        if( !skip ) {
+            skip |= BaikalSpoofer.shouldFilterApplication(packageName, userId);
+        }
+
         return skip;
     }
 
@@ -197,11 +202,14 @@ public final class BaikalAppManagerService extends SystemService {
                     Arrays.stream(entry.mPackages).anyMatch(info.packageName::equals)) {
                     if( userId != 0 && entry.mRootOnly ) skip = true;
                     else skip = !entry.mEnabled;
+                    Slog.d(TAG, "recreatePackageList: app=" + entry.mName + ", skip=" + skip + ", userId=" + userId);
                     break;
                 }
             }
 
-            skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
+            if( !skip ) {
+                skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
+            }
 
             if( skip ) continue;
             newList.add(info);
@@ -225,12 +233,14 @@ public final class BaikalAppManagerService extends SystemService {
                     Arrays.stream(entry.mPackages).anyMatch(info.packageName::equals)) {
                     if( userId != 0 && entry.mRootOnly ) skip = true;
                     else skip = !entry.mEnabled;
+                    Slog.d(TAG, "recreateApplicationList: app=" + entry.mName + ", skip=" + skip + ", userId=" + userId);
                     break;
                 }
             }
 
-            skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
-
+            if( !skip ) {
+                skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
+            }
             if( skip ) continue;
             newList.add(info);
         }
@@ -244,17 +254,21 @@ public final class BaikalAppManagerService extends SystemService {
         if( entries == null ) return;
 
         for(BaikalAppManagerEntry entry : entries) {
-            if(userId != 0 && entry.mRootOnly) continue;
-            boolean enabled = Settings.Secure.getIntForUser(mResolver, entry.mSettingsUri, entry.mEnabledByDefault ? 1 : 0, userId) == 1;
+            boolean enabled = false;
+            if(userId != 0 && entry.mRootOnly) {
+                enabled = false;
+            } else {
+                enabled = Settings.Secure.getIntForUser(mResolver, entry.mSettingsUri, entry.mEnabledByDefault ? 1 : 0, userId) == 1;
+            }
             entry.mEnabled = enabled;
-            Slog.e(TAG, "updateStateForUser: app=" + entry.mName + ", enabled=" + enabled);
+            Slog.d(TAG, "updateStateForUser: app=" + entry.mName + ", enabled=" + enabled + ", userId=" + userId);
             updatePackagesStateForUser(entry.mPackages, enabled, userId);
-            if( entry.mSystemProperty != null ) setSystemPropertyBoolean(entry.mSystemProperty,enabled);
+            if( entry.mSystemProperty != null && userId == 0 ) setSystemPropertyBoolean(entry.mSystemProperty,enabled);
         }
     }
 
     private void updatePackagesStateForUser(String[] packages, boolean enabled, int userId) {
-        Slog.e(TAG, "updatePackagesStateForUser: packages=" + packages + ", enabled=" + enabled);
+        Slog.d(TAG, "updatePackagesStateForUser: packages=" + packages + ", enabled=" + enabled + ", userId=" + userId);
         try {
             for (String packageName : packages) {
                 try {
@@ -281,11 +295,15 @@ public final class BaikalAppManagerService extends SystemService {
         BaikalAppManagerEntry[] entries = sCachedSettings.get(userId);
         if( entries == null ) { 
 
+            
             BaikalAppManagerEntry[] managedApps = initAppList(userId);
 
             sCachedSettings.put(userId, managedApps);
             entries = managedApps;
+            Slog.d(TAG, "initForUser: managedApps=" + managedApps.length + ", userId=" + userId);
         }
+
+        updateStateForUser(userId);
 
         SettingsObserver observer = new SettingsObserver(mHandler, userId);
 
@@ -294,10 +312,7 @@ public final class BaikalAppManagerService extends SystemService {
             mResolver.registerContentObserver(
                 Settings.Secure.getUriFor(entry.mSettingsUri), false, observer, userId);
         }
-
         mObservers.put(userId, observer);
-
-        updateStateForUser(userId);
     }
 
     private void deInitForUser(int userId) {
