@@ -1221,6 +1221,16 @@ public class BaikalSpoofer {
                 }
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P packageName=" + packageName + " proc=" + sProcessName + ", myPkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
                 return true;
+            } else if( hide3P ) {
+                if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P packageName=" + packageName + " !!! disable by self call !!!! 3P for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
+                    return false;
+                }
+                String lPackageName = packageName == null ? null : packageName.toLowerCase();
+                if( lPackageName == null || lPackageName.contains("lineage") || lPackageName.contains("crdroid") || lPackageName.contains("pixel") ) {
+                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P packageName=" + packageName + " proc=" + sProcessName + ", myPkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
+                    return true;
+                }
             }
 
             if( profile == null ) hideHMS = sActivityManager.getBaikalPackageOption(null,callingUid,AppProfile.OPCODE_HIDE_HMS,0) != 0;

@@ -68,6 +68,7 @@ import android.util.KeyValueListParser;
         public boolean autoLimitBackground;
         public boolean lessRestrictiveBackgroundPolicy;
         public boolean disableBackgroundByDefault;
+        public boolean systemPriority;
 
         private static PowerSaverPolicyConfig currentPowerSaverPolicyConfig_ = new PowerSaverPolicyConfig("boot",-1);
 
@@ -107,6 +108,7 @@ import android.util.KeyValueListParser;
             killInBackground = false;
             lessRestrictiveBackgroundPolicy = false;
             disableBackgroundByDefault = false;
+            systemPriority = false;
         }
 
         public static PowerSaverPolicyConfig deserialize(String policyString) {
@@ -154,6 +156,7 @@ import android.util.KeyValueListParser;
                 policy.killInBackground = parser.getBoolean("kill",false);
                 policy.lessRestrictiveBackgroundPolicy = parser.getBoolean("lrbp",false);
                 policy.disableBackgroundByDefault = parser.getBoolean("dbbd",false);
+                policy.systemPriority = parser.getBoolean("sysp",false);
                 return policy;
 
             } catch( Exception e ) {
@@ -190,6 +193,8 @@ import android.util.KeyValueListParser;
             if( killInBackground ) seralized += "," + "kill=" +  killInBackground;
             if( lessRestrictiveBackgroundPolicy ) seralized += "," + "lrbp=" +  lessRestrictiveBackgroundPolicy;
             if( disableBackgroundByDefault ) seralized += "," + "dbbd=" +  disableBackgroundByDefault;
+            if( systemPriority ) seralized += "," + "sysp=" +  systemPriority;
+
             return seralized;
         }
 
@@ -320,6 +325,11 @@ import android.util.KeyValueListParser;
 
         public PowerSaverPolicyConfig setDisableBackgroundByDefault(boolean enable) {
             disableBackgroundByDefault = enable;
+            return this;
+        }
+
+        public PowerSaverPolicyConfig setSystemPriority(boolean enable) {
+            systemPriority = enable;
             return this;
         }
 

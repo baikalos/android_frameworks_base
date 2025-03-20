@@ -2947,7 +2947,7 @@ public class OomAdjuster {
                 break;
         }
 
-        processGroup = mService.mAppProfileManager.updateProcSchedGroup(app.mAppProfile, processGroup, curSchedGroup);
+        processGroup = mService.mAppProfileManager.updateProcSchedGroup(state.getCurProcState(), state.getCurAdj(),app.mAppProfile, processGroup, curSchedGroup);
         
         if (state.getSetSchedGroup() != curSchedGroup || processGroup != state.getCurrentProcSchedGroup() ) {
             int oldSchedGroup = state.getSetSchedGroup();

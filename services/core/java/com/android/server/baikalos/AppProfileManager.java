@@ -17,12 +17,14 @@
 package com.android.server.baikalos;
 
 
+import static android.app.ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE;
+import static android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE;
+
 import static com.android.server.am.ProcessList.SCHED_GROUP_BACKGROUND;
 import static com.android.server.am.ProcessList.SCHED_GROUP_RESTRICTED;
 import static com.android.server.am.ProcessList.SCHED_GROUP_DEFAULT;
 import static com.android.server.am.ProcessList.SCHED_GROUP_TOP_APP;
 import static com.android.server.am.ProcessList.SCHED_GROUP_TOP_APP_BOUND;
-import static android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE;
 
 import static com.android.server.pm.verify.domain.DomainVerificationCollector.RESTRICT_DOMAINS;
 
@@ -69,6 +71,7 @@ import static com.android.server.location.LocationPermissions.PERMISSION_NONE;
 
 import android.util.Slog;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.os.FileUtils;
 import android.os.Handler;
@@ -184,6 +187,7 @@ public class AppProfileManager {
     private int mWakefulness = WAKEFULNESS_AWAKE;
 
     private boolean mAodOnCharger = false;
+    private boolean mSystemPriority = true;
 
     private int mTopUid=-1;
     private String mTopPackageName;
@@ -828,6 +832,7 @@ public class AppProfileManager {
                                                                       ", mWakefulness=" + mWakefulness);
             activateIdleProfileLocked(force);
             updateBoostValuesIfNeededLocked();
+            updateSystemPriorityLocked();
             updateBypassChargingIfNeededLocked();
             updateStaminaIfNeededLocked();
             return;
@@ -878,10 +883,22 @@ public class AppProfileManager {
         }
 
         updateBoostValuesIfNeededLocked();
+        updateSystemPriorityLocked();
         updateBypassChargingIfNeededLocked();
         updateStaminaIfNeededLocked();
     }
 
+
+    private void updateSystemPriorityLocked() {
+        PowerSaverPolicyConfig policy = BaikalPowerSaveManager.getCurrentPolicy();
+        if( mSystemPriority != policy.systemPriority ) {
+            mSystemPriority = policy.systemPriority;
+            if( mSystemPriority == false ) {
+                Slog.i(TAG,"mSystemPriority=" + mSystemPriority, new Throwable());
+            }
+        }
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"mSystemPriority=" + mSystemPriority);
+    }
 
     private void updateBoostValuesIfNeededLocked() {
         boolean changed = false; 
@@ -1298,7 +1315,7 @@ public class AppProfileManager {
     };
 
    
-    public int updateProcSchedGroup(AppProfile profile, int processGroup, int schedGroup) {
+    public int updateProcSchedGroup(int curProcState, int curAdj, AppProfile profile, int processGroup, int schedGroup) {
         int r_processGroup = processGroup;
 
         int level = 0;
@@ -1313,6 +1330,19 @@ public class AppProfileManager {
             if( profile != null ) level = profile.mPerformanceLevel;
         /*}*/
 
+        if( mSystemPriority ) {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: force system level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup   + " state " + curProcState + " adj " + curAdj);
+            if( schedGroup != SCHED_GROUP_TOP_APP ) {
+                if( curProcState <= ActivityManager.PROCESS_STATE_BOUND_FOREGROUND_SERVICE ) {
+                    processGroup = THREAD_GROUP_TOP_APP;
+                    if( BaikalConstants.BAIKAL_DEBUG_OOM || BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: force system on top level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup   + " state " + curProcState + " adj " + curAdj);
+                    return processGroup;
+                }
+            }
+        } else {
+            if( BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: not force system level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup   + " state " + curProcState + " adj " + curAdj);
+        }
+
         if( cur_profile.mHeavyCPU && schedGroup != SCHED_GROUP_TOP_APP_BOUND && schedGroup != SCHED_GROUP_TOP_APP ) {
             if( processGroup != THREAD_GROUP_RESTRICTED && processGroup != THREAD_GROUP_BACKGROUND ) {
                 processGroup = THREAD_GROUP_RESTRICTED;
@@ -1323,7 +1353,7 @@ public class AppProfileManager {
         }
 
         if( level == 0 ) {
-            if( BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup);
+            if( BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup  + " state " + curProcState + " adj " + curAdj);
             return processGroup;
         }
 
@@ -1391,7 +1421,7 @@ public class AppProfileManager {
         }
 
         if( (processGroup != r_processGroup && BaikalConstants.BAIKAL_DEBUG_OOM) ||
-             BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup);
+             BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) Slog.v(TAG,"updateSchedGroupLocked: level=" + level + " " + profile.mPackageName + " " + schedGroup + " " + r_processGroup + " -> " + processGroup + " state " + curProcState + " adj " + curAdj);
         return processGroup;
 
     }
