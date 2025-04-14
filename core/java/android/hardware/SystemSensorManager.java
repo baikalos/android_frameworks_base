@@ -305,7 +305,7 @@ public class SystemSensorManager extends SensorManager {
         }
 
         if (Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 ) {
+                Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) == 1 ) {
 
             if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION) {
                     Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
@@ -391,7 +391,7 @@ public class SystemSensorManager extends SensorManager {
         }
 
         if (Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) == 1 ) {
+                Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) == 1 ) {
 
             if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION) {
                     Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
