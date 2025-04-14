@@ -57,6 +57,7 @@ import android.os.Message;
 import android.os.PersistableBundle;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Settings;
@@ -143,9 +144,18 @@ public class TrustManagerService extends SystemService {
 
     private static final int TRUST_USUALLY_MANAGED_FLUSH_DELAY = 2 * 60 * 1000;
     private static final String TRUST_TIMEOUT_ALARM_TAG = "TrustManagerService.trustTimeoutForUser";
-    private static final long TRUST_TIMEOUT_IN_MILLIS = 8 * 60 * 60 * 1000;
-    private static final long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = 8 * 60 * 60 * 1000;
-    private static final long TRUSTABLE_TIMEOUT_IN_MILLIS = 8 * 60 * 60 * 1000;
+
+    private static final long TRUST_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trust_tm", 8 * 60 * 60 * 1000);
+    private static final long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trust_itm", 8 * 60 * 60 * 1000);
+    private static final long TRUSTABLE_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trustable_tm", 12 * 60 * 60 * 1000);
+
+    private static long getLong(@NonNull String property, long def) {
+        try {
+            return SystemProperties.getLong(property, def);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
 
     private static final String PRIV_NAMESPACE = "http://schemas.android.com/apk/prv/res/android";
 
@@ -579,6 +589,7 @@ public class TrustManagerService extends SystemService {
 
             if (trustedByAtLeastOneAgent && wasTrusted) {
                 // no change
+                if (DEBUG) Slog.d(TAG, "already trusted: " + trustedByAtLeastOneAgent + ", " + wasTrusted);
                 return;
             } else if (trustedByAtLeastOneAgent && canMoveToTrusted
                     && upgradingTrustForCurrentUser) {
@@ -919,8 +930,9 @@ public class TrustManagerService extends SystemService {
     private void setDeviceLockedForUser(@UserIdInt int userId, boolean locked) {
         final boolean changed;
 
-        if( locked ) Log.d(TAG, "setDeviceLockedForUser:true", new Throwable());
-        else Log.d(TAG, "setDeviceLockedForUser:false");
+        //if( locked ) Log.d(TAG, "setDeviceLockedForUser:true", new Throwable());
+        //else 
+        Log.d(TAG, "setDeviceLockedForUser:false");
         synchronized (mDeviceLockedForUser) {
             changed = isDeviceLockedInner(userId) != locked;
             mDeviceLockedForUser.put(userId, locked);
@@ -1847,6 +1859,8 @@ public class TrustManagerService extends SystemService {
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+            Log.d(TAG, "handleMessage:" + msg.what);
+
             switch (msg.what) {
                 case MSG_REGISTER_LISTENER:
                     addListener((ITrustListener) msg.obj);
