@@ -4326,7 +4326,7 @@ public final class PowerManagerService extends SystemService
         // Here we wait for mWakefulnessChanging to become false since the wakefulness
         // transition to DOZING isn't considered "changed" until the doze wake lock is
         // acquired.
-        if (getGlobalWakefulnessLocked() == WAKEFULNESS_DOZING && mDozeStartInProgress) {
+        if (getGlobalWakefulnessLocked() == WAKEFULNESS_DOZING && (mDozeStartInProgress || mIsPowered)) {
             return true;
         }
 
