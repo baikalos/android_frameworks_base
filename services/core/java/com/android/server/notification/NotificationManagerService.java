@@ -57,6 +57,7 @@ import static android.app.NotificationManager.Policy.SUPPRESSED_EFFECT_PEEK;
 import static android.app.NotificationManager.Policy.SUPPRESSED_EFFECT_SCREEN_OFF;
 import static android.app.NotificationManager.Policy.SUPPRESSED_EFFECT_SCREEN_ON;
 import static android.app.NotificationManager.Policy.SUPPRESSED_EFFECT_STATUS_BAR;
+import static android.baikalos.AppProfile.OPCODE_BLOCK_NOTIFICATION;
 import static android.content.Context.BIND_ALLOW_WHITELIST_MANAGEMENT;
 import static android.content.Context.BIND_AUTO_CREATE;
 import static android.content.Context.BIND_FOREGROUND_SERVICE;
@@ -318,6 +319,8 @@ import com.android.server.utils.quota.MultiRateLimiter;
 import com.android.server.wm.ActivityTaskManagerInternal;
 import com.android.server.wm.BackgroundActivityStartCallback;
 import com.android.server.wm.WindowManagerInternal;
+
+import com.android.internal.baikalos.BaikalConstants;
 
 import org.lineageos.internal.notification.LedValues;
 import org.lineageos.internal.notification.LineageNotificationLights;
@@ -10144,6 +10147,15 @@ public class NotificationManagerService extends SystemService {
                         new VersionedPackage(sbn.getPackageName(), sbn.getUid())))) {
             return false;
         }
+
+
+        if( mActivityManager != null && listener.component != null ) {
+            if( mActivityManager.getBaikalPackageOption(listener.component.getPackageName(),-1,OPCODE_BLOCK_NOTIFICATION,0) != 0 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "isVisibleToListener: blocked: sbn=" + sbn.getPackageName() + "/" + sbn.getUid() + " cmp=" + listener.component + " srv=" + listener.connection + " sys=" + listener.isSystem);
+                return false;
+            }
+        }
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "isVisibleToListener: sbn=" + sbn.getPackageName() + "/" + sbn.getUid() + " cmp=" + listener.component + " srv=" + listener.connection + " sys=" + listener.isSystem);
         return true;
     }
 
