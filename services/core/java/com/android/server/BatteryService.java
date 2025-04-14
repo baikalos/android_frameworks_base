@@ -250,6 +250,8 @@ public final class BatteryService extends SystemService {
 
         mCriticalBatteryLevel = mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_criticalBatteryWarningLevel);
+
+
         mLowBatteryWarningLevel = mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_lowBatteryWarningLevel);
         mLowBatteryCloseWarningLevel = mLowBatteryWarningLevel + mContext.getResources().getInteger(
@@ -323,8 +325,17 @@ public final class BatteryService extends SystemService {
                         false, obs, UserHandle.USER_ALL);
 
                 resolver.registerContentObserver(Settings.Global.getUriFor(
+                        Settings.Global.BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL),
+                        false, obs, UserHandle.USER_ALL);
+
+                resolver.registerContentObserver(Settings.Global.getUriFor(
+                        Settings.Global.BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL),
+                        false, obs, UserHandle.USER_ALL);
+
+                resolver.registerContentObserver(Settings.Global.getUriFor(
                         Settings.Global.BAIKALOS_IGNORE_ZERO_BATTERY),
                         false, obs, UserHandle.USER_ALL);
+
 
                 updateBatteryWarningLevelLocked();
             }
@@ -381,21 +392,32 @@ public final class BatteryService extends SystemService {
 
     private void updateBatteryWarningLevelLocked() {
         final ContentResolver resolver = mContext.getContentResolver();
+
+        mLastLowBatteryWarningLevel = mLowBatteryWarningLevel;
+
+        mCriticalBatteryLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL, 
+                                mContext.getResources().getInteger(com.android.internal.R.integer.config_lowBatteryWarningLevel));
+
         int defWarnLevel = mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_lowBatteryWarningLevel);
-        mLastLowBatteryWarningLevel = mLowBatteryWarningLevel;
+
+        defWarnLevel = Settings.Global.getInt(resolver,
+                Settings.Global.BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL, defWarnLevel);
+
         mLowBatteryWarningLevel = Settings.Global.getInt(resolver,
                 Settings.Global.LOW_POWER_MODE_TRIGGER_LEVEL, defWarnLevel);
+
         if (mLowBatteryWarningLevel == 0) {
             mLowBatteryWarningLevel = defWarnLevel;
         }
         if (mLowBatteryWarningLevel < mCriticalBatteryLevel) {
             mLowBatteryWarningLevel = mCriticalBatteryLevel;
         }
+
         mLowBatteryCloseWarningLevel = mLowBatteryWarningLevel + mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_lowBatteryCloseWarningBump);
-        processValuesLocked(true);
 
+        processValuesLocked(true);
 
         mIgnoreZeroBattery = Settings.Global.getInt(resolver,
                 Settings.Global.BAIKALOS_IGNORE_ZERO_BATTERY, 0) != 0;
