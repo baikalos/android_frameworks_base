@@ -181,12 +181,12 @@ final class UpdatableFontDir {
             for (File dir : dirs) {
                 if (!dir.getName().startsWith(RANDOM_DIR_PREFIX)) {
                     Slog.e(TAG, "Unexpected dir found: " + dir);
-                    return;
+                    continue;
                 }
                 if (!config.updatedFontDirs.contains(dir.getName())) {
                     Slog.i(TAG, "Deleting obsolete dir: " + dir);
-                    FileUtils.deleteContentsAndDir(dir);
-                    continue;
+                    //FileUtils.deleteContentsAndDir(dir);
+                    //continue;
                 }
                 File[] files = dir.listFiles();
                 if (files == null || files.length != 1) {
@@ -197,6 +197,7 @@ final class UpdatableFontDir {
                 if (fontConfig == null) {
                     fontConfig = getSystemFontConfig();
                 }
+                Slog.d(TAG, "Loaded file " + files[0] + " with PS name " + fontFileInfo.getPostScriptName());
                 addFileToMapIfSameOrNewer(fontFileInfo, fontConfig, true /* deleteOldFile */);
             }
             success = true;
