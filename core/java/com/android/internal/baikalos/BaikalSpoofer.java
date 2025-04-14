@@ -111,6 +111,9 @@ public class BaikalSpoofer {
 
     private static OverrideSharedPrefsId sOverrideSharedPrefsId = OverrideSharedPrefsId.OVERRIDE_NONE;
     private static OverrideSystemPropertiesId sOverrideSystemPropertiesId = OverrideSystemPropertiesId.OVERRIDE_NONE;
+    private static SpoofDeviceInfo sOverrideDevice = null;
+
+    static volatile boolean sIsInitialized = false;
 
     static volatile boolean sIsGms = false;
     static volatile boolean sIsGmsUnstable = false;
@@ -199,6 +202,8 @@ public class BaikalSpoofer {
 
     private static AppProfile spoofedProfile = null;
 
+    // public SpoofDeviceInfo(String name, String model, String manufacturer, String displayName, String brand, String fp)  JFR
+
     public static SpoofDeviceInfo[] Devices = new SpoofDeviceInfo[] {
         new SpoofDeviceInfo("karna","M2007J20CI","Xiaomi","Poco X3 India", "xiaomi", "POCO/karna_eea/karna:11/RKQ1.200826.002/V12.0.6.4.RJGEUXM:user/release-keys"), // 1
         new SpoofDeviceInfo("surya","M2007J20CG","Xiaomi","Poco X3 NFC Global", "xiaomi", "POCO/surya_eea/surya:11/RKQ1.200826.002/V12.0.6.4.RJGEUXM:user/release-keys"), // 2
@@ -233,6 +238,7 @@ public class BaikalSpoofer {
         new SpoofDeviceInfo("tangorpro","Pixel Tablet","Google","Pixel Tablet","google", "google/tangorpro/tangorpro:13/TQ3A.230901.001.B1/10750577:user/release-keys"), // 31
         new SpoofDeviceInfo("felix","Pixel Fold","Google","Pixel Fold","google", "google/felix/felix:13/TQ3C.230901.001.B1/10750989:user/release-keys"), // 32
         new SpoofDeviceInfo("husky","Pixel 8 Pro","Google","Pixel 8 Pro","google", "google/husky_beta/husky:15/AP31.240517.022/11948202:user/release-keys"), // 33
+        new SpoofDeviceInfo("qssi_64","SM-S928B","samsung","Galaxy S24 Ultra","samsung", "samsung/e3qxxx/qssi_64:15/AP3A.240905.015.A2/S928BXXU4ZXLJ:user/release-keys"), // 34
     };
 
     public static void maybeSpoofProperties(Application app, Context context) {
@@ -630,8 +636,7 @@ public class BaikalSpoofer {
 
 
             sApplicationFilterDisabled = false;
-
-
+            sIsInitialized = true;
         } catch(Exception fl) {
             Log.e(TAG, "Failed to load profile for :" + packageName + ", sBaikalSpooferActive=" + sBaikalSpooferActive, fl);
         }
@@ -667,6 +672,8 @@ public class BaikalSpoofer {
             if( device.deviceName != null &&  !"".equals(device.deviceName) ) setBuildField("DEVICE", device.deviceName);
             if( device.deviceName != null &&  !"".equals(device.deviceName) ) setBuildField("PRODUCT", device.deviceName);
             if( device.deviceFp != null && !"".equals(device.deviceFp) ) setBuildField("FINGERPRINT", device.deviceFp);
+
+            sOverrideDevice = device;
 
         } catch(Exception e) {
             Log.e(TAG, "Failed to spoof Device :" + packageName, e);
@@ -793,7 +800,11 @@ public class BaikalSpoofer {
 
     public static String overrideStringSystemProperty(@NonNull String key, @Nullable String rval) {
         if( BaikalConstants.BAIKAL_DEBUG_RAW ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " rval " + rval);
+        if( !sIsInitialized ) return rval;
         if( getFilteredDevModeKey(key) ) return "";
+
+        rval = overrideDeviceProperty(key,"",rval);
+
         switch(sOverrideSystemPropertiesId) {
             case OVERRIDE_NONE:
                 break;
@@ -805,7 +816,11 @@ public class BaikalSpoofer {
 
     public static String overrideStringSystemProperty(@NonNull String key, @Nullable String def, @Nullable String rval) {
         if( BaikalConstants.BAIKAL_DEBUG_RAW ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( !sIsInitialized ) return rval;
         if( getFilteredDevModeKey(key) ) return def;
+
+        rval = overrideDeviceProperty(key,def,rval);
+        
         switch(sOverrideSystemPropertiesId) {
             case OVERRIDE_NONE:
                 break;
@@ -817,6 +832,7 @@ public class BaikalSpoofer {
 
     public static int overrideIntSystemProperty(@NonNull String key, int def, int rval) {
         if( BaikalConstants.BAIKAL_DEBUG_RAW ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( !sIsInitialized ) return rval;
         if( getFilteredDevModeKey(key) ) return def;
         switch(sOverrideSystemPropertiesId) {
             case OVERRIDE_NONE:
@@ -829,6 +845,7 @@ public class BaikalSpoofer {
 
     public static long overrideLongSystemProperty(@NonNull String key, long def, long rval) {
         if( BaikalConstants.BAIKAL_DEBUG_RAW ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( !sIsInitialized ) return rval;
         if( getFilteredDevModeKey(key) ) return def;
         switch(sOverrideSystemPropertiesId) {
             case OVERRIDE_NONE:
@@ -841,12 +858,40 @@ public class BaikalSpoofer {
 
     public static Boolean overrideBooleanSystemProperty(@NonNull String key, Boolean def, Boolean rval) {
         if( BaikalConstants.BAIKAL_DEBUG_RAW ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def + " rval " + rval);
+        if( !sIsInitialized ) return rval;
         if( getFilteredDevModeKey(key) ) return def;
         switch(sOverrideSystemPropertiesId) {
             case OVERRIDE_NONE:
                 break;
             case OVERRIDE_COM_GOOGLE_GMS_UNSTABLE:
                 return overrideGmsUnstableBoolean(key,rval);
+        }
+        return rval;
+    }
+
+    private static String overrideDeviceProperty(@NonNull String key, @Nullable String def, @Nullable String rval) {
+        if(sOverrideDevice != null) {
+            if("ro.product.name".equals(key)) {
+                return sOverrideDevice.deviceName;
+            } else if("ro.product.device".equals(key)) {
+                return sOverrideDevice.deviceName;
+            } else if("ro.product.brand".equals(key)) {
+                return sOverrideDevice.deviceBrand;
+            } else if("ro.product.manufacturer".equals(key)) {
+                return sOverrideDevice.deviceManufacturer;
+            } else if("ro.product.model".equals(key)) {
+                return sOverrideDevice.deviceModel;
+            } else if("ro.product.system.name".equals(key)) {
+                return sOverrideDevice.deviceName;
+            } else if("ro.product.system.device".equals(key)) {
+                return sOverrideDevice.deviceName;
+            } else if("ro.product.system.brand".equals(key)) {
+                return sOverrideDevice.deviceBrand;
+            } else if("ro.product.system.manufacturer".equals(key)) {
+                return sOverrideDevice.deviceManufacturer;
+            } else if("ro.product.system.model".equals(key)) {
+                return sOverrideDevice.deviceModel;
+            }
         }
         return rval;
     }
@@ -1166,6 +1211,7 @@ public class BaikalSpoofer {
         return shouldFilterApplication(packageName,userId,callingUid,true);
     }
 
+    private static boolean sCachedInfo = false;
     public static boolean shouldFilterApplication(String packageName, int userId, int callingUid, boolean isSystem) {
 
         boolean hide3P = false;
@@ -1173,35 +1219,21 @@ public class BaikalSpoofer {
         boolean hideHMS = false;
 
 
+        try {
+        if( !sIsInitialized ) return false;
+        if( sActivityManager == null ) return false;
         if( sApplicationFilterDisabled ) return false;
 
         if( callingUid == 0 ) callingUid = myUid();
-        if( UserHandle.getAppId(callingUid) < 10000 ) return false;
+        if( UserHandle.getAppId(callingUid) < 10000 ) {
+            return false;
+        }
 
         if( packageName != null ) {
 
             AppProfile profile = null; 
 
-            try {
-                if( UserHandle.getAppId(callingUid) != 1000 && myUid() == callingUid ) {
-                    profile = AppProfile.getCurrentAppProfile();
-                } else {
-                    if( AppProfileSettings.isLoaded() ) {
-                        profile = AppProfileSettings.getInstance().getProfile(UserHandle.getAppId(callingUid));
-                    } 
-                }
-            } catch(Exception le) {
-                Log.e(TAG,"shouldFilterApplication: packageName=" + packageName + " for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid() + ", callingUid=" + callingUid, le);
-                return false;
-            }
-
-            if( profile != null ) {
-                hideGMS = profile.mHideGMS;
-                hide3P = profile.mHide3P;
-                hideHMS = profile.mHideHMS;
-            }
-
-            if( profile == null ) hideGMS = sActivityManager.getBaikalPackageOption(null,callingUid,AppProfile.OPCODE_HIDE_GMS,0) != 0;
+            hideGMS = sActivityManager.getBaikalPackageOption(null,callingUid,AppProfile.OPCODE_HIDE_GMS,0) != 0;
 
             if( hideGMS && packageName.startsWith("com.google.android.gms") ) { 
                 if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
@@ -1212,7 +1244,7 @@ public class BaikalSpoofer {
                 return true;
             }
 
-            if( profile == null ) hide3P = sActivityManager.getBaikalPackageOption(null,callingUid,AppProfile.OPCODE_HIDE_3P,0) != 0;
+            hide3P = sActivityManager.getBaikalPackageOption(null,callingUid,AppProfile.OPCODE_HIDE_3P,0) != 0;
 
             if( hide3P && !isSystem ) {
                 if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
@@ -1222,7 +1254,9 @@ public class BaikalSpoofer {
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P packageName=" + packageName + " proc=" + sProcessName + ", myPkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
                 return true;
             } else if( hide3P ) {
-                if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P pass (isSystem) packageName=" + packageName + " proc=" + sProcessName + ", myPkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
+            
+                /*if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P packageName=" + packageName + " !!! disable by self call !!!! 3P for proc=" + sProcessName + ", pkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
                     return false;
                 }
@@ -1230,10 +1264,10 @@ public class BaikalSpoofer {
                 if( lPackageName == null || lPackageName.contains("lineage") || lPackageName.contains("crdroid") || lPackageName.contains("pixel") ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P packageName=" + packageName + " proc=" + sProcessName + ", myPkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
                     return true;
-                }
-            }
+                }*/
+            } 
 
-            if( profile == null ) hideHMS = sActivityManager.getBaikalPackageOption(null,callingUid,AppProfile.OPCODE_HIDE_HMS,0) != 0;
+            hideHMS = sActivityManager.getBaikalPackageOption(null,callingUid,AppProfile.OPCODE_HIDE_HMS,0) != 0;
 
             if( hideHMS && (packageName.startsWith("com.huawei.hwid") || packageName.startsWith("com.huawei.hms")) ) { 
                 if( packageName == null || sPackageName == null || packageName.startsWith(sPackageName) || sPackageName.startsWith(packageName) ) { 
@@ -1244,7 +1278,9 @@ public class BaikalSpoofer {
                 return true;
             }
         }
-
+        } catch(Exception ex) {
+            Log.i(TAG,"shouldFilterApplication: Exception!",ex);
+        }
         return false;
     }
 }
