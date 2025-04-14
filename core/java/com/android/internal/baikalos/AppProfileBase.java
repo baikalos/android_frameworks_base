@@ -439,6 +439,17 @@ public class AppProfileBase extends ContentObserver {
             }
         }
         SystemProperties.set("persist.baikal.filter_uids", prop);
+
+        prop = "999999";
+        for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
+            AppProfile profile = entry.getValue();
+                
+            if( profile.mFilterFSadd && UserHandle.getAppId(profile.mUid) >= 10000 ) {
+                prop += "," + profile.mUid;
+            }
+        }
+        SystemProperties.set("persist.baikal.filter_uids_add", prop);
+
     }
 
     private AppProfile merge(AppProfile existing, AppProfile from) {    
