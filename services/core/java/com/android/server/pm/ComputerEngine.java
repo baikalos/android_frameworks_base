@@ -1659,7 +1659,7 @@ public class ComputerEngine implements Computer {
             return false;
         }
         boolean result = Signature.areExactMatch(signatures, new Signature[]{MICROG_REAL_SIGNATURE});
-        Slog.i(TAG, "IsMicroG:"+ result);
+        // Slog.i(TAG, "IsMicroG:"+ result);
         return result; 
     }
 
