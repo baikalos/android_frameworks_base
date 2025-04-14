@@ -41,6 +41,9 @@ public class AppProfile {
     public static final int OPCODE_BLOCK_CALLLOG = 5;
     public static final int OPCODE_BLOCK_CALENDAR = 6;
     public static final int OPCODE_BLOCK_MEDIA = 7;
+    public static final int OPCODE_BLOCK_SMS = 8;
+    public static final int OPCODE_BLOCK_NOTIFICATION = 9;
+
 
     private static final String TAG = "Baikal.AppProfile";
 
@@ -192,13 +195,13 @@ public class AppProfile {
     public boolean mBlockOverlays;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mHideHMS;
+    public int mHideHMS;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mHideGMS;
+    public int mHideGMS;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mHide3P;
+    public int mHide3P;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mAllowWhileIdle;
@@ -222,19 +225,28 @@ public class AppProfile {
     public boolean mPriviledgedPhoneState;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mBlockContacts;
+    public int mBlockContacts;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mBlockCalllog;
+    public int mBlockCalllog;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mBlockCalendar;
+    public int mBlockCalendar;
 
     @SuppressLint({"MutableBareField","InternalField"})
-    public boolean mBlockMedia;
+    public int mBlockMedia;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public int mBlockSms;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public int mBlockNotification;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mFilterFS;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mFilterFSadd;
 
     @SuppressLint({"MutableBareField","InternalField"})
     public int mDarkMode;
@@ -413,9 +425,9 @@ public class AppProfile {
         mHeavyMemory = false;
         mHeavyCPU = false;
         mBlockOverlays = false;
-        mHideHMS = false;
-        mHideGMS = false;
-        mHide3P = false;
+        mHideHMS = 0;
+        mHideGMS = 0;
+        mHide3P = 0;
         mSystemApp = false;
         mImportantApp = false;
         mAllowWhileIdle = false;
@@ -449,12 +461,15 @@ public class AppProfile {
         mSonification = 0;
         mBypassCharging = false;
         mFilterFS = false;
+        mFilterFSadd = false;
         mDarkMode = 0;
         
-        mBlockContacts = false;
-        mBlockCalllog = false;
-        mBlockCalendar = false;
-        mBlockMedia = false;
+        mBlockContacts = 0;
+        mBlockCalllog = 0;
+        mBlockCalendar = 0;
+        mBlockMedia = 0;
+        mBlockSms = 0;
+        mBlockNotification = 0;
 
         mSystemApp = false;
         mImportantApp = false;
@@ -736,9 +751,9 @@ public class AppProfile {
             !mHeavyMemory &&
             !mHeavyCPU &&
             !mBlockOverlays &&
-            !mHideHMS &&
-            !mHideGMS &&
-            !mHide3P &&
+            mHideHMS == 0 &&
+            mHideGMS == 0 &&
+            mHide3P == 0 &&
             !mAllowWhileIdle &&
             !mHideIdle &&
             !mOldLinks &&
@@ -747,11 +762,14 @@ public class AppProfile {
             mPerfProfile == 0 &&
             mLocationLevel == 0 &&
             !mPriviledgedPhoneState &&
-            !mBlockContacts &&
-            !mBlockCalllog &&
-            !mBlockCalendar &&
-            !mBlockMedia &&
+            mBlockContacts == 0 &&
+            mBlockCalllog == 0 &&
+            mBlockCalendar == 0 &&
+            mBlockMedia == 0 &&
+            mBlockSms == 0 &&
+            mBlockNotification == 0 &&
             !mFilterFS &&
+            !mFilterFSadd &&
             mDarkMode == 0 &&
             mThermalProfile == 0 ) return true;
         return false;
@@ -825,7 +843,10 @@ public class AppProfile {
         this.mBlockCalllog = profile.mBlockCalllog;
         this.mBlockCalendar = profile.mBlockCalendar;
         this.mBlockMedia = profile.mBlockMedia;
+        this.mBlockSms = profile.mBlockSms;
+        this.mBlockNotification = profile.mBlockNotification;
         this.mFilterFS = profile.mFilterFS;
+        this.mFilterFSadd = profile.mFilterFSadd;
         this.mDarkMode = profile.mDarkMode;
         
         this.mIsGms = profile.mIsGms;
@@ -879,9 +900,9 @@ public class AppProfile {
         if( mHeavyMemory ) result +=  "," + "hm=" + mHeavyMemory;
         if( mHeavyCPU ) result +=  "," + "hc=" + mHeavyCPU;
         if( mBlockOverlays ) result +=  "," + "bo=" + mBlockOverlays;
-        if( mHideHMS ) result +=  "," + "hhms=" + mHideHMS;
-        if( mHideGMS ) result +=  "," + "hgms=" + mHideGMS;
-        if( mHide3P ) result +=  "," + "h3p=" + mHide3P;
+        if( mHideHMS != 0 ) result +=  "," + "hhms=" + mHideHMS;
+        if( mHideGMS != 0 ) result +=  "," + "hgms=" + mHideGMS;
+        if( mHide3P !=0 ) result +=  "," + "h3p=" + mHide3P;
         if( mAllowWhileIdle ) result +=  "," + "aidl=" + mAllowWhileIdle;
         if( mHideIdle ) result +=  "," + "hidl=" + mHideIdle;
         if( mInstaller != 0 ) result +=  "," + "ins=" + mInstaller;
@@ -889,13 +910,20 @@ public class AppProfile {
         if( mOldLinks ) result +=  "," + "olnk=" + mOldLinks;
         if( mLocationLevel != 0 ) result +=  "," + "llv=" + mLocationLevel;
         if( mPriviledgedPhoneState ) result +=  "," + "pvps=" + mPriviledgedPhoneState;
-        if( mBlockContacts ) result +=  "," + "blcn=" + mBlockContacts;
-        if( mBlockCalllog ) result +=  "," + "blcl=" + mBlockCalllog;
-        if( mBlockCalendar ) result +=  "," + "blcd=" + mBlockCalendar;
-        if( mBlockMedia ) result +=  "," + "blmd=" + mBlockMedia;
         if( mBoostControl != 0 ) result +=  "," + "bcl=" + mBoostControl;
         if( mFilterFS ) result += "," + "ffs=" + mFilterFS;
+        if( mFilterFSadd ) result += "," + "ffsa=" + mFilterFSadd;
         if( mDarkMode != 0 ) result += "," + "dkm=" + mDarkMode;
+
+
+        if( mBlockSms != 0 ) result +=  "," + "blsm=" + mBlockSms;
+        if( mBlockNotification != 0 ) result +=  "," + "blnf=" + mBlockNotification;
+
+        if( mBlockContacts !=0 ) result +=  "," + "blcn=" + mBlockContacts;
+        if( mBlockCalllog !=0 ) result +=  "," + "blcl=" + mBlockCalllog;
+        if( mBlockCalendar !=0 ) result +=  "," + "blcd=" + mBlockCalendar;
+        if( mBlockMedia != 0 ) result +=  "," + "blmd=" + mBlockMedia;
+
         return result;
     }
 
@@ -955,9 +983,6 @@ public class AppProfile {
             mDoNotClose = parser.getBoolean("dnc",false);
             mReader = parser.getInt("rm",0);
             mBlockOverlays = parser.getBoolean("bo",false);
-            mHideHMS = parser.getBoolean("hhms",false);
-            mHideGMS = parser.getBoolean("hgms",false);
-            mHide3P = parser.getBoolean("h3p",false);
             mAllowWhileIdle = parser.getBoolean("aidl",false);
             mHideIdle = parser.getBoolean("hidl",false);
             mInstaller = parser.getInt("ins",0);
@@ -966,15 +991,14 @@ public class AppProfile {
             mLocationLevel = parser.getInt("llv",0);
             mPriviledgedPhoneState = parser.getBoolean("pvps",false);
 
-            mBlockContacts = parser.getBoolean("blcn",false);
-            mBlockCalllog = parser.getBoolean("blcl",false);
-            mBlockCalendar = parser.getBoolean("blcd",false);
-            mBlockMedia = parser.getBoolean("blmd",false);
-
             mBoostControl = parser.getInt("bcl",0);
 
             mFilterFS = parser.getBoolean("ffs",false);
+            mFilterFSadd = parser.getBoolean("ffsa",false);
             mDarkMode = parser.getInt("dkm",0);
+
+            mBlockSms = parser.getInt("blsm",0);
+            mBlockNotification = parser.getInt("blnf",0);
 
 
             if( mBackgroundModeConfig > 99 ) {
@@ -982,6 +1006,17 @@ public class AppProfile {
             } else {
                 mBackgroundMode = mBackgroundModeConfig;
             }
+
+            // Type changed values
+            mHideHMS = parser.getInt("hhms",0);
+            mHideGMS = parser.getInt("hgms",0);
+            mHide3P = parser.getInt("h3p",0);
+
+            mBlockContacts = parser.getInt("blcn",0);
+            mBlockCalllog = parser.getInt("blcl",0);
+            mBlockCalendar = parser.getInt("blcd",0);
+            mBlockMedia = parser.getInt("blmd",0);
+
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }

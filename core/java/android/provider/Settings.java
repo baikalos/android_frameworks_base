@@ -17904,6 +17904,68 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_WIFI = "baikalos_airplane_dont_toggle_wifi";
 
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_HIDE_GMS = "baikalos_hide_gms";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_HIDE_HMS = "baikalos_hide_hms";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_HIDE_3P = "baikalos_hide_3p";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_CONTACTS = "baikalos_block_contacts";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_CALENDAR = "baikalos_block_calendar";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_CALLLOG = "baikalos_block_calllog";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_MEDIA = "baikalos_block_media";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_SMS = "baikalos_block_sms";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_NOTIFICATION = "baikalos_block_notification";
 
         /* End of BaikalOS Global Settings */
 

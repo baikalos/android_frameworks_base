@@ -225,7 +225,6 @@ public class AppProfileManager {
     private boolean mPerfAvailable = false;
     private boolean mThermAvailable = false;
 
-    private boolean mAggressiveMode = false;
     private boolean mForcedExtremeMode = false;
     private boolean mAggressiveIdleMode = false;
     private boolean mKillInBackground = false;
@@ -247,6 +246,18 @@ public class AppProfileManager {
     private boolean mAudioPlaying = false;
 
     private boolean mForcedUpdate = false;
+
+    private boolean mHideHMS = false;
+    private boolean mHideGMS = false;
+    private boolean mHide3P = false;
+
+    private boolean mBlockContacts = false;
+    private boolean mBlockCalllog = false;
+    private boolean mBlockCalendar = false;
+    private boolean mBlockMedia = false;
+
+    private boolean mBlockSms = false;
+    private boolean mBlockNotification = false;
 
     private int mGmsUid = -1;
 
@@ -399,6 +410,42 @@ public class AppProfileManager {
                 mResolver.registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.BAIKALOS_BLOCK_IF_BUSY), false, this);
 
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HIDE_GMS),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HIDE_HMS),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_HIDE_3P),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BLOCK_CONTACTS),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BLOCK_CALENDAR),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BLOCK_CALLLOG),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BLOCK_MEDIA),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BLOCK_SMS),
+                    false, this);
+
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_BLOCK_NOTIFICATION),
+                    false, this);
+
             } catch( Exception e ) {
             }
         
@@ -546,7 +593,6 @@ public class AppProfileManager {
 
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings update mForcedUpdate=" + mForcedUpdate);
 
-        mAggressiveMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_IDLE, 0) != 0;
         mAggressiveIdleMode = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) != 0;
         mKillInBackground = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_KILL_IN_BACKGROUND, 0) != 0;
 
@@ -668,6 +714,17 @@ public class AppProfileManager {
         }
 
         mBlockIfBusy = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_IF_BUSY, 0) == 1; 
+
+        mHideHMS = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_HIDE_HMS, 0) == 1; 
+        mHideGMS = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_HIDE_GMS, 0) == 1; 
+        mHide3P = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_HIDE_3P, 0) == 1; 
+
+        mBlockContacts = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_CONTACTS, 0) == 1; 
+        mBlockCalllog = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_CALLLOG, 0) == 1; 
+        mBlockCalendar = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_CALENDAR, 0) == 1; 
+        mBlockMedia = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_MEDIA, 0) == 1; 
+        mBlockSms = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_SMS, 0) == 1; 
+        mBlockNotification = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_BLOCK_NOTIFICATION, 0) == 1; 
 
         if( changed || mForcedUpdate ) {
             activateCurrentProfileLocked(mForcedUpdate,false);
@@ -1503,7 +1560,6 @@ public class AppProfileManager {
                 return true;
             }
         }
-        if( !mAggressiveMode ) return false;
         if( mAwake ) {
             if( profile.getBackgroundMode() > 1 ) {
                 if( profile.mDebug || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "Background execution restricted by baikalos (" 
@@ -1558,7 +1614,6 @@ public class AppProfileManager {
                 return true;
             }
         }
-        if( !mAggressiveMode ) return false;
         if( mAwake ) {
             if( profile.getBackgroundMode() > 1 ) {
                 Slog.w(TAG, "Background execution disabled by baikalos ("
@@ -1626,6 +1681,16 @@ public class AppProfileManager {
         return def;
     }
 
+
+    private int getTriStateInt(int app, boolean global, boolean system, int def) {
+        switch(app) {
+            case 1: return 0;
+            case 2: return 1;
+            default: return global ? (system ? def : 1) : def;
+        }
+    }
+
+
     public int getPackageOptionFromActivityManager(String packageName, int uid, int opCode, int def) {
 
         int result = def;
@@ -1646,31 +1711,39 @@ public class AppProfileManager {
                     break;
                 
                 case AppProfile.OPCODE_HIDE_HMS:
-                    result = profile.mHideHMS ? 1 : 0;
+                    result = getTriStateInt(profile.mHideHMS, mHideHMS, profile.mSystemApp,def);
                     break;
 
                 case AppProfile.OPCODE_HIDE_GMS:
-                    result = profile.mHideGMS ? 1 : 0;
+                    result = getTriStateInt(profile.mHideGMS, mHideGMS, profile.mSystemApp,def);
                     break;
 
                 case AppProfile.OPCODE_HIDE_3P:
-                    result = profile.mHide3P ? 1 : 0;
+                    result = getTriStateInt(profile.mHide3P, mHide3P, profile.mSystemApp,def);
                     break;
 
                 case AppProfile.OPCODE_BLOCK_CONTACTS:
-                    result = profile.mBlockContacts ? 1 : 0;
+                    result = getTriStateInt(profile.mBlockContacts, mBlockContacts, profile.mSystemApp,def);
                     break;
 
                 case AppProfile.OPCODE_BLOCK_CALLLOG:
-                    result = profile.mBlockCalllog ? 1 : 0;
+                    result = getTriStateInt(profile.mBlockCalllog, mBlockCalllog, profile.mSystemApp,def);
                     break;
 
                 case AppProfile.OPCODE_BLOCK_CALENDAR:
-                    result = profile.mBlockCalendar ? 1 : 0;
+                    result = getTriStateInt(profile.mBlockCalendar, mBlockCalendar, profile.mSystemApp,def);
                     break;
 
                 case AppProfile.OPCODE_BLOCK_MEDIA:
-                    result = profile.mBlockMedia ? 1 : 0;
+                    result = getTriStateInt(profile.mBlockMedia, mBlockMedia, profile.mSystemApp,def);
+                    break;
+
+                case AppProfile.OPCODE_BLOCK_SMS:
+                    result = getTriStateInt(profile.mBlockSms, mBlockSms, profile.mSystemApp,def);
+                    break;
+
+                case AppProfile.OPCODE_BLOCK_NOTIFICATION:
+                    result = getTriStateInt(profile.mBlockNotification, mBlockNotification, profile.mSystemApp,def);
                     break;
 
                 default:
@@ -1709,10 +1782,6 @@ public class AppProfileManager {
     public boolean isExtreme() {
         if( mBaikalPowerSaveManager != null ) return mBaikalPowerSaveManager.getCurrentPowerSaverLevel() >= 3;
         return false;
-    }
-
-    public boolean isAggressive() {
-        return mAggressiveMode;
     }
 
     public boolean isStamina() {
