@@ -16,14 +16,14 @@
 
 package com.android.server.baikalos;
 
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_NONE;
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_LOW;
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_MODERATE;
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_AGGRESSIVE;
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_EXTREME;
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_STAMINA;
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_BATTERY_SAVER;
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_MAX;
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_NONE; // 0
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_LOW; // 1
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_MODERATE; // 2
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_AGGRESSIVE; // 3
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_EXTREME; // 4
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_STAMINA; // 5
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_BATTERY_SAVER; // 6
+import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_MAX; // 7
 
 import android.util.Slog;
 
