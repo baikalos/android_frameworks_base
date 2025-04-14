@@ -152,7 +152,6 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     private int mChargingMode;
     private boolean mPowerModeInd;
 
-
     private int mBatteryStyle = BATTERY_STYLE_PORTRAIT;
     private int mShowBatteryPercent;
     private boolean mBatteryPercentCharging;
@@ -260,6 +259,10 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
             mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.BAIKALOS_POWER_LEVEL_IND), false, this);
+
+            mContext.getContentResolver().registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.STATUS_BAR_BATTERY_TEXT_CHARGING), false, this);
+
         }
 
         @Override
@@ -548,15 +551,22 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             String brick = "\u26D4"; // "\uFE0E";
             String exclamation = "\u26A0"; // "\uFE0E";
 
-            CharSequence mChargeIndicator = mCharging && (mBatteryStyle == BATTERY_STYLE_HIDDEN ||
-                    mBatteryStyle == BATTERY_STYLE_TEXT) ? (bolt + " ") : "";
+            CharSequence mChargeIndicator = ""; 
             
             if( mCharging ) {
                 if( mChargingMode ==  1 ) mChargeIndicator = brick + " ";
                 else if( mChargingMode == 2 ) mChargeIndicator = exclamation + " ";  
+                else {
+                    if (mBatteryStyle == BATTERY_STYLE_TEXT ) {
+                        mChargeIndicator = bolt + " ";
+                    }
+                }
             }
 
-            String percentText = mChargeIndicator + text;
+            String percentText = mChargeIndicator + "";
+            if( mBatteryPercentCharging && mCharging || mBatteryStyle == BATTERY_STYLE_TEXT ) {
+                percentText += text;
+            }
             // Setting text actually triggers a layout pass (because the text view is set to
             // wrap_content width and TextView always relayouts for this). Avoid needless
             // relayout if the text didn't actually change.
@@ -569,6 +579,9 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             if (mStaminaMode) {
                 Log.v(TAG, "staminaMode");
                 mBatteryPercentView.setTextColor(Color.rgb(0,200,0));
+            } else if (mPowerLevel > 5) {
+                Log.v(TAG, "battery saver");
+                mBatteryPercentView.setTextColor(Color.rgb(255,0,0));
             } else if (mPowerLevel > 4) {
                 Log.v(TAG, "extremeMode > 4");
                 mBatteryPercentView.setTextColor(Color.rgb(255,100,20));
