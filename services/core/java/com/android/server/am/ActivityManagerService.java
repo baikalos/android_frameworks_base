@@ -425,11 +425,11 @@ import com.android.server.wm.WindowManagerInternal;
 import com.android.server.wm.WindowManagerService;
 import com.android.server.wm.WindowProcessController;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.internal.baikalos.BaikalActions;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 import com.android.server.baikalos.BaikalAlarmManager;
 
 import dalvik.annotation.optimization.NeverCompile;
@@ -1462,7 +1462,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     final AppRestrictionController mAppRestrictionController;
 
-    static Actions mActions;
+    static BaikalActions mActions;
 
     private final class AppDeathRecipient implements IBinder.DeathRecipient {
         final ProcessRecord mApp;
@@ -1616,9 +1616,9 @@ public class ActivityManagerService extends IActivityManager.Stub
     volatile ActivityManagerInternal.VoiceInteractionManagerProvider
             mVoiceInteractionManagerProvider;
 
-    final AppProfileSettings mAppProfileSettings;
-    final AppProfileManager mAppProfileManager;
-    static AppProfileManager sAppProfileManager;
+    final BaikalAppProfileSettings mBaikalAppProfileSettings;
+    final BaikalAppProfileManager mBaikalAppProfileManager;
+    static BaikalAppProfileManager sBaikalAppProfileManager;
 
     final BaikalAlarmManager mBaikalAlarmManager;
 
@@ -2329,7 +2329,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         mBatteryStatsService = null;
         mHandler = new MainHandler(handlerThread.getLooper());
         mHandlerThread = handlerThread;
-        mActions = new Actions(mContext, mHandlerThread.getLooper());
+        mActions = new BaikalActions(mContext, mHandlerThread.getLooper());
         mConstants = new ActivityManagerConstants(mContext, this, mHandler);
         final ActiveUids activeUids = new ActiveUids(this, false /* postChangesToAtm */);
         mPlatformCompat = null;
@@ -2365,10 +2365,10 @@ public class ActivityManagerService extends IActivityManager.Stub
         mComponentAliasResolver = new ComponentAliasResolver(this);
         mSwipeToScreenshotObserver = null;
 
-        mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
-        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext, mConstants); 
+        mBaikalAppProfileSettings = BaikalAppProfileSettings.getInstance(mHandler, mContext); 
+        mBaikalAppProfileManager = BaikalAppProfileManager.getInstance(mHandlerThread.getLooper(), mContext, mConstants); 
         mBaikalAlarmManager = BaikalAlarmManager.getInstance(mHandlerThread.getLooper(), mContext); 
-        sAppProfileManager = mAppProfileManager;
+        sBaikalAppProfileManager = mBaikalAppProfileManager;
     }
 
     // Note: This method is invoked on the main thread but may need to attach various
@@ -2395,7 +2395,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         mProcStartHandlerThread.start();
         mProcStartHandler = new ProcStartHandler(this, mProcStartHandlerThread.getLooper());
 
-        mActions = new Actions(mContext, mHandlerThread.getLooper());
+        mActions = new BaikalActions(mContext, mHandlerThread.getLooper());
         mConstants = new ActivityManagerConstants(mContext, this, mHandler);
         final ActiveUids activeUids = new ActiveUids(this, true /* postChangesToAtm */);
         mPlatformCompat = (PlatformCompat) ServiceManager.getService(
@@ -2485,8 +2485,8 @@ public class ActivityManagerService extends IActivityManager.Stub
         Watchdog.getInstance().addMonitor(this);
         Watchdog.getInstance().addThread(mHandler);
 
-        mAppProfileSettings = AppProfileSettings.getInstance(mHandler, mContext); 
-        mAppProfileManager = AppProfileManager.getInstance(mHandlerThread.getLooper(), mContext, mConstants); 
+        mBaikalAppProfileSettings = BaikalAppProfileSettings.getInstance(mHandler, mContext); 
+        mBaikalAppProfileManager = BaikalAppProfileManager.getInstance(mHandlerThread.getLooper(), mContext, mConstants); 
         mBaikalAlarmManager = BaikalAlarmManager.getInstance(mHandlerThread.getLooper(), mContext); 
 
         // bind background threads to little cores
@@ -3063,28 +3063,28 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     @Override
     public int getBaikalPackageOption(String packageName, int uid, int opCode,int def) {
-        if( mAppProfileManager == null ) { 
-            Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
+        if( mBaikalAppProfileManager == null ) { 
+            Slog.e(TAG_SWITCH, "mBaikalAppProfileManager = null !!!!!!!!!!!!!!!");
             return def;
         }
-        return mAppProfileManager.getPackageOptionFromActivityManager(packageName,uid,opCode,def);
+        return mBaikalAppProfileManager.getPackageOptionFromActivityManager(packageName,uid,opCode,def);
     }
 
     public int getBaikalOption(int opCode, int def, int callingUid, String callingPackage) {
-        if( mAppProfileManager == null ) { 
+        if( mBaikalAppProfileManager == null ) { 
             Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
             return def;
         }
-        return mAppProfileManager.getBaikalOptionFromActivityManager(opCode,def,callingUid,callingPackage,null);
+        return mBaikalAppProfileManager.getBaikalOptionFromActivityManager(opCode,def,callingUid,callingPackage,null);
     }
 
     @Override
     public int getBaikalOption(int opCode, int def, int callingUid, String callingPackage, Bundle bundle) {
-        if( mAppProfileManager == null ) { 
+        if( mBaikalAppProfileManager == null ) { 
             Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
             return def;
         }
-        return mAppProfileManager.getBaikalOptionFromActivityManager(opCode,def,callingUid,callingPackage,bundle);
+        return mBaikalAppProfileManager.getBaikalOptionFromActivityManager(opCode,def,callingUid,callingPackage,bundle);
     }
 
     @Override
@@ -5987,7 +5987,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             }
         }
         
-        if( AppProfileManager.checkComponentPermission(permission, pid, uid, owningUid, exported)) {
+        if( BaikalAppProfileManager.checkComponentPermission(permission, pid, uid, owningUid, exported)) {
             return PackageManager.PERMISSION_GRANTED;
         }
 
@@ -6072,7 +6072,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
     }
 
-    private boolean isInRestrictedBucket(AppProfile appProfile, int userId, String packageName, long nowElapsed) {
+    private boolean isInRestrictedBucket(BaikalAppProfile appProfile, int userId, String packageName, long nowElapsed) {
         int mode = appProfile.getBackgroundMode();
         if( mode > 0 ) return true;
         if( mode < 0 ) return false;
@@ -6082,7 +6082,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     // Unified app-op and target sdk check
     @GuardedBy(anyOf = {"this", "mProcLock"})
-    int appRestrictedInBackgroundLOSP(AppProfile appProfile, int uid, String packageName, int packageTargetSdk) {
+    int appRestrictedInBackgroundLOSP(BaikalAppProfile appProfile, int uid, String packageName, int packageTargetSdk) {
         // Apps that target O+ are always subject to background check
 
         if (packageTargetSdk >= Build.VERSION_CODES.O) {
@@ -6136,7 +6136,7 @@ public class ActivityManagerService extends IActivityManager.Stub
     // some other background operations are not.  If we're doing a check
     // of service-launch policy, allow those callers to proceed unrestricted.
     @GuardedBy(anyOf = {"this", "mProcLock"})
-    int appServicesRestrictedInBackgroundLOSP(AppProfile appProfile, int uid, String packageName, int packageTargetSdk) {
+    int appServicesRestrictedInBackgroundLOSP(BaikalAppProfile appProfile, int uid, String packageName, int packageTargetSdk) {
 
         int mode = appProfile.getBackgroundMode();
 
@@ -6193,15 +6193,15 @@ public class ActivityManagerService extends IActivityManager.Stub
             int callingPid, boolean alwaysRestrict, boolean disabledOnly, boolean forcedStandby) {
 
 
-        if( mAppProfileManager.isTopAppUid(uid,packageName) ) {
+        if( mBaikalAppProfileManager.isTopAppUid(uid,packageName) ) {
             if (DEBUG_BACKGROUND_CHECK) Slog.d(TAG, "checkAllowBackground: top uid=" + uid + " pkg=" + packageName + " result=" + 0);
             return 0;
         }
 
-        AppProfile appProfile = null;
+        BaikalAppProfile appProfile = null;
        
-        appProfile = mAppProfileManager.getAppProfile(packageName, uid);
-        if( appProfile == null ) appProfile = new AppProfile(packageName,uid);
+        appProfile = mBaikalAppProfileManager.getBaikalAppProfile(packageName, uid);
+        if( appProfile == null ) appProfile = new BaikalAppProfile(packageName,uid);
 
         int result = getAppStartModeBaikal(appProfile, uid, packageName, packageTargetSdk,
             callingPid, alwaysRestrict, disabledOnly, forcedStandby);
@@ -6209,7 +6209,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         return result;
     }
 
-    int getAppStartModeBaikal(AppProfile appProfile, int uid, String packageName, int packageTargetSdk,
+    int getAppStartModeBaikal(BaikalAppProfile appProfile, int uid, String packageName, int packageTargetSdk,
             int callingPid, boolean alwaysRestrict, boolean disabledOnly, boolean forcedStandby) {
         if (mInternal.isPendingTopUid(uid)) {
             return ActivityManager.APP_START_MODE_NORMAL;
@@ -6840,7 +6840,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         //        uid, packageName);
         //return mode != AppOpsManager.MODE_ALLOWED;
 
-        return mAppProfileManager.isAppRestricted(uid,packageName);
+        return mBaikalAppProfileManager.isBaikalAppRestricted(uid,packageName);
     }
 
     @Override
@@ -6950,7 +6950,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             app.setPersistent(true);
             app.mState.setMaxAdj(ProcessList.PERSISTENT_PROC_ADJ);
             Slog.d(TAG, "Baikal.AppProfile: setPersistent " + info.packageName);
-        } else if( app.mAppProfile != null && app.mAppProfile.mPinned ) {
+        } else if( app.mBaikalAppProfile != null && app.mBaikalAppProfile.mPinned ) {
             //app.setPersistent(true);
             app.mState.setMaxAdj(ProcessList.FOREGROUND_APP_ADJ);
             //app.mState.setMaxAdj(ProcessList.VISIBLE_APP_ADJ);
@@ -6967,7 +6967,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
 
 
-        Slog.d(TAG, "Baikal.AppProfile: addApp profile=" + app.mAppProfile);
+        Slog.d(TAG, "Baikal.AppProfile: addApp profile=" + app.mBaikalAppProfile);
         return app;
     }
 
@@ -7062,7 +7062,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 mActivityTaskManager.onScreenAwakeChanged(isAwake);
                 mOomAdjProfiler.onWakefulnessChanged(wakefulness);
                 mOomAdjuster.onWakefulnessChanged(wakefulness);
-                mAppProfileManager.setAwake(isAwake);
+                mBaikalAppProfileManager.setAwake(isAwake);
             }
             updateOomAdjLocked(OomAdjuster.OOM_ADJ_REASON_UI_VISIBILITY);
         }
@@ -8288,9 +8288,9 @@ public class ActivityManagerService extends IActivityManager.Stub
             mAppOpsService.systemReady();
             mProcessList.onSystemReady();
             mAppRestrictionController.onSystemReady();
-            mAppProfileManager.init_debug();
-            mAppProfileSettings.registerObserver(true);
-            mAppProfileManager.initialize();
+            mBaikalAppProfileManager.init_debug();
+            mBaikalAppProfileSettings.registerObserver(true);
+            mBaikalAppProfileManager.initialize();
             mBaikalAlarmManager.initialize();
             mSystemReady = true;
             t.traceEnd();
@@ -13085,7 +13085,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                             ? new ComponentName(app.packageName, app.backupAgentName)
                             : new ComponentName("android", "FullBackupAgent");
 
-            if( !mAppProfileManager.isTopAppUid(app.uid,app.packageName) )
+            if( !mBaikalAppProfileManager.isTopAppUid(app.uid,app.packageName) )
             {
                 if(isAppBackgroundBlocked(app) ) {
                     Slog.i(TAG,"Baikal.AppProfile: bindBackupAgent blocked for background restricted app:" + app, new Throwable());
@@ -15842,7 +15842,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                 }
 
                 // Notify BaikalOS core about top app change
-                if( uid != -1 ) Actions.sendTopAppChanged(mCurResumedUid,mCurResumedPackage);
+                if( uid != -1 ) BaikalActions.sendTopAppChanged(mCurResumedUid,mCurResumedPackage);
             }
         }
         return r;
@@ -17556,7 +17556,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                         }
                     }
 
-                    AppProfile appProfile = mAppProfileManager.getAppProfile(info.packageName, info.uid);
+                    BaikalAppProfile appProfile = mBaikalAppProfileManager.getBaikalAppProfile(info.packageName, info.uid);
                     if( appProfile != null ) {
                         appProfile.setLastTopTimeNow();
                     }
@@ -18913,9 +18913,9 @@ public class ActivityManagerService extends IActivityManager.Stub
         */
         //return mAppStateTracker.isAppRestricted(uid,packageName);
 
-        AppProfile appProfile = null;
+        BaikalAppProfile appProfile = null;
        
-        appProfile = mAppProfileManager.getAppProfile(info.packageName, info.uid);
+        appProfile = mBaikalAppProfileManager.getBaikalAppProfile(info.packageName, info.uid);
 
         if( appProfile == null ) return false;
         if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) return true;
@@ -18924,9 +18924,9 @@ public class ActivityManagerService extends IActivityManager.Stub
     }
 
     boolean isAppBackgroundBlocked(ApplicationInfo info) {
-        AppProfile appProfile = null;
+        BaikalAppProfile appProfile = null;
        
-        appProfile = mAppProfileManager.getAppProfile(info.packageName, info.uid);
+        appProfile = mBaikalAppProfileManager.getBaikalAppProfile(info.packageName, info.uid);
 
         if( appProfile == null ) return false;
         if( appProfile.getBackgroundMode() > 1 ) return true;
