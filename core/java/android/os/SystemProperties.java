@@ -19,7 +19,7 @@ package android.os;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.SystemApi;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.util.Log;
 import android.util.MutableInt;
@@ -357,19 +357,19 @@ public class SystemProperties {
     }
 
     private static boolean getFilteredKey(String key,String def) {
-        if( AppProfile.isDebug() ) Log.d(TAG, "Tryget " + AppProfile.packageName() + "/" + AppProfile.uid() + " system property " + key + " def " + def);
-        if( "init.svc.adbd".equals(key) ||
+        if( BaikalAppProfile.isDebug() ) Log.d(TAG, "Tryget " + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + " system property " + key + " def " + def);
+        /*if( "init.svc.adbd".equals(key) ||
             "sys.usb.state".equals(key) ||
             "sys.usb.config".equals(key) ) {
             Log.d(TAG, key + ": for " + Process.myUid() + " system property " + key + " def " + def);
-            if( AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if( BaikalAppProfile.getCurrentAppProfile().mHideDevMode ) {
                 try {
                     Log.d(TAG, "Hide:" + key + ": for " + Process.myUid() + " system property " + key + " return def " + def);
                     return true;
                 } catch(Exception e)  {
                 }
             }
-        }
+        }*/
         return false;
     }
 
