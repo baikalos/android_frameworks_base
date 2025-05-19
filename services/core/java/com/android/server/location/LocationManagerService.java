@@ -142,9 +142,9 @@ import com.android.server.location.settings.LocationSettings;
 import com.android.server.location.settings.LocationUserSettings;
 import com.android.server.pm.permission.LegacyPermissionManagerInternal;
 
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -713,7 +713,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
         // clients in the system process must have an attribution tag set
         Preconditions.checkState(identity.getPid() != Process.myPid() || attributionTag != null);
 
-        String provider = AppProfileManager.overrideProvider(provider_, request, identity);
+        String provider = BaikalAppProfileManager.overrideProvider(provider_, request, identity);
 
         if( provider == null ) {
             return CancellationSignal.createTransport();
@@ -747,7 +747,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
         }
 
 
-        provider = AppProfileManager.overrideProvider(provider, request, identity);
+        provider = BaikalAppProfileManager.overrideProvider(provider, request, identity);
         if( provider == null ) return;
 
         request = validateLocationRequest(provider, request, identity);
@@ -789,7 +789,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
             }
         }
 
-        provider = AppProfileManager.overrideProvider(provider, request, identity);
+        provider = BaikalAppProfileManager.overrideProvider(provider, request, identity);
         if( provider == null ) return;
 
         request = validateLocationRequest(provider, request, identity);
@@ -834,9 +834,9 @@ public class LocationManagerService extends ILocationManager.Stub implements
             }
         }
 
-        sanitized = AppProfileManager.sanitizeLocationRequest(sanitized, identity);
-
         identity.setWorkSource(workSource);
+
+        sanitized = BaikalAppProfileManager.sanitizeLocationRequest(sanitized, identity);
 
         if (workSource.isEmpty()) {
             identity.addToWorkSource(workSource);
@@ -929,7 +929,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
         // clients in the system process must have an attribution tag set
         Preconditions.checkArgument(identity.getPid() != Process.myPid() || attributionTag != null);
 
-        String provider = AppProfileManager.overrideProvider(provider_, null, identity);
+        String provider = BaikalAppProfileManager.overrideProvider(provider_, null, identity);
 
         if( provider == null ) {
             Log.e(TAG,"getLastLocation rejected pkg=" + packageName + "/" + identity.getUid());

@@ -57,11 +57,11 @@ import com.android.server.IoThread;
 import com.android.server.job.JobSchedulerInternal.JobStorePersistStats;
 import com.android.server.job.controllers.JobStatus;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.Actions;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalActions;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -223,9 +223,9 @@ public final class JobStore {
         boolean replaced = mJobSet.remove(jobStatus);
         mJobSet.add(jobStatus);
         if (jobStatus.isPersisted()) {
-            AppProfileManager appProfileManager = AppProfileManager.getInstance();
+            BaikalAppProfileManager appProfileManager = BaikalAppProfileManager.getInstance();
         
-            AppProfile profile = appProfileManager != null ? appProfileManager.getAppProfile(jobStatus.getSourcePackageName(),jobStatus.getSourceUid()) : null;
+            BaikalAppProfile profile = appProfileManager != null ? appProfileManager.getBaikalAppProfile(jobStatus.getSourcePackageName(),jobStatus.getSourceUid()) : null;
             if( profile != null ) {
                 if( profile.mBackgroundMode > 0 ) jobStatus.setPersisted(false); 
             }
@@ -922,9 +922,9 @@ public final class JobStore {
     
             final String sourceTag = parser.getAttributeValue(null, "sourceTag");
 
-            AppProfileManager appProfileManager = AppProfileManager.getInstance();
+            BaikalAppProfileManager appProfileManager = BaikalAppProfileManager.getInstance();
         
-            AppProfile profile = appProfileManager != null ? appProfileManager.getAppProfile(sourcePackageName,sourceUid) : null;
+            BaikalAppProfile profile = appProfileManager != null ? appProfileManager.getBaikalAppProfile(sourcePackageName,sourceUid) : null;
             if( profile != null ) {
                 if( profile.mBackgroundMode > 0 ) jobBuilder.setPersisted(false); 
             }

@@ -48,7 +48,7 @@ import com.android.server.LocalServices;
 import com.android.server.lights.LightsManager;
 import com.android.server.lights.LogicalLight;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;

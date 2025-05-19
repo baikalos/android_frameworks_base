@@ -166,7 +166,7 @@ import com.android.server.pm.UserManagerInternal;
 import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -1763,7 +1763,7 @@ public final class AppRestrictionController {
             case STANDBY_BUCKET_RARE:
             case STANDBY_BUCKET_RESTRICTED:
             default:
-                if( AppProfileManager.getBackgroundMode(packageName, uid) > 0 ) {
+                if( BaikalAppProfileManager.getBackgroundMode(packageName, uid) > 0 ) {
                     return new Pair<>(RESTRICTION_LEVEL_BACKGROUND_RESTRICTED, mEmptyTrackerInfo);                    
                 }
                 if (mInjector.getAppStateTracker()

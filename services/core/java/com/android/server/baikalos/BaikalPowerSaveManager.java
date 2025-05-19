@@ -16,14 +16,14 @@
 
 package com.android.server.baikalos;
 
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_NONE; // 0
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_LOW; // 1
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_MODERATE; // 2
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_AGGRESSIVE; // 3
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_EXTREME; // 4
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_STAMINA; // 5
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_BATTERY_SAVER; // 6
-import static com.android.internal.baikalos.PowerSaverPolicyConfig.POWERSAVER_POLICY_MAX; // 7
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_NONE; // 0
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_LOW; // 1
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_MODERATE; // 2
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_AGGRESSIVE; // 3
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_EXTREME; // 4
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_STAMINA; // 5
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_BATTERY_SAVER; // 6
+import static com.android.internal.baikalos.BaikalPowerSaverPolicyConfig.POWERSAVER_POLICY_MAX; // 7
 
 import android.util.Slog;
 
@@ -80,13 +80,13 @@ import android.view.Display;
 import static android.view.Display.DEFAULT_DISPLAY;
 import static android.view.Display.INVALID_DISPLAY;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.Actions;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalActions;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
-import com.android.internal.baikalos.PowerSaverSettings;
-import com.android.internal.baikalos.PowerSaverPolicyConfig;
+import com.android.internal.baikalos.BaikalPowerSaverSettings;
+import com.android.internal.baikalos.BaikalPowerSaverPolicyConfig;
 
 import com.android.server.LocalServices;
 import com.android.server.am.ActivityManagerConstants;
@@ -114,14 +114,15 @@ public class BaikalPowerSaveManager {
     private boolean mUnrestrictedNetwork;
 
     static BaikalPowerSaveManager mInstance;
-    static PowerSaverSettings mPowerSaverSettings;
+    static BaikalPowerSaverSettings mPowerSaverSettings;
+
     static PowerManager mPowerManager;
 
     static BatterySaverPolicyConfig [] mLevels;
 
-    static PowerSaverPolicyConfig [] mPolicies;
+    static BaikalPowerSaverPolicyConfig [] mPolicies;
 
-    static PowerSaverPolicyConfig [] mDefaultPolicies;
+    static BaikalPowerSaverPolicyConfig [] mDefaultPolicies;
 
     ActivityManagerConstants mAmConstants;
 
@@ -132,7 +133,7 @@ public class BaikalPowerSaveManager {
     private boolean mForcedExtremeMode;
 
     private int mCurrentPowerSaverLevel = -1;
-    static private PowerSaverPolicyConfig mCurrentPolicy;
+    static private BaikalPowerSaverPolicyConfig mCurrentPolicy;
 
 
     private String mPolicyString = "";
@@ -148,10 +149,10 @@ public class BaikalPowerSaveManager {
         return mInstance;
     }
 
-    public static PowerSaverPolicyConfig getCurrentPolicy() {
+    public static BaikalPowerSaverPolicyConfig getCurrentPolicy() {
         if( mCurrentPolicy == null ) {
             Slog.i(TAG,"mCurrentPolicy=null");
-            mCurrentPolicy = new PowerSaverPolicyConfig("<unknown>",0);
+            mCurrentPolicy = new BaikalPowerSaverPolicyConfig("<unknown>",0);
         }
         return mCurrentPolicy;
     }
@@ -211,8 +212,8 @@ public class BaikalPowerSaveManager {
     private BaikalPowerSaveManager(Looper looper, Context context, ActivityManagerConstants amConstants) {
 
         mLevels = new BatterySaverPolicyConfig[POWERSAVER_POLICY_MAX];
-        mPolicies = new PowerSaverPolicyConfig[POWERSAVER_POLICY_MAX];
-        mDefaultPolicies = new PowerSaverPolicyConfig[POWERSAVER_POLICY_MAX];
+        mPolicies = new BaikalPowerSaverPolicyConfig[POWERSAVER_POLICY_MAX];
+        mDefaultPolicies = new BaikalPowerSaverPolicyConfig[POWERSAVER_POLICY_MAX];
 
         mPowerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
 
@@ -220,7 +221,7 @@ public class BaikalPowerSaveManager {
         mLooper = looper;
         mHandler = new Handler(mLooper);
         mAmConstants = amConstants;
-        mPowerSaverSettings = new PowerSaverSettings(mHandler,mContext);
+        mPowerSaverSettings = new BaikalPowerSaverSettings(mHandler,mContext);
     }
 
     public void initialize() {
@@ -229,7 +230,7 @@ public class BaikalPowerSaveManager {
 
             mInstance = this;
 
-            mDefaultPolicies[POWERSAVER_POLICY_NONE] = (new PowerSaverPolicyConfig("default",POWERSAVER_POLICY_NONE))
+            mDefaultPolicies[POWERSAVER_POLICY_NONE] = (new BaikalPowerSaverPolicyConfig("default",POWERSAVER_POLICY_NONE))
                 .setAdjustBrightnessFactor(100)
                 .setAdvertiseIsEnabled(false)
                 .setEnableFullBackup(true)
@@ -257,7 +258,7 @@ public class BaikalPowerSaveManager {
 
             mCurrentPolicy = mDefaultPolicies[POWERSAVER_POLICY_NONE];
 
-            mDefaultPolicies[POWERSAVER_POLICY_LOW] = (new PowerSaverPolicyConfig("low",POWERSAVER_POLICY_LOW))
+            mDefaultPolicies[POWERSAVER_POLICY_LOW] = (new BaikalPowerSaverPolicyConfig("low",POWERSAVER_POLICY_LOW))
                 .setAdjustBrightnessFactor(100)
                 .setAdvertiseIsEnabled(false)
                 .setEnableFullBackup(false)
@@ -284,7 +285,7 @@ public class BaikalPowerSaveManager {
                 .setkillBgRestrictedCachedIdleSettleTime(600);
 
 
-            mDefaultPolicies[POWERSAVER_POLICY_MODERATE] = (new PowerSaverPolicyConfig("moderate",POWERSAVER_POLICY_MODERATE))
+            mDefaultPolicies[POWERSAVER_POLICY_MODERATE] = (new BaikalPowerSaverPolicyConfig("moderate",POWERSAVER_POLICY_MODERATE))
                 .setAdjustBrightnessFactor(100)
                 .setAdvertiseIsEnabled(false)
                 .setEnableFullBackup(false)
@@ -310,7 +311,7 @@ public class BaikalPowerSaveManager {
                 .setKillInBackground(true)
                 .setkillBgRestrictedCachedIdleSettleTime(300);
 
-            mDefaultPolicies[POWERSAVER_POLICY_AGGRESSIVE] = (new PowerSaverPolicyConfig("aggressive",POWERSAVER_POLICY_AGGRESSIVE))
+            mDefaultPolicies[POWERSAVER_POLICY_AGGRESSIVE] = (new BaikalPowerSaverPolicyConfig("aggressive",POWERSAVER_POLICY_AGGRESSIVE))
                 .setAdjustBrightnessFactor(100)
                 .setAdvertiseIsEnabled(false)
                 .setEnableFullBackup(false)
@@ -336,7 +337,7 @@ public class BaikalPowerSaveManager {
                 .setKillInBackground(true)
                 .setkillBgRestrictedCachedIdleSettleTime(30);
 
-            mDefaultPolicies[POWERSAVER_POLICY_EXTREME] = (new PowerSaverPolicyConfig("extreme",POWERSAVER_POLICY_EXTREME))
+            mDefaultPolicies[POWERSAVER_POLICY_EXTREME] = (new BaikalPowerSaverPolicyConfig("extreme",POWERSAVER_POLICY_EXTREME))
                 .setAdjustBrightnessFactor(50)
                 .setAdvertiseIsEnabled(false)
                 .setEnableFullBackup(false)
@@ -362,7 +363,7 @@ public class BaikalPowerSaveManager {
                 .setKillInBackground(true)
                 .setkillBgRestrictedCachedIdleSettleTime(15);
 
-            mDefaultPolicies[POWERSAVER_POLICY_BATTERY_SAVER] = (new PowerSaverPolicyConfig("batterysaver",POWERSAVER_POLICY_BATTERY_SAVER))
+            mDefaultPolicies[POWERSAVER_POLICY_BATTERY_SAVER] = (new BaikalPowerSaverPolicyConfig("batterysaver",POWERSAVER_POLICY_BATTERY_SAVER))
                 .setAdjustBrightnessFactor(50)
                 .setAdvertiseIsEnabled(true)
                 .setEnableFullBackup(false)
@@ -388,7 +389,7 @@ public class BaikalPowerSaveManager {
                 .setKillInBackground(true)
                 .setkillBgRestrictedCachedIdleSettleTime(30);
 
-            mDefaultPolicies[POWERSAVER_POLICY_STAMINA] = (new PowerSaverPolicyConfig("stamina",POWERSAVER_POLICY_STAMINA))
+            mDefaultPolicies[POWERSAVER_POLICY_STAMINA] = (new BaikalPowerSaverPolicyConfig("stamina",POWERSAVER_POLICY_STAMINA))
                 .setAdjustBrightnessFactor(50)
                 .setAdvertiseIsEnabled(true)
                 .setEnableFullBackup(false)
@@ -534,8 +535,8 @@ public class BaikalPowerSaveManager {
     }
 
     private boolean loadOrDefaultLocked(int type) {
-        PowerSaverPolicyConfig policy = null;
-        HashMap<Integer,PowerSaverPolicyConfig> map = mPowerSaverSettings.getPoliciesById();
+        BaikalPowerSaverPolicyConfig policy = null;
+        HashMap<Integer, BaikalPowerSaverPolicyConfig> map = mPowerSaverSettings.getPoliciesById();
         policy = mPowerSaverSettings.getPoliciesById().get(type);
         if( policy == null ) {
             policy = initDefaultPolicyLocked(type);
@@ -549,7 +550,7 @@ public class BaikalPowerSaveManager {
         return false;
     }
 
-    private void updatePolicyLocked(int type, PowerSaverPolicyConfig policy) {
+    private void updatePolicyLocked(int type, BaikalPowerSaverPolicyConfig policy) {
         if( policy != null ) {
             mPowerSaverSettings.getPoliciesById().put(type, policy);
             //mPowerSaverSettings.getPoliciesByName().put(policy.policyName, policy);
@@ -562,11 +563,11 @@ public class BaikalPowerSaveManager {
         }
     }
 
-    private PowerSaverPolicyConfig initDefaultPolicyLocked(int type) {
+    private BaikalPowerSaverPolicyConfig initDefaultPolicyLocked(int type) {
         return initPolicyLocked(type,true,null);
     }
 
-    private PowerSaverPolicyConfig initPolicyLocked(int type, boolean def, PowerSaverPolicyConfig config) {
+    private BaikalPowerSaverPolicyConfig initPolicyLocked(int type, boolean def, BaikalPowerSaverPolicyConfig config) {
         if( type < POWERSAVER_POLICY_NONE || type >= POWERSAVER_POLICY_MAX ) return null;
 
         mPolicies[type] = !def ? config : mDefaultPolicies[type];
@@ -607,7 +608,7 @@ public class BaikalPowerSaveManager {
             powerSaverLevel = setEffectiveMode(powerSaverLevel,mPowerLevelStandby);
         }
 
-        AppProfile.setPowerMode(powerSaverLevel);
+        BaikalAppProfile.setPowerMode(powerSaverLevel);
 
         Settings.Global.putInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_POWER_LEVEL_CURRENT, powerSaverLevel);
 
@@ -617,7 +618,7 @@ public class BaikalPowerSaveManager {
             if( powerSaverLevel >= POWERSAVER_POLICY_NONE && powerSaverLevel < POWERSAVER_POLICY_MAX ) {
                 if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
                 mCurrentPolicy = mPolicies[powerSaverLevel];
-                AppProfile.setDefaultBackgroundMode(mCurrentPolicy.disableBackgroundByDefault ? 2:0);
+                BaikalAppProfile.setDefaultBackgroundMode(mCurrentPolicy.disableBackgroundByDefault ? 2:0);
                 activateCurrentPolicy();
                 mPowerManager.setAdaptivePowerSavePolicy(mLevels[powerSaverLevel]);
                 mPowerManager.setAdaptivePowerSaveEnabled(true);
@@ -631,7 +632,7 @@ public class BaikalPowerSaveManager {
     }
 
     private void activateCurrentPolicy() {
-        PowerSaverPolicyConfig.setCurrentPowerSaverPolicyConfig(mCurrentPolicy);
+        BaikalPowerSaverPolicyConfig.setCurrentPowerSaverPolicyConfig(mCurrentPolicy);
     }
 
     public boolean getUnrestrictedNetwork() {

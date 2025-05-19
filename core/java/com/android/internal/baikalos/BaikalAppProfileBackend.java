@@ -38,7 +38,7 @@ import android.content.res.Resources;
 import android.content.res.Resources.Theme;
 
 import android.app.AppOpsManager;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 
 import android.net.Uri;
 
@@ -56,13 +56,13 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class AppProfileBackend extends AppProfileBase {
+public class BaikalAppProfileBackend extends BaikalAppProfileBase {
 
     private static final String TAG = "BaikalSettings";
 
-    private static AppProfileBackend sInstance;
+    private static BaikalAppProfileBackend sInstance;
 
-    private AppProfileBackend(Handler handler,Context context) {
+    private BaikalAppProfileBackend(Handler handler,Context context) {
         super(handler,context);
         super.registerObserver(false);
         loadProfiles();
@@ -73,26 +73,26 @@ public class AppProfileBackend extends AppProfileBase {
         Slog.i(TAG, "Preferences changed (selfChange=" + selfChange + ", uri=" + uri + "). Reloading");
     }
 
-    public static AppProfileBackend getInstance() {
+    public static BaikalAppProfileBackend getInstance() {
         return sInstance;
     }
 
-    public static AppProfileBackend getInstance(Handler handler, Context context) {
+    public static BaikalAppProfileBackend getInstance(Handler handler, Context context) {
         if (sInstance == null) {
-            sInstance = new AppProfileBackend(handler,context);
+            sInstance = new BaikalAppProfileBackend(handler,context);
         }
         return sInstance;
     }
 
-    public AppProfile updateProfile(AppProfile profile) {
+    public BaikalAppProfile updateProfile(BaikalAppProfile profile) {
         synchronized(this) {
             return updateProfileLocked(profile);
         }
     }
 
-    public AppProfile updateProfileLocked(AppProfile profile) {
+    public BaikalAppProfile updateProfileLocked(BaikalAppProfile profile) {
         if( "android".equals(profile.mPackageName) || "system".equals(profile.mPackageName) ) return profile;
-        AppProfile newProfile = profile;
+        BaikalAppProfile newProfile = profile;
         if( !_profilesByPackageName.containsKey(profile.mPackageName) ) {
             if( profile.isDefault() ) {
                 Slog.i(TAG, "Profile not found. But is default: " + profile.toString());
@@ -102,7 +102,7 @@ public class AppProfileBackend extends AppProfileBase {
             _profilesByPackageName.put(profile.mPackageName, profile);
             newProfile = profile;
         } else {
-            AppProfile oldProfile = _profilesByPackageName.get(profile.mPackageName);
+            BaikalAppProfile oldProfile = _profilesByPackageName.get(profile.mPackageName);
             oldProfile.update(profile);
             newProfile = oldProfile;
         }

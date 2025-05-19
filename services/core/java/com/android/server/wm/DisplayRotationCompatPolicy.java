@@ -56,7 +56,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.protolog.common.ProtoLog;
 import com.android.server.UiThread;
 
-import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 
 import java.util.Map;
 import java.util.Set;

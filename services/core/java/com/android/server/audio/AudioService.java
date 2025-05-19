@@ -190,7 +190,7 @@ import com.android.server.audio.AudioServiceEvents.DeviceVolumeEvent;
 import com.android.server.audio.AudioServiceEvents.PhoneStateEvent;
 import com.android.server.audio.AudioServiceEvents.VolChangedBroadcastEvent;
 import com.android.server.audio.AudioServiceEvents.VolumeEvent;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 import com.android.server.pm.UserManagerInternal;
 import com.android.server.pm.UserManagerInternal.UserRestrictionsListener;
 import com.android.server.pm.UserManagerService;
@@ -924,7 +924,7 @@ public class AudioService extends IAudioService.Stub
         public Lifecycle(Context context) {
             super(context);
             mService = new AudioService(context);
-            AppProfileManager.setAudioService(mService);
+            BaikalAppProfileManager.setAudioService(mService);
         }
 
         @Override

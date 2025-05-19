@@ -262,7 +262,7 @@ import com.android.server.policy.WindowManagerPolicy;
 import com.android.server.wm.LocalAnimationAdapter.AnimationSpec;
 import com.android.server.wm.SurfaceAnimator.AnimationType;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import dalvik.annotation.optimization.NeverCompile;
 
@@ -1206,7 +1206,7 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
             mAttrs.flags |= FLAG_SHOW_WHEN_LOCKED;
         }
 
-        if( AppProfileManager.getCurrentProfile().mForcedScreenshot ) {
+        if( BaikalAppProfileManager.getCurrentProfile().mForcedScreenshot ) {
             Slog.v(TAG, "forcedScreenShot " + this + " token=" + mToken);
             mAttrs.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
         }
@@ -2027,7 +2027,7 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
     }
 
     boolean isSecureLocked() {
-        if( AppProfileManager.getCurrentProfile().mForcedScreenshot ) {
+        if( BaikalAppProfileManager.getCurrentProfile().mForcedScreenshot ) {
             Slog.v(TAG, "isSecureLocked: forcedScreenShot " + this + " token=" + mToken);
             mAttrs.flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
             return false;

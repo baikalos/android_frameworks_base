@@ -17,7 +17,7 @@
 package android.app;
 
 import android.annotation.Nullable;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.Compatibility;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;

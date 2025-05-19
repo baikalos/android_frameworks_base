@@ -25,7 +25,7 @@ import android.annotation.SystemService;
 import android.annotation.TestApi;
 import android.app.ActivityThread;
 import android.app.compat.CompatChanges;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
 import android.compat.annotation.Overridable;
@@ -67,7 +67,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.ArrayUtils;
 
 import com.android.internal.baikalos.BaikalSpoofer;
-import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -746,7 +746,10 @@ public final class CameraManager {
                 getPhysicalIdToCharsMap(characteristics);
 
 
-        if( !AppProfile.isCameraEnabled(characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) ) return null; 
+        if( !BaikalAppProfile.isCameraEnabled(characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) ) {
+            Log.i(TAG, "openCameraDeviceUserAsync: from " + ActivityThread.currentOpPackageName() + " to " + cameraId + ", disabled by baikalos settings. cp=" + BaikalAppProfile.getCurrentAppProfile().toString());
+            return null; 
+        }
 
         synchronized (mLock) {
 
@@ -773,7 +776,7 @@ public final class CameraManager {
 
                 boolean overrideToPortrait = shouldOverrideToPortrait(mContext);
 
-                Log.i(TAG, "openCameraDeviceUserAsync: from " + ActivityThread.currentOpPackageName() + " to " + cameraId + ", op=" + overrideToPortrait + ", cp=" + AppProfile.getCurrentAppProfile().toString());
+                Log.i(TAG, "openCameraDeviceUserAsync: from " + ActivityThread.currentOpPackageName() + " to " + cameraId + ", op=" + overrideToPortrait + ", cp=" + BaikalAppProfile.getCurrentAppProfile().toString());
 
 
                 cameraUser = cameraService.connectDevice(callbacks, cameraId,
@@ -2651,7 +2654,7 @@ public final class CameraManager {
 
         private void onCameraOpenedLocked(String cameraId, String clientPackageId) {
             String oldApk = mOpenedDevices.put(cameraId, clientPackageId);
-            if( mOpenedDevices.size() > 0 ) AppProfileSettings.setCameraActive(true);
+            if( mOpenedDevices.size() > 0 ) BaikalAppProfileSettings.setCameraActive(true);
 
             if (oldApk != null) {
                 if (oldApk.equals(clientPackageId)) {
@@ -2686,7 +2689,7 @@ public final class CameraManager {
 
         private void onCameraClosedLocked(String cameraId) {
             mOpenedDevices.remove(cameraId);
-            if( mOpenedDevices.size() == 0 ) AppProfileSettings.setCameraActive(false);
+            if( mOpenedDevices.size() == 0 ) BaikalAppProfileSettings.setCameraActive(false);
 
 
             final int callbackCount = mCallbackMap.size();

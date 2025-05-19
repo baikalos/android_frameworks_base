@@ -35,11 +35,11 @@ import android.util.Slog;
 import android.util.SparseBooleanArray;
 import android.util.proto.ProtoOutputStream;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.internal.baikalos.BaikalActions;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import com.android.internal.util.ArrayUtils;
 import com.android.server.DeviceIdleInternal;
@@ -209,7 +209,7 @@ public final class DeviceIdleJobsController extends StateController {
         //AppProfile dstProfile = AppProfileManager.getInstance().getProfile(job.getPackageName());
         //if( dstProfile.getBackgroundMode() < 0 ) return true;
 
-        AppProfile srcProfile = AppProfileManager.getInstance().getAppProfile(job.getSourcePackageName(),job.getSourceUid());
+        BaikalAppProfile srcProfile = BaikalAppProfileManager.getInstance().getBaikalAppProfile(job.getSourcePackageName(),job.getSourceUid());
         if( srcProfile != null && srcProfile.getBackgroundMode(false) < 0 ) return true;
 
         final int appId = UserHandle.getAppId(job.getSourceUid());
@@ -222,7 +222,7 @@ public final class DeviceIdleJobsController extends StateController {
      */
     boolean isAllowedWhileIdleLocked(JobStatus job) {
 
-        AppProfile srcProfile = AppProfileManager.getInstance().getProfile(job.getSourcePackageName(),job.getSourceUid());
+        BaikalAppProfile srcProfile = BaikalAppProfileManager.getInstance().getBaikalProfile(job.getSourcePackageName(),job.getSourceUid());
         if( srcProfile != null ) {
             if( srcProfile.getBackgroundMode(false) < 0 ) return true;
             if( srcProfile.mAllowWhileIdle ) return true;

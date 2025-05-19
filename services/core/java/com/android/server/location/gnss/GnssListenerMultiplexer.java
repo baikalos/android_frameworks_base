@@ -43,7 +43,7 @@ import com.android.server.location.injector.UserInfoHelper.UserListener;
 import com.android.server.location.listeners.BinderListenerRegistration;
 import com.android.server.location.listeners.ListenerMultiplexer;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import java.util.Collection;
 import java.util.Objects;
@@ -316,7 +316,7 @@ public abstract class GnssListenerMultiplexer<TRequest, TListener extends IInter
             return true;
         }
 
-        int level = AppProfileManager.getBaikalPermissionLevel(null, identity);
+        int level = BaikalAppProfileManager.getBaikalPermissionLevel(null, identity);
         if( level == 1 || level == 2 ) return true;
 
         if (mSettingsHelper.getBackgroundThrottlePackageWhitelist().contains(

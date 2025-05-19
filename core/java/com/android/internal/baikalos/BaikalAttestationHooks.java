@@ -52,9 +52,9 @@ import com.android.internal.org.bouncycastle.cert.X509CertificateHolder;
 /**
  * @hide
  */
-public final class AttestationHooks {
+public final class BaikalAttestationHooks {
 
-    private static final String TAG = AttestationHooks.class.getSimpleName();
+    private static final String TAG = BaikalAttestationHooks.class.getSimpleName();
     private static final boolean DEBUG = false;
 
     private static final String SPOOF_PIXEL_PI = "persist.sys.pixelprops.pi";

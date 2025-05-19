@@ -17,4 +17,4 @@
 
 package android.baikalos;
 
-parcelable AppProfile;
+parcelable BaikalAppProfile;

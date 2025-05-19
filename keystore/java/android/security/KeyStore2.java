@@ -33,7 +33,7 @@ import android.util.Log;
 
 import java.util.Calendar;
 
-import com.android.internal.baikalos.AttestationHooks;
+import com.android.internal.baikalos.BaikalAttestationHooks;
 
 /**
  * @hide This should not be made public in its present form because it
@@ -252,7 +252,7 @@ public class KeyStore2 {
     public KeyEntryResponse getKeyEntry(@NonNull KeyDescriptor descriptor)
             throws KeyStoreException {
         KeyEntryResponse response = handleRemoteExceptionWithRetry((service) -> service.getKeyEntry(descriptor));
-        return AttestationHooks.onGetKeyEntry(response);
+        return BaikalAttestationHooks.onGetKeyEntry(response);
     }
 
     /**

@@ -26,8 +26,7 @@ import android.os.Process;
 import android.util.Slog;
 import android.util.KeyValueListParser;
 
-    public class PowerSaverPolicyConfig {
-
+public class BaikalPowerSaverPolicyConfig {
 
     public static final int POWERSAVER_POLICY_NONE = 0;
     public static final int POWERSAVER_POLICY_LOW = 1;
@@ -70,18 +69,18 @@ import android.util.KeyValueListParser;
         public boolean disableBackgroundByDefault;
         public boolean systemPriority;
 
-        private static PowerSaverPolicyConfig currentPowerSaverPolicyConfig_ = new PowerSaverPolicyConfig("boot",-1);
+        private static BaikalPowerSaverPolicyConfig currentPowerSaverPolicyConfig_ = new BaikalPowerSaverPolicyConfig("boot",-1);
 
-        public static PowerSaverPolicyConfig getCurrentPowerSaverPolicyConfig() {  
+        public static BaikalPowerSaverPolicyConfig getCurrentPowerSaverPolicyConfig() {  
             return currentPowerSaverPolicyConfig_;
         }
 
-        public static void setCurrentPowerSaverPolicyConfig(PowerSaverPolicyConfig currentPowerSaverPolicyConfig) {  
+        public static void setCurrentPowerSaverPolicyConfig(BaikalPowerSaverPolicyConfig currentPowerSaverPolicyConfig) {  
             currentPowerSaverPolicyConfig_ = currentPowerSaverPolicyConfig;
         }
         
 
-        public PowerSaverPolicyConfig(String name, int number) {
+        public BaikalPowerSaverPolicyConfig(String name, int number) {
             policyName = name;
             policyNumber = number;
             adjustBrightnessFactor = 100;
@@ -111,7 +110,7 @@ import android.util.KeyValueListParser;
             systemPriority = false;
         }
 
-        public static PowerSaverPolicyConfig deserialize(String policyString) {
+        public static BaikalPowerSaverPolicyConfig deserialize(String policyString) {
             KeyValueListParser parser = new KeyValueListParser(',');
 
             try {
@@ -130,7 +129,7 @@ import android.util.KeyValueListParser;
             try {
                 int number = parser.getInt("pnr",0);
 
-                PowerSaverPolicyConfig policy = new PowerSaverPolicyConfig(name,number);
+                BaikalPowerSaverPolicyConfig policy = new BaikalPowerSaverPolicyConfig(name,number);
 
                 policy.adjustBrightnessFactor = parser.getInt("abf",100);
                 policy.advertiseIsEnabled = parser.getBoolean("av",false);
@@ -198,137 +197,137 @@ import android.util.KeyValueListParser;
             return seralized;
         }
 
-        public PowerSaverPolicyConfig setPolicyName(String policyName_) {
+        public BaikalPowerSaverPolicyConfig setPolicyName(String policyName_) {
             policyName = policyName_;
             return this;
         }
 
-        public PowerSaverPolicyConfig setPolicyNumber(int policyNumber_) {
+        public BaikalPowerSaverPolicyConfig setPolicyNumber(int policyNumber_) {
             policyNumber = policyNumber_;
             return this;
         }
 
-        public PowerSaverPolicyConfig setAdjustBrightnessFactor(int  adjustBrightnessFactor_) {
+        public BaikalPowerSaverPolicyConfig setAdjustBrightnessFactor(int  adjustBrightnessFactor_) {
             adjustBrightnessFactor = adjustBrightnessFactor_;
             return this;
         }
 
-        public PowerSaverPolicyConfig setAdvertiseIsEnabled(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setAdvertiseIsEnabled(boolean enable) {
             advertiseIsEnabled = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableFullBackup(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableFullBackup(boolean enable) {
             enableFullBackup = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableKeyValueBackup(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableKeyValueBackup(boolean enable) {
             enableKeyValueBackup = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableAnimation(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableAnimation(boolean enable) {
             enableAnimation = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableAod(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableAod(boolean enable) {
             enableAod = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableLaunchBoost(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableLaunchBoost(boolean enable) {
             enableLaunchBoost = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableInteractionBoost(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableInteractionBoost(boolean enable) {
             enableInteractionBoost = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableRenderingBoost(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableRenderingBoost(boolean enable) {
             enableRenderingBoost = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableOptionalSensors(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableOptionalSensors(boolean enable) {
             enableOptionalSensors = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableVibration(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableVibration(boolean enable) {
             enableVibration = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableAdjustBrightness(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableAdjustBrightness(boolean enable) {
             enableAdjustBrightness = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableDataSaver(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableDataSaver(boolean enable) {
             enableDataSaver = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableFirewall(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableFirewall(boolean enable) {
             enableFirewall = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableNightMode(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableNightMode(boolean enable) {
             enableNightMode = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setEnableQuickDoze(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setEnableQuickDoze(boolean enable) {
             enableQuickDoze = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setForceAllAppsStandby(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setForceAllAppsStandby(boolean enable) {
             forceAllAppsStandby = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setForceBackgroundCheck(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setForceBackgroundCheck(boolean enable) {
             forceBackgroundCheck = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setLocationMode(int mode) {
+        public BaikalPowerSaverPolicyConfig setLocationMode(int mode) {
             locationMode = mode;
             return this;
         }
 
-        public PowerSaverPolicyConfig setSoundTriggerMode(int mode) {
+        public BaikalPowerSaverPolicyConfig setSoundTriggerMode(int mode) {
             soundTriggerMode = mode;
             return this;
         }
 
-        public PowerSaverPolicyConfig setkillBgRestrictedCachedIdleSettleTime(int timeout) {
+        public BaikalPowerSaverPolicyConfig setkillBgRestrictedCachedIdleSettleTime(int timeout) {
             killBgRestrictedCachedIdleSettleTime = timeout;
             return this;
         }
 
-        public PowerSaverPolicyConfig setKillInBackground(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setKillInBackground(boolean enable) {
             killInBackground = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setLessRestrictiveBackgroundPolicy(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setLessRestrictiveBackgroundPolicy(boolean enable) {
             lessRestrictiveBackgroundPolicy = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setDisableBackgroundByDefault(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setDisableBackgroundByDefault(boolean enable) {
             disableBackgroundByDefault = enable;
             return this;
         }
 
-        public PowerSaverPolicyConfig setSystemPriority(boolean enable) {
+        public BaikalPowerSaverPolicyConfig setSystemPriority(boolean enable) {
             systemPriority = enable;
             return this;
         }
@@ -355,5 +354,5 @@ import android.util.KeyValueListParser;
                 .setSoundTriggerMode(soundTriggerMode)
                 .build();
         }
-    }
+}
 

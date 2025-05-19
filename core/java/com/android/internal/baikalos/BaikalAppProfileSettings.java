@@ -38,7 +38,7 @@ import android.content.res.Resources;
 import android.content.res.Resources.Theme;
 
 import android.app.AppOpsManager;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 
 import android.net.Uri;
 
@@ -57,17 +57,17 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class AppProfileSettings extends AppProfileBase {
+public class BaikalAppProfileSettings extends BaikalAppProfileBase {
 
     private static final String TAG = "BaikalSettings";
 
-    private static AppProfileSettings sInstance;
+    private static BaikalAppProfileSettings sInstance;
     private static boolean sScreenMode = true;
     private static boolean sSuperSaverAvailable = false;
 
     private boolean mAutorevokeDisabled;
 
-    private AppProfileSettings(Handler handler,Context context) {
+    private BaikalAppProfileSettings(Handler handler,Context context) {
         super(handler,context);
 
         final Resources resources = mContext.getResources();
@@ -142,7 +142,7 @@ public class AppProfileSettings extends AppProfileBase {
     public static void updateRulesForWhitelistedAppIdsBaikal(final SparseIntArray uidRules, int userId, int chain) {
     
         
-        AppProfileSettings _settings = AppProfileSettings.getInstance();
+        BaikalAppProfileSettings _settings = BaikalAppProfileSettings.getInstance();
         if( _settings == null ) {
             Slog.e(TAG,"updateRulesForWhitelistedAppIdsBaikal: Not ready yet");
             return;
@@ -155,8 +155,8 @@ public class AppProfileSettings extends AppProfileBase {
             return;
         }
 
-        final HashMap<String, AppProfile> profilesByPackageName =  _settings._profilesByPackageName;
-        final HashMap<Integer, AppProfile> profilesByUid =  _settings._profilesByUid;
+        final HashMap<String, BaikalAppProfile> profilesByPackageName =  _settings._profilesByPackageName;
+        final HashMap<Integer, BaikalAppProfile> profilesByUid =  _settings._profilesByUid;
 
         final int minlevel = chain != 2 ? 0 : 1;
 
@@ -166,13 +166,13 @@ public class AppProfileSettings extends AppProfileBase {
                 PackageManager.MATCH_ANY_USER);
 
         for (PackageInfo info : installedAppInfo) {
-            AppProfile profile = null ; 
+            BaikalAppProfile profile = null ; 
             if( profilesByPackageName.containsKey(info.packageName) ) {
                 profile = profilesByPackageName.get(info.packageName);
             } else if( profilesByUid.containsKey(UserHandle.getAppId(info.applicationInfo.uid)) ) {
                 profile = profilesByUid.get(UserHandle.getAppId(info.applicationInfo.uid));
             } else {
-                profile = new AppProfile(info.packageName, UserHandle.getAppId(info.applicationInfo.uid));
+                profile = new BaikalAppProfile(info.packageName, UserHandle.getAppId(info.applicationInfo.uid));
             }
 
             if( profile.mImportantApp ||
@@ -206,14 +206,14 @@ public class AppProfileSettings extends AppProfileBase {
 
     public static void updateBackgroundRestrictedUidPackagesLocked(Set<Pair<Integer, String>> backgroundRestrictedUidPackages, boolean forceAllAppsStandby) {
 
-        AppProfileSettings _settings = AppProfileSettings.getInstance();
+        BaikalAppProfileSettings _settings = BaikalAppProfileSettings.getInstance();
         if( _settings == null ) {
             Slog.i(TAG,"updateBackgroundRestrictedUidPackagesLocked: Not ready yet");
             return;
         }
         
-        final HashMap<String, AppProfile> profilesByPackageName =  _settings._profilesByPackageName;
-        final HashMap<Integer, AppProfile> profilesByUid =  _settings._profilesByUid;
+        final HashMap<String, BaikalAppProfile> profilesByPackageName =  _settings._profilesByPackageName;
+        final HashMap<Integer, BaikalAppProfile> profilesByUid =  _settings._profilesByUid;
         
         Slog.i(TAG,"updateBackgroundRestrictedUidPackagesLocked:" + forceAllAppsStandby);
 
@@ -232,7 +232,7 @@ public class AppProfileSettings extends AppProfileBase {
                 PackageManager.MATCH_ANY_USER);
 
         for (PackageInfo info : installedAppInfo) {
-            AppProfile profile = null ; 
+            BaikalAppProfile profile = null ; 
 
             int appId = UserHandle.getAppId(info.applicationInfo.uid);
 
@@ -249,7 +249,7 @@ public class AppProfileSettings extends AppProfileBase {
                     continue;
                 }
             } else {
-                profile = new AppProfile(info.packageName, appId);
+                profile = new BaikalAppProfile(info.packageName, appId);
             }
 
 
@@ -326,13 +326,13 @@ public class AppProfileSettings extends AppProfileBase {
         return mAutorevokeDisabled;
     }
 
-    public static AppProfileSettings getInstance() {
+    public static BaikalAppProfileSettings getInstance() {
         return sInstance;
     }
 
-    public static AppProfileSettings getInstance(Handler handler, Context context) {
+    public static BaikalAppProfileSettings getInstance(Handler handler, Context context) {
         if (sInstance == null) {
-            sInstance = new AppProfileSettings(handler,context);
+            sInstance = new BaikalAppProfileSettings(handler,context);
         }
         return sInstance;
     }

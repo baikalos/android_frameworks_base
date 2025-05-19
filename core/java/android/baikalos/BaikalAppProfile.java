@@ -31,7 +31,7 @@ import android.provider.Settings;
 import android.util.Slog;
 import android.util.KeyValueListParser;
 
-public class AppProfile {
+public class BaikalAppProfile {
 
     public static final int OPCODE_LOCATION = 0;
     public static final int OPCODE_HIDE_HMS = 1;
@@ -45,7 +45,7 @@ public class AppProfile {
     public static final int OPCODE_BLOCK_NOTIFICATION = 9;
 
 
-    private static final String TAG = "Baikal.AppProfile";
+    private static final String TAG = "Baikal.BaikalAppProfile";
 
     @SuppressLint({"MutableBareField","InternalField","AllUpper"})
     public static boolean DEBUG = false;
@@ -290,7 +290,7 @@ public class AppProfile {
 
     private static int sTopUid = -1;
     private static @Nullable String  sTopPackageName = "unknown";
-    private static AppProfile sTopAppProfile = new AppProfile("top",-1);
+    private static BaikalAppProfile sTopAppProfile = new BaikalAppProfile("top",-1);
 
     public static void setDefaultBackgroundMode(int mode) {
         mDefaultBackgroundMode = mode;
@@ -350,13 +350,13 @@ public class AppProfile {
         return sPackageName;
     }
 
-    private static AppProfile sCurrentAppProfile = new AppProfile("current",-1);
+    private static BaikalAppProfile sCurrentAppProfile = new BaikalAppProfile("current",-1);
 
-    public static @Nullable AppProfile getCurrentAppProfile() {
+    public static @Nullable BaikalAppProfile getCurrentAppProfile() {
         return sCurrentAppProfile;
     }
 
-    public static void setCurrentAppProfile(@Nullable AppProfile profile,@Nullable String packageName, int uid) {
+    public static void setCurrentAppProfile(@Nullable BaikalAppProfile profile,@Nullable String packageName, int uid) {
         sPackageName = packageName;
         sUid = uid;
         sCurrentAppProfile = profile;
@@ -366,11 +366,11 @@ public class AppProfile {
         if( DEBUG ) Slog.d(TAG, "CurrentAppProfile set to :" + sPackageName + "/" + sUid);
     }
 
-    public static @Nullable AppProfile getTopAppProfile() {
+    public static @Nullable BaikalAppProfile getTopAppProfile() {
         return sTopAppProfile;
     }
 
-    public static void setTopAppProfile(@Nullable AppProfile profile,@Nullable String packageName, int uid) {
+    public static void setTopAppProfile(@Nullable BaikalAppProfile profile,@Nullable String packageName, int uid) {
         sTopPackageName = packageName;
         sTopUid = uid;
         sTopAppProfile = profile;
@@ -383,13 +383,13 @@ public class AppProfile {
         return sDefaultProfile;
     }*/
 
-    private AppProfile() {
+    private BaikalAppProfile() {
         mPackageName = "";
         mUid = -1;
         clear();
     }
 
-    public AppProfile(@Nullable String packageName, int uid) {
+    public BaikalAppProfile(@Nullable String packageName, int uid) {
 
         if( packageName == null ) mPackageName = "";
         else mPackageName = packageName;
@@ -398,7 +398,7 @@ public class AppProfile {
         clear();
     }
 
-    public AppProfile(@Nullable AppProfile profile) {
+    public BaikalAppProfile(@Nullable BaikalAppProfile profile) {
         update(profile);
     }
 
@@ -775,7 +775,7 @@ public class AppProfile {
         return false;
     }
 
-    public @Nullable AppProfile update(@Nullable AppProfile profile) {
+    public @Nullable BaikalAppProfile update(@Nullable BaikalAppProfile profile) {
         if( profile == null ) {
             Slog.e(TAG, "Invalid profile assignment", new Throwable());
             return null;
@@ -852,7 +852,7 @@ public class AppProfile {
         this.mIsGms = profile.mIsGms;
         this.mIsGmsPersistent = profile.mIsGmsPersistent;
         this.mIsGmsUnstable = profile.mIsGmsUnstable;
-        if( TRACE || mDebug ) Slog.d(TAG, "AppProfile updated :" + profile.serialize());
+        if( TRACE || mDebug ) Slog.d(TAG, "BaikalAppProfile updated :" + profile.serialize());
         return this;
     }
 
@@ -1034,8 +1034,8 @@ public class AppProfile {
         return mLastTopTime;
     }
 
-    public static @Nullable AppProfile deserializeProfile(@Nullable String profileString) {
-        AppProfile profile = new AppProfile();
+    public static @Nullable BaikalAppProfile deserializeProfile(@Nullable String profileString) {
+        BaikalAppProfile profile = new BaikalAppProfile();
         try {
             profile.deserialize(profileString);
             return profile;
@@ -1076,7 +1076,7 @@ public class AppProfile {
         boolean backDisabled = Settings.Global.getInt(resolver,
                         Settings.Global.BAIKALOS_CAMERA_DISABLE_BACK,0) != 0;
 
-        AppProfile profile = getCurrentAppProfile();
+        BaikalAppProfile profile = getCurrentAppProfile();
 
         int mode = 0;
         if( profile != null ) {

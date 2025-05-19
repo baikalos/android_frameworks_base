@@ -23,7 +23,7 @@ import android.os.Build;
 import android.os.SystemProperties;
 import android.util.Log;
 
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 
 public class BaikalSpooferService { 
 
@@ -58,7 +58,7 @@ public class BaikalSpooferService {
 
     public static com.android.server.pm.InstallSource overrideInstallSource(com.android.server.pm.PackageSetting packageSettings) {
 
-        AppProfile profile = AppProfileManager.getProfile(packageSettings.getName(), packageSettings.getAppId());
+        BaikalAppProfile profile = BaikalAppProfileManager.getBaikalProfile(packageSettings.getName(), packageSettings.getAppId());
         if( profile != null ) {
             switch(profile.mInstaller) {
                 case 1:

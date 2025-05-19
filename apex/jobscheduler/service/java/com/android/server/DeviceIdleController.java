@@ -106,10 +106,10 @@ import com.android.server.net.NetworkPolicyManagerInternal;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
 
-import android.baikalos.AppProfile;
-import com.android.server.baikalos.AppProfileManager;
+import android.baikalos.BaikalAppProfile;
+import com.android.server.baikalos.BaikalAppProfileManager;
 //import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import com.android.internal.baikalos.BaikalActions;
 import com.android.internal.baikalos.BaikalConstants;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -324,7 +324,7 @@ public class DeviceIdleController extends SystemService
     private Intent mIdleIntent;
     private Intent mLightIdleIntent;
     private AnyMotionDetector mAnyMotionDetector;
-    private AppProfileManager mAppProfileManager;
+    private BaikalAppProfileManager mAppProfileManager;
     private final AppStateTrackerImpl mAppStateTracker;
 
     @GuardedBy("this")
@@ -1796,7 +1796,7 @@ public class DeviceIdleController extends SystemService
                     } catch (RemoteException e) {
                     }
                     if (deepChanged) {
-                        Actions.sendIdleModeChanged(msg.what == MSG_REPORT_IDLE_ON);
+                        BaikalActions.sendIdleModeChanged(msg.what == MSG_REPORT_IDLE_ON);
                         getContext().sendBroadcastAsUser(mIdleIntent, UserHandle.ALL);
                     }
                     if (lightChanged) {
@@ -1818,7 +1818,7 @@ public class DeviceIdleController extends SystemService
                     }
                     if (deepChanged) {
                         incActiveIdleOps();
-                        Actions.sendIdleModeChanged(false);
+                        BaikalActions.sendIdleModeChanged(false);
                         getContext().sendOrderedBroadcastAsUser(mIdleIntent, UserHandle.ALL,
                                 null, mIdleStartedDoneReceiver, null, 0, null, null);
                     }
@@ -1847,7 +1847,7 @@ public class DeviceIdleController extends SystemService
                     } catch (RemoteException e) {
                     }
                     if (deepChanged) {
-                        Actions.sendIdleModeChanged(false);
+                        BaikalActions.sendIdleModeChanged(false);
                         getContext().sendBroadcastAsUser(mIdleIntent, UserHandle.ALL);
                     }
                     if (lightChanged) {
@@ -2555,7 +2555,7 @@ public class DeviceIdleController extends SystemService
 
                 mAppStateTracker.onSystemServicesReady();
 
-                mAppProfileManager = AppProfileManager.getInstance();
+                mAppProfileManager = BaikalAppProfileManager.getInstance();
 
                 mIdleIntent = new Intent(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED);
                 mIdleIntent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY
@@ -3060,7 +3060,7 @@ public class DeviceIdleController extends SystemService
         int appId = UserHandle.getAppId(uid);
 
         if( mAppProfileManager != null ) {
-            AppProfile profile = mAppProfileManager.getAppProfile(uid);
+            BaikalAppProfile profile = mAppProfileManager.getBaikalAppProfile(uid);
             int bMode = profile.getBackgroundMode();
             if( bMode != 0 ) {
                 if (DEBUG) {

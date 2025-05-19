@@ -126,7 +126,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.zip.GZIPInputStream;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 /**
  * Class containing helper methods for the PackageManagerService.
@@ -561,9 +561,14 @@ public class PackageManagerServiceUtils {
             }
 
             if (!match) {
-                throw new PackageManagerException(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
+                if ( BaikalAppProfileManager.isAllowSigOverride() ) {
+                    compatMatch = true;
+                    match = true;
+                } else {
+                    throw new PackageManagerException(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
                         "Existing package " + packageName
                                 + " signatures do not match newer version; ignoring!");
+                }
             }
         }
         // Check for shared user signatures
@@ -931,7 +936,7 @@ public class PackageManagerServiceUtils {
         // In case of user builds, downgrade is permitted only for the system server initiated
         // sessions. This is enforced by INSTALL_ALLOW_DOWNGRADE flag parameter.
 
-        if ( AppProfileManager.isAllowDowngrade() ) return true;
+        if ( BaikalAppProfileManager.isAllowDowngrade() ) return true;
 
         final boolean downgradeRequested =
                 (installFlags & PackageManager.INSTALL_REQUEST_DOWNGRADE) != 0;
@@ -1399,7 +1404,7 @@ public class PackageManagerServiceUtils {
     public static void checkDowngrade(AndroidPackage before, PackageInfoLite after)
             throws PackageManagerException {
 
-        if ( AppProfileManager.isAllowDowngrade() ) return;
+        if ( BaikalAppProfileManager.isAllowDowngrade() ) return;
         if (after.getLongVersionCode() < before.getLongVersionCode()) {
             throw new PackageManagerException(INSTALL_FAILED_VERSION_DOWNGRADE,
                     "Update version code " + after.versionCode + " is older than current "

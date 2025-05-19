@@ -171,7 +171,7 @@ import android.app.PendingIntent;
 import android.app.usage.NetworkStats;
 import android.app.usage.NetworkStatsManager;
 import android.app.usage.UsageStatsManagerInternal;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -265,7 +265,7 @@ import android.util.Xml;
 import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.messages.nano.SystemMessageProto.SystemMessage;
 import com.android.internal.notification.SystemNotificationChannels;
 import com.android.internal.os.SomeArgs;
@@ -4756,7 +4756,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
             final List<UserInfo> users = mUserManager.getUsers();
             for (int ui = users.size() - 1; ui >= 0; ui--) {
                 UserInfo user = users.get(ui);
-                AppProfileSettings.updateRulesForWhitelistedAppIdsBaikal(uidRules, user.id, chain);
+                BaikalAppProfileSettings.updateRulesForWhitelistedAppIdsBaikal(uidRules, user.id, chain);
                 updateRulesForWhitelistedAppIds(uidRules, mPowerSaveTempWhitelistAppIds, user.id);
                 updateRulesForWhitelistedAppIds(uidRules, mPowerSaveWhitelistAppIds, user.id);
                 if (chain == FIREWALL_CHAIN_POWERSAVE) {
@@ -4836,7 +4836,7 @@ public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
         String[] pkgs = mContext.getPackageManager().getPackagesForUid(appId);
         if( pkgs != null ) {
             for( String pkg : pkgs) {
-                AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(pkg);
+                BaikalAppProfile profile = BaikalAppProfileSettings.getInstance() == null ? null : BaikalAppProfileSettings.getInstance().getBaikalProfile(pkg);
                 if( profile != null ) {
                     if( profile.mAllowIdleNetwork )  return true;
                     if( profile.mImportantApp )  return true;

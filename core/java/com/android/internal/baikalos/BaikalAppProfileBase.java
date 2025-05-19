@@ -38,7 +38,7 @@ import android.content.res.Resources;
 import android.content.res.Resources.Theme;
 
 import android.app.AppOpsManager;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 
 import android.net.Uri;
 
@@ -56,7 +56,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class AppProfileBase extends ContentObserver {
+public class BaikalAppProfileBase extends ContentObserver {
 
     private static final String TAG = "BaikalSettingsBase";
 
@@ -67,14 +67,14 @@ public class AppProfileBase extends ContentObserver {
     PackageManager mPackageManager;
     AppOpsManager mAppOpsManager;
 
-    PowerWhitelistBackend mBackend;
+    BaikalPowerWhitelistBackend mBackend;
 
     protected String mLoadedProfileString = "invalid";
 
     private final TextUtils.StringSplitter mSplitter = new TextUtils.SimpleStringSplitter('|');
 
-    HashMap<String, AppProfile> _profilesByPackageName = new HashMap<String,AppProfile> ();
-    HashMap<Integer, AppProfile> _profilesByUid = new HashMap<Integer,AppProfile> ();
+    HashMap<String, BaikalAppProfile> _profilesByPackageName = new HashMap<String,BaikalAppProfile> ();
+    HashMap<Integer, BaikalAppProfile> _profilesByUid = new HashMap<Integer,BaikalAppProfile> ();
 
     static HashSet<Integer> _mAppsForDebug = new HashSet<Integer>();
 
@@ -83,21 +83,19 @@ public class AppProfileBase extends ContentObserver {
     static HashSet<String> _systemImportantByPackageName = new HashSet<String>(); 
     static HashSet<String> _systemWhitelistedByPackageName = new HashSet<String>(); 
 
-    //AppProfile mSystemProfile;
-    //AppProfile mAndroidProfile;
-    AppProfile mNotFoundProfile;
+    BaikalAppProfile mNotFoundProfile;
 
     boolean isChanged = false;
 
     static boolean sIsLoaded;
 
-    public interface IAppProfileSettingsNotifier {
+    public interface IBaikalAppProfileSettingsNotifier {
         void onAppProfileSettingsChanged();
     }
 
-    IAppProfileSettingsNotifier mNotifier = null;
+    IBaikalAppProfileSettingsNotifier mNotifier = null;
 
-    AppProfileBase(Handler handler,Context context) {
+    BaikalAppProfileBase(Handler handler,Context context) {
         super(handler);
 
         /*mAndroidProfile = new AppProfile("android");
@@ -112,7 +110,7 @@ public class AppProfileBase extends ContentObserver {
         mSystemProfile.mImportantApp = true;
         mSystemProfile.mSystemWhitelisted = true;*/
         
-        mNotFoundProfile = new AppProfile("NotFound",-1);
+        mNotFoundProfile = new BaikalAppProfile("NotFound",-1);
         /*mNotFoundProfile.mBootDisabled = true;
         mNotFoundProfile.mBackgroundModeConfig = 2;
         mNotFoundProfile.mBackgroundMode = 2;
@@ -127,7 +125,7 @@ public class AppProfileBase extends ContentObserver {
         mAppOpsManager = mContext.getSystemService(AppOpsManager.class);
         mPackageManager = mContext.getPackageManager();
         mResolver = mContext.getContentResolver();
-        mBackend = PowerWhitelistBackend.getInstance(mContext);
+        mBackend = BaikalPowerWhitelistBackend.getInstance(mContext);
         mBackend.refreshList();
         updateAllAppsLocked();
         updateSystemWhitelistedAppsLocked();
@@ -154,11 +152,11 @@ public class AppProfileBase extends ContentObserver {
         return false;
     }
 
-    HashMap<String, AppProfile> getProfilesByPackageName() { 
+    HashMap<String, BaikalAppProfile> getProfilesByPackageName() { 
         return _profilesByPackageName;
     }
 
-    HashMap<Integer, AppProfile> getProfilesByUid() { 
+    HashMap<Integer, BaikalAppProfile> getProfilesByUid() { 
         return _profilesByUid;
     }
 
@@ -248,19 +246,19 @@ public class AppProfileBase extends ContentObserver {
 
         updateImportantAppsLocked();
 
-        Slog.e(TAG, "Loading AppProfiles selfUpdate:" + selfUpdate);
+        Slog.e(TAG, "Loading BaikalAppProfiles selfUpdate:" + selfUpdate);
         if( selfUpdate ) return;
         selfUpdate = true;
 
         HashSet<Integer> newAppsForDebug = new HashSet<Integer>();
 
-        HashMap<String,AppProfile> newProfilesByPackageName = new HashMap<String,AppProfile> ();
+        HashMap<String,BaikalAppProfile> newProfilesByPackageName = new HashMap<String,BaikalAppProfile> ();
         //newProfilesByPackageName.put(mSystemProfile.mPackageName,mSystemProfile);
         //newProfilesByPackageName.put(mAndroidProfile.mPackageName,mAndroidProfile);
 
-        HashMap<Integer,AppProfile> newProfilesByUid = new HashMap<Integer,AppProfile> ();
+        HashMap<Integer,BaikalAppProfile> newProfilesByUid = new HashMap<Integer,BaikalAppProfile> ();
 
-        HashMap<String,AppProfile> oldProfiles = _profilesByPackageName;
+        HashMap<String,BaikalAppProfile> oldProfiles = _profilesByPackageName;
 
         try {
             String appProfiles = Settings.Global.getString(mResolver,
@@ -276,7 +274,7 @@ public class AppProfileBase extends ContentObserver {
 
                 for(String profileString:mSplitter) {
                 
-                    AppProfile profile = AppProfile.deserializeProfile(profileString); 
+                    BaikalAppProfile profile = BaikalAppProfile.deserializeProfile(profileString); 
                     if( profile != null  ) {
 
                         int uid = getAppUidLocked(profile.mPackageName);
@@ -289,7 +287,7 @@ public class AppProfileBase extends ContentObserver {
                         }
 
                         if( oldProfiles.containsKey(profile.mPackageName) ) {
-                            AppProfile old_profile = oldProfiles.get(profile.mPackageName);
+                            BaikalAppProfile old_profile = oldProfiles.get(profile.mPackageName);
                             old_profile.update(profile);
                             profile = old_profile;
                         } 
@@ -301,8 +299,8 @@ public class AppProfileBase extends ContentObserver {
                         if( !newProfilesByUid.containsKey(profile.mUid)  ) {
                             newProfilesByUid.put(profile.mUid, profile);
                         } else {
-                            AppProfile old_uid_profile = newProfilesByUid.get(profile.mUid);
-                            AppProfile replace = merge(old_uid_profile,profile);
+                            BaikalAppProfile old_uid_profile = newProfilesByUid.get(profile.mUid);
+                            BaikalAppProfile replace = merge(old_uid_profile,profile);
                             if( replace != null ) {
                                 newProfilesByUid.remove(profile.mUid);
                                 newProfilesByUid.put(replace.mUid, replace);
@@ -335,7 +333,7 @@ public class AppProfileBase extends ContentObserver {
                 int uid = getAppUidLocked(pkgName);
                 if( uid == -1 ) continue;
 
-                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+                BaikalAppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
                 if( !profile.mSystemApp ) {
                     Slog.e(TAG, "Enforce mSystemApp on " + pkgName);
                     profile.mSystemApp = true;
@@ -349,7 +347,7 @@ public class AppProfileBase extends ContentObserver {
             for(String pkgName : _systemWhitelistedByPackageName) {
                 int uid = getAppUidLocked(pkgName);
                 if( uid == -1 ) continue;
-                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+                BaikalAppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
                 if( !profile.mSystemWhitelisted ) {
                     Slog.e(TAG, "Enforce mSystemWhitelisted on " + pkgName);
                     profile.mSystemWhitelisted = true;
@@ -363,7 +361,7 @@ public class AppProfileBase extends ContentObserver {
             for(String pkgName : _systemImportantByPackageName) {
                 int uid = getAppUidLocked(pkgName);
                 if( uid == -1 ) continue;
-                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+                BaikalAppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
                 if( !profile.mImportantApp ) {
                     Slog.e(TAG, "Enforce mImportantApp on " + pkgName);
                     profile.mImportantApp = true;
@@ -377,10 +375,10 @@ public class AppProfileBase extends ContentObserver {
             for(String pkgName : _allAppsByPackageName) {
                 int uid = getAppUidLocked(pkgName);
                 if( uid == -1 ) continue;
-                AppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
+                BaikalAppProfile profile = findOrAddDefaultProfile(pkgName, newProfilesByPackageName, newProfilesByUid, oldProfiles);
             }
 
-            AppProfile android = oldProfiles.containsKey("android") ? oldProfiles.get("android") : new AppProfile("android",1000);
+            BaikalAppProfile android = oldProfiles.containsKey("android") ? oldProfiles.get("android") : new BaikalAppProfile("android",1000);
             android.mSystemWhitelisted = true;
             android.mStaminaEnforced = true;
             android.mImportantApp = true;
@@ -389,7 +387,7 @@ public class AppProfileBase extends ContentObserver {
             newProfilesByPackageName.put("android",android);
             newProfilesByUid.put(1000,android);
 
-            AppProfile empty = oldProfiles.containsKey("empty") ? oldProfiles.get("empty") : new AppProfile("empty",-1);
+            BaikalAppProfile empty = oldProfiles.containsKey("empty") ? oldProfiles.get("empty") : new BaikalAppProfile("empty",-1);
             empty.mSystemWhitelisted = false;
             empty.mStaminaEnforced = false;
             empty.mImportantApp = false;
@@ -398,11 +396,11 @@ public class AppProfileBase extends ContentObserver {
             newProfilesByPackageName.put("empty",empty);
             newProfilesByUid.put(-1,empty);
 
-            for(Map.Entry<String, AppProfile> entry : oldProfiles.entrySet()) {
+            for(Map.Entry<String, BaikalAppProfile> entry : oldProfiles.entrySet()) {
                 entry.getValue().isInvalidated = true;
             }
 
-            for(Map.Entry<String, AppProfile> entry : newProfilesByPackageName.entrySet()) {
+            for(Map.Entry<String, BaikalAppProfile> entry : newProfilesByPackageName.entrySet()) {
                 updateSystemSettingsLocked(entry.getValue());
             }
 
@@ -418,7 +416,7 @@ public class AppProfileBase extends ContentObserver {
         _profilesByUid = newProfilesByUid;
         _mAppsForDebug = newAppsForDebug;
 
-        Slog.e(TAG, "Loaded " + _profilesByPackageName.size() + " AppProfiles");
+        Slog.e(TAG, "Loaded " + _profilesByPackageName.size() + " BaikalAppProfiles");
 
         updateSystemProperties();
 
@@ -431,8 +429,8 @@ public class AppProfileBase extends ContentObserver {
 
     private void updateSystemProperties() {
         String prop = "999999";
-        for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
-            AppProfile profile = entry.getValue();
+        for(Map.Entry<String, BaikalAppProfile> entry : _profilesByPackageName.entrySet()) {
+            BaikalAppProfile profile = entry.getValue();
                 
             if( profile.mFilterFS && UserHandle.getAppId(profile.mUid) >= 10000 ) {
                 prop += "," + profile.mUid;
@@ -441,8 +439,8 @@ public class AppProfileBase extends ContentObserver {
         SystemProperties.set("persist.baikal.filter_uids", prop);
 
         prop = "999999";
-        for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
-            AppProfile profile = entry.getValue();
+        for(Map.Entry<String, BaikalAppProfile> entry : _profilesByPackageName.entrySet()) {
+            BaikalAppProfile profile = entry.getValue();
                 
             if( profile.mFilterFSadd && UserHandle.getAppId(profile.mUid) >= 10000 ) {
                 prop += "," + profile.mUid;
@@ -452,8 +450,8 @@ public class AppProfileBase extends ContentObserver {
 
     }
 
-    private AppProfile merge(AppProfile existing, AppProfile from) {    
-        AppProfile to = new AppProfile(existing);
+    private BaikalAppProfile merge(BaikalAppProfile existing, BaikalAppProfile from) {    
+        BaikalAppProfile to = new BaikalAppProfile(existing);
         if( isSysWhitelistedLocked(from.mPackageName) ) to.mSystemWhitelisted = true;
         if( to.mBackgroundMode > from.mBackgroundMode ) to.mBackgroundMode = from.mBackgroundMode;
         if( from.mSystemApp ) to.mSystemApp = true;
@@ -463,14 +461,14 @@ public class AppProfileBase extends ContentObserver {
         return to;
     }
 
-    private AppProfile findOrAddDefaultProfile(String pkgName, 
-                                HashMap<String,AppProfile> newProfiles, 
-                                HashMap<Integer, AppProfile> newProfilesByUid,
-                                HashMap<String,AppProfile> oldProfiles ) {
+    private BaikalAppProfile findOrAddDefaultProfile(String pkgName, 
+                                HashMap<String, BaikalAppProfile> newProfiles, 
+                                HashMap<Integer, BaikalAppProfile> newProfilesByUid,
+                                HashMap<String, BaikalAppProfile> oldProfiles ) {
 
         //Slog.e(TAG, "Add system or important app:" + pkgName);
 
-        AppProfile profile = null;
+        BaikalAppProfile profile = null;
 
         //if( newProfiles.containsKey(pkgName)  ) {
         //    profile = newProfiles.get(pkgName);
@@ -478,7 +476,7 @@ public class AppProfileBase extends ContentObserver {
 
         if(/* profile == null &&*/ oldProfiles.containsKey(pkgName) && !newProfiles.containsKey(pkgName) ) {
             Slog.e(TAG, "Found removed profile for:" + pkgName);
-            AppProfile old_profile = oldProfiles.get(pkgName);
+            BaikalAppProfile old_profile = oldProfiles.get(pkgName);
             old_profile.clear();
             profile = old_profile;
             //newProfiles.put(profile.mPackageName, profile);
@@ -496,7 +494,7 @@ public class AppProfileBase extends ContentObserver {
 
         if( profile == null ) {
             int uid = pkgName.equals("android") ? 1000 : getAppUidLocked(pkgName);
-            profile = new AppProfile(pkgName, uid);
+            profile = new BaikalAppProfile(pkgName, uid);
         }
                
         if( !newProfiles.containsKey(profile.mPackageName)  ) {
@@ -522,7 +520,7 @@ public class AppProfileBase extends ContentObserver {
             appProfiles = "";
         }
 
-        for(Map.Entry<String, AppProfile> entry : _profilesByPackageName.entrySet()) {
+        for(Map.Entry<String, BaikalAppProfile> entry : _profilesByPackageName.entrySet()) {
             if( entry.getValue().isDefault() ) { 
                 Slog.i(TAG, "Skip saving default profile for packageName=" + entry.getValue().mPackageName);
                 continue;
@@ -552,13 +550,13 @@ public class AppProfileBase extends ContentObserver {
         }
     }
 
-    public AppProfile updateSystemSettings(AppProfile profile) {
+    public BaikalAppProfile updateSystemSettings(BaikalAppProfile profile) {
         synchronized(this) {
             return updateSystemSettingsLocked(profile);
         }
     }
 
-    AppProfile updateSystemSettingsLocked(AppProfile profile) {
+    BaikalAppProfile updateSystemSettingsLocked(BaikalAppProfile profile) {
 
         boolean changed = false;
 
@@ -666,12 +664,12 @@ public class AppProfileBase extends ContentObserver {
         return profile;
     }
 
-    public AppProfile getProfileWithNullLocked(String packageName) {
+    BaikalAppProfile getProfileWithNullLocked(String packageName) {
         if( packageName != null ) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
                 Slog.d(TAG,"getProfileLocked(" + packageName + ")", new Throwable());
             }
-            AppProfile profile = _profilesByPackageName.get(packageName);
+            BaikalAppProfile profile = _profilesByPackageName.get(packageName);
             if( profile != null ) return profile;
         }
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
@@ -682,12 +680,12 @@ public class AppProfileBase extends ContentObserver {
         return null;
     }
 
-    public AppProfile getProfileLocked(String packageName) {
+    BaikalAppProfile getProfileLocked(String packageName) {
         if( packageName != null ) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
                 Slog.d(TAG,"getProfileLocked(" + packageName + ")", new Throwable());
             }
-            AppProfile profile = _profilesByPackageName.get(packageName);
+            BaikalAppProfile profile = _profilesByPackageName.get(packageName);
             if( profile != null ) return profile;
         }
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
@@ -698,13 +696,13 @@ public class AppProfileBase extends ContentObserver {
         return "android".equals(packageName) ? null : _profilesByUid.get(-1);
     }
 
-    public AppProfile getProfileLocked(int uid) {
+    BaikalAppProfile getProfileLocked(int uid) {
 
         int appId = UserHandle.getAppId(uid);
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
             Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ")", new Throwable());
         }
-        AppProfile profile = _profilesByUid.get(appId);
+        BaikalAppProfile profile = _profilesByUid.get(appId);
         if( profile != null ) return profile;
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
             Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ") : profile not found",new Throwable());
@@ -732,19 +730,19 @@ public class AppProfileBase extends ContentObserver {
         }
     }
 
-    public AppProfile getProfileWithNull(String packageName) {
+    public BaikalAppProfile getBaikalProfileWithNull(String packageName) {
         //synchronized(this) {
             return getProfileWithNullLocked(packageName);
         //}
     }
 
-    public AppProfile getProfile(String packageName) {
+    public BaikalAppProfile getBaikalProfile(String packageName) {
         //synchronized(this) {
             return getProfileLocked(packageName);
         //}
     }
 
-    public AppProfile getProfile(int uid) {
+    public BaikalAppProfile getBaikalProfile(int uid) {
         //synchronized(this) {
             return getProfileLocked(uid);
         //}
@@ -777,10 +775,10 @@ public class AppProfileBase extends ContentObserver {
         return uid;
     }
 
-    public static HashMap<Integer, AppProfile> updateProfileUids(HashMap<String, AppProfile> profilesByPackageName, Context context) {
-        HashMap<Integer, AppProfile> profilesByUid = new HashMap<Integer,AppProfile> ();
+    public static HashMap<Integer, BaikalAppProfile> updateProfileUids(HashMap<String, BaikalAppProfile> profilesByPackageName, Context context) {
+        HashMap<Integer, BaikalAppProfile> profilesByUid = new HashMap<Integer, BaikalAppProfile> ();
 
-        for(Map.Entry<String, AppProfile> entry : profilesByPackageName.entrySet()) {
+        for(Map.Entry<String, BaikalAppProfile> entry : profilesByPackageName.entrySet()) {
             if( entry.getValue().isDefault() ) { 
                 continue;
             }
@@ -792,9 +790,9 @@ public class AppProfileBase extends ContentObserver {
         return profilesByUid;
     }
 
-    public static HashMap<String, AppProfile> loadCachedProfiles(Context context) {
+    public static HashMap<String, BaikalAppProfile> loadCachedProfiles(Context context) {
 
-        HashMap<String, AppProfile> profilesByPackageName = new HashMap<String,AppProfile> ();
+        HashMap<String, BaikalAppProfile> profilesByPackageName = new HashMap<String, BaikalAppProfile> ();
 
         try {
             String appProfiles = Settings.Global.getString(context.getContentResolver(),
@@ -815,7 +813,7 @@ public class AppProfileBase extends ContentObserver {
             }
 
             for(String profileString:splitter) {
-                AppProfile profile = AppProfile.deserializeProfile(profileString);
+                BaikalAppProfile profile = BaikalAppProfile.deserializeProfile(profileString);
                 if( profile != null  ) {
                     profilesByPackageName.put(profile.mPackageName, updateProfileFromSystemApplist(profile,context));
                 }
@@ -826,7 +824,7 @@ public class AppProfileBase extends ContentObserver {
         return profilesByPackageName;
     }
 
-    public static AppProfile loadSingleProfile(String packageName, int uid, Context context) {
+    public static BaikalAppProfile loadSingleProfile(String packageName, int uid, Context context) {
 
         Slog.e(TAG, "loadSingleProfile:" + packageName);
 
@@ -853,7 +851,7 @@ public class AppProfileBase extends ContentObserver {
             }
 
             for(String profileString:splitter) {
-                AppProfile profile = AppProfile.deserializeProfile(profileString);
+                BaikalAppProfile profile = BaikalAppProfile.deserializeProfile(profileString);
                 if( profile != null  ) {
                     if( profile.mPackageName.equals(packageName) ) 
                         return updateProfileFromSystemApplist(profile,context);
@@ -864,12 +862,12 @@ public class AppProfileBase extends ContentObserver {
             Slog.e(TAG, "Bad BaikalService settings", e);
         } 
 
-        AppProfile default_profile = new AppProfile(packageName, uid);
+        BaikalAppProfile default_profile = new BaikalAppProfile(packageName, uid);
         
         return updateProfileFromSystemApplist(default_profile,context); 
     }
 
-    static AppProfile updateProfileFromSystemApplist(AppProfile profile, Context context) {
+    static BaikalAppProfile updateProfileFromSystemApplist(BaikalAppProfile profile, Context context) {
         return profile;
     }
 

@@ -17,9 +17,9 @@
 
 package com.android.server.baikalos;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.Actions;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalActions;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 
 
 import android.app.job.IJobScheduler;
@@ -85,8 +85,8 @@ public class BaikalAlarmManager {
     private boolean mSystemReady = false;
     private boolean mDisableWakeupByDefault = false;
     private Context mContext;
-    private AppProfileSettings mAppSettings;
-    private AppProfileManager mAppProfileManager;
+    private BaikalAppProfileSettings mAppSettings;
+    private BaikalAppProfileManager mAppProfileManager;
 
     private boolean mEnableDeviceComponents;
 
@@ -130,8 +130,8 @@ public class BaikalAlarmManager {
         if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"initialize()");                
         synchronized(mLock) {
             mInstance = this;
-            mAppSettings = AppProfileSettings.getInstance(); 
-            mAppProfileManager = AppProfileManager.getInstance();
+            mAppSettings = BaikalAppProfileSettings.getInstance(); 
+            mAppProfileManager = BaikalAppProfileManager.getInstance();
             mEnableDeviceComponents = SystemProperties.getBoolean("persist.baikal.opt.srv", false);
         }
     }
@@ -196,7 +196,7 @@ public class BaikalAlarmManager {
         }
 
 
-        AppProfile profile = mAppSettings.getProfile(packageName);
+        BaikalAppProfile profile = mAppSettings.getBaikalProfile(packageName);
         if( profile != null ) {
 
             int backgroundMode = profile.getBackgroundMode(false);

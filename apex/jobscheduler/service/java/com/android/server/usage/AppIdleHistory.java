@@ -48,9 +48,9 @@ import android.util.SparseLongArray;
 import android.util.TimeUtils;
 import android.util.Xml;
 
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.CollectionUtils;
@@ -418,7 +418,7 @@ public class AppIdleHistory {
 
     public boolean isIdle(String packageName, int userId, long elapsedRealtime) {
 
-        AppProfile profile = AppProfileManager.getProfile(packageName,-1);
+        BaikalAppProfile profile = BaikalAppProfileManager.getBaikalProfile(packageName,-1);
         if( profile != null ) {
             if( profile.getBackgroundMode(false) < 0 || 
                 profile.mAllowWhileIdle ) {
@@ -456,7 +456,7 @@ public class AppIdleHistory {
     public void setAppStandbyBucket(String packageName, int userId, long elapsedRealtime,
             int bucket, int reason, boolean resetExpiryTimes) {
 
-        AppProfile profile = AppProfileManager.getProfile(packageName,-1);
+        BaikalAppProfile profile = BaikalAppProfileManager.getBaikalProfile(packageName,-1);
         if( profile != null && profile.mBackgroundMode > 0 && bucket < STANDBY_BUCKET_RESTRICTED ) {
             bucket = STANDBY_BUCKET_RESTRICTED;
             if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "setAppStandbyBucket " + bucket + " ->RARE > 1 :" + packageName);
@@ -596,7 +596,7 @@ public class AppIdleHistory {
 
     public int getAppStandbyBucket(String packageName, int userId, long elapsedRealtime) {
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);
-        AppProfile profile = AppProfileManager.getProfile(packageName,-1);
+        BaikalAppProfile profile = BaikalAppProfileManager.getBaikalProfile(packageName,-1);
         int backgroundMode = profile == null ? 0 : profile.getBackgroundMode(false);
         if( backgroundMode > 0 ) {
             if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket forced STANDBY_BUCKET_RESTRICTED :" + packageName);

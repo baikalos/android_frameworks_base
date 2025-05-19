@@ -59,7 +59,7 @@ import com.android.server.display.config.ThermalThrottling;
 import com.android.server.display.config.ThresholdPoint;
 import com.android.server.display.config.XmlParser;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -2069,7 +2069,7 @@ public class DisplayDeviceConfig {
                 com.android.internal.R.array.config_screenBrightnessBacklight);
         final float[] sysBrightnessFloat = new float[sysBrightness.length];
 
-        AppProfileManager appProfileManager = AppProfileManager.getInstance();
+        BaikalAppProfileManager appProfileManager = BaikalAppProfileManager.getInstance();
         if( appProfileManager != null ) {
             brightnessCurve = appProfileManager.getBrightnessCurve();
         } 

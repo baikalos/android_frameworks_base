@@ -142,11 +142,11 @@ import dalvik.annotation.optimization.NeverCompile;
 
 import lineageos.providers.LineageSettings;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.internal.baikalos.BaikalActions;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 import com.android.server.baikalos.BaikalSpecialDevices;
 
 import java.io.FileDescriptor;
@@ -1522,7 +1522,7 @@ public final class PowerManagerService extends SystemService
         mContext.registerReceiver(new DockReceiver(), filter, null, mHandler);
 
         filter = new IntentFilter();
-        filter.addAction(com.android.internal.baikalos.Actions.ACTION_BRIGHTNESS_OVERRIDE);
+        filter.addAction(com.android.internal.baikalos.BaikalActions.ACTION_BRIGHTNESS_OVERRIDE);
         mContext.registerReceiver(new BrightnessOverrideReceiver(), filter, null, mHandler);
     }
 
@@ -2078,7 +2078,7 @@ public final class PowerManagerService extends SystemService
                     return;
                 }
 	            ///if( wakeLock.mTag.startsWith("Audio") ) return;
-                if( !AppProfileManager.getInstance().isGmsUid(wakeLock.mOwnerUid) ) {
+                if( !BaikalAppProfileManager.getInstance().isGmsUid(wakeLock.mOwnerUid) ) {
                     //AppProfile profile = AppProfileManager.getInstance().getProfile(wakeLock.mPackageName);
                     //if( profile.getBackground() < 0 ) return;
                     if( wakeLock.getBackgroundMode(true,true) < 0 ) {
@@ -2638,7 +2638,7 @@ public final class PowerManagerService extends SystemService
             }
             mWakefulnessChanging = false;
             mNotifier.onWakefulnessChangeFinished();
-            Actions.sendWakefulnessChanged(getGlobalWakefulnessLocked());
+            BaikalActions.sendWakefulnessChanged(getGlobalWakefulnessLocked());
 
         }
     }
@@ -2763,7 +2763,7 @@ public final class PowerManagerService extends SystemService
         }
         if( mBaikalDevices == null ) return false;
         if( mBaikalDevices.isActive() ) return true;
-        switch( AppProfileManager.getCurrentProfile().mKeepOn ) {
+        switch( BaikalAppProfileManager.getCurrentProfile().mKeepOn ) {
             case 1:
                 return true;
             case 2:
@@ -2892,7 +2892,7 @@ public final class PowerManagerService extends SystemService
                         mNotifier.onWirelessChargingStarted(mBatteryLevel, mUserId);
                     }
 
-                    Actions.sendChargerModeChanged(mIsPowered);
+                    BaikalActions.sendChargerModeChanged(mIsPowered);
             		mIsPoweredInitialized = true;
                 }
             }
@@ -2946,7 +2946,7 @@ public final class PowerManagerService extends SystemService
         if( !mBypassChargingEnabled ) {
             if( mPowerInputSuspended ) {
                 Slog.i(TAG, "Bypass charging mBypassChargingEnabled: " + mBypassChargingEnabled);
-                AppProfileManager.getInstance().updateBypassCharging(false);
+                BaikalAppProfileManager.getInstance().updateBypassCharging(false);
                 mPowerInputSuspended = false;
             }
             return;
@@ -2954,7 +2954,7 @@ public final class PowerManagerService extends SystemService
 
         if (mPowerInputSuspended && mBatteryLevel <= mBypassChargingResumeLevel) {
             Slog.i(TAG, "Bypass charging deactivate mBypassChargingEnabled: " + mBypassChargingEnabled);
-            AppProfileManager.getInstance().updateBypassCharging(false);
+            BaikalAppProfileManager.getInstance().updateBypassCharging(false);
             mPowerInputSuspended = false;
             return;
         }
@@ -2969,7 +2969,7 @@ public final class PowerManagerService extends SystemService
                      Slog.e(TAG, "failed to reset battery statistics", e);
                 }
             }
-            AppProfileManager.getInstance().updateBypassCharging(true);
+            BaikalAppProfileManager.getInstance().updateBypassCharging(true);
             mPowerInputSuspended = true;
         }
     }
@@ -4229,7 +4229,7 @@ public final class PowerManagerService extends SystemService
         boolean needAudioBlocker = ((mWakeLockSummary & WAKE_LOCK_AUDIO) != 0);
         if ( needAudioBlocker != mHoldingAudioBlocker ) {
             mHoldingAudioBlocker = needAudioBlocker;
-            AppProfileManager.setAudioMode(needAudioBlocker);
+            BaikalAppProfileManager.setAudioMode(needAudioBlocker);
         }
     }
 
@@ -4781,7 +4781,7 @@ public final class PowerManagerService extends SystemService
                             }
                         }
 
-                        if (!disabled /*&& !mDeviceIdleMode */ && wakefulness == WAKEFULNESS_AWAKE && AppProfileSettings.isSuperSaverActive()) {
+                        if (!disabled /*&& !mDeviceIdleMode */ && wakefulness == WAKEFULNESS_AWAKE && BaikalAppProfileSettings.isSuperSaverActive()) {
                             // If we are in idle mode, we will also ignore all partial wake locks that are
                             // for application uids that are not allowlisted.
                             if (state.mProcState != ActivityManager.PROCESS_STATE_NONEXISTENT
@@ -4959,7 +4959,7 @@ public final class PowerManagerService extends SystemService
         Slog.d(TAG, "setBaikalScreenState: mode=" + mode);
         if( mBaikalScreenMode != mode ) {   
             mBaikalScreenMode = mode;
-            Actions.sendScreenModeChanged(mode);
+            BaikalActions.sendScreenModeChanged(mode);
         }
     }
 
@@ -5747,7 +5747,7 @@ public final class PowerManagerService extends SystemService
         public void onReceive(Context context, Intent intent) {
             synchronized (mLock) {
                 String action = intent.getAction();
-                int brightness = (int)intent.getExtra(com.android.internal.baikalos.Actions.EXTRA_INT_BRIGHTNESS);
+                int brightness = (int)intent.getExtra(com.android.internal.baikalos.BaikalActions.EXTRA_INT_BRIGHTNESS);
                 if (mBrightnessOverrideFromBaikalService != brightness) {
                     if(DEBUG) Slog.i(TAG,"BrightnessOverride brightness=" + brightness);
                     mBrightnessOverrideFromBaikalService = brightness;
@@ -6093,7 +6093,7 @@ public final class PowerManagerService extends SystemService
                 }
             } 
 
-            if( ignoreGms && AppProfileManager.getInstance().isGmsUid(opUid) ) return 0;
+            if( ignoreGms && BaikalAppProfileManager.getInstance().isGmsUid(opUid) ) return 0;
 
             boolean tempWhitelisted = Arrays.binarySearch(mDeviceIdleTempWhitelist, opUid) >= 0;
 
@@ -6103,7 +6103,7 @@ public final class PowerManagerService extends SystemService
             }
 
             if( opPackageName != null ) {
-                AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName, opUid);
+                BaikalAppProfile profile = BaikalAppProfileManager.getInstance().getBaikalProfile(opPackageName, opUid);
                 int mode = profile.getBackgroundMode();
                 if( mode < 0 ) {
                     if( BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "isWhitelisted: whitelisted opPackageName=" + opPackageName + " : " + -1 + ", wl=" + this);
@@ -6545,7 +6545,7 @@ public final class PowerManagerService extends SystemService
                 try {
 
 	            Slog.i(TAG, "wakeUp reason=" + reason + ", details=" + details + ", opPackageName=" + opPackageName);
-        	    AppProfileManager.getInstance().wakeUp();
+        	    BaikalAppProfileManager.getInstance().wakeUp();
 
                     synchronized (mLock) {
                         if (!mBootCompleted && sQuiescent) {
@@ -6877,7 +6877,7 @@ public final class PowerManagerService extends SystemService
             final int uid = Binder.getCallingUid();
             final long ident = Binder.clearCallingIdentity();
             try {
-                AppProfile profile = AppProfileManager.getInstance().getAppProfile(uid);
+                BaikalAppProfile profile = BaikalAppProfileManager.getInstance().getBaikalAppProfile(uid);
                 if( profile != null && profile.mHideIdle ) return false;
                 return isDeviceIdleModeInternal();
             } finally {
@@ -6890,7 +6890,7 @@ public final class PowerManagerService extends SystemService
             final int uid = Binder.getCallingUid();
             final long ident = Binder.clearCallingIdentity();
             try {
-                AppProfile profile = AppProfileManager.getInstance().getAppProfile(uid);
+                BaikalAppProfile profile = BaikalAppProfileManager.getInstance().getBaikalAppProfile(uid);
                 if( profile != null && profile.mHideIdle ) return false;
                 return isLightDeviceIdleModeInternal();
             } finally {

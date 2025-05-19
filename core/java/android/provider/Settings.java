@@ -37,7 +37,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.SearchManager;
 import android.app.WallpaperManager;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -3064,7 +3064,7 @@ public final class Settings {
             // Notice that a key string that is not defined in any of the Settings.* classes will
             // still be regarded as readable.
 
-            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(BaikalAppProfile.getCurrentAppProfile().mHideDevMode ) {
                 if( Secure.ALLOW_MOCK_LOCATION.equals(name) || 
                     Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     Settings.Global.ADB_ENABLED.equals(name) || 
@@ -3083,9 +3083,9 @@ public final class Settings {
                 }
             }
 
-            if (AppProfile.isDebug() || 
+            if (BaikalAppProfile.isDebug() || 
                 (BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW) )  {
-                Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + " " + Process.myUid() + "/" + Process.myPid() + ": " + name);
+                Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + " " + Process.myUid() + "/" + Process.myPid() + ": " + name);
             }
 
             if (!isCallerExemptFromReadableRestriction() && mAllFields.contains(name)) {
@@ -3129,7 +3129,7 @@ public final class Settings {
                             }
                             mValues.clear();
                         } else if (mValues.containsKey(name)) {
-                            if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " =\'" + mValues.get(name) + "\'");
+                            if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + mValues.get(name) + "\'");
                             return mValues.get(name);
                         }
                         if (mGenerationTracker != null) {
@@ -3239,7 +3239,7 @@ public final class Settings {
                                     + " by " + UserHandle.myUserId()
                                     + " so not updating cache");
                         }
-                        if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " =\'" + value + "\'");
+                        if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + value + "\'");
                         return value;
                     }
                     // If the response Bundle is null, we fall through
@@ -3269,7 +3269,7 @@ public final class Settings {
                 }
                 if (c == null) {
                     Log.w(TAG, "Can't get key " + name + " from " + mUri);
-                    if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " = null");
+                    if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " = null");
                     return null;
                 }
 
@@ -3284,11 +3284,11 @@ public final class Settings {
                     Log.v(TAG, "cache miss [" + mUri.getLastPathSegment() + "]: " +
                             name + " = " + (value == null ? "(null)" : value));
                 }
-                if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " =\'" + value + "\'");
+                if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + value + "\'");
                 return value;
             } catch (RemoteException e) {
                 Log.w(TAG, "Can't get key " + name + " from " + mUri, e);
-                if (AppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + AppProfile.packageName() + "/" + AppProfile.uid() + ": " + name + " = null");
+                if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " = null");
                 return null;  // Return null, but don't cache it.
             } finally {
                 if (c != null) c.close();
@@ -3775,7 +3775,7 @@ public final class Settings {
         public static String getStringForUser(ContentResolver resolver, String name,
                 int userHandle) {
 
-            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(BaikalAppProfile.getCurrentAppProfile().mHideDevMode ) {
                 if( Secure.ALLOW_MOCK_LOCATION.equals(name) || 
                     Settings.Global.DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     Settings.Global.ADB_ENABLED.equals(name) || 
@@ -17610,6 +17610,13 @@ public final class Settings {
         @Readable
         public static final String BAIKALOS_ALLOW_DOWNGRADE = "baikalos_allow_downgrade";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_ALLOW_SIG_OVERRIDE = "baikalos_allow_sig_override";
+
 
         /**
          * This preference holds app profiles.
@@ -17967,6 +17974,28 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_BLOCK_NOTIFICATION = "baikalos_block_notification";
 
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_TIMEOUT_IN_MILLIS = "baikalos_trust_timeout_in_millis";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = "baikalos_trustable_idle_timeout_in_millis";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS = "baikalos_trustable_timeout_in_millis";
+
+
         /* End of BaikalOS Global Settings */
 
         /**
@@ -18068,7 +18097,7 @@ public final class Settings {
         public static String getStringForUser(ContentResolver resolver, String name,
                 int userHandle) {
 
-            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(BaikalAppProfile.getCurrentAppProfile().mHideDevMode ) {
                 if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
                     DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     ADB_ENABLED.equals(name) || 
@@ -18298,7 +18327,7 @@ public final class Settings {
          */
         public static int getInt(ContentResolver cr, String name, int def) {
 
-            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(BaikalAppProfile.getCurrentAppProfile().mHideDevMode ) {
                 if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
                     DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     ADB_ENABLED.equals(name) || 
@@ -18342,7 +18371,7 @@ public final class Settings {
         public static int getInt(ContentResolver cr, String name)
                 throws SettingNotFoundException {
 
-            if(AppProfile.getCurrentAppProfile().mHideDevMode ) {
+            if(BaikalAppProfile.getCurrentAppProfile().mHideDevMode ) {
                 if( Secure.ALLOW_MOCK_LOCATION.equals(name) ||
                     DEVELOPMENT_SETTINGS_ENABLED.equals(name) || 
                     ADB_ENABLED.equals(name) || 

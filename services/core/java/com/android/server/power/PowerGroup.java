@@ -40,9 +40,9 @@ import android.os.Trace;
 import android.util.Slog;
 import android.view.Display;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.server.baikalos.AppProfileManager;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.LatencyTracker;
@@ -420,7 +420,7 @@ public class PowerGroup {
             // sensor may not be correctly configured as a wake-up source.
             if (!mDisplayPowerRequest.useProximitySensor || !proximityPositive
                     || !suspendWhenScreenOffDueToProximityConfig) {
-                if( !AppProfileSettings.isSuperSaverActive() || mDisplayPowerRequest.useProximitySensor ) {
+                if( !BaikalAppProfileSettings.isSuperSaverActive() || mDisplayPowerRequest.useProximitySensor ) {
                     return true;
                 } else {
                     return false;

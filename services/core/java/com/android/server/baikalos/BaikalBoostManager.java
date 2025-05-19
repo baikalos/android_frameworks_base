@@ -94,9 +94,9 @@ import android.view.Display;
 import static android.view.Display.DEFAULT_DISPLAY;
 import static android.view.Display.INVALID_DISPLAY;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.Actions;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalActions;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.server.LocalServices;

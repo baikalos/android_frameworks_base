@@ -25,7 +25,7 @@ import android.annotation.IntDef;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.UiContext;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.AttributionSource;
 import android.content.AutofillOptions;
@@ -2163,7 +2163,7 @@ class ContextImpl extends Context {
     }
 
     private boolean isForceLocationPermission(String permission, int pid, int uid) {
-        if( AppProfile.getCurrentAppProfile().mLocationLevel == 0 ) return false;
+        if( BaikalAppProfile.getCurrentAppProfile().mLocationLevel == 0 ) return false;
         int checkUid = uid;
         try {
             checkUid = Binder.getCallingUid();

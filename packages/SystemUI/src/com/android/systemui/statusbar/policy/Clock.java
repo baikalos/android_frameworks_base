@@ -359,11 +359,11 @@ public class Clock extends TextView implements
                     return;
                 });
             } else if (action.equals(Intent.ACTION_SCREEN_ON)) {
-                android.baikalos.AppProfile.setScreenMode(true);
+                android.baikalos.BaikalAppProfile.setScreenMode(true);
                 mScreenOn = true;
                 handler.post(() -> updateClockVisibility());
             } else if (action.equals(Intent.ACTION_SCREEN_OFF)) {
-                android.baikalos.AppProfile.setScreenMode(false);
+                android.baikalos.BaikalAppProfile.setScreenMode(false);
                 mScreenOn = false;
                 handler.post(() -> updateClockVisibility());
             }

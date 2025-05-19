@@ -35,11 +35,11 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.job.JobSchedulerService;
 import com.android.server.job.StateControllerProto;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.internal.baikalos.BaikalActions;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -405,7 +405,7 @@ public final class TimeController extends StateController {
         }*/
 
         if( opPackageName != null ) {
-            AppProfile profile = AppProfileManager.getInstance().getProfile(opPackageName,opUid);
+            BaikalAppProfile profile = BaikalAppProfileManager.getInstance().getBaikalProfile(opPackageName,opUid);
 
             if( profile != null ) {
                 if( profile.mDisableWakeup ) {

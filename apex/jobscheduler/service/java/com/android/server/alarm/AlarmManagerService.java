@@ -154,11 +154,11 @@ import com.android.server.tare.EconomyManagerInternal;
 import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.internal.baikalos.BaikalActions;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 
 import com.android.server.baikalos.BaikalAlarmManager;
@@ -237,8 +237,8 @@ public class AlarmManagerService extends SystemService {
 
     AppOpsManager mAppOps;
     DeviceIdleInternal mLocalDeviceIdleController;
-    AppProfileSettings mAppProfileSettings;
-    AppProfileManager mAppProfileManager;
+    BaikalAppProfileSettings mAppProfileSettings;
+    BaikalAppProfileManager mAppProfileManager;
     BaikalAlarmManager mBaikalAlarmManager;
     private UsageStatsManagerInternal mUsageStatsManagerInternal;
     private ActivityManagerInternal mActivityManagerInternal;
@@ -2061,8 +2061,8 @@ public class AlarmManagerService extends SystemService {
                 mClockReceiver.scheduleTimeTickEvent();
                 mClockReceiver.scheduleDateChangedEvent();
 
-                mAppProfileSettings = AppProfileSettings.getInstance(); 
-                mAppProfileManager = AppProfileManager.getInstance(); 
+                mAppProfileSettings = BaikalAppProfileSettings.getInstance(); 
+                mAppProfileManager = BaikalAppProfileManager.getInstance(); 
                 mBaikalAlarmManager = BaikalAlarmManager.getInstance();
             }
             IAppOpsService iAppOpsService = mInjector.getAppOpsService();

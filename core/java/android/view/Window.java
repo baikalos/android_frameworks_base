@@ -24,7 +24,7 @@ import static android.view.WindowManager.LayoutParams.FLAG_SECURE;
 import static android.view.WindowManager.LayoutParams.SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
 
 
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.annotation.ColorInt;
 import android.annotation.DrawableRes;
 import android.annotation.IdRes;
@@ -1288,7 +1288,7 @@ public abstract class Window {
     public void setFlags(int flags, int mask) {
         final WindowManager.LayoutParams attrs = getAttributes();
 
-        if( AppProfile.getCurrentAppProfile().mForcedScreenshot ) {
+        if( BaikalAppProfile.getCurrentAppProfile().mForcedScreenshot ) {
             mask &= ~FLAG_SECURE;
         }
 
@@ -1300,7 +1300,7 @@ public abstract class Window {
     private void setPrivateFlags(int flags, int mask) {
         final WindowManager.LayoutParams attrs = getAttributes();
 
-        if( AppProfile.getCurrentAppProfile().mForcedScreenshot ) {
+        if( BaikalAppProfile.getCurrentAppProfile().mForcedScreenshot ) {
             mask &= ~FLAG_SECURE;
         }
 

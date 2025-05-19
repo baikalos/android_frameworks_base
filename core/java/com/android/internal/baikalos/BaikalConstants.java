@@ -106,52 +106,52 @@ public class BaikalConstants {
 
     public static void Logv(boolean type, int uid,String tag, String msg) {
         if( type ) { Slog.v(tag,msg); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.v(tag,msg); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.v(tag,msg); return; }
     }
 
     public static void Logv(boolean type, int uid, String tag, String msg, Throwable tr) {
         if( type ) { Slog.v(tag,msg,tr); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.v(tag,msg,tr); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.v(tag,msg,tr); return; }
     }
 
     public static void Logd(boolean type, int uid,String tag, String msg) {
         if( type ) { Slog.d(tag,msg); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.d(tag,msg); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.d(tag,msg); return; }
     }
 
     public static void Logd(boolean type, int uid, String tag, String msg, Throwable tr) {
         if( type ) { Slog.d(tag,msg,tr); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.d(tag,msg,tr); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.d(tag,msg,tr); return; }
     }
 
     public static void Logi(boolean type, int uid,String tag, String msg) {
         if( type ) { Slog.i(tag,msg); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.i(tag,msg); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.i(tag,msg); return; }
     }
 
     public static void Logi(boolean type, int uid, String tag, String msg, Throwable tr) {
         if( type ) { Slog.i(tag,msg,tr); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.i(tag,msg,tr); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.i(tag,msg,tr); return; }
     }
 
     public static void Logw(boolean type, int uid,String tag, String msg) {
         if( type ) { Slog.w(tag,msg); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.w(tag,msg); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.w(tag,msg); return; }
     }
 
     public static void Logw(boolean type, int uid, String tag, String msg, Throwable tr) {
         if( type ) { Slog.w(tag,msg,tr); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.w(tag,msg,tr); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.w(tag,msg,tr); return; }
     }
 
     public static void Loge(boolean type, int uid,String tag, String msg) {
         if( type ) { Slog.e(tag,msg); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.e(tag,msg); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.e(tag,msg); return; }
     }
 
     public static void Loge(boolean type, int uid, String tag, String msg, Throwable tr) {
         if( type ) { Slog.e(tag,msg,tr); return; }
-        if( uid > 0 && AppProfileSettings.isDebugUid(uid) ) { Slog.e(tag,msg,tr); return; }
+        if( uid > 0 && BaikalAppProfileSettings.isDebugUid(uid) ) { Slog.e(tag,msg,tr); return; }
     }
 
     public static String getPackageByUid(Context context, int uid) {

@@ -30,7 +30,7 @@ import android.os.UserHandle;
 
 import android.provider.Settings;
 
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import com.android.internal.baikalos.BaikalConstants;
 
 public class BaikalDebugInternal { 
@@ -148,7 +148,7 @@ public class BaikalDebugInternal {
         if( (debugMask&BaikalConstants.DEBUG_MASK_NETWORK) !=0 ) BaikalConstants.BAIKAL_DEBUG_NETWORK = true;
 
 
-        AppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
-        AppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_OOM_RAW && BaikalConstants.BAIKAL_DEBUG_RAW;
+        BaikalAppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+        BaikalAppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_OOM_RAW && BaikalConstants.BAIKAL_DEBUG_RAW;
     }
 }

@@ -477,8 +477,8 @@ public class ContentProviderHelper {
                 if (i >= numLaunchingProviders) {
                     final long origId = Binder.clearCallingIdentity();
 
-                    if( !mService.mAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
-                        !mService.mAppProfileManager.isTopAppUid(cpr.appInfo.uid,cpr.appInfo.packageName) )
+                    if( !mService.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
+                        !mService.mBaikalAppProfileManager.isTopAppUid(cpr.appInfo.uid,cpr.appInfo.packageName) )
                     {
                         if(mService.isAppBackgroundBlocked(cpr.appInfo) ) {
                             Slog.i(TAG,"Baikal.AppProfile: getContentProvider blocked for background restricted app:" + cpr.appInfo, new Throwable());

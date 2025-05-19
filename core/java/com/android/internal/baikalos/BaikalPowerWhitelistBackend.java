@@ -36,13 +36,13 @@ import com.android.internal.util.ArrayUtils;
 /**
  * Handles getting/changing the whitelist for the exceptions to battery saving features.
  */
-public class PowerWhitelistBackend {
+public class BaikalPowerWhitelistBackend {
 
-    private static final String TAG = "PowerWhitelistBackend";
+    private static final String TAG = "BaikalPowerWhitelistBackend";
 
     private static final String DEVICE_IDLE_SERVICE = "deviceidle";
 
-    private static PowerWhitelistBackend sInstance = null;
+    private static BaikalPowerWhitelistBackend sInstance = null;
 
     private final Context mAppContext;
     private final IDeviceIdleController mDeviceIdleService;
@@ -51,11 +51,11 @@ public class PowerWhitelistBackend {
     private final ArraySet<String> mSysWhitelistedAppsExceptIdle = new ArraySet<>();
     private final ArraySet<String> mDefaultActiveApps = new ArraySet<>();
 
-    public PowerWhitelistBackend(Context context) {
+    public BaikalPowerWhitelistBackend(Context context) {
         this(context, IDeviceIdleController.Stub.asInterface(ServiceManager.getService(DEVICE_IDLE_SERVICE)));
     }
 
-    PowerWhitelistBackend(Context context, IDeviceIdleController deviceIdleService) {
+    BaikalPowerWhitelistBackend(Context context, IDeviceIdleController deviceIdleService) {
         mAppContext = context; 
         mDeviceIdleService = deviceIdleService;
         if (mDeviceIdleService == null) {
@@ -214,9 +214,9 @@ public class PowerWhitelistBackend {
         }
     }
 
-    public static PowerWhitelistBackend getInstance(Context context) {
+    public static BaikalPowerWhitelistBackend getInstance(Context context) {
         if (sInstance == null) {
-            sInstance = new PowerWhitelistBackend(context);
+            sInstance = new BaikalPowerWhitelistBackend(context);
         }
         return sInstance;
     }

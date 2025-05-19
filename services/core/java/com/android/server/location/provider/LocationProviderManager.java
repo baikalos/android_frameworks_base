@@ -120,7 +120,7 @@ import com.android.server.location.listeners.RemoteListenerRegistration;
 import com.android.server.location.settings.LocationSettings;
 import com.android.server.location.settings.LocationUserSettings;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import java.io.FileDescriptor;
 import java.lang.annotation.Retention;
@@ -391,8 +391,8 @@ public class LocationProviderManager extends
             Preconditions.checkArgument(permissionLevel > PERMISSION_NONE);
             Preconditions.checkArgument(!request.getWorkSource().isEmpty());
 
-            mPermissionLevel = AppProfileManager.overridePermissionLevel(permissionLevel, request, identity);
-            mBaikalPermissionLevel = AppProfileManager.getBaikalPermissionLevel(request, identity);
+            mPermissionLevel = BaikalAppProfileManager.overridePermissionLevel(permissionLevel, request, identity);
+            mBaikalPermissionLevel = BaikalAppProfileManager.getBaikalPermissionLevel(request, identity);
             mProviderLocationRequest = request;
         }
 
@@ -2250,9 +2250,9 @@ public class LocationProviderManager extends
             return false;
         }
 
-        int uid = AppProfileManager.getRequestUid(registration.getIdentity().getUid(), registration.getRequest());
+        int uid = BaikalAppProfileManager.getRequestUid(registration.getIdentity().getUid(), registration.getRequest());
 
-        int level = AppProfileManager.getLocationLevel(uid);
+        int level = BaikalAppProfileManager.getLocationLevel(uid);
         if( level > 4 ) {
             if (D) {
                 Log.d(TAG, mName + " level: " + level + " for " + registration);

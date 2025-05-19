@@ -27,7 +27,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.TestApi;
 import android.annotation.UiThread;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
@@ -94,7 +94,7 @@ public class Typeface {
     private static String TAG = "Typeface";
 
     private static void dLog(String func, String text) {
-        if( BaikalConstants.BAIKAL_DEBUG_RAW && (AppProfile.getCurrentAppProfile().mDebug /*|| BaikalConstants.BAIKAL_DEBUG_APP_PROFILE*/) ) {
+        if( BaikalConstants.BAIKAL_DEBUG_RAW && (BaikalAppProfile.getCurrentAppProfile().mDebug /*|| BaikalConstants.BAIKAL_DEBUG_APP_PROFILE*/) ) {
             Log.d(TAG, func + ":" + text);
         }
     }
@@ -316,8 +316,8 @@ public class Typeface {
 
             String systemFontFamilyName = providerEntry.getSystemFontFamilyName();
             
-            if (systemFontFamilyName != null && sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
-                //Log.e(TAG, "createFromResources: ProviderResourceEntry:" + systemFontFamilyName + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
+            if (systemFontFamilyName != null && sFallbackName != null && BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
+                //Log.e(TAG, "createFromResources: ProviderResourceEntry:" + systemFontFamilyName + ", " + sFallbackName + ", pf=" + BaikalAppProfile.getCurrentAppProfile().toString());
                 dLog("createFromResources", path + ", forced fallback=" + sFallbackName);
                 return Typeface.create(sFallbackName, NORMAL);
             }  
@@ -347,8 +347,8 @@ public class Typeface {
             return typeface == null ? DEFAULT : typeface;
         }
 
-        //Log.e(TAG, "createFromResources: " + path + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
-        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        //Log.e(TAG, "createFromResources: " + path + ", " + sFallbackName + ", pf=" + BaikalAppProfile.getCurrentAppProfile().toString());
+        if( sFallbackName != null && BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
             dLog("createFromResources", path + ", forced fallback=" + sFallbackName);
             return Typeface.create(sFallbackName, NORMAL);
         }
@@ -706,8 +706,8 @@ public class Typeface {
          * @return Newly created Typeface. May return null if some parameters are invalid.
          */
         public Typeface build() {
-            //Log.e(TAG, "Typeface build " + mFallbackFamilyName + ", " + sFallbackName + ", pf=" + AppProfile.getCurrentAppProfile().toString());
-            if (mFontBuilder == null || AppProfile.getCurrentAppProfile().mOverrideFonts) {
+            //Log.e(TAG, "Typeface build " + mFallbackFamilyName + ", " + sFallbackName + ", pf=" + BaikalAppProfile.getCurrentAppProfile().toString());
+            if (mFontBuilder == null || BaikalAppProfile.getCurrentAppProfile().mOverrideFonts) {
                 return resolveFallbackTypeface();
             }
 
@@ -901,7 +901,7 @@ public class Typeface {
          * @return the Typeface object
          */
         public @NonNull Typeface build() {
-            if( AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+            if( BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
                 return getDefault();
             }
             final int userFallbackSize = mFamilies.size();
@@ -931,7 +931,7 @@ public class Typeface {
      * @return The best matching typeface.
      */
     public static Typeface create(String familyName, @Style int style) {
-        if( sFallbackName != null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        if( sFallbackName != null && BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
             dLog("create", " sFallbackName=" + sFallbackName);
             return create(getSystemOverrideTypeface(sFallbackName), style); 
         }
@@ -958,14 +958,14 @@ public class Typeface {
      */
     public static Typeface create(Typeface family, @Style int style) {
 
-        dLog("create",AppProfile.getCurrentAppProfile().toString());
-        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        dLog("create",BaikalAppProfile.getCurrentAppProfile().toString());
+        if( /*sFallbackName != null &&*/ BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
             family = getDefault();
             dLog("create", " getDefault=" + family);
             //return family;
         }
 
-        /*if( sFallbackName == null && AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        /*if( sFallbackName == null && BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
             family = getDefault();
             dLog("create", " getDefault(null)=" + family);
         }*/
@@ -1052,7 +1052,7 @@ public class Typeface {
             @IntRange(from = 1, to = 1000) int weight, boolean italic) {
         final int key = (weight << 1) | (italic ? 1 : 0);
 
-        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        if( /*sFallbackName != null &&*/ BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
             base = getDefault();
             dLog("createWeightStyle", " getDefault=" + base);
             //return base;
@@ -1090,7 +1090,7 @@ public class Typeface {
             @NonNull List<FontVariationAxis> axes) {
         Typeface base = family == null ? Typeface.DEFAULT : family;
 
-        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        if( /*sFallbackName != null &&*/ BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
             base = Typeface.DEFAULT;
         }
 
@@ -1159,7 +1159,7 @@ public class Typeface {
 
         dLog("createFromFile", " path=" + file);
 
-        if( /*sFallbackName != null &&*/ AppProfile.getCurrentAppProfile().mOverrideFonts ) {
+        if( /*sFallbackName != null &&*/ BaikalAppProfile.getCurrentAppProfile().mOverrideFonts ) {
             dLog("createFromFile", " default=" + Typeface.DEFAULT);
             return Typeface.DEFAULT;
         }

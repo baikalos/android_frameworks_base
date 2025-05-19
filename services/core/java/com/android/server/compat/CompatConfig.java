@@ -48,7 +48,7 @@ import com.android.server.compat.overrides.Overrides;
 import com.android.server.compat.overrides.XmlWriter;
 import com.android.server.pm.ApexManager;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -175,7 +175,7 @@ final class CompatConfig {
      */
     boolean isChangeEnabled(long changeId, ApplicationInfo app) {
         CompatChange c = mChanges.get(changeId);
-        AppProfileManager manager = AppProfileManager.getInstance();
+        BaikalAppProfileManager manager = BaikalAppProfileManager.getInstance();
         if (c == null) {
             if( manager != null ) return manager.isCompatChangeEnabled(changeId,app,true);
             return true;

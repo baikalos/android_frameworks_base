@@ -75,7 +75,7 @@ import com.android.server.pm.UserManagerService;
 import com.android.server.pm.parsing.pkg.AndroidPackage;
 import com.android.server.pm.permission.PermissionManagerServiceInternal.HotwordDetectionServiceProvider;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -213,7 +213,7 @@ public class PermissionManagerService extends IPermissionManager.Stub {
             return PackageManager.PERMISSION_DENIED;
         }
 
-        if( AppProfileManager.checkPermission(pkgName,permName,userId) ) {
+        if( BaikalAppProfileManager.checkPermission(pkgName,permName,userId) ) {
             return PackageManager.PERMISSION_GRANTED;
         }
 
@@ -236,7 +236,7 @@ public class PermissionManagerService extends IPermissionManager.Stub {
             return PackageManager.PERMISSION_DENIED;
         }
 
-        if( AppProfileManager.checkUidPermission(uid,permName) ) {
+        if( BaikalAppProfileManager.checkUidPermission(uid,permName) ) {
             return PackageManager.PERMISSION_GRANTED;
         }
 

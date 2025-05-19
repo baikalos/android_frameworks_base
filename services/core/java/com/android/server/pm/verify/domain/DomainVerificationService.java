@@ -68,8 +68,8 @@ import com.android.server.pm.verify.domain.models.DomainVerificationStateMap;
 import com.android.server.pm.verify.domain.proxy.DomainVerificationProxy;
 import com.android.server.pm.verify.domain.proxy.DomainVerificationProxyUnavailable;
 
-import android.baikalos.AppProfile;
-import com.android.server.baikalos.AppProfileManager;
+import android.baikalos.BaikalAppProfile;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -1833,9 +1833,9 @@ public class DomainVerificationService extends SystemService
         //boolean forceAllOld = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_OLD_LINKS, 0) != 0;
         boolean forceOld = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_OLD_LINKS, 0) != 0;
         if( !forceOld ) {
-            AppProfileManager manager = AppProfileManager.getInstance();
+            BaikalAppProfileManager manager = BaikalAppProfileManager.getInstance();
             if( manager != null ) {
-                AppProfile profile = manager.getAppProfile(packageName,0);
+                BaikalAppProfile profile = manager.getBaikalAppProfile(packageName,0);
                 if( profile != null ) {
                     forceOld = profile.mOldLinks;
                     if( forceOld ) Slog.d(TAG,"Forced old links app:" + packageName);

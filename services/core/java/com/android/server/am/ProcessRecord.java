@@ -26,7 +26,7 @@ import android.app.ApplicationExitInfo;
 import android.app.ApplicationExitInfo.Reason;
 import android.app.ApplicationExitInfo.SubReason;
 import android.app.IApplicationThread;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManagerInternal;
 import android.content.pm.ProcessInfo;
@@ -59,7 +59,7 @@ import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.wm.WindowProcessController;
 import com.android.server.wm.WindowProcessListener;
 
-import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 
 import java.io.PrintWriter;
 import java.util.Arrays;
@@ -390,7 +390,7 @@ class ProcessRecord implements WindowProcessListener {
      */
     Runnable mSuccessorStartRunnable;
 
-    volatile AppProfile mAppProfile;
+    volatile BaikalAppProfile mBaikalAppProfile;
 
     void setStartParams(int startUid, HostingRecord hostingRecord, String seInfo,
             long startUptime, long startElapsedTime) {
@@ -518,38 +518,38 @@ class ProcessRecord implements WindowProcessListener {
         mProcLock = _service.mProcLock;
         info = _info;
 
-        AppProfileSettings appSettings = AppProfileSettings.getInstance();
+        BaikalAppProfileSettings appSettings = BaikalAppProfileSettings.getInstance();
         if( appSettings != null ) { 
-            mAppProfile = appSettings.getProfile(_info.packageName);
-            if( mAppProfile == null ) mAppProfile = new AppProfile(_info.packageName, _uid);
-            Slog.i(TAG,"Baikal.AppProfile: Loaded ProcessRecord AppProfile:" + mAppProfile.toString());
-            if( mAppProfile.mBackgroundMode > 0 ) {
-                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for background restricted app for:" + mAppProfile.toString(), new Throwable());
-            } else if( mAppProfile.mDebug ) {
-                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for debug app for:" + mAppProfile.toString(), new Throwable());
+            mBaikalAppProfile = appSettings.getBaikalProfile(_info.packageName);
+            if( mBaikalAppProfile == null ) mBaikalAppProfile = new BaikalAppProfile(_info.packageName, _uid);
+            Slog.i(TAG,"Baikal.AppProfile: Loaded ProcessRecord AppProfile:" + mBaikalAppProfile.toString());
+            if( mBaikalAppProfile.mBackgroundMode > 0 ) {
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for background restricted app for:" + mBaikalAppProfile.toString(), new Throwable());
+            } else if( mBaikalAppProfile.mDebug ) {
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for debug app for:" + mBaikalAppProfile.toString(), new Throwable());
             } else {
-                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for:" + mAppProfile.toString() + ", proc=" + _processName);
+                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for:" + mBaikalAppProfile.toString() + ", proc=" + _processName);
             }
         } else {
             Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord Not ready for package:" + _info.packageName + ", proc=" + _processName);
-            mAppProfile = new AppProfile(_info.packageName, _uid);
+            mBaikalAppProfile = new BaikalAppProfile(_info.packageName, _uid);
         }
 
 
         if( "com.google.android.gms".equals(_info.packageName) ) {
-            mAppProfile = new AppProfile(mAppProfile);
-            mAppProfile.mIsGms = true;
+            mBaikalAppProfile = new BaikalAppProfile(mBaikalAppProfile);
+            mBaikalAppProfile.mIsGms = true;
             if("com.google.android.gms.persistent".equals(_processName)) {
                 Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for google persistent package:" + _info.packageName + ", proc=" + _processName);
-                mAppProfile.mIsGmsPersistent = true;
+                mBaikalAppProfile.mIsGmsPersistent = true;
             } else if("com.google.android.gms.unstable".equals(_processName)) {
                 Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for google unstable package:" + _info.packageName + ", proc=" + _processName);
-                mAppProfile.mIsGmsUnstable = true; 
-                mAppProfile.mSystemWhitelisted = false;
-                mAppProfile.mImportantApp = false;
+                mBaikalAppProfile.mIsGmsUnstable = true; 
+                mBaikalAppProfile.mSystemWhitelisted = false;
+                mBaikalAppProfile.mImportantApp = false;
             } else {
-                mAppProfile.mSystemWhitelisted = false;
-                mAppProfile.mImportantApp = false;
+                mBaikalAppProfile.mSystemWhitelisted = false;
+                mBaikalAppProfile.mImportantApp = false;
             }
         } 
         /* else {
@@ -610,7 +610,7 @@ class ProcessRecord implements WindowProcessListener {
         mOptRecord.init(now);
         mState.init(now);
         setLastTopTime(now);
-        mAppProfile.setLastTopTime(now);
+        mBaikalAppProfile.setLastTopTime(now);
         mWindowProcessController = new WindowProcessController(
                 mService.mActivityTaskManager, info, processName, uid, userId, this, this);
         mPkgList.put(_info.packageName, new ProcessStats.ProcessStateHolder(_info.longVersionCode));
@@ -1460,6 +1460,6 @@ class ProcessRecord implements WindowProcessListener {
     }
 
     public boolean isBackgroundRestricted() {
-        return mAppProfile.getBackgroundMode(true) > 0;
+        return mBaikalAppProfile.getBackgroundMode(true) > 0;
     }
 }

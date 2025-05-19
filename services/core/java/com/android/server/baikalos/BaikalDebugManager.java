@@ -94,9 +94,9 @@ import android.view.Display;
 import static android.view.Display.DEFAULT_DISPLAY;
 import static android.view.Display.INVALID_DISPLAY;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.Actions;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalActions;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
 import com.android.server.LocalServices;
@@ -266,9 +266,9 @@ public class BaikalDebugManager {
         if( (debugMask&BaikalConstants.DEBUG_MASK_NETWORK) !=0 ) BaikalConstants.BAIKAL_DEBUG_NETWORK = true;
 
 
-        AppProfile.DEBUG = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
-        AppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
-        AppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+        BaikalAppProfile.DEBUG = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+        BaikalAppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+        BaikalAppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
 
         LocationManagerService.D = BaikalConstants.BAIKAL_DEBUG_LOCATION;
 

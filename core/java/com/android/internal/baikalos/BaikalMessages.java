@@ -16,21 +16,12 @@
 
 package com.android.internal.baikalos;
 
-public class SpoofDeviceInfo {
-    public String deviceName;
-    public String deviceModel;
-    public String deviceManufacturer;
-    public String deviceDisplayName;
-    public String deviceBrand;
-    public String deviceFp;
-        
-    public SpoofDeviceInfo(String name, String model, String manufacturer, String displayName, String brand, String fp) {
-        deviceName = name;
-        deviceModel = model;
-        deviceManufacturer = manufacturer;
-        deviceDisplayName = displayName;
-        deviceBrand = brand;
-        deviceFp = fp;
-    }
-}
+public class BaikalMessages { 
 
+    public static final int MESSAGE_SEND_INTENT = BaikalConstants.MESSAGE_ACTIONS;
+
+    public static final int MESSAGE_SETTINGS_UPDATE = BaikalConstants.MESSAGE_SETTINGS;
+    public static final int MESSAGE_SENSOR_PROXIMITY_TIMEOUT = BaikalConstants.MESSAGE_SENSORS;
+
+
+}

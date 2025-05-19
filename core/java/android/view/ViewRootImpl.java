@@ -104,7 +104,7 @@ import android.app.ICompatCameraControlCallback;
 import android.app.ResourcesManager;
 import android.app.WindowConfiguration;
 import android.app.compat.CompatChanges;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ClipData;
 import android.content.ClipDescription;
@@ -209,7 +209,7 @@ import android.window.WindowOnBackInvokedDispatcher;
 import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable;
 import com.android.internal.inputmethod.ImeTracing;
 import com.android.internal.inputmethod.InputMethodDebug;
@@ -1658,20 +1658,20 @@ public final class ViewRootImpl implements ViewParent,
     private void updateForceDarkMode() {
         if (mAttachInfo.mThreadedRenderer == null) return;
 
-        boolean forceDark = AppProfile.getCurrentAppProfile().mDarkMode == 2;
+        boolean forceDark = BaikalAppProfile.getCurrentAppProfile().mDarkMode == 2;
         boolean useAutoDark = getNightMode() == Configuration.UI_MODE_NIGHT_YES;
 
         if (!forceDark && useAutoDark) {
             boolean forceDarkAllowedDefault =
                     SystemProperties.getBoolean(ThreadedRenderer.DEBUG_FORCE_DARK, 
-                    AppProfile.getCurrentAppProfile().mDarkMode == 1);
+                    BaikalAppProfile.getCurrentAppProfile().mDarkMode == 1);
             TypedArray a = mContext.obtainStyledAttributes(R.styleable.Theme);
             useAutoDark = a.getBoolean(R.styleable.Theme_isLightTheme, true)
                     && a.getBoolean(R.styleable.Theme_forceDarkAllowed, forceDarkAllowedDefault);
             a.recycle();
         }
 
-        Slog.d(mTag, "updateForceDarkMode: " + mBasePackageName + "/" + Process.myUid() + ", ua=" + useAutoDark + ", fd=" + forceDark + ", " + AppProfile.getCurrentAppProfile().toString());
+        Slog.d(mTag, "updateForceDarkMode: " + mBasePackageName + "/" + Process.myUid() + ", ua=" + useAutoDark + ", fd=" + forceDark + ", " + BaikalAppProfile.getCurrentAppProfile().toString());
 
         if (mAttachInfo.mThreadedRenderer.setForceDark(useAutoDark || forceDark)) {
             // TODO: Don't require regenerating all display lists to apply this setting
@@ -1963,7 +1963,7 @@ public final class ViewRootImpl implements ViewParent,
     }
 
     void pokeDrawLockIfNeeded() {
-        if (!Display.isDozeState(mAttachInfo.mDisplayState) && !AppProfileSettings.isSuperSaverActiveForDraw()) {
+        if (!Display.isDozeState(mAttachInfo.mDisplayState) && !BaikalAppProfileSettings.isSuperSaverActiveForDraw()) {
             // Only need to acquire wake lock for DOZE state.
             return;
         }

@@ -72,7 +72,7 @@ import android.view.KeyEvent;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.util.Preconditions;
-import com.android.internal.baikalos.AppVolumeDB;
+import com.android.internal.baikalos.BaikalAppVolumeDB;
 
 import java.io.IOException;
 import java.lang.annotation.Retention;
@@ -1053,7 +1053,7 @@ public class AudioManager {
     @UnsupportedAppUsage
     @RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_ROUTING)
     public int setAppVolume(String packageName, float volume) {
-        AppVolumeDB.setAppVolume(packageName, volume);
+        BaikalAppVolumeDB.setAppVolume(packageName, volume);
         if( volume < 0.0F ) volume = 1.0F;
         return AudioSystem.setAppVolume(packageName, volume);
     }

@@ -75,11 +75,11 @@ import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 import com.android.server.utils.AlarmQueue;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.internal.baikalos.BaikalActions;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import dalvik.annotation.optimization.NeverCompile;
 
@@ -4786,7 +4786,7 @@ public final class QuotaController extends StateController {
 
     boolean isAllowedWhileIdleLocked(JobStatus job) {
 
-        AppProfile srcProfile = AppProfileManager.getInstance().getProfile(job.getSourcePackageName(),job.getSourceUid());
+        BaikalAppProfile srcProfile = BaikalAppProfileManager.getInstance().getBaikalProfile(job.getSourcePackageName(),job.getSourceUid());
         if( srcProfile != null ) {
             if( srcProfile.getBackgroundMode(false) < 0 ) return true;
             if( srcProfile.mAllowWhileIdle ) return true;

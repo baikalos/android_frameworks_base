@@ -58,9 +58,9 @@ import java.util.Map;
 import java.util.Set;
 
 
-public class PowerSaverSettings extends ContentObserver {
+public class BaikalPowerSaverSettings extends ContentObserver {
 
-    private static final String TAG = "PowerSaverSettings";
+    private static final String TAG = "BaikalPowerSaverSettings";
 
     boolean mIsReady;
 
@@ -71,14 +71,14 @@ public class PowerSaverSettings extends ContentObserver {
 
     private final TextUtils.StringSplitter mSplitter = new TextUtils.SimpleStringSplitter('|');
 
-    HashMap<Integer, PowerSaverPolicyConfig> _policiesById = new HashMap<Integer,PowerSaverPolicyConfig> ();
+    HashMap<Integer, BaikalPowerSaverPolicyConfig> _policiesById = new HashMap<Integer, BaikalPowerSaverPolicyConfig> ();
     //HashMap<String, PowerSaverPolicyConfig> _policiesByName = new HashMap<String,PowerSaverPolicyConfig> ();
 
     boolean isChanged = false;
 
     static boolean sIsLoaded;
 
-    public PowerSaverSettings(Handler handler,Context context) {
+    public BaikalPowerSaverSettings(Handler handler,Context context) {
         super(handler);
 
         mContext = context;
@@ -92,7 +92,7 @@ public class PowerSaverSettings extends ContentObserver {
     }
 
 
-    public HashMap<Integer, PowerSaverPolicyConfig> getPoliciesById() { 
+    public HashMap<Integer, BaikalPowerSaverPolicyConfig> getPoliciesById() { 
         return _policiesById;
     }
 
@@ -101,7 +101,7 @@ public class PowerSaverSettings extends ContentObserver {
         return _policiesByName;
     }*/
 
-    public void updatePolicy(PowerSaverPolicyConfig policy) {
+    public void updatePolicy(BaikalPowerSaverPolicyConfig policy) {
         _policiesById.put(policy.policyNumber,policy);
         //_policiesByName.put(policy.policyName,policy);
     }
@@ -128,8 +128,8 @@ public class PowerSaverSettings extends ContentObserver {
         if( selfUpdate ) return;
         selfUpdate = true;
 
-        HashMap<String,PowerSaverPolicyConfig> newPoliciesByName = new HashMap<String,PowerSaverPolicyConfig> ();
-        HashMap<Integer,PowerSaverPolicyConfig> newPoliciesById = new HashMap<Integer,PowerSaverPolicyConfig> ();
+        HashMap<String, BaikalPowerSaverPolicyConfig> newPoliciesByName = new HashMap<String, BaikalPowerSaverPolicyConfig> ();
+        HashMap<Integer, BaikalPowerSaverPolicyConfig> newPoliciesById = new HashMap<Integer, BaikalPowerSaverPolicyConfig> ();
 
         try {
             if( policiesString == null ) {
@@ -142,7 +142,7 @@ public class PowerSaverSettings extends ContentObserver {
 
                 for(String policyString:mSplitter) {
                 
-                    PowerSaverPolicyConfig policy = PowerSaverPolicyConfig.deserialize(policyString); 
+                    BaikalPowerSaverPolicyConfig policy = BaikalPowerSaverPolicyConfig.deserialize(policyString); 
                     if( policy != null  ) {
                         newPoliciesByName.put(policy.policyName, policy);
                         newPoliciesById.put(policy.policyNumber, policy);
@@ -184,7 +184,7 @@ public class PowerSaverSettings extends ContentObserver {
             policies = "";
         }
 
-        for(Map.Entry<Integer, PowerSaverPolicyConfig> entry : _policiesById.entrySet()) {
+        for(Map.Entry<Integer, BaikalPowerSaverPolicyConfig> entry : _policiesById.entrySet()) {
             if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.i(TAG, "Save policy name=" + entry.getValue().policyName);
             String entryString = entry.getValue().serialize();
             if( entryString != null ) val += entryString + "|";

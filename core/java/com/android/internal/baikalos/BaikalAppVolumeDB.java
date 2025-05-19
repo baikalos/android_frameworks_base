@@ -40,7 +40,7 @@ import android.content.res.Resources;
 import android.content.res.Resources.Theme;
 
 import android.app.AppOpsManager;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 
 import android.net.Uri;
 
@@ -59,11 +59,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class AppVolumeDB {
+public class BaikalAppVolumeDB {
 
     private static final String TAG = "AppVolumeDB";
 
-    static AppVolumeDB _instance;
+    static BaikalAppVolumeDB _instance;
 
     Context mContext;
     ContentResolver mResolver;
@@ -75,14 +75,14 @@ public class AppVolumeDB {
 
     HashMap<String, Float> _volumeByPackageName = new HashMap<String,Float> ();
 
-    private AppVolumeDB(Context context) {
+    private BaikalAppVolumeDB(Context context) {
         mContext = context;
         mResolver = mContext.getContentResolver();
     }
 
-    public static AppVolumeDB getInstance(Context context) {
+    public static BaikalAppVolumeDB getInstance(Context context) {
         if( _instance == null ) {
-            _instance = new AppVolumeDB(context);
+            _instance = new BaikalAppVolumeDB(context);
         }
         return _instance;
     }

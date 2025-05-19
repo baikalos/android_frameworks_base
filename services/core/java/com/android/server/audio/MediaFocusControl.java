@@ -42,8 +42,8 @@ import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 
 
 import java.io.PrintWriter;
@@ -1032,7 +1032,7 @@ public class MediaFocusControl implements PlayerFocusEnforcer {
 
             }
 
-            AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(callingPackageName);
+            BaikalAppProfile profile = BaikalAppProfileSettings.getInstance() == null ? null : BaikalAppProfileSettings.getInstance().getBaikalProfile(callingPackageName);
             if( profile != null && profile.mBAFSend ) {
                 Log.e(TAG, "requestAudioFocus() blocked from uid/pid " + Binder.getCallingUid()
                     + "/" + Binder.getCallingPid()

@@ -65,7 +65,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.annotation.UserIdInt;
 import android.app.ActivityManager;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -155,7 +155,7 @@ import com.android.server.utils.WatchedSparseIntArray;
 import com.android.server.wm.ActivityTaskManagerInternal;
 import com.android.server.baikalos.BaikalAppManagerService;
 import com.android.server.baikalos.BaikalSpooferService;
-import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.baikalos.BaikalSpoofer;
 
 import libcore.util.EmptyArray;
@@ -5714,14 +5714,14 @@ public class ComputerEngine implements Computer {
                     && p.isDirectBootAware();
 
             boolean pinned = false;
-            AppProfileSettings appSettings = AppProfileSettings.getInstance();
+            BaikalAppProfileSettings appSettings = BaikalAppProfileSettings.getInstance();
             if( appSettings != null ) {
-                AppProfile appProfile = appSettings.getProfile(p.getPackageName());
+                BaikalAppProfile appProfile = appSettings.getBaikalProfile(p.getPackageName());
                 if( appProfile != null && appProfile.mPinned ) pinned = true;
             }
 
             if ( (p.isPersistent() || pinned)
-                    && (!safeMode || p.isSystem())
+                    && (!safeMode || p.isSystem() || pinned)
                     && (matchesUnaware || matchesAware)) {
                 PackageStateInternal ps = mSettings.getPackage(p.getPackageName());
                 if (ps != null) {

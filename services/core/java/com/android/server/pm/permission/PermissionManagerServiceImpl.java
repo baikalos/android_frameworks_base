@@ -66,7 +66,7 @@ import android.annotation.UserIdInt;
 import android.app.ActivityManager;
 import android.app.IActivityManager;
 import android.app.admin.DevicePolicyManagerInternal;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledAfter;
 import android.content.Context;
@@ -145,8 +145,8 @@ import com.android.server.pm.pkg.parsing.ParsingPackageImpl;
 import com.android.server.policy.PermissionPolicyInternal;
 import com.android.server.policy.SoftRestrictedPermissionPolicy;
 
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import libcore.util.EmptyArray;
 
@@ -953,7 +953,7 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
             @NonNull String permissionName, @UserIdInt int userId) {
 
 
-        if( AppProfileManager.checkPermission(pkg.getPackageName(),permissionName,userId) ) {
+        if( BaikalAppProfileManager.checkPermission(pkg.getPackageName(),permissionName,userId) ) {
             return PackageManager.PERMISSION_GRANTED;
         }
 
@@ -4020,20 +4020,20 @@ public class PermissionManagerServiceImpl implements PermissionManagerServiceInt
                 ParsingPackageImpl pkg = (ParsingPackageImpl)apkg;
                 int mode = -1;
 
-                if( AppProfileSettings.getInstance() == null ) {
+                if( BaikalAppProfileSettings.getInstance() == null ) {
                     Slog.w(TAG, "BaikalService not initialized!!!!!!!!!!!!!", new Throwable());
                     return;
                 }
 
-                boolean isAutoreovkeDisabled = AppProfileSettings.getInstance().isAutoRevokeDisabled();
+                boolean isAutoreovkeDisabled = BaikalAppProfileSettings.getInstance().isAutoRevokeDisabled();
                 if( isAutoreovkeDisabled ) {
                     Slog.i(TAG, "Disable permission autorevoke for " + pkg.getPackageName());
                     pkg.setAutoRevokePermissions(2);
                 }
 
 
-                if( AppProfileSettings.isLoaded() ) {
-                AppProfile profile = AppProfileSettings.getInstance().getProfileLocked(pkg.getPackageName());
+                if( BaikalAppProfileSettings.isLoaded() ) {
+                BaikalAppProfile profile = BaikalAppProfileSettings.getInstance().getBaikalProfile(pkg.getPackageName());
 
                     if( profile != null ) {
                         Slog.w(TAG, "Profile file access mode for " + pkg.getPackageName() + ": "  + profile.mFileAccess);

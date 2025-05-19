@@ -126,9 +126,9 @@ import com.android.server.LocalServices;
 import com.android.server.pm.parsing.pkg.AndroidPackage;
 import com.android.server.usage.AppIdleHistory.AppUsageHistory;
 
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import com.android.internal.baikalos.BaikalConstants;
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 
 import libcore.util.EmptyArray;
 
@@ -1429,7 +1429,7 @@ public class AppStandbyController
         }
         if (mSystemServicesReady) {
 
-            AppProfile profile = AppProfileManager.getProfile(packageName,appId);
+            BaikalAppProfile profile = BaikalAppProfileManager.getBaikalProfile(packageName,appId);
 
             //if( AppProfileManager.getInstance().isStamina() && !profile.getStamina() && profile.getBackgroundMode() >= 0 ) {
             //    return STANDBY_BUCKET_RARE;

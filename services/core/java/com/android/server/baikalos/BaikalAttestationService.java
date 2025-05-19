@@ -39,9 +39,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public final class AttestationService {
+public final class BaikalAttestationService {
 
-    private static final String TAG = AttestationService.class.getSimpleName();
+    private static final String TAG = BaikalAttestationService.class.getSimpleName();
 
     private static final String API = "https://raw.githubusercontent.com/crdroidandroid/android_vendor_certification/refs/heads/15.0/gms_certified_props.json";
     private static final String DATA_FILE = "gms_certified_props.json";
@@ -58,7 +58,7 @@ public final class AttestationService {
     private boolean mPendingUpdate;
     private boolean mEnabled;
 
-    public AttestationService(Context context) {
+    public BaikalAttestationService(Context context) {
         mContext = context;
     }
 
@@ -205,17 +205,17 @@ public final class AttestationService {
         }
 
         private void update(PiItem item) {
-            SystemProperties.set("persist.spoof.def.manufacturer",item.MANUFACTURER);
-            SystemProperties.set("persist.spoof.def.model",item.MODEL);
-            SystemProperties.set("persist.spoof.def.fingerprint", item.FINGERPRINT);
-            SystemProperties.set("persist.spoof.def.brand", item.BRAND);
-            SystemProperties.set("persist.spoof.def.product", item.PRODUCT);
-            SystemProperties.set("persist.spoof.def.device", item.DEVICE);
-            SystemProperties.set("persist.spoof.def.id", item.ID);
-            SystemProperties.set("persist.spoof.def.release", item.RELEASE);
-            SystemProperties.set("persist.spoof.def.incremental", item.INCREMENTAL);
-            SystemProperties.set("persist.spoof.def.security_patch", item.SECURITY_PATCH);
-            SystemProperties.set("persist.spoof.def.firs_api_level", item.DEVICE_INITIAL_SDK_INT);
+            SystemProperties.set("persist.spf.def.manufacturer",item.MANUFACTURER);
+            SystemProperties.set("persist.spf.def.model",item.MODEL);
+            SystemProperties.set("persist.spf.def.fingerprint", item.FINGERPRINT);
+            SystemProperties.set("persist.spf.def.brand", item.BRAND);
+            SystemProperties.set("persist.spf.def.product", item.PRODUCT);
+            SystemProperties.set("persist.spf.def.device", item.DEVICE);
+            SystemProperties.set("persist.spf.def.id", item.ID);
+            SystemProperties.set("persist.spf.def.release", item.RELEASE);
+            SystemProperties.set("persist.spf.def.incremental", item.INCREMENTAL);
+            SystemProperties.set("persist.spf.def.security_patch", item.SECURITY_PATCH);
+            SystemProperties.set("persist.spf.def.firs_api_level", item.DEVICE_INITIAL_SDK_INT);
         }
     }
 

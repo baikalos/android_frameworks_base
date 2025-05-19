@@ -59,12 +59,12 @@ import com.android.server.AppStateTrackerProto.RunAnyInBackgroundRestrictedPacka
 import com.android.server.usage.AppStandbyInternal;
 import com.android.server.usage.AppStandbyInternal.AppIdleStateChangeListener;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.Actions;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalActions;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 import com.android.server.baikalos.BaikalAlarmManager;
 
 import java.io.PrintWriter;
@@ -100,7 +100,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
     PowerManagerInternal mPowerManagerInternal;
     StandbyTracker mStandbyTracker;
     AppStandbyInternal mAppStandbyInternal;
-    AppProfileManager mAppProfileManager;
+    BaikalAppProfileManager mAppProfileManager;
 
     private final MyHandler mHandler;
 
@@ -204,7 +204,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
     public boolean isAppBackgroundRestricted(int uid, @NonNull String packageName) {
         //final Set<Pair<Integer, String>> bgRestrictedUidPkgs = mBackgroundRestrictedUidPackages;
         //return bgRestrictedUidPkgs.contains(Pair.create(uid, packageName));
-        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName,uid) : null;
+        BaikalAppProfile profile = mAppProfileManager != null ? mAppProfileManager.getBaikalAppProfile(packageName,uid) : null;
         int backgroundMode = profile != null ? profile.getBackgroundMode(true) : 0;
         if( backgroundMode > 0 ) return true;
         return false;
@@ -505,8 +505,8 @@ public class AppStateTrackerImpl implements AppStateTracker {
                 case Intent.ACTION_SCREEN_ON:
                 case Intent.ACTION_SCREEN_OFF:
                 case Intent.ACTION_USER_UNLOCKED:
-                case Actions.ACTION_IDLE_MODE_CHANGED:
-                case Actions.ACTION_STAMINA_CHANGED:
+                case BaikalActions.ACTION_IDLE_MODE_CHANGED:
+                case BaikalActions.ACTION_STAMINA_CHANGED:
                     Slog.w(TAG, "Action: " + intent.getAction());
                     synchronized (mLock) {
                         updateBackgroundRestrictedUidPackagesLocked();
@@ -582,8 +582,8 @@ public class AppStateTrackerImpl implements AppStateTracker {
             filter.addAction(Intent.ACTION_SCREEN_ON);
             filter.addAction(Intent.ACTION_SCREEN_OFF);
             filter.addAction(Intent.ACTION_PACKAGE_ADDED);
-            filter.addAction(Actions.ACTION_STAMINA_CHANGED);
-            filter.addAction(Actions.ACTION_IDLE_MODE_CHANGED);
+            filter.addAction(BaikalActions.ACTION_STAMINA_CHANGED);
+            filter.addAction(BaikalActions.ACTION_IDLE_MODE_CHANGED);
             mContext.registerReceiver(mReceiver, filter);
 
             filter = new IntentFilter(Intent.ACTION_PACKAGE_REMOVED);
@@ -604,7 +604,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
             mBatterySaverEnabled = mPowerManagerInternal.getLowPowerState(
                     ServiceType.FORCE_ALL_APPS_STANDBY).batterySaverEnabled;
 
-            mAppProfileManager = AppProfileManager.getInstance();
+            mAppProfileManager = BaikalAppProfileManager.getInstance();
 
             updateForceAllAppStandbyState();
         }
@@ -690,7 +690,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
     private void updateBackgroundRestrictedUidPackagesLocked() {
         if (!mForcedAppStandbyEnabled) {
             Set<Pair<Integer, String>> emptyUidPkgs = new ArraySet<>();
-            AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(emptyUidPkgs, mForceAllAppsStandby);
+            BaikalAppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(emptyUidPkgs, mForceAllAppsStandby);
             mBackgroundRestrictedUidPackages = Collections.unmodifiableSet(emptyUidPkgs);
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
                 for (Pair<Integer, String> entry : mBackgroundRestrictedUidPackages) {
@@ -706,7 +706,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.d(TAG, "mBackgroundRestrictedUidPackages: (2) " 
                 + mRunAnyRestrictedPackages.valueAt(i).second + "/" + mRunAnyRestrictedPackages.valueAt(i).first);
         }
-        AppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(fasUidPkgs, mForceAllAppsStandby);
+        BaikalAppProfileSettings.updateBackgroundRestrictedUidPackagesLocked(fasUidPkgs, mForceAllAppsStandby);
         mBackgroundRestrictedUidPackages = Collections.unmodifiableSet(fasUidPkgs);
 
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) {
@@ -749,7 +749,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
 
     @GuardedBy("mLock")
     private boolean containsForcedAppStandbyUidPackageLocked(int uid, @NonNull String packageName) {
-        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName,uid) : null;
+        BaikalAppProfile profile = mAppProfileManager != null ? mAppProfileManager.getBaikalAppProfile(packageName,uid) : null;
         int backgroundMode = profile != null ? profile.getBackgroundMode(true) : 0;
 
         if( backgroundMode > 0 ) { 
@@ -1272,7 +1272,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     public boolean areAlarmsRestrictedByBatterySaver(int uid, @NonNull String packageName) {
 
-        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName, uid) : null;
+        BaikalAppProfile profile = mAppProfileManager != null ? mAppProfileManager.getBaikalAppProfile(packageName, uid) : null;
         boolean stamina = mAppProfileManager != null ? mAppProfileManager.isStamina() : false;
 
 
@@ -1312,7 +1312,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
     public boolean areJobsRestricted(int uid, @NonNull String packageName,
             boolean hasForegroundExemption) {
 
-        AppProfile profile = mAppProfileManager != null ? mAppProfileManager.getAppProfile(packageName,uid) : null;
+        BaikalAppProfile profile = mAppProfileManager != null ? mAppProfileManager.getBaikalAppProfile(packageName,uid) : null;
         boolean stamina = mAppProfileManager != null ? mAppProfileManager.isStamina() : false;
 
         int backgroundMode = 0;
@@ -1429,7 +1429,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     public boolean isUidPowerSaveExempt(int uid) {
 
-        AppProfile profile = mAppProfileManager.getAppProfile(uid);
+        BaikalAppProfile profile = mAppProfileManager.getBaikalAppProfile(uid);
         if( profile != null ) {
         	if( profile.mBackgroundMode < 0 ) return true;
         	if( profile.mAllowWhileIdle ) return true;
@@ -1447,7 +1447,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     public boolean isUidPowerSaveUserExempt(int uid) {
 
-        AppProfile profile = mAppProfileManager.getAppProfile(uid);
+        BaikalAppProfile profile = mAppProfileManager.getBaikalAppProfile(uid);
         if( profile != null ) {
         	if( profile.mBackgroundMode < 0 ) return true;
         	if( profile.mAllowWhileIdle ) return true;
@@ -1465,7 +1465,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
      */
     public boolean isUidPowerSaveIdleExempt(int uid) {
 
-        AppProfile profile = mAppProfileManager.getAppProfile(uid);
+        BaikalAppProfile profile = mAppProfileManager.getBaikalAppProfile(uid);
         if( profile != null ) {
         	if( profile.mBackgroundMode < 0 ) return true;
         	if( profile.mAllowWhileIdle ) return true;
@@ -1499,7 +1499,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
                 AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
                 uid, packageName) != AppOpsManager.MODE_ALLOWED;
         */
-        return mAppProfileManager.isAppRestricted(uid,packageName);
+        return mAppProfileManager.isBaikalAppRestricted(uid,packageName);
     }
 
     /**

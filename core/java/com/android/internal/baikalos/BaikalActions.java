@@ -25,7 +25,7 @@ import android.os.Message;
 import android.os.UserHandle;
 import android.util.Log;
 
-public class Actions { 
+public class BaikalActions { 
 
     private static final String TAG = "Baikal.Actions";
 
@@ -42,6 +42,8 @@ public class Actions {
     public static final String ACTION_PROFILE_CHANGED = "com.android.internal.baikalos.Actions.ACTION_PROFILE_CHANGED";
 
     public static final String ACTION_SET_PROFILE = "com.android.internal.baikalos.Actions.ACTION_SET_PROFILE";
+
+    public static final String ACTION_SWITCH_INCALLUI = "com.android.internal.baikalos.Actions.ACTION_SWITCH_INCALLUI";
 
     public static final String EXTRA_BOOL_MODE = "com.android.internal.baikalos.Actions.EXTRA_BOOL_MODE";
     public static final String EXTRA_INT_MODE = "com.android.internal.baikalos.Actions.EXTRA_INT_MODE";
@@ -67,14 +69,14 @@ public class Actions {
         }
     }
 
-    public Actions(Context context, Looper looper) {
+    public BaikalActions(Context context, Looper looper) {
     	mStaticContext = context;
 	    mStaticHandler = new ActionHandler(looper);
     }
 
     public boolean onMessage(Message msg) {
     	switch(msg.what) {
-    	    case Messages.MESSAGE_SEND_INTENT:
+    	    case BaikalMessages.MESSAGE_SEND_INTENT:
         	if( BaikalConstants.BAIKAL_DEBUG_ACTIONS ) Log.i(TAG,"sendIntent:" + (Intent)msg.obj);
     		sendIntent((Intent)msg.obj);
     		return true;
@@ -148,12 +150,19 @@ public class Actions {
     	enqueueIntent(intent);
     }
 
+
+    public static void sendSwitchIncallUi() {
+        Intent intent = new Intent(ACTION_SWITCH_INCALLUI);
+        intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
+    	enqueueIntent(intent);
+    }
+
     public static void enqueueIntent(Intent intent) {
         if( mStaticHandler == null ) {
             Log.e(TAG, "Not ready to post intent " + intent);
             return;
         }
-    	Message msg = mStaticHandler.obtainMessage(Messages.MESSAGE_SEND_INTENT);
+    	Message msg = mStaticHandler.obtainMessage(BaikalMessages.MESSAGE_SEND_INTENT);
     	msg.obj = intent;
     	mStaticHandler.sendMessage(msg);
     }

@@ -28,8 +28,8 @@ import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 import com.android.server.audio.MediaFocusControl.AudioFocusDeathHandler;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 
 import java.io.PrintWriter;
 
@@ -345,7 +345,7 @@ public class FocusRequester {
             mFocusController.notifyExtPolicyFocusGrant_syncAf(toAudioFocusInfo(),
                     AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
 
-            AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(mPackageName);
+            BaikalAppProfile profile = BaikalAppProfileSettings.getInstance() == null ? null : BaikalAppProfileSettings.getInstance().getBaikalProfile(mPackageName);
 
             if( (mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS || 
                 mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK )
@@ -409,7 +409,7 @@ public class FocusRequester {
                     return;
                 }
 
-                AppProfile profile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfile(mPackageName);
+                BaikalAppProfile profile = BaikalAppProfileSettings.getInstance() == null ? null : BaikalAppProfileSettings.getInstance().getBaikalProfile(mPackageName);
 
                 if( (mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS || 
                     mFocusLossReceived == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK )
