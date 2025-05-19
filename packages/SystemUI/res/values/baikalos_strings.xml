@@ -47,4 +47,8 @@
     <!-- CPUInfoLite tile -->
     <string name="quick_settings_cpuinfolite_label">SYS Info</string>
 
+    <string name="quick_settings_switch_incallui_label">InCall UI</string>
+
+
+
 </resources>
