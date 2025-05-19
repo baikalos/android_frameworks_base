@@ -99,7 +99,7 @@ import android.app.servertransaction.ClientTransaction;
 import android.app.servertransaction.LaunchActivityItem;
 import android.app.servertransaction.PauseActivityItem;
 import android.app.servertransaction.ResumeActivityItem;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -878,7 +878,7 @@ public class ActivityTaskSupervisor implements RecentTasks.Callbacks {
                 if (r.isActivityTypeHome()) {
                     // Home process is the root process of the task.
                     updateHomeProcess(task.getBottomMostActivity().app);
-                    AppProfile.updateHomeProcess(task.getBottomMostActivity().app.mUid);
+                    BaikalAppProfile.updateHomeProcess(task.getBottomMostActivity().app.mUid);
                 }
                 mService.getPackageManagerInternalLocked().notifyPackageUse(
                         r.intent.getComponent().getPackageName(), NOTIFY_PACKAGE_USE_ACTIVITY);
