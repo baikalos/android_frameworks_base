@@ -26,8 +26,8 @@
 
     <java-symbol type="bool" name="config_superSaverAvailable" />
     <java-symbol type="bool" name="config_validLayoutRequesters" />
-    <java-symbol type="bool" name="config_certificateSpooferAvailable" />
-    <java-symbol type="bool" name="config_signatureSpooferAvailable" />
+    <java-symbol type="bool" name="config_certificateSpfrAvailable" />
+    <java-symbol type="bool" name="config_signatureSpfrAvailable" />
 
     <java-symbol type="bool" name="config_irCameraAvailable" />
 </resources>
