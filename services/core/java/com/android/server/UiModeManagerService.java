@@ -92,6 +92,8 @@ import com.android.server.twilight.TwilightState;
 import com.android.server.wm.ActivityTaskManagerInternal;
 import com.android.server.wm.WindowManagerInternal;
 
+import com.android.server.baikalos.BaikalAppProfileManager;
+
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.time.DateTimeException;
@@ -1473,6 +1475,8 @@ final class UiModeManagerService extends SystemService {
         intent.putExtra(UiModeManager.EXTRA_PRIORITY, priority);
         getContext().sendBroadcastAsUser(intent, UserHandle.ALL,
                 android.Manifest.permission.HANDLE_CAR_MODE_CHANGES);
+
+        BaikalAppProfileManager.notifyCarModeEnabled(priority,packageName);
     }
 
     private void notifyCarModeDisabled(int priority, String packageName) {
@@ -1481,6 +1485,8 @@ final class UiModeManagerService extends SystemService {
         intent.putExtra(UiModeManager.EXTRA_PRIORITY, priority);
         getContext().sendBroadcastAsUser(intent, UserHandle.ALL,
                 android.Manifest.permission.HANDLE_CAR_MODE_CHANGES);
+
+        BaikalAppProfileManager.notifyCarModeDisabled(priority,packageName);
     }
 
     /**
