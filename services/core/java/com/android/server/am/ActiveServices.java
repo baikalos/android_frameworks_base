@@ -178,11 +178,11 @@ import com.android.server.am.LowMemDetector.MemFactor;
 import com.android.server.uri.NeededUriGrants;
 import com.android.server.wm.ActivityServiceConnectionsHolder;
 
-import android.baikalos.AppProfile;
-import com.android.internal.baikalos.AppProfileSettings;
-import com.android.internal.baikalos.Actions;
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
+import com.android.internal.baikalos.BaikalActions;
 
-import com.android.server.baikalos.AppProfileManager;
+import com.android.server.baikalos.BaikalAppProfileManager;
 import com.android.server.baikalos.BaikalAlarmManager;
 
 import java.io.FileDescriptor;
@@ -797,8 +797,8 @@ public final class ActiveServices {
             }
         }
 
-        if( bgLaunch && !mAm.mAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
-            mAm.mAppProfileManager.isAppBlocked(null, r.packageName, r.appInfo.uid) ) {
+        if( bgLaunch && !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
+            mAm.mBaikalAppProfileManager.isBaikalAppBlocked(null, r.packageName, r.appInfo.uid) ) {
             Slog.w(TAG, "App service execution blocked: service "
                     + service + " to " + r.shortInstanceName
                     + " from pid=" + callingPid + " uid=" + callingUid
@@ -809,8 +809,8 @@ public final class ActiveServices {
         }
 
 
-        if( bgLaunch && !mAm.mAppProfileManager.isTopAppUid(callingUid,callingPackage) ) {
-            AppProfile appProfile = mAm.mAppProfileManager.getAppProfile(r.appInfo.packageName,r.appInfo.uid);
+        if( bgLaunch && !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) ) {
+            BaikalAppProfile appProfile = mAm.mBaikalAppProfileManager.getBaikalAppProfile(r.appInfo.packageName,r.appInfo.uid);
             if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) {
                 Slog.w(TAG, "startForegroundService not allowed by baikalos settings: service "
                         + service + " to " + r.shortInstanceName
@@ -824,7 +824,7 @@ public final class ActiveServices {
         
         // If this isn't a direct-to-foreground start, check our ability to kick off an
         // arbitrary service
-        if ( !mAm.mAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
+        if ( !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
             (forcedStandby || (!r.startRequested && !fgRequired)) ) {
             // Before going further -- if this app is not allowed to start services in the
             // background, then at this point we aren't going to let it period.
@@ -2920,16 +2920,20 @@ public final class ActiveServices {
 
         if( callerApp.info.uid == 1000 ||  
             (callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
-            !mAm.mAppProfileManager.isTopAppUid(callerApp.info.uid,callerApp.info.packageName) &&
-            !mAm.mAppProfileManager.isTopAppUid(s.appInfo.uid, s.packageName) ) ) {
-            if( mAm.mAppProfileManager.isAppBlocked(null, s.packageName, s.appInfo.uid) ) {
+            callerApp.info.uid != s.appInfo.uid &&
+            !mAm.mBaikalAppProfileManager.isGmsUid(callerApp.info.uid) &&
+            !mAm.mBaikalAppProfileManager.isAaUid(callerApp.info.uid) &&
+            !mAm.mBaikalAppProfileManager.isSystemuiUid(callerApp.info.uid) &&
+            !mAm.mBaikalAppProfileManager.isTopAppUid(callerApp.info.uid,callerApp.info.packageName) &&
+            !mAm.mBaikalAppProfileManager.isTopAppUid(s.appInfo.uid, s.packageName) ) ) {
+            if( mAm.mBaikalAppProfileManager.isBaikalAppBlocked(null, s.packageName, s.appInfo.uid) ) {
                 Slog.w(TAG, "Background service start disabled by baikal settings from:" + callerApp + " for: " + s);
                 Slog.w(TAG, "Background service start attempt from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState());
                 s.stopIfKilled = true;
                 return 0;
             }
         } else {
-            if( mAm.mAppProfileManager.isAppBlocked(null, s.packageName, s.appInfo.uid) ) {
+            if( mAm.mBaikalAppProfileManager.isBaikalAppBlocked(null, s.packageName, s.appInfo.uid) ) {
                 Slog.w(TAG, "Background service start disabled by baikal settings, but requested from foreground app: " + s);
                 Slog.w(TAG, "Background service start forced from :" + callingPackage + "/" + callerApp.info.uid + ":" + callerApp.mState.getCurProcState(), new Throwable());
             }
@@ -4359,18 +4363,19 @@ public final class ActiveServices {
             }
         }
 
-        if (/*!isolated &&*/ app == null /*&& !permissionsReviewRequired && !packageFrozen*/ && !r.fgRequired) {
-            if( !mAm.mAppProfileManager.isTopAppUid(r.appInfo.uid,r.appInfo.packageName) ) {
-                AppProfile appProfile = mAm.mAppProfileManager.getAppProfile(r.appInfo.packageName,r.appInfo.uid);
+        if (/*!isolated &&*/ app == null /*&& !permissionsReviewRequired && !packageFrozen*/ && !r.fgRequired && !execInFg) {
+            if( !mAm.mBaikalAppProfileManager.isTopAppUid(r.appInfo.uid,r.appInfo.packageName) ) {
+                BaikalAppProfile appProfile = mAm.mBaikalAppProfileManager.getBaikalAppProfile(r.appInfo.packageName,r.appInfo.uid);
                 if( appProfile != null ) {
                     if( /*!(appProfile.getBackgroundMode() < 0) &&*/ !appProfile.mAllowWhileIdle && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
                         String msg = "Unable to launch app "
                             + r.appInfo.packageName + "/"
                             + r.appInfo.uid
                             + " isSdkSandbox=" + r.isSdkSandbox
+                            + " execInFg=" + execInFg
                             + " for service "
                             + r.intent.getIntent() + ": disabled by baikalos settings";
-                        Slog.w(TAG, msg);
+                        Slog.w(TAG, msg, new Throwable());
                         bringDownServiceLocked(r, enqueueOomAdj);
                         return msg;
                     }
