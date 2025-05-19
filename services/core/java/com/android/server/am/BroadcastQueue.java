@@ -53,7 +53,7 @@ import android.app.IApplicationThread;
 import android.app.PendingIntent;
 import android.app.usage.UsageEvents.Event;
 import android.app.usage.UsageStatsManagerInternal;
-import android.baikalos.AppProfile;
+import android.baikalos.BaikalAppProfile;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.IIntentReceiver;
@@ -94,7 +94,7 @@ import com.android.internal.util.FrameworkStatsLog;
 import com.android.server.LocalServices;
 import com.android.server.pm.UserManagerInternal;
 
-import com.android.internal.baikalos.AppProfileSettings;
+import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.server.BaikalSystemService;
 import com.android.server.baikalos.BaikalPowerSaveManager;
 
@@ -951,7 +951,7 @@ public final class BroadcastQueue {
 
         if (!skip && filter.receiverList.app != null && filter.receiverList.app.processName.endsWith(":Metrica") ) {
             if( "background".equals(mQueueName) && 
-                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid,filter.packageName) ) { 
+                !mService.mBaikalAppProfileManager.isTopAppUid(filter.receiverList.uid,filter.packageName) ) { 
                 Slog.w(TAG, "Metrica App Denial: receiving "
                     + r.intent.toString()
                     + " to " + filter.receiverList.app
@@ -963,13 +963,13 @@ public final class BroadcastQueue {
             }
         }
 
-        AppProfile appProfile = filter.receiverList.app.mAppProfile;
-        if( appProfile == null ) appProfile = AppProfileSettings.getInstance() == null ? new AppProfile(filter.packageName, filter.receiverList.uid) : AppProfileSettings.getInstance().getProfileLocked(filter.packageName);
-        if( appProfile == null ) appProfile = new AppProfile(filter.packageName, filter.receiverList.uid);
+        BaikalAppProfile appProfile = filter.receiverList.app.mBaikalAppProfile;
+        if( appProfile == null ) appProfile = BaikalAppProfileSettings.getInstance() == null ? new BaikalAppProfile(filter.packageName, filter.receiverList.uid) : BaikalAppProfileSettings.getInstance().getBaikalProfile(filter.packageName);
+        if( appProfile == null ) appProfile = new BaikalAppProfile(filter.packageName, filter.receiverList.uid);
 
         if (!skip && filter.receiverList.app != null && appProfile.getBackgroundMode() > 0 ) {
             if( "background".equals(mQueueName) &&
-                !mService.mAppProfileManager.isTopAppUid(filter.receiverList.uid,filter.packageName) ) { 
+                !mService.mBaikalAppProfileManager.isTopAppUid(filter.receiverList.uid,filter.packageName) ) { 
                 Slog.w(TAG, "Restricted App Denial: receiving "
                     + r.intent.toString()
                     + " to " + filter.receiverList.app
@@ -1037,7 +1037,7 @@ public final class BroadcastQueue {
             } else {
                 r.receiverTime = SystemClock.uptimeMillis();
                 maybeAddAllowBackgroundActivityStartsToken(filter.receiverList.app, r);
-                maybeScheduleTempAllowlistLocked(filter.owningUid, r, r.options, filter.receiverList.app.mAppProfile);
+                maybeScheduleTempAllowlistLocked(filter.owningUid, r, r.options, filter.receiverList.app.mBaikalAppProfile);
                 maybeReportBroadcastDispatchedEventLocked(r, filter.owningUid);
                 performReceiveLocked(filter.receiverList.app, filter.receiverList.receiver,
                         new Intent(r.intent), r.resultCode, r.resultData,
@@ -1126,7 +1126,7 @@ public final class BroadcastQueue {
     }
 
     boolean maybeScheduleTempAllowlistLocked(int uid, BroadcastRecord r,
-            @Nullable BroadcastOptions brOptions,@Nullable AppProfile appProfile) {
+            @Nullable BroadcastOptions brOptions,@Nullable BaikalAppProfile appProfile) {
 
         long baikalDuration = BaikalSystemService.getTemporaryAppWhitelistDuration(uid, r.intent.getPackage(), r.intent.getAction()); 
 
@@ -1788,16 +1788,16 @@ public final class BroadcastQueue {
         boolean background = mQueueName.equals("background") || mQueueName.equals("offload_bg");
         boolean appProcessReady = app != null && app.getThread() != null && !app.isKilled();
 
-        AppProfile appProfile = null;
-        if( appProcessReady ) appProfile = app.mAppProfile;
+        BaikalAppProfile appProfile = null;
+        if( appProcessReady ) appProfile = app.mBaikalAppProfile;
 
         if( appProfile == null ) {
-            appProfile = AppProfileSettings.getInstance() == null ? null : AppProfileSettings.getInstance().getProfileLocked(info.activityInfo.packageName);
+            appProfile = BaikalAppProfileSettings.getInstance() == null ? null : BaikalAppProfileSettings.getInstance().getBaikalProfile(info.activityInfo.packageName);
         }
 
         if( appProfile == null ) {
             Slog.i(TAG,"AppProfileSettings: not ready or no profile " + r.callerPackage + "/" + r.callingUid + "/" + r.callingPid + " intent " + r + " info " + info + " on [" + background + "]");
-            appProfile = new AppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid);
+            appProfile = new BaikalAppProfile(info.activityInfo.packageName, info.activityInfo.applicationInfo.uid);
         }
 
         if( Intent.ACTION_BOOT_COMPLETED.equals(r.intent.getAction()) || 
@@ -1841,8 +1841,11 @@ public final class BroadcastQueue {
         }
 
         //if( r.callerApp != null ) {
-            if( mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) || 
-                mService.mAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid,info.activityInfo.applicationInfo.packageName) ) {
+            if( mService.mBaikalAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) || 
+                mService.mBaikalAppProfileManager.isGmsUid(r.callingUid) || 
+                mService.mBaikalAppProfileManager.isAaUid(r.callingUid) || 
+                mService.mBaikalAppProfileManager.isSystemuiUid(r.callingUid) || 
+                mService.mBaikalAppProfileManager.isTopAppUid(info.activityInfo.applicationInfo.uid,info.activityInfo.applicationInfo.packageName) ) {
                 callerBackground = false;
             }
         //}
@@ -1884,7 +1887,7 @@ public final class BroadcastQueue {
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                            + ", isTopAppUid=" + mService.mBaikalAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -1903,7 +1906,7 @@ public final class BroadcastQueue {
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                            + ", isTopAppUid=" + mService.mBaikalAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -1930,7 +1933,7 @@ public final class BroadcastQueue {
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                            + ", isTopAppUid=" + mService.mBaikalAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -1949,7 +1952,7 @@ public final class BroadcastQueue {
                             + ", background=" + background
                             + ", callerBackground=" + callerBackground
                             + ", callingUid=" + r.callingUid
-                            + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                            + ", isTopAppUid=" + mService.mBaikalAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                             + ", Wakefulness=" + mService.mWakefulness.get()
                             + ", callerApp=" + r.callerApp
                             + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -2104,7 +2107,7 @@ public final class BroadcastQueue {
                     + ", background=" + background
                     + ", callerBackground=" + callerBackground
                     + ", callingUid=" + r.callingUid
-                    + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                    + ", isTopAppUid=" + mService.mBaikalAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                     + ", Wakefulness=" + mService.mWakefulness.get()
                     + ", callerApp=" + r.callerApp
                     + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
@@ -2129,7 +2132,7 @@ public final class BroadcastQueue {
                     + ", background=" + background
                     + ", callerBackground=" + callerBackground
                     + ", callingUid=" + r.callingUid
-                    + ", isTopAppUid=" + mService.mAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
+                    + ", isTopAppUid=" + mService.mBaikalAppProfileManager.isTopAppUid(r.callingUid,r.callerPackage) 
                     + ", Wakefulness=" + mService.mWakefulness.get()
                     + ", callerApp=" + r.callerApp
                     + ", callerApp.mState=" + (r.callerApp != null ?  r.callerApp.mState : null )
