@@ -53,6 +53,7 @@ import com.android.systemui.qs.tiles.SuperSaverTile
 import com.android.systemui.qs.tiles.LogRecorderTile
 import com.android.systemui.qs.tiles.LimitedChargingTile
 import com.android.systemui.qs.tiles.LocationModeTile
+import com.android.systemui.qs.tiles.SwitchInCallUiTile;
 
 /* End of BaikalOS tiles */
 
@@ -261,5 +262,11 @@ interface LineageModule {
     @IntoMap
     @StringKey(LocationModeTile.TILE_SPEC)
     fun bindLocationModeTile(locationModeTile: LocationModeTile): QSTileImpl<*>
+
+    /** Inject SwitchInCallUiTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(SwitchInCallUiTile.TILE_SPEC)
+    fun bindSwitchInCallUiTile(switchInCallUiTile: SwitchInCallUiTile): QSTileImpl<*>
 
 }
