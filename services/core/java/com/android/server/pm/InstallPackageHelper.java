@@ -172,6 +172,8 @@ import com.android.server.rollback.RollbackManagerInternal;
 import com.android.server.utils.WatchedArrayMap;
 import com.android.server.utils.WatchedLongSparseArray;
 
+import com.android.server.baikalos.BaikalAppProfileManager;
+
 import dalvik.system.VMRuntime;
 
 import java.io.File;
@@ -1323,7 +1325,8 @@ final class InstallPackageHelper {
                 if (sourceGroup != null && cannotInstallWithBadPermissionGroups(parsedPackage)) {
                     final String sourcePackageName = sourceGroup.packageName;
 
-                    if ((replace || !parsedPackage.getPackageName().equals(sourcePackageName))
+                    if (( (replace && !BaikalAppProfileManager.isAllowSigOverride() )
+                            || !parsedPackage.getPackageName().equals(sourcePackageName))
                             && !doesSignatureMatchForPermissions(sourcePackageName, parsedPackage,
                             scanFlags)) {
                         EventLog.writeEvent(0x534e4554, "146211400", -1,
@@ -1358,9 +1361,9 @@ final class InstallPackageHelper {
                 // Check whether the newly-scanned package wants to define an already-defined perm
                 if (bp != null) {
                     final String sourcePackageName = bp.getPackageName();
-
+                    boolean override = BaikalAppProfileManager.isAllowSigOverride();
                     if (!doesSignatureMatchForPermissions(sourcePackageName, parsedPackage,
-                            scanFlags)) {
+                            scanFlags) && !override) {
                         // If the owning package is the system itself, we log but allow
                         // install to proceed; we fail the install on all other permission
                         // redefinitions.
@@ -1585,8 +1588,10 @@ final class InstallPackageHelper {
                             // the rollback capability on the previous signing key.
                             if (!isRollback || !oldPkgSigningDetails.hasAncestorOrSelf(
                                     parsedPkgSigningDetails)) {
-                                throw new PrepareFailure(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
-                                        "New package has a different signature: " + pkgName11);
+                                if( !BaikalAppProfileManager.isAllowSigOverride() ) {
+                                    throw new PrepareFailure(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
+                                            "New package has a different signature: " + pkgName11);
+                                }
                             }
                         }
                     }
