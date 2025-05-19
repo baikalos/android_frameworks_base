@@ -966,7 +966,6 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
         mNonAdaptedForegroundColor = mDualToneHandler.getFillColor(intensity);
         mNonAdaptedBackgroundColor = mDualToneHandler.getBackgroundColor(intensity);
 
-        Log.v(TAG, "updateColors intensity=" + intensity + ", mNonAdaptedSingleToneColor=" + mNonAdaptedSingleToneColor + ", tint=" + tint);
         updateColors(mNonAdaptedForegroundColor, mNonAdaptedBackgroundColor,
                 mNonAdaptedSingleToneColor);
     }
