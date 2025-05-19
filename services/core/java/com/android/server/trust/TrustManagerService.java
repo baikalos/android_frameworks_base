@@ -145,9 +145,9 @@ public class TrustManagerService extends SystemService {
     private static final int TRUST_USUALLY_MANAGED_FLUSH_DELAY = 2 * 60 * 1000;
     private static final String TRUST_TIMEOUT_ALARM_TAG = "TrustManagerService.trustTimeoutForUser";
 
-    private static final long TRUST_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trust_tm", 8 * 60 * 60 * 1000);
-    private static final long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trust_itm", 8 * 60 * 60 * 1000);
-    private static final long TRUSTABLE_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trustable_tm", 12 * 60 * 60 * 1000);
+    private static long TRUST_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trust_tm", 4 * 60 * 60 * 1000);
+    private static long TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trust_itm", 8 * 60 * 60 * 1000);
+    private static long TRUSTABLE_TIMEOUT_IN_MILLIS = getLong("persist.baikal.debug.trustable_tm", 24 * 60 * 60 * 1000);
 
     private static long getLong(@NonNull String property, long def) {
         try {
@@ -290,10 +290,20 @@ public class TrustManagerService extends SystemService {
         private final Uri LOCK_SCREEN_WHEN_TRUST_LOST =
                 Settings.Secure.getUriFor(Settings.Secure.LOCK_SCREEN_WHEN_TRUST_LOST);
 
+        private final Uri BAIKALOS_TRUST_TIMEOUT_IN_MILLIS_URI = 
+                Settings.Global.getUriFor(Settings.Global.BAIKALOS_TRUST_TIMEOUT_IN_MILLIS);
+
+        private final Uri BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS_URI = 
+                Settings.Global.getUriFor(Settings.Global.BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS);
+
+        private final Uri BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS_URI = 
+                Settings.Global.getUriFor(Settings.Global.BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS);
+
         private final boolean mIsAutomotive;
         private final ContentResolver mContentResolver;
         private boolean mTrustAgentsNonrenewableTrust;
         private boolean mLockWhenTrustLost;
+        private final Handler mHandler;
 
         /**
          * Creates a settings observer
@@ -303,12 +313,15 @@ public class TrustManagerService extends SystemService {
         SettingsObserver(Handler handler) {
             super(handler);
 
+            mHandler = handler;
             PackageManager packageManager = getContext().getPackageManager();
             mIsAutomotive = packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE);
 
             mContentResolver = getContext().getContentResolver();
             updateContentObserver();
         }
+
+
 
         void updateContentObserver() {
             mContentResolver.unregisterContentObserver(this);
@@ -321,9 +334,27 @@ public class TrustManagerService extends SystemService {
                     this /* observer */,
                     mCurrentUser);
 
+            mContentResolver.registerContentObserver(BAIKALOS_TRUST_TIMEOUT_IN_MILLIS_URI,
+                    false /* notifyForDescendents */,
+                    this /* observer */);
+
+
+            mContentResolver.registerContentObserver(BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS_URI,
+                    false /* notifyForDescendents */,
+                    this /* observer */);
+
+            mContentResolver.registerContentObserver(BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS_URI,
+                    false /* notifyForDescendents */,
+                    this /* observer */);
+
+
             // Update the value immediately
             onChange(true /* selfChange */, TRUST_AGENTS_EXTEND_UNLOCK);
             onChange(true /* selfChange */, LOCK_SCREEN_WHEN_TRUST_LOST);
+
+            onChange(true /* selfChange */, BAIKALOS_TRUST_TIMEOUT_IN_MILLIS_URI);
+            onChange(true /* selfChange */, BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS_URI);
+            onChange(true /* selfChange */, BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS_URI);
         }
 
         @Override
@@ -346,7 +377,33 @@ public class TrustManagerService extends SystemService {
                                 Settings.Secure.LOCK_SCREEN_WHEN_TRUST_LOST,
                                 0 /* default */,
                                 mCurrentUser) != 0;
+            } else if (BAIKALOS_TRUST_TIMEOUT_IN_MILLIS_URI.equals(uri)) {
+                TRUST_TIMEOUT_IN_MILLIS =
+                        Settings.Global.getInt(
+                                mContentResolver,
+                                Settings.Global.BAIKALOS_TRUST_TIMEOUT_IN_MILLIS,
+                                4 /* default */) * 60 * 60 * 1000;
+                        mHandler.obtainMessage(MSG_REFRESH_TRUSTABLE_TIMERS_AFTER_AUTH, mCurrentUser).sendToTarget();
+                        mHandler.obtainMessage(MSG_SCHEDULE_TRUST_TIMEOUT, 1, 0).sendToTarget();
+
+            } else if (BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS_URI.equals(uri)) {
+                TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS =
+                        Settings.Global.getInt(
+                                mContentResolver,
+                                Settings.Global.BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS,
+                                8 /* default */) * 60 * 60 * 1000;
+                        mHandler.obtainMessage(MSG_REFRESH_TRUSTABLE_TIMERS_AFTER_AUTH, mCurrentUser).sendToTarget();
+
+            } else if (BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS_URI.equals(uri)) {
+                TRUSTABLE_TIMEOUT_IN_MILLIS =
+                        Settings.Global.getInt(
+                                mContentResolver,
+                                Settings.Global.BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS,
+                                24 /* default */) * 60 * 60 * 1000;
+                        mHandler.obtainMessage(MSG_REFRESH_TRUSTABLE_TIMERS_AFTER_AUTH, mCurrentUser).sendToTarget();
+
             }
+
         }
 
         boolean getTrustAgentsNonrenewableTrust() {
