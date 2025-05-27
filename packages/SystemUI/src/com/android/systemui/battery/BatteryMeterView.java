@@ -564,7 +564,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             }
 
             String percentText = mChargeIndicator + "";
-            if( mBatteryPercentCharging && mCharging || mBatteryStyle == BATTERY_STYLE_TEXT ) {
+            if( mBatteryPercentCharging && mCharging || mShowBatteryPercent != 0 || mBatteryStyle == BATTERY_STYLE_TEXT ) {
                 percentText += text;
             }
             // Setting text actually triggers a layout pass (because the text view is set to
