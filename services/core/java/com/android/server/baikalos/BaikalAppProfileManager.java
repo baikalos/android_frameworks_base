@@ -788,7 +788,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
                             restoreProfileForCurrentModeLocked(true);
                         }
                     }
-                }, 100);
+                }, 50);
             //}
 
             if( mBaikalPowerSaveManager != null ) mBaikalPowerSaveManager.setDeviceIdle(mode);
@@ -799,11 +799,19 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     protected void onCallStateChangedLocked(int state, String incomingNumber) {
     }
 
+
+    private boolean isCallStateActive(int callState) {
+        if( callState > 0 && callState != 7 ) return true;
+        return false;
+    }
+
     protected void onPreciseCallStateChangedLocked(PreciseCallState callState) {
 
-        boolean state =  callState.getRingingCallState() > 0 ||
-                         callState.getForegroundCallState() > 0 ||
-                         callState.getBackgroundCallState() > 0;
+        boolean state = isCallStateActive(callState.getRingingCallState()) ||
+                        isCallStateActive(callState.getForegroundCallState()) ||
+                        isCallStateActive(callState.getBackgroundCallState());
+
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"PreciseCallState: " + callState.toString());
 
         if( mPhoneCall != state ) {
             mPhoneCall = state;
@@ -817,7 +825,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
                         restoreProfileForCurrentModeLocked(true);
                     }
                 }
-            }, 100);
+            }, 50);
 
         }
     }
@@ -834,7 +842,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
                         restoreProfileForCurrentModeLocked(true);
                     }
                 }
-            }, 100);
+            }, 50);
 
         }
     }
@@ -853,7 +861,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
                         restoreProfileForCurrentModeLocked(true);
                     }
                 }
-            }, 100);
+            }, 50);
 
         }
     }
@@ -870,7 +878,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
                         restoreProfileForCurrentModeLocked(true);
                     }
                 }
-            }, 100);
+            }, 50);
 
             if( mBaikalPowerSaveManager != null ) mBaikalPowerSaveManager.setScreenMode(mWakefulness == WAKEFULNESS_AWAKE);
         }
@@ -923,7 +931,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     protected void activateCurrentProfileLocked(boolean force, boolean wakeup) {
 
         //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
-        if( mCarModeEnabled || mPhoneCall) {
+        /*if( mCarModeEnabled || mPhoneCall) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate balanced profile for phone or car mode " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mCarModeEnabled=" + mCarModeEnabled +
@@ -938,7 +946,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             updateStaminaIfNeededLocked();
             return;
         }
-        else if( !mCarModeEnabled && !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE  /*&& !mScreenMode*/)  {
+        else*/ if( !mCarModeEnabled && !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE  /*&& !mScreenMode*/)  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mCarModeEnabled=" + mCarModeEnabled +
@@ -963,7 +971,12 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
         BaikalAppProfile profile = mCurrentProfile;
 
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate current profile=" + profile);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate current profile=" + profile +
+                                                                      ", mPhoneCall=" + mPhoneCall +
+                                                                      ", mCarModeEnabled=" + mCarModeEnabled +
+                                                                      ", mScreenMode=" + mScreenMode +
+                                                                      ", mDeviceIdleMode=" + mDeviceIdleMode +
+                                                                      ", mWakefulness=" + mWakefulness);
 
         if( profile == null ) {
             BaikalAppProfileSettings.setReaderMode(0);
@@ -971,6 +984,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             BaikalActions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(0));
             setRotation(-1);
             int perfMode = mDefaultPerformanceProfile <= 0 ?  MODE_INTERACTIVE : mDefaultPerformanceProfile;
+            if( (mCarModeEnabled || mPhoneCall) && (perfMode == MODE_DEVICE_IDLE || perfMode == MODE_LOW_POWER ) ) perfMode = MODE_INTERACTIVE;
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", mDefaultPerformanceProfile=" + mDefaultPerformanceProfile);
             try {
     		    if( force || perfMode != mActivePerfProfile ) activatePowerMode(perfMode, true);
@@ -986,6 +1000,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             BaikalActions.sendBrightnessOverrideChanged(setBrightnessOverrideLocked(profile.mBrightness));
             setRotation(profile.mRotation-1);
             int perfMode = profile.mPerfProfile <= 0 ? (mDefaultPerformanceProfile <= 0 ?  MODE_INTERACTIVE : mDefaultPerformanceProfile) : profile.mPerfProfile;
+            if( (mCarModeEnabled || mPhoneCall) && (perfMode == MODE_DEVICE_IDLE || perfMode == MODE_LOW_POWER ) ) perfMode = MODE_INTERACTIVE;
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", profile.mPerfProfile=" + profile.mPerfProfile);
             try {
                 if( force || perfMode != mActivePerfProfile ) activatePowerMode(perfMode, true);
@@ -1008,9 +1023,9 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         BaikalPowerSaverPolicyConfig policy = BaikalPowerSaveManager.getCurrentPolicy();
         if( mSystemPriority != policy.systemPriority ) {
             mSystemPriority = policy.systemPriority;
-            if( mSystemPriority == false ) {
+            /*if( mSystemPriority == false ) {
                 Slog.i(TAG,"mSystemPriority=" + mSystemPriority, new Throwable());
-            }
+            }*/
         }
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"mSystemPriority=" + mSystemPriority);
     }
@@ -1758,7 +1773,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             if( packageName != null ) profile = mAppSettings.getBaikalProfile(packageName);
             else profile = mAppSettings.getBaikalProfile(uid);
             if( profile == null )  {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", profile=null" + ", result=" + def);
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", profile=null" + ", result=" + def);
                 return def;
             }
 
@@ -1810,7 +1825,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         } catch(Exception ex) {
             Slog.w(TAG, "getPackageOptionFromActivityManager: exception", ex);
         }
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", result=" + result);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", result=" + result);
         return result;
     }
 
