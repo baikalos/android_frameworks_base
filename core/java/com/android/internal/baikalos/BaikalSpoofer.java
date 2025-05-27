@@ -248,11 +248,11 @@ public class BaikalSpoofer {
 
     public static int maybeSpoofFeature(String packageName, String name, int version) {
 
-        if (PackageManager.FEATURE_KEYSTORE_APP_ATTEST_KEY.equals(name) || 
+        /*if (PackageManager.FEATURE_KEYSTORE_APP_ATTEST_KEY.equals(name) || 
             PackageManager.FEATURE_STRONGBOX_KEYSTORE.equals(name) ||
             "android.software.device_id_attestation".equals(name) ) {
             return 0;
-        }
+        }*/
 
         if (packageName != null &&
                 packageName.contains("com.google.android.apps.as") ) {
@@ -396,6 +396,7 @@ public class BaikalSpoofer {
             if( !sEnableGmsSpoof ) {
                 Log.e(TAG, "Spoof Device for GMS SN disabled: " + Application.getProcessName());
                 sIsExcluded = true;
+                setVersionField("SECURITY_PATCH", "2025-05-05");
                 return;
             }
 
@@ -426,11 +427,17 @@ public class BaikalSpoofer {
             setVersionField("RELEASE", RELEASE);
             setVersionField("SECURITY_PATCH", SECURITY_PATCH);
             setVersionField("DEVICE_INITIAL_SDK_INT", FIRST_API_LEVEL);
+            setVersionField("SDK_INT", 32);
 
             setBuildField("TYPE", "user");
             setBuildField("TAGS", "release-keys");
 
         } else if( "com.android.vending".equals(packageName) ) {
+            setVersionField("SECURITY_PATCH", "2025-05-05");
+            if( sEnableGmsSpoof ) {
+                setVersionField("SDK_INT", 32);
+                setVersionField("RELEASE", "12");
+            }
             sIsFinsky = true;
         }
 
@@ -802,7 +809,10 @@ public class BaikalSpoofer {
                 break;
             case OVERRIDE_COM_GOOGLE_GMS_UNSTABLE:
                 return overrideGmsUnstableString(key,rval);
+            default:
+                if( sIsFinsky ) return overrideGmsUnstableString(key,rval);
         }
+        
         return rval;
     }
 
@@ -916,7 +926,7 @@ public class BaikalSpoofer {
     private static String overrideGmsUnstableString(String key, String def) {
         if( key != null ) {
             if( key.endsWith(".first_api_level") ) return String.valueOf(FIRST_API_LEVEL);
-            if( key.endsWith(".security_patch") ) return SECURITY_PATCH;
+            if( key.endsWith(".security_patch") ) return "2025-05-05"; //SECURITY_PATCH;
             if( key.endsWith(".build.id") ) return ID;
         }
         return def;
@@ -1274,5 +1284,9 @@ public class BaikalSpoofer {
             Log.i(TAG,"shouldFilterApplication: Exception!",ex);
         }
         return false;
+    }
+
+    public static Context getContext() {
+        return sContext;
     }
 }
