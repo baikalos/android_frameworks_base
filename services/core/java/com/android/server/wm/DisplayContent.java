@@ -1943,9 +1943,7 @@ class DisplayContent extends RootDisplayArea implements WindowManagerPolicy.Disp
             return;
         }
         // The orientation of display is not changed.
-        if (!mTransitionController.isCollecting(this)) {
-            clearFixedRotationLaunchingApp();
-        }
+        clearFixedRotationLaunchingApp();
     }
 
     /**
