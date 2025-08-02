@@ -51,7 +51,7 @@ class SystemGesturesPointerEventListener implements PointerEventListener {
     private static final long SWIPE_TIMEOUT_MS = 500;
     private static final int MAX_TRACKED_POINTERS = 32;  // max per input system
     private static final int UNTRACKED_POINTER = -1;
-    private static final int MAX_FLING_TIME_MILLIS = 15000;
+    private static final int MAX_FLING_TIME_MILLIS = 5000;
 
     private static final int SWIPE_NONE = 0;
     private static final int SWIPE_FROM_TOP = 1;
