@@ -38,7 +38,7 @@ import javax.inject.Inject;
  */
 public class ThresholdSensorImpl implements ThresholdSensor {
     private static final String TAG = "ThresholdSensor";
-    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean DEBUG = true; // Log.isLoggable(TAG, Log.DEBUG);
 
     private final AsyncSensorManager mSensorManager;
     private final Execution mExecution;
@@ -342,6 +342,19 @@ public class ThresholdSensorImpl implements ThresholdSensor {
 
             List<Sensor> sensorList = mSensorManager.getSensorList(Sensor.TYPE_ALL);
             Sensor sensor = null;
+
+
+            if( requireWakeUp ) if( DEBUG ) Log.d(TAG, "SystemUI requested wakeup sensor :" + sensorType, new Throwable()); 
+
+            for (Sensor s : sensorList) {
+                if (sensorType.equals(s.getStringType())) {
+                    sensor = s;
+                    if (sensor.isWakeUpSensor() == requireWakeUp) {
+                        return sensor;
+                    }
+                }
+            }
+
             for (Sensor s : sensorList) {
                 if (sensorType.equals(s.getStringType())) {
                     sensor = s;
