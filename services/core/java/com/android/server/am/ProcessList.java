@@ -1762,6 +1762,7 @@ public final class ProcessList {
             }
 
             if (debuggableFlag) {
+                Slog.w("DEBUG", "Application is debuggable:" + app.uid);
                 runtimeFlags |= Zygote.DEBUG_ENABLE_JDWP;
                 runtimeFlags |= Zygote.DEBUG_JAVA_DEBUGGABLE;
                 // Also turn on CheckJNI for debuggable apps. It's quite
@@ -1772,39 +1773,48 @@ public final class ProcessList {
                 if (android.provider.Settings.Global.getInt(mService.mContext.getContentResolver(),
                         android.provider.Settings.Global.ART_VERIFIER_VERIFY_DEBUGGABLE, 1) == 0) {
                     runtimeFlags |= Zygote.DISABLE_VERIFIER;
-                    Slog.w(TAG_PROCESSES, app + ": ART verification disabled");
+                    Slog.w("DEBUG", app + ": ART verification disabled");
                 }
             }
             // Run the app in safe mode if its manifest requests so or the
             // system is booted in safe mode.
             if ((app.info.flags & ApplicationInfo.FLAG_VM_SAFE_MODE) != 0 || mService.mSafeMode) {
                 runtimeFlags |= Zygote.DEBUG_ENABLE_SAFEMODE;
+                Slog.w("DEBUG", "Application is debuggable (safe mode):" + app.uid);
             }
             if (isProfileableByShell) {
                 runtimeFlags |= Zygote.PROFILE_FROM_SHELL;
+                Slog.w("DEBUG", "Application is debuggable (profileable from shell):" + app.uid);
             }
             if (isProfileable) {
                 runtimeFlags |= Zygote.PROFILEABLE;
+                Slog.w("DEBUG", "Application is debuggable (profileable):" + app.uid);
             }
             if ("1".equals(SystemProperties.get("debug.checkjni"))) {
                 runtimeFlags |= Zygote.DEBUG_ENABLE_CHECKJNI;
+                Slog.w("DEBUG", "Application is debuggable (checkjni):" + app.uid);
             }
             String genDebugInfoProperty = SystemProperties.get("debug.generate-debug-info");
             if ("1".equals(genDebugInfoProperty) || "true".equals(genDebugInfoProperty)) {
                 runtimeFlags |= Zygote.DEBUG_GENERATE_DEBUG_INFO;
+                Slog.w("DEBUG", "Application is debuggable (debug_info):" + app.uid);
             }
             String genMiniDebugInfoProperty = SystemProperties.get("dalvik.vm.minidebuginfo");
             if ("1".equals(genMiniDebugInfoProperty) || "true".equals(genMiniDebugInfoProperty)) {
                 runtimeFlags |= Zygote.DEBUG_GENERATE_MINI_DEBUG_INFO;
+                Slog.w("DEBUG", "Application is debuggable (mini_debug_info):" + app.uid);
             }
             if ("1".equals(SystemProperties.get("debug.jni.logging"))) {
                 runtimeFlags |= Zygote.DEBUG_ENABLE_JNI_LOGGING;
+                Slog.w("DEBUG", "Application is debuggable (jni logging):" + app.uid);
             }
             if ("1".equals(SystemProperties.get("debug.assert"))) {
                 runtimeFlags |= Zygote.DEBUG_ENABLE_ASSERT;
+                Slog.w("DEBUG", "Application is debuggable (enable assert):" + app.uid);
             }
             if ("1".equals(SystemProperties.get("debug.ignoreappsignalhandler"))) {
                 runtimeFlags |= Zygote.DEBUG_IGNORE_APP_SIGNAL_HANDLER;
+                Slog.w("DEBUG", "Application is debuggable (ignore app signal handler):" + app.uid);
             }
             if (mService.mNativeDebuggingApp != null
                     && mService.mNativeDebuggingApp.equals(app.processName)) {
@@ -1813,6 +1823,7 @@ public final class ProcessList {
                 runtimeFlags |= Zygote.DEBUG_GENERATE_DEBUG_INFO; // Generate debug info
                 runtimeFlags |= Zygote.DEBUG_NATIVE_DEBUGGABLE;   // Disbale optimizations
                 mService.mNativeDebuggingApp = null;
+                Slog.w("DEBUG", "Application is debuggable (mNativeDebuggingApp):" + app.uid);
             }
 
             if (app.info.isEmbeddedDexUsed()) {
@@ -3053,7 +3064,7 @@ public final class ProcessList {
         final ProcessStateRecord state = r.mState;
 
         if (!isolated && !isSdkSandbox
-                && userId == UserHandle.USER_SYSTEM
+                /*&& userId == UserHandle.USER_SYSTEM*/
                 && (info.flags & PERSISTENT_MASK) == PERSISTENT_MASK
                 && (TextUtils.equals(proc, info.processName))) {
             // The system process is initialized to SCHED_GROUP_DEFAULT in init.rc.
@@ -5107,46 +5118,71 @@ public final class ProcessList {
     long killAppIfBgRestrictedAndCachedIdleLocked(ProcessRecord app, long nowElapsed) {
         final UidRecord uidRec = app.getUidRecord();
         final long lastCanKillTime = app.mState.getLastCanKillOnBgRestrictedAndIdleTime();
-        
-        boolean killInBackground = app.isBackgroundRestricted() || BaikalPowerSaveManager.getCurrentPolicy().killInBackground;
 
-        if (!mService.mConstants.mKillBgRestrictedAndCachedIdle
-                || app.isKilled() || app.getThread() == null || uidRec == null || !uidRec.isIdle()
-                || !app.isCached() || app.mState.shouldNotKillOnBgRestrictedAndIdle()
-                || !killInBackground || lastCanKillTime == 0) {
-
-            /*if( BaikalConstants.BAIKAL_DEBUG_POWER ) {
-                if( !app.isKilled() && app.getThread() != null && uidRec != null ) {
-                    Slog.i(TAG, "KillApp : " + app.mAppProfile.mPackageName);
-                    Slog.i(TAG, "KillApp : isCached = " + app.isCached());
-                    Slog.i(TAG, "KillApp : shouldNotKill = " + app.mState.shouldNotKillOnBgRestrictedAndIdle());
-                    Slog.i(TAG, "KillApp : isBackgroundRestricted = " + app.isBackgroundRestricted());
-                    Slog.i(TAG, "KillApp : killInBackground = " + BaikalPowerSaveManager.getCurrentPolicy().killInBackground);
-                    Slog.i(TAG, "KillApp : lastCanKillTime = " + lastCanKillTime);
-                    Slog.i(TAG, "KillApp : mKillBgRestrictedAndCachedIdle = " + mService.mConstants.mKillBgRestrictedAndCachedIdle);
-                }
-            } */
+        if( uidRec == null || lastCanKillTime == 0) {
             return 0;
         }
+        
+        boolean killInBackground = 
+                (!app.mBaikalAppProfile.mPinned && 
+                !app.mBaikalAppProfile.mDoNotClose);
+
+        int bMode = app.mBaikalAppProfile.getBackgroundMode();
+
+        if (bMode < -1 
+                || !BaikalPowerSaveManager.getCurrentPolicy().killInBackground
+                || !killInBackground 
+                || app.isKilled() 
+                || app.getThread() == null 
+                || !uidRec.isIdle()
+                || uidRec.isCurAllowListed()
+                || !app.isCached() 
+                || app.mState.shouldNotKillOnBgRestrictedAndIdle() 
+                || app.mBaikalAppProfile.isActive() ) {
+
+            if( app.mBaikalAppProfile.mDebug || BaikalConstants.BAIKAL_DEBUG_OOM ) {
+                if( !app.isKilled() && app.getThread() != null && uidRec != null ) {
+                    Slog.i(TAG, "KillApp (false): " + app.mBaikalAppProfile.mPackageName);
+                    Slog.i(TAG, "KillApp (false): policy killInBackground = " + BaikalPowerSaveManager.getCurrentPolicy().killInBackground);
+                    Slog.i(TAG, "KillApp (false): killInBackground = " + killInBackground);
+                    Slog.i(TAG, "KillApp (false): isIdle = " + uidRec.isIdle());
+                    Slog.i(TAG, "KillApp (false): isCached = " + app.isCached());
+                    Slog.i(TAG, "KillApp (false): isCurAllowListed = " + uidRec.isCurAllowListed());
+                    Slog.i(TAG, "KillApp (false): shouldNotKill = " + app.mState.shouldNotKillOnBgRestrictedAndIdle());
+                    Slog.i(TAG, "KillApp (false): isBackgroundRestricted = " + app.isBackgroundRestricted());
+                    Slog.i(TAG, "KillApp (false): isActive = " + app.mBaikalAppProfile.isActive());
+                    Slog.i(TAG, "KillApp (false): lastCanKillTime = " + lastCanKillTime);
+                    Slog.i(TAG, "KillApp (false): mKillBgRestrictedAndCachedIdle = " + mService.mConstants.mKillBgRestrictedAndCachedIdle);
+                }
+            }
+            return 0;
+        }
+
+        //int timeout = BaikalPowerSaveManager.getCurrentPolicy().killBgRestrictedCachedIdleSettleTime;
 
         final long future = lastCanKillTime
                 + mService.mConstants.mKillBgRestrictedAndCachedIdleSettleTimeMs;
         if (future <= nowElapsed) {
 
-            if( app.mBaikalAppProfile.mPinned || app.mBaikalAppProfile.mDoNotClose || app.mBaikalAppProfile.mAllowWhileIdle ) {
+            if( app.mBaikalAppProfile.mPinned || app.mBaikalAppProfile.mDoNotClose /*|| app.mBaikalAppProfile.mAllowWhileIdle*/ ) {
                 Slog.wtf(TAG, "KillApp : Killing pinned or DoNotClose app ignored!!! :" + app.mBaikalAppProfile.mPackageName);
                 return 0;
             }
 
-            if( BaikalConstants.BAIKAL_DEBUG_POWER ) {
+            if( app.mBaikalAppProfile.mDebug || BaikalConstants.BAIKAL_DEBUG_OOM ) {
                 if( !app.isKilled() && app.getThread() != null && uidRec != null ) {
                     Slog.i(TAG, "KillApp : " + app.mBaikalAppProfile.mPackageName);
+                    Slog.i(TAG, "KillApp : policy killInBackground = " + BaikalPowerSaveManager.getCurrentPolicy().killInBackground);
+                    Slog.i(TAG, "KillApp : killInBackground = " + killInBackground);
+                    Slog.i(TAG, "KillApp : isIdle = " + uidRec.isIdle());
                     Slog.i(TAG, "KillApp : isCached = " + app.isCached());
+                    Slog.i(TAG, "KillApp : isCurAllowListed = " + uidRec.isCurAllowListed());
                     Slog.i(TAG, "KillApp : shouldNotKill = " + app.mState.shouldNotKillOnBgRestrictedAndIdle());
                     Slog.i(TAG, "KillApp : isBackgroundRestricted = " + app.isBackgroundRestricted());
-                    Slog.i(TAG, "KillApp : killInBackground = " + BaikalPowerSaveManager.getCurrentPolicy().killInBackground);
+                    Slog.i(TAG, "KillApp : isActive = " + app.mBaikalAppProfile.isActive());
                     Slog.i(TAG, "KillApp : lastCanKillTime = " + lastCanKillTime);
-                    Slog.i(TAG, "KillApp : mKillBgRestrictedAndCachedIdle = " + mService.mConstants.mKillBgRestrictedAndCachedIdle);
+                    Slog.i(TAG, "KillApp : mKillBgRestrictedAndCachedIdle = " + BaikalPowerSaveManager.getCurrentPolicy().killInBackground);
+                    Slog.i(TAG, "KillApp : mKillBgRestrictedAndCachedIdleSettleTimeMs = " + mService.mConstants.mKillBgRestrictedAndCachedIdleSettleTimeMs);
                 }
             }
 
