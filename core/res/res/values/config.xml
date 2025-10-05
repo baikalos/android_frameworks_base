@@ -2692,7 +2692,7 @@
          This value must be greater than zero, otherwise the device will immediately
          fall asleep again as soon as it is awoken.
     -->
-    <integer name="config_minimumScreenOffTimeout">15000</integer>
+    <integer name="config_minimumScreenOffTimeout">25000</integer>
 
     <!-- User activity timeout: Maximum screen dim duration in milliseconds.
 
@@ -2708,7 +2708,7 @@
          This value may be zero in which case the screen will not dim before the
          device goes to sleep.
     -->
-    <integer name="config_maximumScreenDimDuration">5000</integer>
+    <integer name="config_maximumScreenDimDuration">7000</integer>
 
     <!-- User activity timeout: Maximum screen dim duration as a percentage of screen off timeout.
 
@@ -2724,7 +2724,7 @@
          This value must be between 0% and 100%.  If the value is zero, the screen will not
          dim before the device goes to sleep.
     -->
-    <fraction name="config_maximumScreenDimRatio">15%</fraction>
+    <fraction name="config_maximumScreenDimRatio">30%</fraction>
 
     <!-- Minimum size of the scrollbar thumb's touch target. -->
     <dimen name="config_minScrollbarTouchTarget">48dp</dimen>
