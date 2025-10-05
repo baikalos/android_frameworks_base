@@ -46,9 +46,12 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.UiccAccessRule;
 import android.text.TextUtils;
+import android.util.Log;
 import android.util.Patterns;
 
 import com.android.internal.telephony.SmsApplication;
+
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -378,6 +381,12 @@ public final class Telephony {
          * @return package name for the default SMS package or null
          */
         public static String getDefaultSmsPackage(Context context) {
+
+            if( BaikalSpoofer.isSpoofDefaultSMS() ) {
+                Log.i(TAG, "Spoof default sms package name to:" + BaikalSpoofer.getPackageName());
+                return BaikalSpoofer.getPackageName(); 
+            }
+
             ComponentName component = SmsApplication.getDefaultSmsApplication(context, false);
             if (component != null) {
                 return component.getPackageName();
