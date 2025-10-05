@@ -1069,12 +1069,12 @@ public class OomAdjuster {
     private boolean updateAndTrimProcessLSP(final long now, final long nowElapsed,
             final long oldTime, final ActiveUids activeUids, String oomAdjReason) {
         ArrayList<ProcessRecord> lruList = mProcessList.getLruProcessesLOSP();
-        final int numLru = lruList.size();
+        int numLru = lruList.size();
 
 
         int timeout = BaikalPowerSaveManager.getCurrentPolicy().killBgRestrictedCachedIdleSettleTime;
         if( timeout == 0 ) {
-            timeout = mService.mBaikalAppProfileManager.isStamina() ? 15 * 1000 : 300 * 1000;
+            timeout = mService.mBaikalAppProfileManager.isStamina() ? 15 * 1000 : 3600 * 1000;
         }
 
         final long oldTimeActive =  now - timeout * 1000;
@@ -1082,10 +1082,11 @@ public class OomAdjuster {
         final long oldTimeExtreme = now - timeout * 1000;
         final long oldTimeStamina = now - timeout * 1000;
         final long oldTimeStartup = now - ((timeout > 90) ? timeout : 90) * 1000;
+        final long oldTimeTooLong = now - 300000 * 1000;
 
         final boolean awake = mService.mWakefulness.get() == PowerManagerInternal.WAKEFULNESS_AWAKE;
 
-        final boolean doKillExcessiveProcesses = shouldKillExcessiveProcesses(now);
+        final boolean doKillExcessiveProcesses = true; //shouldKillExcessiveProcesses(now);
         if (!doKillExcessiveProcesses) {
             if (mNextNoKillDebugMessageTime < now) {
                 mNextNoKillDebugMessageTime = now + 5000; // Every 5 seconds
@@ -1103,7 +1104,9 @@ public class OomAdjuster {
         int numEmpty = 0;
         int numTrimming = 0;
 
-        double lowSwapThresholdPercent = mConstants.LOW_SWAP_THRESHOLD_PERCENT;
+        mProactiveKillsEnabled = true;
+        double lowSwapThresholdPercent = 0.3; // mConstants.LOW_SWAP_THRESHOLD_PERCENT;
+        double moderateSwapThresholdPercent = 0.5; // mConstants.LOW_SWAP_THRESHOLD_PERCENT;
         double freeSwapPercent = mProactiveKillsEnabled ? getFreeSwapPercent() : 1.00;
         ProcessRecord lruCachedApp = null;
 
@@ -1123,19 +1126,21 @@ public class OomAdjuster {
                 }
 
                 final ProcessServiceRecord psr = app.mServices;
+                final UidRecord uidRec = app.getUidRecord();
 
-                if( !app.mBaikalAppProfile.mPinned ) {
+                if( !app.mBaikalAppProfile.mPinned && !(uidRec == null || uidRec.isCurAllowListed()) ) {
 
-                    final boolean appLimited = app.mBaikalAppProfile.getBackgroundMode() > (awake ? 1 : 0);
+                    final boolean appLimited = app.mBaikalAppProfile.getBackgroundMode() > 1;
                     boolean killed = false;
 
-                    if( app.mBaikalAppProfile.mDebug || BaikalConstants.BAIKAL_DEBUG_OOM ) {
+                    if( (app.mBaikalAppProfile.mDebug && BaikalConstants.BAIKAL_DEBUG_OOM) || BaikalConstants.BAIKAL_DEBUG_OOM_RAW ) {
                         /*if( state.getCurProcState() > ActivityManager.PROCESS_STATE_CACHED_ACTIVITY ) {*/
                             long timeoutExtreme = app.getLastActivityTime() - oldTimeExtreme;
                             long timeoutActive = app.getLastActivityTime() - oldTimeActive;
                             long timeoutStamina = app.getLastActivityTime() - oldTimeStamina;
                             long timeoutLimited = app.getLastTopTime() - oldTimeLimited;
                             long timeoutStartup = app.getLastActivityTime() - oldTimeStartup;
+                            long timeoutTooLong = app.getLastActivityTime() - 300000;
 
                             Slog.d(TAG_OOM_ADJ, "OOM app check packageName=" + app.mBaikalAppProfile.mPackageName + "/" + app.mBaikalAppProfile.mUid +
                                                 ", getBackgroundMode=" + app.mBaikalAppProfile.getBackgroundMode() +
@@ -1145,6 +1150,7 @@ public class OomAdjuster {
                                                 ", imp=" + app.mBaikalAppProfile.mImportantApp +
                                                 ", lim=" + appLimited +
                                                 ", adj=" + state.getCurAdj() +
+                                                ", free=" + freeSwapPercent +
                                                 ", timeout=" + timeout +
                                                 ", timeoutActive=" + timeoutActive + 
                                                 ", timeoutLimited=" + timeoutLimited + 
@@ -1176,6 +1182,7 @@ public class OomAdjuster {
                         && appLimited
                         && state.getCurProcState() > ActivityManager.PROCESS_STATE_IMPORTANT_BACKGROUND
                         && state.getCurAdj() > ProcessList.PERCEPTIBLE_APP_ADJ
+                        && state.getCurProcState() != ActivityManager.PROCESS_STATE_HOME
                         && app.getLastTopTime() < oldTimeLimited ) {
                             app.killLocked("baikalos - disabled background process",
                             "baikalos - disabled background process",
@@ -1187,9 +1194,11 @@ public class OomAdjuster {
 
                     if( !killed 
                         && !app.mBaikalAppProfile.mDoNotClose
-                        && !app.mBaikalAppProfile.mAllowWhileIdle
+                        && !app.mBaikalAppProfile.mImportantApp
+                        /*&& !app.mBaikalAppProfile.mAllowWhileIdle*/
                         && BaikalPowerSaveManager.getCurrentPolicy().killInBackground
                         && state.getCurAdj() > ProcessList.PERCEPTIBLE_APP_ADJ
+                        && state.getCurProcState() != ActivityManager.PROCESS_STATE_HOME
                         && app.mBaikalAppProfile.getBackgroundMode() >= -1 ) {
 
                         /*if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
@@ -1201,7 +1210,7 @@ public class OomAdjuster {
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                                 true);
                                 killed = true;
-                        } else */ if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+                        } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
                             && ( state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 45))
                             && app.getLastActivityTime() < oldTimeActive )   {
                                 app.killLocked("baikalos - expired background process",
@@ -1210,7 +1219,19 @@ public class OomAdjuster {
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                                 true);
                                 killed = true;
-                        } else if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+
+                        } else */ if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
+                            && uidRec.isIdle()
+                            && (state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 10))
+                            && (app.getLastActivityTime() > now 
+                                || app.getLastActivityTime() < oldTimeTooLong) )  {
+                                app.killLocked("baikalos - cached to long",
+                                "baikalos - cached too long",
+                                ApplicationExitInfo.REASON_OTHER,
+                                ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
+                                true);
+                                killed = true;
+                        } else  if( state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_ACTIVITY
                             && (state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 65))
                             && (app.getLastActivityTime() > now 
                                 || app.getLastActivityTime() < oldTimeStartup) )  {
@@ -1220,7 +1241,7 @@ public class OomAdjuster {
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                                 true);
                                 killed = true;
-                        } else if( app.mBaikalAppProfile.getBackgroundMode() >= 0 
+                        } /* else if( app.mBaikalAppProfile.getBackgroundMode() >= 0 
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
                             && BaikalPowerSaveManager.getCurrentPolicy().killInBackground
                             && app.getLastActivityTime() < oldTimeExtreme )  {
@@ -1230,7 +1251,7 @@ public class OomAdjuster {
                                 ApplicationExitInfo.SUBREASON_KILL_BACKGROUND,
                                 true);
                                 killed = true;
-                        } /*else if( mService.mAppProfileManager.isExtreme()
+                        } else if( mService.mAppProfileManager.isExtreme()
                             && awake
                             && state.getCurProcState() >= ActivityManager.PROCESS_STATE_CACHED_EMPTY 
                             && (state.getCurAdj() >= (ProcessList.CACHED_APP_MIN_ADJ + 25))
@@ -1294,8 +1315,9 @@ public class OomAdjuster {
                                 }
                                 if (!app.mBaikalAppProfile.mDoNotClose 
                                     && !app.mBaikalAppProfile.mImportantApp
-                                    && !app.mBaikalAppProfile.mAllowWhileIdle
+                                    /*&& !app.mBaikalAppProfile.mAllowWhileIdle*/
                                     && app.mBaikalAppProfile.getBackgroundMode() >= 0
+                                    && app.getLastActivityTime() < oldTime
                                     && (numCached - numCachedExtraGroup) > cachedProcessLimit) {
                                     app.killLocked("cached #" + numCached,
                                             "too many cached",
@@ -1305,28 +1327,33 @@ public class OomAdjuster {
                                 }
                                 break;
                             case PROCESS_STATE_CACHED_EMPTY:
-                                if (!app.mBaikalAppProfile.mDoNotClose 
+                                numEmpty++;
+                                /*if (!app.mBaikalAppProfile.mDoNotClose 
                                     && !app.mBaikalAppProfile.mImportantApp
-                                    && !app.mBaikalAppProfile.mAllowWhileIdle
-                                    && app.mBaikalAppProfile.getBackgroundMode() >= 0
-                                    && numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
-                                        && app.getLastActivityTime() < oldTime) {
-                                    app.killLocked("empty for " + ((now
-                                            - app.getLastActivityTime()) / 1000) + "s",
-                                            "empty for too long",
-                                            ApplicationExitInfo.REASON_OTHER,
-                                            ApplicationExitInfo.SUBREASON_TRIM_EMPTY,
-                                            true);
-                                } else {
-                                    numEmpty++;
-                                    if (numEmpty > emptyProcessLimit) {
-                                        app.killLocked("empty #" + numEmpty,
-                                                "too many empty",
+                                    && app.mBaikalAppProfile.getBackgroundMode() >= 0 ) {
+
+                                    if( numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
+                                            && app.getLastActivityTime() < oldTime) {
+                                        app.killLocked("empty for " + ((now
+                                                - app.getLastActivityTime()) / 1000) + "s",
+                                                "empty for too long",
                                                 ApplicationExitInfo.REASON_OTHER,
-                                                ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
+                                                ApplicationExitInfo.SUBREASON_TRIM_EMPTY,
                                                 true);
+                                        numEmpty--;
+                                    } else {
+                                        if (numEmpty > emptyProcessLimit) {
+                                            app.killLocked("empty #" + numEmpty,
+                                                    "too many empty",
+                                                    ApplicationExitInfo.REASON_OTHER,
+                                                    ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
+                                                    true);
+                                            numEmpty--;
+                                        } else if(mProactiveKillsEnabled) {
+                                            lruCachedApp = app;
+                                        }
                                     }
-                                }
+                                }*/
                                 break;
                             default:
                                 mNumNonCachedProcs++;
@@ -1358,22 +1385,76 @@ public class OomAdjuster {
             }
         }
 
+        for (int i = numLru - 1; i >= 0; i--) {
+            ProcessRecord app = lruList.get(i);
+            final ProcessStateRecord state = app.mState;
+
+            if (!app.isKilledByAm() && app.getThread() != null) {
+                switch (state.getCurProcState()) {
+                    case PROCESS_STATE_CACHED_ACTIVITY:
+                    case ActivityManager.PROCESS_STATE_CACHED_ACTIVITY_CLIENT:
+                    case PROCESS_STATE_CACHED_EMPTY:
+                        if (!app.mBaikalAppProfile.mDoNotClose 
+                            && !app.mBaikalAppProfile.mImportantApp
+                            && app.mBaikalAppProfile.getBackgroundMode() >= 0 ) {
+
+                            if( freeSwapPercent < lowSwapThresholdPercent ) {
+                                app.killLocked("empty for " + ((now
+                                        - app.getLastActivityTime()) / 1000) + "s" + " - low memory " + freeSwapPercent,
+                                        "low memory " + freeSwapPercent,
+                                        ApplicationExitInfo.REASON_OTHER,
+                                        ApplicationExitInfo.SUBREASON_TRIM_EMPTY,
+                                        true);
+                                freeSwapPercent = mProactiveKillsEnabled ? getFreeSwapPercent() : 1.00;
+                                numEmpty--;
+                            } else if( numEmpty > mConstants.CUR_TRIM_EMPTY_PROCESSES
+                                && app.getLastActivityTime() < oldTime) {
+                                app.killLocked("empty for " + ((now
+                                        - app.getLastActivityTime()) / 1000) + "s - empty for too long",
+                                        "empty for too long",
+                                        ApplicationExitInfo.REASON_OTHER,
+                                        ApplicationExitInfo.SUBREASON_TRIM_EMPTY,
+                                        true);
+                                freeSwapPercent = mProactiveKillsEnabled ? getFreeSwapPercent() : 1.00;
+                                numEmpty--;
+                            } else {
+                                if (numEmpty > emptyProcessLimit) {
+                                    app.killLocked("empty #" + numEmpty + " - too many empty",
+                                        "too many empty",
+                                        ApplicationExitInfo.REASON_OTHER,
+                                        ApplicationExitInfo.SUBREASON_TOO_MANY_EMPTY,
+                                        true);
+                                    freeSwapPercent = mProactiveKillsEnabled ? getFreeSwapPercent() : 1.00;
+                                    numEmpty--;
+                                } else if(mProactiveKillsEnabled) {
+                                    if( lruCachedApp != null ) lruCachedApp = app;
+                                }
+                            }
+                        }
+                    break;
+                }
+            }
+        }
+        
+
+        freeSwapPercent = mProactiveKillsEnabled ? getFreeSwapPercent() : 1.00;
+
         if (mProactiveKillsEnabled                              // Proactive kills enabled?
                 && doKillExcessiveProcesses                     // Should kill excessive processes?
                 && freeSwapPercent < lowSwapThresholdPercent    // Swap below threshold?
                 && lruCachedApp != null                         // If no cached app, let LMKD decide
                 // If swap is non-decreasing, give reclaim a chance to catch up
                 && freeSwapPercent < mLastFreeSwapPercent) {
-            if( !lruCachedApp.mBaikalAppProfile.mPinned
+            /*if( !lruCachedApp.mBaikalAppProfile.mPinned
                 && !lruCachedApp.mBaikalAppProfile.mDoNotClose 
                 && !lruCachedApp.mBaikalAppProfile.mImportantApp
-                && !lruCachedApp.mBaikalAppProfile.mAllowWhileIdle
-                && lruCachedApp.mBaikalAppProfile.getBackgroundMode() >= 0 ) {
+                /* && !lruCachedApp.mBaikalAppProfile.mAllowWhileIdle* /
+                && lruCachedApp.mBaikalAppProfile.getBackgroundMode() >= 0 ) {*/
             	lruCachedApp.killLocked("swap low and too many cached",
                     ApplicationExitInfo.REASON_OTHER,
                     ApplicationExitInfo.SUBREASON_TOO_MANY_CACHED,
                     true);
-            }
+            /* } */
         }
 
         mLastFreeSwapPercent = freeSwapPercent;
@@ -3335,7 +3416,7 @@ public class OomAdjuster {
             final UidRecord uidRec = mActiveUids.valueAt(i);
 
             if( uidRec.getBaikalAppProfile().mPinned ) continue;
-            if( uidRec.getBaikalAppProfile().mAllowWhileIdle ) continue;
+            //if( uidRec.getBaikalAppProfile().mAllowWhileIdle ) continue;
             if( uidRec.getBaikalAppProfile().mBackgroundMode < -1 ) continue;
 
             if( BaikalPowerSaverPolicyConfig.getCurrentPowerSaverPolicyConfig().lessRestrictiveBackgroundPolicy ) {
@@ -3373,11 +3454,15 @@ public class OomAdjuster {
         // if so, kill it if it's been there long enough, or kick off a msg to check
         // it later.
         if (mService.mConstants.mKillBgRestrictedAndCachedIdle) {
-            final ArraySet<ProcessRecord> apps = mProcessList.mAppsInBackgroundRestricted;
+            //final ArraySet<ProcessRecord> apps = mProcessList.mAppsInBackgroundRestricted;
+            final ArrayList<ProcessRecord> apps = mProcessList.getLruProcessesLOSP();
+
             for (int i = 0, size = apps.size(); i < size; i++) {
                 // Check to see if needs to be killed.
+                //final long bgTime = mProcessList.killAppIfBgRestrictedAndCachedIdleLocked(
+                //        apps.valueAt(i), nowElapsed) - mConstants.BACKGROUND_SETTLE_TIME;
                 final long bgTime = mProcessList.killAppIfBgRestrictedAndCachedIdleLocked(
-                        apps.valueAt(i), nowElapsed) - mConstants.BACKGROUND_SETTLE_TIME;
+                        apps.get(i), nowElapsed) - mConstants.BACKGROUND_SETTLE_TIME;
                 if (bgTime > 0 && (nextTime == 0 || nextTime > bgTime)) {
                     nextTime = bgTime;
                 }
