@@ -441,8 +441,8 @@ public final class TelephonyPermissions {
                 return false;
             }
         }
-        throwSecurityExceptionAsUidDoesNotHaveAccess(message, uid);
-        return true;
+        //throwSecurityExceptionAsUidDoesNotHaveAccess(message, uid);
+        return false;
     }
 
     /**
