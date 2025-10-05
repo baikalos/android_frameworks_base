@@ -3777,10 +3777,10 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
         }
 
         // change in charging current while plugged in
-        if (nowPluggedIn &&
+        if (nowPluggedIn /* &&
               (current.maxChargingWattage != old.maxChargingWattage ||
                current.maxChargingCurrent != old.maxChargingCurrent ||
-               current.maxChargingVoltage != old.maxChargingVoltage)) {
+               current.maxChargingVoltage != old.maxChargingVoltage)*/) {
             return true;
         }
 
