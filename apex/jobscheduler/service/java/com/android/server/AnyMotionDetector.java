@@ -73,7 +73,7 @@ public class AnyMotionDetector {
     private static final long ORIENTATION_MEASUREMENT_INTERVAL_MILLIS = 5000;
 
     /** The maximum duration we will hold a wakelock to determine stationary status. */
-    private static final long WAKELOCK_TIMEOUT_MILLIS = 30000;
+    private static final long WAKELOCK_TIMEOUT_MILLIS = 10000;
 
     /**
      * The duration in milliseconds after which an orientation measurement is considered
