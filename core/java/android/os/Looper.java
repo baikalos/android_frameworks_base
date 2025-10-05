@@ -19,10 +19,14 @@ package android.os;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.compat.annotation.UnsupportedAppUsage;
+import android.baikalos.BaikalAppProfile;
 import android.util.Log;
 import android.util.Printer;
 import android.util.Slog;
 import android.util.proto.ProtoOutputStream;
+
+import com.android.internal.baikalos.BaikalConstants;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 /**
   * Class used to run a message loop for a thread.  Threads by default do
@@ -170,6 +174,12 @@ public final class Looper {
             logging.println(">>>>> Dispatching to " + msg.target + " "
                     + msg.callback + ": " + msg.what);
         }
+
+        if( BaikalConstants.BAIKAL_DEBUG_RAW && BaikalAppProfile.isDebug() ) {
+            Log.d(TAG,"loopOnce->>>>> Dispatching to " + msg.target + " "
+                    + msg.callback + ": " + msg.what);
+        } 
+
         // Make sure the observer won't change while processing a transaction.
         final Observer observer = sObserver;
 
@@ -191,7 +201,7 @@ public final class Looper {
         }
 
         final long dispatchStart = needStartTime ? SystemClock.uptimeMillis() : 0;
-        final long dispatchEnd;
+        long dispatchEnd;
         Object token = null;
         if (observer != null) {
             token = observer.messageDispatchStarting();
@@ -204,10 +214,16 @@ public final class Looper {
             }
             dispatchEnd = needEndTime ? SystemClock.uptimeMillis() : 0;
         } catch (Exception exception) {
-            if (observer != null) {
-                observer.dispatchingThrewException(token, msg, exception);
+            if( /*BaikalSpoofer.isChatGpt ||*/ (BaikalConstants.BAIKAL_DEBUG_RAW && BaikalAppProfile.isDebug()) ) {
+                Log.d(TAG,"BaikalSpoofer: Hide looper Exception->>>>>", exception);
+                dispatchEnd = needEndTime ? SystemClock.uptimeMillis() : 0;
+            } else {
+                if(BaikalConstants.BAIKAL_DEBUG_RAW && BaikalAppProfile.isDebug() ) Log.d(TAG,"Exception->>>>>", exception);
+                if (observer != null) {
+                    observer.dispatchingThrewException(token, msg, exception);
+                }
+                throw exception;
             }
-            throw exception;
         } finally {
             ThreadLocalWorkSource.restore(origWorkSource);
             if (traceTag != 0) {
