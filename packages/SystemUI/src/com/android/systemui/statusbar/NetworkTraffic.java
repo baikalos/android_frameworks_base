@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019-2023 crDroid Android Project
+ * Copyright (C) 2019-2024 crDroid Android Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +105,7 @@ public class NetworkTraffic extends TextView implements TunerService.Tunable {
 
     private int mRefreshInterval = 2;
 
-    private boolean mAttached;
+    protected boolean mAttached;
     private boolean mHideArrows;
 
     protected boolean mVisible = true;
@@ -117,6 +117,7 @@ public class NetworkTraffic extends TextView implements TunerService.Tunable {
     private RelativeSizeSpan mUnitRelativeSizeSpan = new RelativeSizeSpan(0.65f);
 
     protected boolean mEnabled = false;
+    protected boolean mRegistered = false;
     private boolean mConnectionAvailable = true;
     private boolean mChipVisible;
 
@@ -375,10 +376,9 @@ public class NetworkTraffic extends TextView implements TunerService.Tunable {
             tunerService.addTunable(this, NETWORK_TRAFFIC_REFRESH_INTERVAL);
             tunerService.addTunable(this, NETWORK_TRAFFIC_HIDEARROW);
 
-            mConnectivityManager.registerNetworkCallback(mRequest, mNetworkCallback);
-            mConnectivityManager.registerDefaultNetworkCallback(mDefaultNetworkCallback);
 
             mConnectionAvailable = mConnectivityManager.getActiveNetworkInfo() != null;
+            registerNetworkCallback();
 
             IntentFilter filter = new IntentFilter();
             filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
@@ -394,9 +394,30 @@ public class NetworkTraffic extends TextView implements TunerService.Tunable {
         if (mAttached) {
             clearHandlerCallbacks();
             mContext.unregisterReceiver(mIntentReceiver);
-            mConnectivityManager.unregisterNetworkCallback(mNetworkCallback);
+            unregisterNetworkCallback();
             Dependency.get(TunerService.class).removeTunable(this);
             mAttached = false;
+        }
+    }
+
+    private void registerNetworkCallback() {
+        if( !mRegistered ) {
+            try {
+                mConnectivityManager.registerNetworkCallback(mRequest, mNetworkCallback);
+                mConnectivityManager.registerDefaultNetworkCallback(mDefaultNetworkCallback);
+                mRegistered = true;
+            } catch( Exception ex ) {
+            }            
+        }
+    }
+
+    private void unregisterNetworkCallback() {
+        if( mRegistered ) {
+            try {
+                mConnectivityManager.unregisterNetworkCallback(mNetworkCallback);
+                mRegistered = false;
+            } catch( Exception ex ) {
+            }            
         }
     }
 
@@ -490,9 +511,9 @@ public class NetworkTraffic extends TextView implements TunerService.Tunable {
     }
 
     protected void updateViews() {
-        if (mEnabled) {
+        //if (mEnabled) {
             updateViewState();
-        }
+        //}
     }
 
     private void updateViewState() {
