@@ -204,7 +204,8 @@ public class DozeUi implements DozeMachine.Part {
         mHost.dozeTimeTick();
         Log.d(DozeMachine.TAG, "AOD time tick");
         // Keep wakelock until a frame has been pushed.
-        mHandler.post(mWakeLock.wrap(() -> {}));
+        //mHandler.post(mWakeLock.wrap(() -> {}));
+        mHandler.post(mWakeLock.wrap(mHost::dozeTimeTick));
 
         scheduleTimeTick();
     }
