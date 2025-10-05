@@ -1325,7 +1325,7 @@ final class InstallPackageHelper {
                 if (sourceGroup != null && cannotInstallWithBadPermissionGroups(parsedPackage)) {
                     final String sourcePackageName = sourceGroup.packageName;
 
-                    if (( (replace && !BaikalAppProfileManager.isAllowSigOverride() )
+                    if (( (replace && !BaikalAppProfileManager.isAllowSigOverride(parsedPackage.getPackageName()) )
                             || !parsedPackage.getPackageName().equals(sourcePackageName))
                             && !doesSignatureMatchForPermissions(sourcePackageName, parsedPackage,
                             scanFlags)) {
@@ -1361,7 +1361,7 @@ final class InstallPackageHelper {
                 // Check whether the newly-scanned package wants to define an already-defined perm
                 if (bp != null) {
                     final String sourcePackageName = bp.getPackageName();
-                    boolean override = BaikalAppProfileManager.isAllowSigOverride();
+                    boolean override = BaikalAppProfileManager.isAllowSigOverride(parsedPackage.getPackageName());
                     if (!doesSignatureMatchForPermissions(sourcePackageName, parsedPackage,
                             scanFlags) && !override) {
                         // If the owning package is the system itself, we log but allow
@@ -1588,7 +1588,7 @@ final class InstallPackageHelper {
                             // the rollback capability on the previous signing key.
                             if (!isRollback || !oldPkgSigningDetails.hasAncestorOrSelf(
                                     parsedPkgSigningDetails)) {
-                                if( !BaikalAppProfileManager.isAllowSigOverride() ) {
+                                if( !BaikalAppProfileManager.isAllowSigOverride(pkgName11) ) {
                                     throw new PrepareFailure(INSTALL_FAILED_UPDATE_INCOMPATIBLE,
                                             "New package has a different signature: " + pkgName11);
                                 }
