@@ -50,6 +50,8 @@ import android.util.Log;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.telecom.ITelecomService;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
@@ -1594,6 +1596,12 @@ public class TelecomManager {
      *         selected as the default dialer.
      */
     public String getDefaultDialerPackage() {
+
+        if( BaikalSpoofer.isSpoofDefaultDialer() ) {
+            Log.i(TAG, "Spoof default dialer package name to:" + BaikalSpoofer.getPackageName());
+            return BaikalSpoofer.getPackageName(); 
+        }
+
         ITelecomService service = getTelecomService();
         if (service != null) {
             try {
@@ -1617,6 +1625,12 @@ public class TelecomManager {
     @RequiresPermission(READ_PRIVILEGED_PHONE_STATE)
     public @Nullable String getDefaultDialerPackage(@NonNull UserHandle userHandle) {
         ITelecomService service = getTelecomService();
+
+        if( BaikalSpoofer.isSpoofDefaultDialer() ) {
+            Log.i(TAG, "Spoof default dialer package name to:" + BaikalSpoofer.getPackageName());
+            return BaikalSpoofer.getPackageName(); 
+        }
+
         if (service != null) {
             try {
                 return service.getDefaultDialerPackageForUser(
@@ -1668,6 +1682,12 @@ public class TelecomManager {
      *         preloaded.
      */
     public @Nullable String getSystemDialerPackage() {
+
+        if( BaikalSpoofer.isSpoofDefaultDialer() ) {
+            Log.i(TAG, "Spoof default dialer package name to:" + BaikalSpoofer.getPackageName());
+            return BaikalSpoofer.getPackageName(); 
+        }
+
         ITelecomService service = getTelecomService();
         if (service != null) {
             try {
