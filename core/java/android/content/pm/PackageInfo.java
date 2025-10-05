@@ -545,7 +545,8 @@ public class PackageInfo implements Parcelable {
         public PackageInfo createFromParcel(Parcel source) {
 
             PackageInfo packageInfo = new PackageInfo(source);
-            return BaikalSpoofer.spoofPackageInfo(packageInfo, source);
+            //return BaikalSpoofer.spoofPackageInfo(packageInfo, source);
+            return packageInfo;
         }
 
         @Override
@@ -602,5 +603,6 @@ public class PackageInfo implements Parcelable {
             signingInfo = SigningInfo.CREATOR.createFromParcel(source);
         }
         isApex = source.readBoolean();
+        BaikalSpoofer.spoofPackageInfo(this, source);
     }
 }

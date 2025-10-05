@@ -89,6 +89,7 @@ import com.android.internal.util.ArrayUtils;
 import com.android.internal.util.DataClass;
 
 import com.android.internal.baikalos.BaikalSpoofer;
+import com.android.internal.baikalos.BaikalConstants;
 
 import com.nvidia.NvAppProfileService;
 
@@ -10530,9 +10531,9 @@ public abstract class PackageManager {
     /** @hide */
     public static PackageInfo getPackageInfoAsUserCached(
             String packageName, @PackageInfoFlagsBits long flags, int userId) {
-        PackageInfo info = sPackageInfoCache.query(new PackageInfoQuery(packageName, flags, userId));
-        PackageInfo result = BaikalSpoofer.getPackageInfoAsUserCached(info, packageName, flags, userId);
-        return result;
+        return sPackageInfoCache.query(new PackageInfoQuery(packageName, flags, userId));
+        //PackageInfo result = BaikalSpoofer.getPackageInfoAsUserCached(info, packageName, flags, userId);
+        //return result;
     }
 
     /**
