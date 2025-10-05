@@ -174,9 +174,9 @@ public final class BaikalAppManagerService extends SystemService {
             }
         }
 
-        if( !skip ) {
+        /*if( !skip ) {
             skip |= BaikalSpoofer.shouldFilterApplication(packageName, userId);
-        }
+        }*/
 
         return skip;
     }
@@ -198,8 +198,7 @@ public final class BaikalAppManagerService extends SystemService {
 
             boolean skip = false;
             for(BaikalAppManagerEntry entry : entries) {
-                if(
-                    Arrays.stream(entry.mPackages).anyMatch(info.packageName::equals)) {
+                if( Arrays.stream(entry.mPackages).anyMatch(info.packageName::equals)) {
                     if( userId != 0 && entry.mRootOnly ) skip = true;
                     else skip = !entry.mEnabled;
                     Slog.d(TAG, "recreatePackageList: app=" + entry.mName + ", skip=" + skip + ", userId=" + userId);
@@ -207,9 +206,9 @@ public final class BaikalAppManagerService extends SystemService {
                 }
             }
 
-            if( !skip ) {
+            /*if( !skip ) {
                 skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
-            }
+            }*/
 
             if( skip ) continue;
             newList.add(info);
@@ -238,9 +237,9 @@ public final class BaikalAppManagerService extends SystemService {
                 }
             }
 
-            if( !skip ) {
+            /*if( !skip ) {
                 skip |= BaikalSpoofer.shouldFilterApplication(info.packageName, userId);
-            }
+            }*/
             if( skip ) continue;
             newList.add(info);
         }

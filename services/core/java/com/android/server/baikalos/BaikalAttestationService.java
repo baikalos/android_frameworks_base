@@ -15,10 +15,15 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Environment;
 import android.os.SystemProperties;
+import android.provider.Settings;
 import android.util.Log;
+
 
 import com.android.server.SystemService;
 import com.android.internal.util.crdroid.Utils;
+
+import com.android.internal.baikalos.BaikalSpoofer;
+import com.android.internal.baikalos.BaikalConstants;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,45 +48,61 @@ public final class BaikalAttestationService {
 
     private static final String TAG = BaikalAttestationService.class.getSimpleName();
 
-    private static final String API = "https://raw.githubusercontent.com/crdroidandroid/android_vendor_certification/refs/heads/15.0/gms_certified_props.json";
+    //private static final String API = "https://raw.githubusercontent.com/baikalos/android_vendor_certification/refs/heads/13.0/gms_certified_props.json";
     private static final String DATA_FILE = "gms_certified_props.json";
+    private static final String CERT_FILE = "att_certicate.bin";
     private static final long INITIAL_DELAY = 0; // Start immediately on boot
     private static final long INTERVAL = 8; // Interval in hours
-    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    private static final boolean DEBUG = true; //Log.isLoggable(TAG, Log.DEBUG);
 
     private final Context mContext;
     private File mDataFile;
+    private File mCertFile;
     private ScheduledExecutorService mScheduler;
     private ConnectivityManager mConnectivityManager;
     private FetchGmsCertifiedProps mFetchRunnable;
 
     private boolean mPendingUpdate;
     private boolean mEnabled;
+    private boolean isInitialized;
+    private int mRetry;
 
     public BaikalAttestationService(Context context) {
         mContext = context;
     }
 
     public void initialize() {
-        if (Utils.isPackageInstalled(mContext, "com.google.android.gms") ) {
+        //if (Utils.isPackageInstalled(mContext, "com.google.android.gms") ) {
+            synchronized(this) {
+            if( isInitialized ) return;
             Log.i(TAG, "Scheduling the service");
 
             mDataFile = new File(Environment.getDataSystemDirectory(), DATA_FILE);
+            mCertFile = new File(Environment.getDataSystemDirectory(), CERT_FILE);
             mFetchRunnable = new FetchGmsCertifiedProps();
             mScheduler = Executors.newSingleThreadScheduledExecutor();
             mConnectivityManager =
                 (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
 
             registerNetworkCallback();
-        }
+            isInitialized = true;
+            }
+        //}
     }
 
     public void scheduleIfNeeded(boolean enabled) {
-        mEnabled = enabled;
-        if( mEnabled && mScheduler != null ) {
-            mScheduler.scheduleAtFixedRate(
+        //if (Utils.isPackageInstalled(mContext, "com.google.android.gms") ) {
+            if( !isInitialized ) initialize(); 
+            mEnabled = enabled;
+            if( mEnabled && mScheduler != null ) {
+                mScheduler.scheduleAtFixedRate(
                     mFetchRunnable, INITIAL_DELAY, INTERVAL, TimeUnit.HOURS);
-        }
+            }
+            if( !mEnabled ) {
+                deleteFile(mDataFile);
+                Settings.Global.putString(mContext.getContentResolver(), "baikal_kb_data", "");
+            }
+        //}
     }    
 
     private String readFromFile(File file) {
@@ -95,7 +116,7 @@ public final class BaikalAttestationService {
                     content.append(line);
                 }
             } catch (IOException e) {
-                Log.e(TAG, "Error reading from file", e);
+                Log.e(TAG, "Error reading from spoofer file", e);
             }
         }
         return content.toString();
@@ -107,13 +128,25 @@ public final class BaikalAttestationService {
             // Set -rw-r--r-- (644) permission to make it readable by others.
             file.setReadable(true, false);
         } catch (IOException e) {
-            Log.e(TAG, "Error writing to file", e);
+            Log.e(TAG, "Error writing to spoofer file", e);
         }
     }
 
+    private void deleteFile(File file) {
+        if(file.exists()) {
+            try {
+                file.delete();
+            } catch(Exception e) {
+                Log.e(TAG, "Can't delete spoofer file", e);
+            }
+        }
+    }
+        
+
     private String fetchProps() {
         try {
-            URL url = new URI(API).toURL();
+
+            URL url = new URI(BaikalSpoofer.getDevString(BaikalSpoofer.DEV_CONST.SPOOFER_JSON_URL)).toURL();
             HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 
             try {
@@ -129,6 +162,7 @@ public final class BaikalAttestationService {
                         response.append(line);
                     }
 
+                    mRetry = 0;
                     return response.toString();
                 }
             } finally {
@@ -158,9 +192,10 @@ public final class BaikalAttestationService {
             @Override
             public void onAvailable(Network network) {
                 if( !mEnabled ) return;
-                Log.i(TAG, "Internet is available, resuming update");
+                Log.i(TAG, "Internet is available, resuming update:" + mPendingUpdate);
+                mRetry = 0;
                 if (mPendingUpdate) {
-                    mScheduler.schedule(mFetchRunnable, 0, TimeUnit.SECONDS);
+                    mScheduler.schedule(mFetchRunnable, 10, TimeUnit.SECONDS);
                 }
             }
         });
@@ -185,6 +220,13 @@ public final class BaikalAttestationService {
 
                 String savedProps = readFromFile(mDataFile);
                 String props = fetchProps();
+                if( props == null ) {
+                    if( mRetry < 10 ) {
+                        mScheduler.schedule(mFetchRunnable, 15, TimeUnit.SECONDS);
+                        mRetry++;
+                        return;
+                    }
+                }
 
                 if (props != null && !savedProps.equals(props)) {
                     dlog("Found new props");
@@ -199,9 +241,14 @@ public final class BaikalAttestationService {
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Error in FetchGmsCertifiedProps", e);
+                if( mRetry < 10 ) {
+                    mScheduler.schedule(mFetchRunnable, 15, TimeUnit.SECONDS);
+                    mRetry++;
+                }
                 return;
             }
             mPendingUpdate = false;
+            mRetry = 0;
         }
 
         private void update(PiItem item) {
@@ -216,6 +263,8 @@ public final class BaikalAttestationService {
             SystemProperties.set("persist.spf.def.incremental", item.INCREMENTAL);
             SystemProperties.set("persist.spf.def.security_patch", item.SECURITY_PATCH);
             SystemProperties.set("persist.spf.def.firs_api_level", item.DEVICE_INITIAL_SDK_INT);
+            SystemProperties.set("persist.spf.def.sdk_int", item.SDK_INT);
+            Settings.Global.putString(mContext.getContentResolver(), "baikal_kb_data", item.ATT_CERT);
         }
     }
 
@@ -231,8 +280,11 @@ public final class BaikalAttestationService {
         public String RELEASE;
         public String SECURITY_PATCH;
         public String DEVICE_INITIAL_SDK_INT;
+        public String SDK_INT;
+        public String ATT_CERT;
 
         public PiItem() {
+            SDK_INT = "33";
         }
 
         public PiItem(String json) {
@@ -271,16 +323,26 @@ public final class BaikalAttestationService {
                             ID = value;
                             break;
                         case "VERSION.INCREMENTAL":
+                        case "INCREMENTAL":
                             INCREMENTAL = value;
                             break;
                         case "VERSION.RELEASE":
+                        case "RELEASE":
                             RELEASE = value;
                             break;
                         case "VERSION.SECURITY_PATCH":
+                        case "SECURITY_PATCH":
                             SECURITY_PATCH = value;
                             break;
                         case "VERSION.DEVICE_INITIAL_SDK_INT":
+                        case "DEVICE_INITIAL_SDK_INT":
                             DEVICE_INITIAL_SDK_INT = value;
+                            break;
+                        case "SDK_INT":
+                            SDK_INT = value;
+                            break;
+                        case "ATT_CERT":
+                            ATT_CERT = value;
                             break;
                     }
                 }

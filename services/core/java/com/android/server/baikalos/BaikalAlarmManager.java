@@ -159,6 +159,7 @@ public class BaikalAlarmManager {
             boolean disable = false;
             if( tag != null ) {
                 if( tag.contains("android.appwidget.action.APPWIDGET_UPDATE") ) disable = true;
+                if( tag.contains("JS idleness") ) disable = true;
                 if( !disable && tag.contains("BluetoothMetricsLogger") ) disable = true;
             }
 
@@ -180,10 +181,14 @@ public class BaikalAlarmManager {
         }
 
         if( mAppProfileManager.isGmsUid(uid) ) {
-            if(  tag != null ) {
+            if( tag != null ) {
 
-                if( !mEnableDeviceComponents && tag.endsWith("ALARM_WAKEUP_ACTIVITY_DETECTION") ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". GCM blocked uid=" + uid);
+                if( !mEnableDeviceComponents && (
+                    tag.endsWith("ALARM_WAKEUP_ACTIVITY_DETECTION")  ||
+                    tag.contains("FusionEngineFlush")  ||
+                    tag.contains("NetworkLocationScanner")
+                    )) {
+                    if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". GMS blocked uid=" + uid);
                     return 2;
                 }
 
@@ -209,7 +214,11 @@ public class BaikalAlarmManager {
                 if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". enabled for " + packageName);
                 return -1;
             }
-            if( !profile.mSystemWhitelisted && backgroundMode > 0 ) {
+            if( !profile.mSystemApp && backgroundMode >= 0 ) {
+                if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". restricted for " + packageName);
+                return 1;
+            }
+            if( backgroundMode > 0 ) {
                 if( BaikalConstants.BAIKAL_DEBUG_ALARM ) Slog.i(TAG,"Wakeup alarm:" + tag + ". restricted for " + packageName);
                 return 1;
             }

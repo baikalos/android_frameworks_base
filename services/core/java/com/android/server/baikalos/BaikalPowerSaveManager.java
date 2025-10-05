@@ -191,8 +191,6 @@ public class BaikalPowerSaveManager {
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_POWERSAVER_POLICY),
                     false, this);
 
-
-
             } catch( Exception e ) {
             }
         
@@ -619,10 +617,10 @@ public class BaikalPowerSaveManager {
                 if( BaikalConstants.BAIKAL_DEBUG_POWER ) Slog.i(TAG,"mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
                 mCurrentPolicy = mPolicies[powerSaverLevel];
                 BaikalAppProfile.setDefaultBackgroundMode(mCurrentPolicy.disableBackgroundByDefault ? 2:0);
+                mAmConstants.updateKillBgRestrictedCachedIdleSettleTime(mPolicies[powerSaverLevel].killBgRestrictedCachedIdleSettleTime * 1000);
                 activateCurrentPolicy();
                 mPowerManager.setAdaptivePowerSavePolicy(mLevels[powerSaverLevel]);
                 mPowerManager.setAdaptivePowerSaveEnabled(true);
-                mAmConstants.updateKillBgRestrictedCachedIdleSettleTime(mPolicies[powerSaverLevel].killBgRestrictedCachedIdleSettleTime * 1000);
             } else {
                 Slog.wtf(TAG,"INVALID mCurrentPowerSaverLevel=" + mCurrentPowerSaverLevel);
             }

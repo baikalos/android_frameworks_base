@@ -139,6 +139,7 @@ import com.android.internal.baikalos.BaikalAppProfileSettings;
 import com.android.internal.baikalos.BaikalConstants;
 import com.android.internal.baikalos.BaikalAppVolumeDB;
 import com.android.internal.baikalos.BaikalPowerSaverPolicyConfig;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import com.android.server.audio.AudioService;
 import com.android.server.LocalServices;
@@ -184,6 +185,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     private IPowerManager mPowerManager;
 
     private boolean mAutoUpdate = false;
+    private boolean mOverrideSpoof = false;
     private boolean mOnCharger = false;
     private boolean mDeviceIdleMode = false;
     private boolean mScreenMode = true;
@@ -214,6 +216,9 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
     private int mDefaultPerformanceProfile;
     private int mDefaultThermalProfile;
+
+    private int mDefaultScreenOffPerformanceProfile;
+    private int mDefaultScreenOffThermalProfile;
 
     private int mDefaultIdlePerformanceProfile;
     private int mDefaultIdleThermalProfile;
@@ -409,6 +414,10 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
                     Settings.Global.getUriFor(Settings.Global.BAIKALOS_GMS_SPOOFER_UPDATE),
                     false, this);
 
+                mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_GMS_OVERRIDE_PROPS),
+                    false, this);
+
                 mResolver.registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.BAIKALOS_BOOST_INTERACTION), false, this);
 
@@ -580,7 +589,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_BPCHARGE_FORCE, 0);
             Settings.Global.putInt(mResolver,Settings.Global.BAIKALOS_LIMITED_CHARGE_FORCE, 0);
 
-            mAttestation.initialize();
+            //mAttestation.initialize();
             mGmsUid = UserHandle.getAppId(BaikalConstants.getUidByPackage(mContext, "com.google.android.gms"));
             mAaUid = UserHandle.getAppId(BaikalConstants.getUidByPackage(mContext, "com.google.android.projection.gearhead"));
             mSystemuiUid = UserHandle.getAppId(BaikalConstants.getUidByPackage(mContext, "com.android.systemui"));
@@ -631,6 +640,20 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading thermal profile=" + defaultThermalProfile);
         if( mDefaultThermalProfile != defaultThermalProfile ) {
             mDefaultThermalProfile = defaultThermalProfile;
+            changed = true;
+        }
+
+        int defaultScreenOffPerformanceProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_SCREENOFF_PERFORMANCE, -1);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading screenoff performance profile=" + defaultScreenOffPerformanceProfile);
+        if( mDefaultScreenOffPerformanceProfile != defaultScreenOffPerformanceProfile ) {
+            mDefaultScreenOffPerformanceProfile = defaultScreenOffPerformanceProfile;
+            changed = true;
+        }
+
+        int defaultScreenOffThermalProfile = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEFAULT_SCREENOFF_THERMAL, -1);
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Settings loading screenoff thermal profile=" + defaultScreenOffThermalProfile);
+        if( mDefaultScreenOffThermalProfile != defaultScreenOffThermalProfile ) {
+            mDefaultScreenOffThermalProfile = defaultScreenOffThermalProfile;
             changed = true;
         }
 
@@ -703,7 +726,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
         mAllowDowngrade = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_ALLOW_DOWNGRADE, 0) != 0;
 
-        mAllowSigOverride = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_ALLOW_SIG_OVERRIDE, 0) != 0;
+        mAllowSigOverride = false; //Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_ALLOW_SIG_OVERRIDE, 0) != 0;
 
         boolean superSaver = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_SUPER_SAVER, 0) != 0;
         BaikalAppProfileSettings.setSuperSaver(superSaver);
@@ -719,6 +742,11 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         if( mAttestation != null && autoUpdate != mAutoUpdate ) {
             mAutoUpdate = autoUpdate;
             mAttestation.scheduleIfNeeded(autoUpdate);
+        }
+
+        boolean overrideSpoof = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_GMS_OVERRIDE_PROPS, 0) != 0;
+        if( overrideSpoof != mOverrideSpoof ) {
+            mOverrideSpoof = overrideSpoof;
         }
 
         boolean interactionBoost = Settings.Global.getInt(mResolver,Settings.Global.BAIKALOS_BOOST_INTERACTION, 1) == 1;
@@ -843,10 +871,9 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
                     }
                 }
             }, 50);
-
+            BaikalActions.sendCarModeChanged(mode);
         }
     }
-
 
     protected void setScreenModeLocked(boolean mode) {
         if( mScreenMode != mode ) {
@@ -912,6 +939,21 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         }
     }
 
+    protected void activateScreenOffProfileLocked(boolean force) {
+
+        int thermMode = mDefaultScreenOffThermalProfile <= 0 ?  1 : mDefaultScreenOffThermalProfile;
+        if( force || thermMode != mActiveThermProfile ) activateThermalProfile(thermMode);
+
+        int perfMode = mDefaultScreenOffPerformanceProfile <= 0 ? MODE_LOW_POWER : mDefaultScreenOffPerformanceProfile;
+
+        try {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"setPowerMode profile=" + perfMode + ", idle=" + mDeviceIdleMode + ", screen=" + mScreenMode);
+            if( force || perfMode != mActivePerfProfile ) activatePowerMode(perfMode, true);
+        } catch(Exception e) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate Screen Off perfromance profile failed profile=" + perfMode, e);
+        }
+    }
+
     protected void activateBalancedProfileLocked(boolean force) {
 
         int thermMode = mDefaultIdleThermalProfile <= 0 ?  1 : mDefaultIdleThermalProfile;
@@ -930,23 +972,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     @GuardedBy("mLock")
     protected void activateCurrentProfileLocked(boolean force, boolean wakeup) {
 
-        //if( !mPhoneCall && (!mScreenMode || mDeviceIdleMode || mWakefulness == WAKEFULNESS_ASLEEP || mWakefulness == WAKEFULNESS_DOZING ) )  {
-        /*if( mCarModeEnabled || mPhoneCall) {
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate balanced profile for phone or car mode " + 
-                                                                      "mPhoneCall=" + mPhoneCall +
-                                                                      ", mCarModeEnabled=" + mCarModeEnabled +
-                                                                      ", mScreenMode=" + mScreenMode +
-                                                                      ", mDeviceIdleMode=" + mDeviceIdleMode +
-                                                                      ", mWakefulness=" + mWakefulness);
-
-            activateBalancedProfileLocked(force);
-            updateBoostValuesIfNeededLocked();
-            updateSystemPriorityLocked();
-            updateBypassChargingIfNeededLocked();
-            updateStaminaIfNeededLocked();
-            return;
-        }
-        else*/ if( !mCarModeEnabled && !mPhoneCall && /* !mScreenMode && !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE  /*&& !mScreenMode*/)  {
+        if( mDeviceIdleMode && !mCarModeEnabled && !mPhoneCall && /* !isAudioPlaying() &&*/ !wakeup && mWakefulness != WAKEFULNESS_AWAKE )  {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate idle profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
                                                                       ", mCarModeEnabled=" + mCarModeEnabled +
@@ -959,15 +985,22 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             updateBypassChargingIfNeededLocked();
             updateStaminaIfNeededLocked();
             return;
-        } /* else if( mPhoneCall || mScreenMode ) {
-            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate balanced profile " + 
+        } 
+
+        if( !mCarModeEnabled && !mPhoneCall && !wakeup && mWakefulness != WAKEFULNESS_AWAKE )  {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate Screen Off profile " + 
                                                                       "mPhoneCall=" + mPhoneCall +
+                                                                      ", mCarModeEnabled=" + mCarModeEnabled +
                                                                       ", mScreenMode=" + mScreenMode +
                                                                       ", mDeviceIdleMode=" + mDeviceIdleMode +
                                                                       ", mWakefulness=" + mWakefulness);
-            //activateBalancedProfileLocked(force);
-            //return;
-        } */
+            activateScreenOffProfileLocked(force);
+            updateBoostValuesIfNeededLocked();
+            updateSystemPriorityLocked();
+            updateBypassChargingIfNeededLocked();
+            updateStaminaIfNeededLocked();
+            return;
+        } 
 
         BaikalAppProfile profile = mCurrentProfile;
 
@@ -1037,6 +1070,11 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         boolean displayBoost = false;
         boolean renderingBoost = false;
 
+        if( !BaikalConstants.isKernelCompatible() ) {
+            Slog.w(TAG, "updateBoostValuesIfNeededLocked: Unsupported kernel!");
+            return;
+        }
+
         if( mWakefulness == WAKEFULNESS_AWAKE ) {
             if( mDisplayBoost ) displayBoost = true;
             if( mInteractionBoost ) {
@@ -1096,8 +1134,13 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     public void wakeUp() {
         activateCurrentProfileLocked(true,true);
         
+        if( !BaikalConstants.isKernelCompatible() ) {
+            Slog.w(TAG, "wakeUp: Unsupported kernel!");
+            return;
+        }
+
         try {
-            mPowerManager.setPowerBoost(BOOST_INTERACTION,4000);
+            //mPowerManager.setPowerBoost(BOOST_INTERACTION,4000);
             //mPowerManager.setPowerMode(MODE_LAUNCH,true);
         } catch (Exception e) {
             e.printStackTrace();
@@ -1105,6 +1148,11 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     }
 
     protected void activatePowerMode(int mode, boolean enable) {
+
+        if( !BaikalConstants.isKernelCompatible() ) {
+            Slog.w(TAG, "activatePowerMode: Unsupported kernel!");
+            return;
+        }
 
 	    if( enable ) {
             if( mActivePerfProfile != -1 ) {
@@ -1147,6 +1195,12 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     }
 
     protected void activateThermalProfile(int profile) {
+
+        if( !BaikalConstants.isKernelCompatible() ) {
+            Slog.w(TAG, "activateThermalProfile: Unsupported kernel!");
+            return;
+        }
+
         if( profile != SystemProperties.getInt("baikal.power.thermal",-99999) ) {
             SystemPropertiesSet("baikal.power.thermal",Integer.toString(profile));
         }
@@ -1165,13 +1219,14 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             mTopUid = uid;
             mTopPackageName = packageName;
 
-            Slog.i(TAG,"topAppChanged uid=" + uid + ", packageName=" + packageName);
+            Slog.i(TAG,"topAppChanged " + packageName + "/" + uid);
 
             BaikalAppProfile profile = mAppSettings.getBaikalProfile(packageName);
             if( profile == null ) {
-                profile = new BaikalAppProfile(mTopPackageName, uid);   
+                profile = new BaikalAppProfile(mTopPackageName, UserHandle.getAppId(uid));   
             }
 
+            Slog.i(TAG,"setTopAppProfile " + packageName + "/" + uid + ", " + profile.toString());
             BaikalAppProfile.setTopAppProfile(profile,packageName,uid);
 
             mCurrentProfile = profile;
@@ -1563,7 +1618,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
         if( playing ) {
             try {
-                mPowerManager.setPowerBoost(AUDIO_LAUNCH,3000);
+                mPowerManager.setPowerBoost(AUDIO_LAUNCH,1000);
             } catch(Exception e) {
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG,"Activate audio boost failed", e);
             }
@@ -1588,16 +1643,16 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
 
     public BaikalAppProfile getBaikalAppProfile(String packageName, int uid) {
-        if( mAppSettings == null ) return new BaikalAppProfile(packageName,uid);
+        if( mAppSettings == null ) return new BaikalAppProfile(packageName,UserHandle.getAppId(uid));
 
         BaikalAppProfile profile = null;
 
         if( packageName == null ) {
             if( uid == -1 ) {
                 Slog.d(TAG,"getBaikalAppProfile(null,-1) : profile not found",new Throwable());
-                return new BaikalAppProfile(packageName,uid);
+                return new BaikalAppProfile(packageName,UserHandle.getAppId(uid));
             }
-            profile = mAppSettings.getBaikalProfile(uid);
+            profile = mAppSettings.getBaikalProfile(UserHandle.getAppId(uid));
         } else {
             profile = mAppSettings.getBaikalProfile(packageName);
         }
@@ -1607,11 +1662,11 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         if( uid == -1 ) {
             uid = 99999;
         }
-        return new BaikalAppProfile(packageName,uid);
+        return new BaikalAppProfile(packageName,UserHandle.getAppId(uid));
     }
 
     public BaikalAppProfile getBaikalAppProfile(int uid) {
-        BaikalAppProfile profile = mAppSettings != null ? mAppSettings.getBaikalProfile(uid) : null;
+        BaikalAppProfile profile = mAppSettings != null ? mAppSettings.getBaikalProfile(UserHandle.getAppId(uid)) : null;
         return profile;
     }
 
@@ -1619,12 +1674,12 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         if( mAppSettings == null ) return false;
         if( UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID ) return false;
         if( packageName == null ) {
-            packageName = BaikalConstants.getPackageByUid(mContext, uid);
+            packageName = BaikalConstants.getPackageByUid(mContext, UserHandle.getAppId(uid));
             if( packageName == null ) return false;
         }
         BaikalAppProfile profile = mAppSettings.getBaikalProfile(packageName);
         if( profile == null ) return false;
-        if( isStamina() && !profile.getStamina() ) {
+        if( isStamina() && !profile.getStamina() && !profile.mSystemApp) {
             if( profile.getBackgroundMode() >= 0 ) {
                 if( profile.mDebug || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "Background execution restricted by baikalos stamina ("
                     + profile.getBackgroundMode() + "," 
@@ -1643,7 +1698,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             
             }
         } else {
-            if( profile.getBackgroundMode() > 0 ) {
+            if( profile.getBackgroundMode() > 1 ) {
                 if( profile.mDebug || BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "Background execution restricted by baikalos ("
                     + profile.getBackgroundMode() + "," 
                     + profile.getStamina() + ") : " 
@@ -1667,7 +1722,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         if( UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID ) return false;
         if( profile == null ) {
             if( packageName == null ) {
-                profile = mAppSettings.getBaikalProfile(uid);
+                profile = mAppSettings.getBaikalProfile(UserHandle.getAppId(uid));
             } else {
                 profile = mAppSettings.getBaikalProfile(packageName);
             }
@@ -1678,8 +1733,8 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     public boolean isBaikalBlocked(BaikalAppProfile profile) {
         if( profile == null ) return false;
         if( UserHandle.getAppId(profile.mUid) < Process.FIRST_APPLICATION_UID ) return false;
-        if( isStamina() && !profile.getStamina() ) {
-            if( profile.getBackgroundMode() > 0 ) {
+        if( isStamina() && !profile.getStamina() && !profile.mSystemApp ) {
+            if( profile.getBackgroundMode() >= 0 ) {
                 Slog.w(TAG, "Background execution disabled by baikalos stamina (" + 
                     + profile.getBackgroundMode() + "," 
                     + profile.getStamina() + ") : " 
@@ -1697,7 +1752,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
             
             }
         } else {
-            if( profile.getBackgroundMode() > 0 ) {
+            if( profile.getBackgroundMode() > 1 ) {
                 Slog.w(TAG, "Background execution limited by baikalos ("
                     + profile.getBackgroundMode() + "," 
                     + profile.getStamina() + ") : " 
@@ -1755,6 +1810,11 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     }
 
 
+    public String getBaikalStringFromActivityManager(int opCode, String def, int callingUid, String callingPackage, Bundle bundle) {
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getBaikalStringFromActivityManager:" + callingPackage + "/" + callingUid + ", opCode=" + opCode + ", def=" + def + ", profile=null" + ", result=" + def);                
+        return def;
+    }
+
     private int getTriStateInt(int app, boolean global, boolean system, int def) {
         switch(app) {
             case 1: return 0;
@@ -1763,10 +1823,51 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         }
     }
 
+    public String getPackageStringFromActivityManager(String packageName, int _uid, int opCode, String def) {
+        String result = def;
+        int uid = UserHandle.getAppId(_uid);
 
-    public int getPackageOptionFromActivityManager(String packageName, int uid, int opCode, int def) {
+        try {
+            BaikalAppProfile profile = null;
+            if( packageName != null ) profile = mAppSettings.getBaikalProfile(packageName);
+            else profile = mAppSettings.getBaikalProfile(uid);
+            if( profile == null )  {
+                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) Slog.w(TAG, "getPackageStringFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", profile=null" + ", result=" + def);
+                return def;
+            }
+
+            switch(opCode) {
+                case BaikalAppProfile.OPCODE_SPOOF_SIM_COUNTRY:
+                    result = "".equals(profile.mSpoofSimCountry) ? def : profile.mSpoofSimCountry;
+                    break;
+                case BaikalAppProfile.OPCODE_SPOOF_SIM_MNC:
+                    result = "".equals(profile.mSpoofSimMnc) ? def : profile.mSpoofSimMnc;
+                    break;
+                case BaikalAppProfile.OPCODE_SPOOF_SIM_OP:
+                    result = "".equals(profile.mSpoofSimOpName) ? def : profile.mSpoofSimOpName;
+                    break;
+                case BaikalAppProfile.OPCODE_SPOOF_SIM_LN:
+                    result = "".equals(profile.mSpoofSimLN) ? def : profile.mSpoofSimLN;
+                    break;
+
+
+                default:
+                    Slog.w(TAG, "getPackageStringFromActivityManager: invalid opcode:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", result=" + result);
+            }
+        } catch(Exception ex) {
+            Slog.w(TAG, "getPackageStringFromActivityManager: exception", ex);
+        }
+
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) Slog.w(TAG, "getPackageStringFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def + ", result=" + result);
+        return result;
+
+    }
+
+    public int getPackageOptionFromActivityManager(String packageName, int _uid, int opCode, int def) {
 
         int result = def;
+        int uid = UserHandle.getAppId(_uid);
+
         //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.w(TAG, "getPackageOptionFromActivityManager:" + packageName + "/" + uid + ", opCode=" + opCode + ", def=" + def);
         try {
             BaikalAppProfile profile = null;
@@ -1817,6 +1918,18 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
                 case BaikalAppProfile.OPCODE_BLOCK_NOTIFICATION:
                     result = getTriStateInt(profile.mBlockNotification, mBlockNotification, profile.mSystemApp,def);
+                    break;
+
+                case BaikalAppProfile.OPCODE_DEFAULT_DIALER:
+                    result = profile.mPackageName.equals(packageName) && profile.mUid == uid && profile.mSpoofAsDefaultDialer ? 1 : def;
+                    break;
+
+                case BaikalAppProfile.OPCODE_DEFAULT_SMS:
+                    result = profile.mPackageName.equals(packageName) && profile.mUid == uid && profile.mSpoofAsDefaultSMS ? 1 : def;
+                    break;
+
+                case BaikalAppProfile.OPCODE_DEFAULT_CALLERID:
+                    result = profile.mPackageName.equals(packageName) && profile.mUid == uid && profile.mSpoofAsDefaultCallerID ? 1 : def;
                     break;
 
                 default:
@@ -1964,7 +2077,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
 
     public boolean isAodOnChargerEnabled() {
-        return mAodOnCharger & mOnCharger;
+        return mAodOnCharger && mOnCharger && !mCarModeEnabled;
     }
 
     public boolean isGmsUid(int uid) {
@@ -1983,7 +2096,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     public static BaikalAppProfile getBaikalProfile(String packageName, int uid) {
         BaikalAppProfile profile = null;
         if( mInstance != null ) { 
-            profile =  mInstance.getBaikalAppProfile(packageName, uid);
+            profile =  mInstance.getBaikalAppProfile(packageName, UserHandle.getAppId(uid));
             if( uid == -1 ) return profile;
             return profile != null ? profile : mInstance.getBaikalAppProfile(-1);
         }
@@ -1995,7 +2108,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
     public static int getBackgroundMode(String packageName, int uid) {
         BaikalAppProfile profile = null;
         if( mInstance != null ) { 
-            profile = mInstance.getBaikalAppProfile(packageName, uid);
+            profile = mInstance.getBaikalAppProfile(packageName, UserHandle.getAppId(uid));
             return profile != null ? profile.getBackgroundMode() : 0;
         }
         Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
@@ -2030,10 +2143,17 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
         return false;
     }
 
-    public static boolean isAllowSigOverride() {
-        if( mInstance != null ) return mInstance.mAllowSigOverride;
+    public static boolean isAllowSigOverride(String packageName) {
+        if( mInstance != null ) {
+            BaikalAppProfile profile = mInstance.getBaikalAppProfile(packageName, -1);
+            return profile != null ? profile.mAllowSigOverride : false;
+        }
         Slog.wtf(TAG, "AppProfileManager not initialized.", new Throwable());
         return false;
+    }
+
+    public static boolean isPackageDisabledForUid(String packageName, int userId, int callerUid, boolean isSystem) {
+        return BaikalSpoofer.shouldFilterApplication(packageName,userId,callerUid,isSystem);
     }
 
 // ----------------- READER MODE --------------
@@ -2051,7 +2171,7 @@ public class BaikalAppProfileManager implements UiModeManager.OnProjectionStateC
 
         int uid = Binder.getCallingUid();
 
-        int level = getLocationLevel(uid);
+        int level = getLocationLevel(UserHandle.getAppId(uid));
         switch(level) {
             case 0:
                 return true;
