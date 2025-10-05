@@ -223,13 +223,13 @@ public class PowerUI implements CoreStartable, CommandQueue.Callbacks {
     void updateBatteryWarningLevels() {
 
         final ContentResolver resolver = mContext.getContentResolver();
-
-        int critLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL, 
+                                                                            
+        int critLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL, 
                                         mContext.getResources().getInteger(
                                             com.android.internal.R.integer.config_criticalBatteryWarningLevel));
 
 
-        int warnLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL, 
+        int warnLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL, 
                                         mContext.getResources().getInteger(
                                             com.android.internal.R.integer.config_lowBatteryWarningLevel));
 
