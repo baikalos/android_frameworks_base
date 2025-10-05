@@ -199,7 +199,7 @@ public class AlarmManagerService extends SystemService {
     static final int TIME_CHANGED_MASK = 1 << 16;
     static final int IS_WAKEUP_MASK = RTC_WAKEUP_MASK | ELAPSED_REALTIME_WAKEUP_MASK;
 
-    static final String TAG = "AlarmManager";
+    static final String TAG = "AlarmManagerService";
     static final String TIME_TICK_TAG = "TIME_TICK";
     static final boolean localLOGV = false;
     static final boolean DEBUG_BATCH = localLOGV || false;
@@ -4680,7 +4680,7 @@ public class AlarmManagerService extends SystemService {
         private int mWtfThreshold;
 
         AlarmThread() {
-            super("AlarmManager");
+            super("AlarmManagerService");
             mFalseWakeups = 0;
             mWtfThreshold = 100;
         }
