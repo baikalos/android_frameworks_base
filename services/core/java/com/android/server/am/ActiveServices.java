@@ -742,11 +742,15 @@ public final class ActiveServices {
         // idleness state tracking as e.g. O+ background service start policy.
         final boolean bgLaunch = !mAm.isUidActiveLOSP(r.appInfo.uid);
 
+        boolean baikalWhitelisted = false;
+        if( r.name != null && r.name.getClassName() != null && r.name.getClassName().contains("CallScreeningService") ) baikalWhitelisted = true;
+
+
         // If the app has strict background restrictions, we treat any bg service
         // start analogously to the legacy-app forced-restrictions case, regardless
         // of its target SDK version.
         boolean forcedStandby = false;
-        if (bgLaunch && appRestrictedAnyInBackground(r.appInfo.uid, r.packageName)) {
+        if (!baikalWhitelisted && bgLaunch && appRestrictedAnyInBackground(r.appInfo.uid, r.packageName)) {
             if (DEBUG_FOREGROUND_SERVICE) {
                 Slog.d(TAG, "Forcing bg-only service start only for " + r.shortInstanceName
                         + " : bgLaunch=" + bgLaunch + " callerFg=" + callerFg);
@@ -793,11 +797,15 @@ public final class ActiveServices {
                     forceSilentAbort = true;
                     break;
                 default:
+                    Slog.w(TAG, "startForegroundService not allowed as per app op: service "
+                            + service + " to " + r.shortInstanceName
+                            + " from pid=" + callingPid + " uid=" + callingUid
+                            + " pkg=" + callingPackage);
                     return new ComponentName("!!", "foreground not allowed as per app op");
             }
         }
 
-        if( bgLaunch && !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
+        if( !baikalWhitelisted && bgLaunch && !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
             mAm.mBaikalAppProfileManager.isBaikalAppBlocked(null, r.packageName, r.appInfo.uid) ) {
             Slog.w(TAG, "App service execution blocked: service "
                     + service + " to " + r.shortInstanceName
@@ -809,9 +817,9 @@ public final class ActiveServices {
         }
 
 
-        if( bgLaunch && !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) ) {
+        if( !baikalWhitelisted && bgLaunch && !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) ) {
             BaikalAppProfile appProfile = mAm.mBaikalAppProfileManager.getBaikalAppProfile(r.appInfo.packageName,r.appInfo.uid);
-            if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0 ) {
+            if( appProfile.mBootDisabled || appProfile.getBackgroundMode() > 1 ) {
                 Slog.w(TAG, "startForegroundService not allowed by baikalos settings: service "
                         + service + " to " + r.shortInstanceName
                         + " from pid=" + callingPid + " uid=" + callingUid
@@ -824,7 +832,7 @@ public final class ActiveServices {
         
         // If this isn't a direct-to-foreground start, check our ability to kick off an
         // arbitrary service
-        if ( !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
+        if ( !baikalWhitelisted && !mAm.mBaikalAppProfileManager.isTopAppUid(callingUid,callingPackage) &&
             (forcedStandby || (!r.startRequested && !fgRequired)) ) {
             // Before going further -- if this app is not allowed to start services in the
             // background, then at this point we aren't going to let it period.
@@ -2807,12 +2815,19 @@ public final class ActiveServices {
         final int callingUid = Binder.getCallingUid();
         final ProcessRecord callerApp = mAm.getRecordForAppLOSP(caller);
         if (callerApp == null) {
+            Slog.e(TAG_SERVICE, "bindService: Unable to find app for caller " + caller
+                    + " (pid=" + callingPid
+                    + ") when binding service " + service);
             throw new SecurityException(
                     "Unable to find app for caller " + caller
                     + " (pid=" + callingPid
                     + ") when binding service " + service);
         }
 
+        if( service.toString().contains("com.google.android.play.core.install.BIND_UPDATE_SERVICE") ) {
+            Slog.w(TAG, "bindService: google play update allowed");
+            //return 0;
+        }
         
         ActivityServiceConnectionsHolder<ConnectionRecord> activity = null;
         if (token != null) {
@@ -2904,7 +2919,7 @@ public final class ActiveServices {
         int enableState = PackageManager.COMPONENT_ENABLED_STATE_DEFAULT;
         try {
             IPackageManager pm = AppGlobals.getPackageManager();
-            enableState = pm.getComponentEnabledSetting(s.name, 0);
+            enableState = pm.getComponentEnabledSetting(s.name, UserHandle.getUserId(callingUid));
         } catch (Exception e) {
             Slog.w(TAG, "Exception checking component:" + s.name, e);
         }
@@ -2918,9 +2933,14 @@ public final class ActiveServices {
             return 0;
         }
 
+        boolean baikalWhitelisted = false;
+        if( s.name != null && s.name.getClassName() != null && s.name.getClassName().contains("CallScreeningService") ) baikalWhitelisted = true;
+
+
         if( callerApp.info.uid == 1000 ||  
             (callerApp.mState.getCurProcState() != ActivityManager.PROCESS_STATE_TOP &&
             callerApp.info.uid != s.appInfo.uid &&
+            !baikalWhitelisted &&
             !mAm.mBaikalAppProfileManager.isGmsUid(callerApp.info.uid) &&
             !mAm.mBaikalAppProfileManager.isAaUid(callerApp.info.uid) &&
             !mAm.mBaikalAppProfileManager.isSystemuiUid(callerApp.info.uid) &&
@@ -4239,6 +4259,9 @@ public final class ActiveServices {
             boolean whileRestarting, boolean permissionsReviewRequired, boolean packageFrozen,
             boolean enqueueOomAdj)
             throws TransactionTooLargeException {
+
+        boolean baikalWhitelisted = false;
+
         if (r.app != null && r.app.getThread() != null) {
             sendServiceArgsLocked(r, execInFg, false);
             return null;
@@ -4267,7 +4290,7 @@ public final class ActiveServices {
             return null;
         }
 
-
+        if( r.name != null && r.name.getClassName() != null && r.name.getClassName().contains("CallScreeningService") ) baikalWhitelisted = true;
         // We are now bringing the service up, so no longer in the
         // restarting state.
         if (mRestartingServices.remove(r)) {
@@ -4363,11 +4386,11 @@ public final class ActiveServices {
             }
         }
 
-        if (/*!isolated &&*/ app == null /*&& !permissionsReviewRequired && !packageFrozen*/ && !r.fgRequired && !execInFg) {
+        if (!baikalWhitelisted && /*!isolated &&*/ app == null /*&& !permissionsReviewRequired && !packageFrozen*/ && !r.fgRequired && !execInFg) {
             if( !mAm.mBaikalAppProfileManager.isTopAppUid(r.appInfo.uid,r.appInfo.packageName) ) {
                 BaikalAppProfile appProfile = mAm.mBaikalAppProfileManager.getBaikalAppProfile(r.appInfo.packageName,r.appInfo.uid);
                 if( appProfile != null ) {
-                    if( /*!(appProfile.getBackgroundMode() < 0) &&*/ !appProfile.mAllowWhileIdle && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 0) ) {
+                    if( /*!(appProfile.getBackgroundMode() < 0) &&*/ !appProfile.mAllowWhileIdle && (appProfile.mBootDisabled || appProfile.getBackgroundMode() > 1) ) {
                         String msg = "Unable to launch app "
                             + r.appInfo.packageName + "/"
                             + r.appInfo.uid
@@ -4394,6 +4417,9 @@ public final class ActiveServices {
                         hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, uid, r.sdkSandboxClientAppPackage);
                 r.isolationHostProc = app;
             } else {
+                if (/*DEBUG_BROADCAST*/ true)  Slog.v(TAG,
+                "Need to start app " + procName + " for service " + r);
+
                 app = mAm.startProcessLocked(procName, r.appInfo, true, intentFlags,
                         hostingRecord, ZYGOTE_POLICY_FLAG_EMPTY, false, isolated);
             }
