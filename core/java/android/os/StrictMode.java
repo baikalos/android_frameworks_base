@@ -1487,6 +1487,7 @@ public final class StrictMode {
         final int targetSdkVersion =
                 (ai != null) ? ai.targetSdkVersion : Build.VERSION_CODES.CUR_DEVELOPMENT;
 
+        /*
         // Starting in N, we don't allow file:// Uri exposure
         if (targetSdkVersion >= Build.VERSION_CODES.N) {
             builder.detectFileUriExposure();
@@ -1503,7 +1504,7 @@ public final class StrictMode {
                 builder.permitActivityLeaks();
                 builder.penaltyDropBox();
             }
-        } else if (Build.IS_ENG) {
+        } else */ if (Build.IS_ENG) {
             // Detect everything in bundled apps
             if (isBundledSystemApp(ai)) {
                 builder.detectAll();
