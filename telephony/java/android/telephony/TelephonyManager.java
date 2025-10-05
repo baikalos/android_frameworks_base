@@ -67,6 +67,7 @@ import android.os.ParcelFileDescriptor;
 import android.os.ParcelUuid;
 import android.os.Parcelable;
 import android.os.PersistableBundle;
+import android.os.Process;
 import android.os.RemoteException;
 import android.os.ResultReceiver;
 import android.os.SystemProperties;
@@ -127,6 +128,9 @@ import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.RILConstants;
 import com.android.internal.telephony.SmsApplication;
 import com.android.telephony.Rlog;
+
+import android.baikalos.BaikalAppProfile;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -2423,9 +2427,9 @@ public class TelephonyManager {
                 return null;
             String nai = info.getNaiForSubscriber(subId, mContext.getOpPackageName(),
                     mContext.getAttributionTag());
-            if (Log.isLoggable(TAG, Log.VERBOSE)) {
-                Rlog.v(TAG, "Nai = " + nai);
-            }
+            //if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                Rlog.v(TAG, "getNaiBySubscriberId:" + ProcessmyUid() + ", Nai = " + nai );
+            //}
             return nai;
         } catch (RemoteException ex) {
             return null;
@@ -2463,6 +2467,8 @@ public class TelephonyManager {
                         + " phone type doesn't match CellLocation type");
                 return null;
             }
+
+            Rlog.d(TAG, "getCellLocation:" + ProcessmyUid() + ", cl=" + cl);
 
             return cl;
         } catch (RemoteException ex) {
@@ -3881,7 +3887,10 @@ public class TelephonyManager {
      */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
     public String getSimOperatorNumericForPhone(int phoneId) {
-        return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_numeric(), "");
+        String result = getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_numeric(), "");
+        result = BaikalSpoofer.getBaikalPackageString(null, getCallingUid(), BaikalAppProfile.OPCODE_SPOOF_SIM_MNC, result);
+        Log.d(TAG, "getSimOperatorNumericForPhone:" + ProcessmyUid() + ", result = \'" + result + "\'");
+        return result;
     }
 
     /**
@@ -3919,7 +3928,11 @@ public class TelephonyManager {
      */
     @UnsupportedAppUsage
     public String getSimOperatorNameForPhone(int phoneId) {
-        return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_alpha(), "");
+        // return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_alpha(), "");
+        String result = getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_alpha(), "");
+        result = BaikalSpoofer.getBaikalPackageString(null, getCallingUid(), BaikalAppProfile.OPCODE_SPOOF_SIM_OP, result);
+        Log.d(TAG, "getSimOperatorNameForPhone:" + ProcessmyUid() + ", result = \'" + result + "\'");
+        return result;
     }
 
     /**
@@ -3953,7 +3966,13 @@ public class TelephonyManager {
      */
     @UnsupportedAppUsage
     public static String getSimCountryIsoForPhone(int phoneId) {
-        return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_iso_country(), "");
+        //return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_iso_country(), "");
+
+        String result = getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_iso_country(), "");
+        result = BaikalSpoofer.getBaikalPackageString(null, getCallingUid(), BaikalAppProfile.OPCODE_SPOOF_SIM_COUNTRY, result);
+        Log.d(TAG, "getSimCountryIsoForPhone:" + ProcessmyUid() + ", result = \'" + result + "\'");
+        return result;
+
     }
 
     /**
@@ -5067,20 +5086,28 @@ public class TelephonyManager {
         } catch (NullPointerException ex) {
         }
         if (number != null) {
+            number = BaikalSpoofer.getBaikalPackageString(null, getCallingUid(), BaikalAppProfile.OPCODE_SPOOF_SIM_LN, number);
+            Log.d(TAG, "getLine1Number:" + ProcessmyUid() + ", result = \'" + number + "\'");
             return number;
         }
         try {
             IPhoneSubInfo info = getSubscriberInfoService();
-            if (info == null)
-                return null;
-            return info.getLine1NumberForSubscriber(subId, mContext.getOpPackageName(),
-                    mContext.getAttributionTag());
+            if (info != null) {
+                number = info.getLine1NumberForSubscriber(subId, mContext.getOpPackageName(),
+                        mContext.getAttributionTag());
+                number = BaikalSpoofer.getBaikalPackageString(null, getCallingUid(), BaikalAppProfile.OPCODE_SPOOF_SIM_LN, number);
+                Log.d(TAG, "getLine1Number:" + ProcessmyUid() + ", result = \'" + number + "\'");
+                return number;
+            }
         } catch (RemoteException ex) {
-            return null;
+            //return null;
         } catch (NullPointerException ex) {
             // This could happen before phone restarts due to crashing
-            return null;
+            //return null;
         }
+        number = BaikalSpoofer.getBaikalPackageString(null, getCallingUid(), BaikalAppProfile.OPCODE_SPOOF_SIM_LN, null);
+        Log.d(TAG, "getLine1Number:" + ProcessmyUid() + ", result = \'" + number + "\'");
+        return number;
     }
 
     /**
@@ -5283,7 +5310,9 @@ public class TelephonyManager {
             IPhoneSubInfo info = getSubscriberInfoService();
             if (info == null)
                 return null;
-            return info.getMsisdnForSubscriber(subId, getOpPackageName(), getAttributionTag());
+            String result = info.getMsisdnForSubscriber(subId, getOpPackageName(), getAttributionTag());
+            Log.d(TAG, "getMsisdn:" + ProcessmyUid() + ", result = \'" + result + "\'");
+            return result;
         } catch (RemoteException ex) {
             return null;
         } catch (NullPointerException ex) {
@@ -17059,4 +17088,18 @@ public class TelephonyManager {
         }
         return false;
     }
+
+    static String ProcessmyUid() {
+        return "" + Process.myUid() + ",c=" + getCallingUid();
+    }
+
+    static int getCallingUid() {
+        int callingUid = Process.myUid();
+        try {
+            callingUid = Binder.getCallingUid();
+        } catch(Exception e) {
+        }
+        return callingUid;
+    }
+
 }
