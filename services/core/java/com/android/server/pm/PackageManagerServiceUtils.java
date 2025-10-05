@@ -561,7 +561,7 @@ public class PackageManagerServiceUtils {
             }
 
             if (!match) {
-                if ( BaikalAppProfileManager.isAllowSigOverride() ) {
+                if ( BaikalAppProfileManager.isAllowSigOverride(packageName) ) {
                     compatMatch = true;
                     match = true;
                 } else {
@@ -1318,6 +1318,12 @@ public class PackageManagerServiceUtils {
 
     public static @Nullable File preparePackageParserCache(boolean forEngBuild,
             boolean isUserDebugBuild, String incrementalVersion, boolean isUpgrade) {
+
+        boolean purge_package_cache = SystemProperties.getBoolean("persist.baikal.purge_package_cache",false);
+        if( purge_package_cache ) {
+            SystemProperties.set("persist.baikal.purge_package_cache", "0");
+        }
+
         if (!FORCE_PACKAGE_PARSED_CACHE_ENABLED) {
             if (!DEFAULT_PACKAGE_PARSER_CACHE_ENABLED) {
                 return null;
@@ -1348,7 +1354,7 @@ public class PackageManagerServiceUtils {
 
         // Reconcile cache directories, keeping only what we'd actually use.
         for (File cacheDir : FileUtils.listFilesOrEmpty(cacheBaseDir)) {
-            if (!isUpgrade && Objects.equals(cacheName, cacheDir.getName())) {
+            if (!purge_package_cache && !isUpgrade && Objects.equals(cacheName, cacheDir.getName())) {
                 Slog.d(TAG, "Keeping known cache " + cacheDir.getName());
             } else {
                 Slog.d(TAG, "Destroying unknown cache " + cacheDir.getName());
@@ -1364,6 +1370,13 @@ public class PackageManagerServiceUtils {
             Slog.wtf(TAG, "Cache directory cannot be created - wiping base dir " + cacheBaseDir);
             FileUtils.deleteContentsAndDir(cacheBaseDir);
             return null;
+        }
+
+        if (purge_package_cache) {
+            Slog.w(TAG, "Wiping cache directory by the user property.");
+            FileUtils.deleteContents(cacheBaseDir);
+            cacheDir = FileUtils.createDir(cacheBaseDir, cacheName);
+            return cacheDir;
         }
 
         // The following is a workaround to aid development on non-numbered userdebug
@@ -1387,12 +1400,6 @@ public class PackageManagerServiceUtils {
             }
         }
 
-        if (SystemProperties.getBoolean("persist.baikal.purge_package_cache", false)) {
-            SystemProperties.set("persist.baikal.purge_package_cache", "0");
-            Slog.w(TAG, "Wiping cache directory by the user property.");
-            FileUtils.deleteContents(cacheBaseDir);
-            cacheDir = FileUtils.createDir(cacheBaseDir, cacheName);
-        }
 
         return cacheDir;
     }
