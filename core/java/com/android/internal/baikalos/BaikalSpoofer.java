@@ -1066,6 +1066,9 @@ public class BaikalSpoofer {
         if( !sIsInitialized ) return rval == null ? "" : rval;
         if( getFilteredDevModeKey(key) ) return "";
 
+        String simoverride;
+        if( (simoverride = overrideSimProperties(key)) != null ) return simoverride;
+
         rval = overrideDeviceProperty(key,"",rval);
 
         switch(sOverrideSystemPropertiesId) {
@@ -1084,6 +1087,9 @@ public class BaikalSpoofer {
         if( BaikalConstantsBAIKAL_DEBUG_RAW || BaikalAppProfile.isDebug() ) Log.d(TAG, "Tryget string " + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + " system property \'" + key + "\' def \'" + def + "\' rval " + rval);
         if( !sIsInitialized ) return rval == null ? "" : rval;
         if( getFilteredDevModeKey(key) ) return def == null ? "" : def;
+
+        String simoverride;
+        if( (simoverride = overrideSimProperties(key)) != null ) return simoverride;
 
         rval = overrideDeviceProperty(key,def,rval);
         
@@ -1170,6 +1176,29 @@ public class BaikalSpoofer {
         return rval;
     }
 
+
+    private static String overrideOneSimProperty(String property, String key, String rkey) {
+        if(property == null || "".equals(property)) return null;
+        if( rkey == null ) return null;
+        if( rkey.equals("gsm." + key) || rkey.equals("gsm.sim." + key) ) {
+            /*if( BaikalConstantsBAIKAL_DEBUG_RAW || BaikalAppProfile.isDebug() )*/ 
+            Log.d(TAG, "Tryget override SIM prop " + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + " system property \'" + key + "\'" + " value = \'" + property + "\'");
+            return property;
+        }
+        return null;
+    }
+
+
+    private static String overrideSimProperties(String key) {
+        String result;
+        if( (result = overrideOneSimProperty(BaikalAppProfile.getCurrentAppProfile().mSpoofSimCountry, "operator.iso-country", key)) != null ) return result;
+        if( (result = overrideOneSimProperty(BaikalAppProfile.getCurrentAppProfile().mSpoofSimMnc, "operator.numeric", key)) != null ) return result;
+        if( (result = overrideOneSimProperty(BaikalAppProfile.getCurrentAppProfile().mSpoofSimOpName, "operator.alpha", key)) != null ) return result;
+        //if( result = overrideOneSimProperty(BaikalAppProfile.getCurrentAppProfile().mSpoofSimLN, "operator.iso-country", key) != null ) return result;
+        return null;
+    }
+
+
     private static boolean getFilteredDevModeKey(String key) {
         if( /*BaikalAppProfile.getCurrentAppProfile().mHideDevMode && */ key != null ) {
            if(  "init.svc.adbd".equals(key) ||
@@ -1189,12 +1218,12 @@ public class BaikalSpoofer {
                 "persist.adb.wifi.guid".equals(key) ||
                 "persist.adb.tls_server.port".equals(key) ||
                 "persist.adb.tls_server.enable".equals(key) ||
-                "gsm.sim.operator.numeric".equals(key) ||
+                /*"gsm.sim.operator.numeric".equals(key) ||
                 "gsm.operator.numeric".equals(key) ||
                 "gsm.sim.operator.alpha".equals(key) ||
                 "gsm.operator.alpha".equals(key) ||
                 "gsm.sim.operator.iso-country".equals(key) ||
-                "gsm.operator.iso-country".equals(key) ||
+                "gsm.operator.iso-country".equals(key) ||*/
                 key.startsWith("persist.spoof") ) { 
 
                 if( BaikalAppProfile.getCurrentAppProfile().mHideDevMode ) {
