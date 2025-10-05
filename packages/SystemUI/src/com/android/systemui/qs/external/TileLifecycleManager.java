@@ -325,7 +325,7 @@ public class TileLifecycleManager extends BroadcastReceiver implements
         mIsBound = false;
         if (!mBound) return;
         if (DEBUG) Log.d(TAG, "handleDeath");
-        if (checkComponentState()) {
+        /*if (checkComponentState()) {
             mHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
@@ -335,7 +335,7 @@ public class TileLifecycleManager extends BroadcastReceiver implements
                     }
                 }
             }, mBindRetryDelay);
-        }
+        }*/
     }
 
     private boolean checkComponentState() {
