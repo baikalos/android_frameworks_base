@@ -187,16 +187,22 @@ public class BaikalConstants {
 
     public static int mIsKernelCompatible = -1;
     public static boolean isKernelCompatible() {
-        if( mIsKernelCompatible == -1 ) initIsKernalCompatible();
+        if( mIsKernelCompatible == -1 ) initIsKernelCompatible();
         //Slog.i(TAG,"isKernelCompatible " + (mIsKernelCompatible == 1) );
         return mIsKernelCompatible == 1;
     }
 
     private static String kernelVersion = "";
-    private static void initIsKernalCompatible() {
+    private static void initIsKernelCompatible() {
+        mIsKernelCompatible = 1;
         File file = new File("/sys/module/baikalfs");
-        if(file.exists()) mIsKernelCompatible = 1;
-        else mIsKernelCompatible = 0;
+        if(!file.exists()) { mIsKernelCompatible = 0; Slog.i(TAG,"initIsKernelCompatible:" + "baikalfs"); }
+        file = new File("/sys/devices/system/cpu/cpu0/core_ctl/enable");
+        if(!file.exists()) { mIsKernelCompatible = 0; Slog.i(TAG,"initIsKernelCompatible:" + "core_ctl"); }
+        file = new File("/sys/power/keep_awake");
+        if(!file.exists()) { mIsKernelCompatible = 0; Slog.i(TAG,"initIsKernelCompatible:" + "keep_awake"); }
+
+
         /*if( Os.uname() == null ) { kernelVersion = ""; mIsKernelCompatible = -1; return; }
         kernelVersion = Os.uname().release;
         if( kernelVersion != null && kernelVersion.contains("baikalos") ) mIsKernelCompatible = 1;

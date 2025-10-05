@@ -271,12 +271,15 @@ public class BaikalAppProfileSettings extends BaikalAppProfileBase {
             boolean runAnyInBackground = _settings.getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
                     uid, info.packageName) == AppOpsManager.MODE_ALLOWED;
 
-            //if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
-            //if( !runInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
+            if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
+            if( !runInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
 
             int backgroundMode = profile.getBackgroundMode(forceAllAppsStandby);
+            if( (isSystem || appId == -1 ) && backgroundMode > 0 ) backgroundMode = profile.mBackgroundMode;
+            // if( backgroundMode > 99 ) backgroundMode = 0;
 
-            if( backgroundMode < 1 && ( /*isSystem ||*/ profile.mAllowWhileIdle || profile.isHome() || profile.mImportantApp ) ) {
+            if( backgroundMode < 1 || ( /*isSystem ||*/ profile.mAllowWhileIdle || profile.isHome() || profile.mImportantApp ) ) {
+                //if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
                 if( restricted ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: unrestrict system or allowed packageName=" + info.packageName + "/" + appId);
                     backgroundRestrictedUidPackages.remove(pair);
@@ -285,35 +288,29 @@ public class BaikalAppProfileSettings extends BaikalAppProfileBase {
             }
 
             if( backgroundMode >= 2 ) {
-                if( runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_IGNORED); 
+                //if( runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_IGNORED); 
                 if( restricted ) continue;
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Restrict 2 packageName=" + info.packageName + "/" + appId);
                 backgroundRestrictedUidPackages.add(pair);
-            } else if( backgroundMode == 1 && !sScreenMode ) {
-                if( runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_IGNORED); 
+            } else if( backgroundMode == 1 ) {
+                //if( runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_IGNORED); 
                 if( restricted ) continue;
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Restrict 1 packageName=" + info.packageName + "/" + appId);
                 backgroundRestrictedUidPackages.add(pair);
-            } else if( backgroundMode == 1 && sScreenMode ) {
-                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
-                if( restricted ) {
-                    if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict 1 packageName=" + info.packageName + "/" + appId);
-                    backgroundRestrictedUidPackages.remove(pair);
-                }
             } else if( backgroundMode == 0 )  {
-                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
+                //if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
                 if( restricted ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict 0 packageName=" + info.packageName + "/" + appId);
                     backgroundRestrictedUidPackages.remove(pair);
                 }
             } else if( backgroundMode < 0 )  {
-                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
+                //if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
                 if( restricted ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: Unrestrict whitelisted packageName=" + info.packageName + "/" + appId);
                     backgroundRestrictedUidPackages.remove(pair);
                 }
             } else {
-                if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
+                //if( !runAnyInBackground ) _settings.setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, info.packageName,AppOpsManager.MODE_ALLOWED); 
                 if( restricted ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateBackgroundRestrictedUidPackagesLocked: WTF? Unrestrict whitelisted packageName=" + info.packageName + "/" + appId);
                     backgroundRestrictedUidPackages.remove(pair);

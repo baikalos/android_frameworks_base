@@ -28,12 +28,14 @@ import android.content.ContentResolver;
 
 import android.os.UserHandle;
 
+import android.net.Uri;
+import android.database.ContentObserver;
 import android.provider.Settings;
 
 import android.baikalos.BaikalAppProfile;
 import com.android.internal.baikalos.BaikalConstants;
 
-public class BaikalDebugInternal { 
+public class BaikalDebugInternal extends ContentObserver { 
 
     private static final String TAG = "Baikal.DebugI";
 
@@ -46,29 +48,48 @@ public class BaikalDebugInternal {
 
     static BaikalDebugInternal mInstance;
 
-    public static BaikalDebugInternal getInstance() {
+    /*public static BaikalDebugInternal getInstance() {
         return mInstance;
-    }
+    }*/
 
-    public static BaikalDebugInternal getInstance(Context context) {
+    public static BaikalDebugInternal getInstance(Handler handler, Context context) {
         if( mInstance == null ) {
-            mInstance = new BaikalDebugInternal(context);
+            mInstance = new BaikalDebugInternal(handler,context);
         }
         return mInstance;
     }
 
-    private BaikalDebugInternal(Context context) {
+    private BaikalDebugInternal(Handler handler, Context context) {
+        super(handler);
+
         mContext = context;
+        mResolver = mContext.getContentResolver();
+        try {
+            mResolver.registerContentObserver(
+                Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEBUG),
+                false, this);
+        } catch( Exception e ) {
+        }
     }
 
+    @Override
+    public void onChange(boolean selfChange, Uri uri) {
+        updateConstants();
+    }
 
     public void updateConstants() {
+        synchronized(this) {
+            updateConstantsLocked();
+        }
+    }
+
+    public void updateConstantsLocked() {
         boolean changed = false;
 
         try {
-        boolean debug = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEBUG, 0) != 0;
+        boolean debug = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_DEBUG, 0) != 0;
 
-        String debugMaskString = Settings.Global.getString(mContext.getContentResolver(), Settings.Global.BAIKALOS_DEBUG_MASK);
+        String debugMaskString = Settings.Global.getString(mResolver, Settings.Global.BAIKALOS_DEBUG_MASK);
         Slog.i(TAG,"enabled=" + debug + ", DebugMask=" + debugMaskString);
 
         if( debugMaskString != null && !"".equals(debugMaskString) &&
@@ -148,7 +169,7 @@ public class BaikalDebugInternal {
         if( (debugMask&BaikalConstants.DEBUG_MASK_NETWORK) !=0 ) BaikalConstants.BAIKAL_DEBUG_NETWORK = true;
 
 
-        BaikalAppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW;
+        BaikalAppProfile.TRACE = BaikalConstants.BAIKAL_DEBUG_OOM_RAW && BaikalConstants.BAIKAL_DEBUG_RAW;
         BaikalAppProfile.VERBOSE = BaikalConstants.BAIKAL_DEBUG_OOM_RAW && BaikalConstants.BAIKAL_DEBUG_RAW;
     }
 }

@@ -45,6 +45,8 @@ public class BaikalActions {
 
     public static final String ACTION_SWITCH_INCALLUI = "com.android.internal.baikalos.Actions.ACTION_SWITCH_INCALLUI";
 
+    public static final String ACTION_CAR_MODE_CHANGED = "com.android.internal.baikalos.Actions.ACTION_CAR_MODE_CHANGED";
+
     public static final String EXTRA_BOOL_MODE = "com.android.internal.baikalos.Actions.EXTRA_BOOL_MODE";
     public static final String EXTRA_INT_MODE = "com.android.internal.baikalos.Actions.EXTRA_INT_MODE";
     public static final String EXTRA_INT_BRIGHTNESS = "com.android.internal.baikalos.Actions.EXTRA_INT_BRIGHTNESS";
@@ -156,6 +158,15 @@ public class BaikalActions {
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
     	enqueueIntent(intent);
     }
+
+    public static void sendCarModeChanged(boolean carMode) {
+        Intent intent = new Intent(ACTION_CAR_MODE_CHANGED);
+        intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY);
+    	intent.putExtra(EXTRA_BOOL_MODE,carMode);
+    	enqueueIntent(intent);
+    }
+
+
 
     public static void enqueueIntent(Intent intent) {
         if( mStaticHandler == null ) {

@@ -132,6 +132,14 @@ public class BaikalAppProfileBase extends ContentObserver {
         updateImportantAppsLocked();
     }
 
+
+    public boolean isSystemApp(String packageName) {
+        synchronized(this) {
+            return isSystemAppLocked(packageName);
+        }
+    }
+
+
     boolean isSysWhitelistedLocked(String packageName) {
         if( _systemWhitelistedByPackageName.contains(packageName) ) return true;     
         return false;
@@ -205,9 +213,12 @@ public class BaikalAppProfileBase extends ContentObserver {
                 PackageManager.MATCH_ANY_USER
                 );
         for (PackageInfo info : installedAppInfo) {
+
             boolean isSystem = (info.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
 
-            if( isSystem || info.packageName.startsWith("com.android.") ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.e(TAG, "Found app package:" + info.packageName + ", flags=" + Integer.toHexString(info.applicationInfo.flags));
+
+            if( isSystem /*|| info.packageName.startsWith("com.android.")*/ ) {
                 if( !_systemAppsByPackageName.contains(info.packageName) ) {
                     Slog.e(TAG, "Added system app " + info.packageName);
                     _systemAppsByPackageName.add(info.packageName);
@@ -300,6 +311,9 @@ public class BaikalAppProfileBase extends ContentObserver {
                             newProfilesByUid.put(profile.mUid, profile);
                         } else {
                             BaikalAppProfile old_uid_profile = newProfilesByUid.get(profile.mUid);
+                            if( old_uid_profile.mPackageName == null && !old_uid_profile.mPackageName.equals(profile.mPackageName) ) {
+                                Slog.e(TAG, "Package " + profile.mPackageName +  " with uid " + profile.mUid + " already loaded with package name=" + old_uid_profile.mPackageName);
+                            }
                             BaikalAppProfile replace = merge(old_uid_profile,profile);
                             if( replace != null ) {
                                 newProfilesByUid.remove(profile.mUid);
@@ -381,7 +395,7 @@ public class BaikalAppProfileBase extends ContentObserver {
             BaikalAppProfile android = oldProfiles.containsKey("android") ? oldProfiles.get("android") : new BaikalAppProfile("android",1000);
             android.mSystemWhitelisted = true;
             android.mStaminaEnforced = true;
-            android.mImportantApp = true;
+            //android.mImportantApp = true;
             android.mSystemApp = true;
             android.mBackgroundMode = -1;
             newProfilesByPackageName.put("android",android);
@@ -503,6 +517,11 @@ public class BaikalAppProfileBase extends ContentObserver {
 
         if( !newProfilesByUid.containsKey(profile.mUid)  ) {
             newProfilesByUid.put(profile.mUid, profile);
+        } else {
+            BaikalAppProfile found_profile = newProfilesByUid.get(profile.mUid);
+            if( found_profile.mPackageName == null && !found_profile.mPackageName.equals(profile.mPackageName) ) {
+                Slog.e(TAG, "Package " + profile.mPackageName +  " with uid " + profile.mUid + " already loaded with package name=" + found_profile.mPackageName);
+            }
         }
         return profile;
     }
@@ -599,6 +618,9 @@ public class BaikalAppProfileBase extends ContentObserver {
         boolean runAnyInBackground = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
                     uid, profile.mPackageName) == AppOpsManager.MODE_ALLOWED;
 
+        if( !runAnyInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+        if( !runInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "updateSystemSettingsLocked packageName=" + profile.mPackageName 
             + ", uid=" + uid
             + ", runInBackground=" + runInBackground
@@ -613,50 +635,50 @@ public class BaikalAppProfileBase extends ContentObserver {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Add to whitelist packageName=" + profile.mPackageName + ", uid=" + uid);
                     mBackend.addApp(profile.mPackageName);
                 }
-                if( !runAnyInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
-                if( !runInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                //if( !runAnyInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                //if( !runInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
             case -1:
                 if( !isSystemWhitelisted && !isWhitelisted ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Add to whitelist packageName=" + profile.mPackageName + ", uid=" + uid);
                     mBackend.addApp(profile.mPackageName);
                 }
-                if( !runAnyInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
-                if( !runInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                //if( !runAnyInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
+                //if( !runInBackground ) setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
             break;
 
             case 0:
-                if( !runAnyInBackground ) {
+                /*if( !runAnyInBackground ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Drop OP_RUN_ANY_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
                     setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
                 }
                 if( !runInBackground ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Drop OP_RUN_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
                     setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
-                }
+                }*/
                 if( isWhitelisted ) mBackend.removeApp(profile.mPackageName);
             break;
 
             case 1:
-                if( runAnyInBackground ) {
+                /*if( runAnyInBackground ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Drop OP_RUN_ANY_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
                     setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_IGNORED); 
                 }
                 if( !runInBackground ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
                     setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
-                }
+                }*/
                 if( isWhitelisted ) mBackend.removeApp(profile.mPackageName);
             break;
 
             case 2:
-                if( runAnyInBackground  ) {
+                /*if( runAnyInBackground  ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_ANY_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
                     setBackgroundMode(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_IGNORED); 
                 }
                 if( !runInBackground ) {
                     if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "Set OP_RUN_IN_BACKGROUND packageName=" + profile.mPackageName + ", uid=" + uid);
                     setBackgroundMode(AppOpsManager.OP_RUN_IN_BACKGROUND,uid, profile.mPackageName,AppOpsManager.MODE_ALLOWED); 
-                }
+                }*/
                 if( isWhitelisted ) mBackend.removeApp(profile.mPackageName);
             break;
     
@@ -667,13 +689,13 @@ public class BaikalAppProfileBase extends ContentObserver {
     BaikalAppProfile getProfileWithNullLocked(String packageName) {
         if( packageName != null ) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-                Slog.d(TAG,"getProfileLocked(" + packageName + ")", new Throwable());
+                Slog.d(TAG,"getProfileLocked(" + packageName + ")"/*, new Throwable()*/);
             }
             BaikalAppProfile profile = _profilesByPackageName.get(packageName);
             if( profile != null ) return profile;
         }
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found",new Throwable());
+            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found"/*,new Throwable()*/);
         } else {
             Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found");
         }
@@ -683,13 +705,13 @@ public class BaikalAppProfileBase extends ContentObserver {
     BaikalAppProfile getProfileLocked(String packageName) {
         if( packageName != null ) {
             if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-                Slog.d(TAG,"getProfileLocked(" + packageName + ")", new Throwable());
+                Slog.d(TAG,"getProfileLocked(" + packageName + ")"/*, new Throwable()*/);
             }
             BaikalAppProfile profile = _profilesByPackageName.get(packageName);
             if( profile != null ) return profile;
         }
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found",new Throwable());
+            Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found"/*,new Throwable()*/);
         } else {
             Slog.d(TAG,"getProfileLocked(" + packageName + ") : profile not found");
         }
@@ -700,12 +722,12 @@ public class BaikalAppProfileBase extends ContentObserver {
 
         int appId = UserHandle.getAppId(uid);
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-            Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ")", new Throwable());
+            Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ")"/*, new Throwable()*/);
         }
         BaikalAppProfile profile = _profilesByUid.get(appId);
         if( profile != null ) return profile;
         if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) {
-            Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ") : profile not found",new Throwable());
+            Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ") : profile not found"/*,new Throwable()*/);
         } else {
             Slog.d(TAG,"getProfileLocked(" + appId + "," + uid + ") : profile not found");
         }
@@ -747,6 +769,31 @@ public class BaikalAppProfileBase extends ContentObserver {
             return getProfileLocked(uid);
         //}
     }
+
+
+    public static boolean isSystemApp(String packageName, Context context) {
+
+        final PackageManager pm = context.getPackageManager();
+
+        try {
+            ApplicationInfo ai = pm.getApplicationInfo(packageName,
+                PackageManager.MATCH_DISABLED_COMPONENTS | 
+                PackageManager.MATCH_DISABLED_UNTIL_USED_COMPONENTS |
+                PackageManager.MATCH_APEX |
+                PackageManager.MATCH_ALL |
+                PackageManager.MATCH_UNINSTALLED_PACKAGES |
+                PackageManager.MATCH_INSTANT |
+                PackageManager.MATCH_ANY_USER );
+            if( ai != null ) {
+                return  (ai.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+            }
+        } catch(Exception e) {
+            Slog.i(TAG,"Package " + packageName + " not found on this device", e);
+        }
+        return false;
+    }
+
+
 
     public static int getAppUid(String packageName, Context context) {
 	    int uid = -1;
