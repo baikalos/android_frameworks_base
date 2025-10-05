@@ -3083,8 +3083,7 @@ public final class Settings {
                 }
             }
 
-            if (BaikalAppProfile.isDebug() || 
-                (BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW) )  {
+            if (BaikalAppProfileIsDebug())  {
                 Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + " " + Process.myUid() + "/" + Process.myPid() + ": " + name);
             }
 
@@ -3129,7 +3128,7 @@ public final class Settings {
                             }
                             mValues.clear();
                         } else if (mValues.containsKey(name)) {
-                            if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + mValues.get(name) + "\'");
+                            if (BaikalAppProfileIsDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + mValues.get(name) + "\'");
                             return mValues.get(name);
                         }
                         if (mGenerationTracker != null) {
@@ -3239,7 +3238,7 @@ public final class Settings {
                                     + " by " + UserHandle.myUserId()
                                     + " so not updating cache");
                         }
-                        if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + value + "\'");
+                        if (BaikalAppProfileIsDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + value + "\'");
                         return value;
                     }
                     // If the response Bundle is null, we fall through
@@ -3269,7 +3268,7 @@ public final class Settings {
                 }
                 if (c == null) {
                     Log.w(TAG, "Can't get key " + name + " from " + mUri);
-                    if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " = null");
+                    if (BaikalAppProfileIsDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " = null");
                     return null;
                 }
 
@@ -3284,11 +3283,11 @@ public final class Settings {
                     Log.v(TAG, "cache miss [" + mUri.getLastPathSegment() + "]: " +
                             name + " = " + (value == null ? "(null)" : value));
                 }
-                if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + value + "\'");
+                if (BaikalAppProfileIsDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " =\'" + value + "\'");
                 return value;
             } catch (RemoteException e) {
                 Log.w(TAG, "Can't get key " + name + " from " + mUri, e);
-                if (BaikalAppProfile.isDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " = null");
+                if (BaikalAppProfileIsDebug()) Log.d(TAG, "getStringForUser:" + BaikalAppProfile.packageName() + "/" + BaikalAppProfile.uid() + ": " + name + " = null");
                 return null;  // Return null, but don't cache it.
             } finally {
                 if (c != null) c.close();
@@ -17521,8 +17520,22 @@ public final class Settings {
          * @hide
          */
         @Readable
-        public static final String BAIKALOS_DEFAULT_IDLE_PERFORMANCE = "baikalos_default_idle_performance";
+        public static final String BAIKALOS_DEFAULT_SCREENOFF_PERFORMANCE = "baikalos_default_screenoff_performance";
 
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_SCREENOFF_THERMAL = "baikalos_default_screenoff_thermal";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_IDLE_PERFORMANCE = "baikalos_default_idle_performance";
 
         /**
          * This preference holds app profiles.
@@ -17734,16 +17747,7 @@ public final class Settings {
          */
         @Readable
         @SuppressLint("NoSettingsProvider")
-        public static final String BAIKALOS_DISABLE_GMS_SPOOF = "baikalos_disable_gms_spoof";
-
-
-        /**
-         * This preference holds autorevoke option.
-         * @hide
-         */
-        @Readable
-        @SuppressLint("NoSettingsProvider")
-        public static final String BAIKALOS_DISABLE_CERTIFICATE_SPOOF = "baikalos_disable_certificate_spoof";
+        public static final String BAIKALOS_ENABLE_GMS_SPOOF = "baikalos_enable_gms_spoof";
 
         /**
          * This preference holds autorevoke option.
@@ -17751,7 +17755,7 @@ public final class Settings {
          */
         @Readable
         @SuppressLint("NoSettingsProvider")
-        public static final String BAIKALOS_DISABLE_SIGNATURE_SPOOF = "baikalos_disable_signature_spoof";
+        public static final String BAIKALOS_ENABLE_VENDING_SPOOF = "baikalos_enable_vending_spoof";
 
         /**
          * This preference holds autorevoke option.
@@ -17759,7 +17763,55 @@ public final class Settings {
          */
         @Readable
         @SuppressLint("NoSettingsProvider")
-        public static final String BAIKALOS_DISABLE_GMS_SWA_SPOOF = "baikalos_disable_gms_swa_spoof";
+        public static final String BAIKALOS_ENABLE_SERVICES_SPOOF = "baikalos_enable_services_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF = "baikalos_enable_certificate_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF_SERVICES = "baikalos_enable_certificate_spoof_services";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF_VENDING = "baikalos_enable_certificate_spoof_vending";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF_APPS = "baikalos_enable_certificate_spoof_apps";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_SIGNATURE_SPOOF = "baikalos_enable_signature_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        //@Readable
+        //@SuppressLint("NoSettingsProvider")
+        //public static final String BAIKALOS_DISABLE_GMS_SWA_SPOOF = "baikalos_disable_gms_swa_spoof";
 
         /**
          * This preference holds autorevoke option.
@@ -20818,4 +20870,11 @@ public final class Settings {
         }
         return packages[0];
     }
+
+
+    private static boolean BaikalAppProfileIsDebug() {
+        return (BaikalAppProfile.isDebug() || 
+                (BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW));
+    }
+
 }
