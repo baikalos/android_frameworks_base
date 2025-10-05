@@ -545,20 +545,9 @@ class ProcessRecord implements WindowProcessListener {
             } else if("com.google.android.gms.unstable".equals(_processName)) {
                 Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for google unstable package:" + _info.packageName + ", proc=" + _processName);
                 mBaikalAppProfile.mIsGmsUnstable = true; 
-                mBaikalAppProfile.mSystemWhitelisted = false;
-                mBaikalAppProfile.mImportantApp = false;
             } else {
-                mBaikalAppProfile.mSystemWhitelisted = false;
-                mBaikalAppProfile.mImportantApp = false;
             }
         } 
-        /* else {
-            if("com.google.android.gms.persistent".equals(_processName)) {
-                Slog.i(TAG,"Baikal.AppProfile: new ProcessRecord for google persistent package wtf:" + _info.packageName + ", proc=" + _processName);
-                mAppProfile = new AppProfile(mAppProfile);
-                mAppProfile.mIsGmsPersistent = true;
-            }
-        } */
 
         ProcessInfo procInfo = null;
         if (_service.mPackageManagerInt != null) {
@@ -1142,7 +1131,7 @@ class ProcessRecord implements WindowProcessListener {
                     && mErrorState.getAnrAnnotation() != null) {
                 description = description + ": " + mErrorState.getAnrAnnotation();
             }
-            if (mService != null && (noisy || info.uid == mService.mCurOomAdjUid)) {
+            if (mService != null /* && (noisy || info.uid == mService.mCurOomAdjUid) */) {
                 mService.reportUidInfoMessageLocked(TAG,
                         "Killing " + toShortString() + " (adj " + mState.getSetAdj()
                         + "): " + reason, info.uid);
