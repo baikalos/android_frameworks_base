@@ -10151,11 +10151,11 @@ public class NotificationManagerService extends SystemService {
 
         if( mActivityManager != null && listener.component != null ) {
             if( mActivityManager.getBaikalPackageOption(listener.component.getPackageName(),-1,OPCODE_BLOCK_NOTIFICATION,0) != 0 ) {
-                if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "isVisibleToListener: blocked: sbn=" + sbn.getPackageName() + "/" + sbn.getUid() + " cmp=" + listener.component + " srv=" + listener.connection + " sys=" + listener.isSystem);
+                //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "isVisibleToListener: blocked: sbn=" + sbn.getPackageName() + "/" + sbn.getUid() + " cmp=" + listener.component + " srv=" + listener.connection + " sys=" + listener.isSystem);
                 return false;
             }
         }
-        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "isVisibleToListener: sbn=" + sbn.getPackageName() + "/" + sbn.getUid() + " cmp=" + listener.component + " srv=" + listener.connection + " sys=" + listener.isSystem);
+        //if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Slog.i(TAG, "isVisibleToListener: sbn=" + sbn.getPackageName() + "/" + sbn.getUid() + " cmp=" + listener.component + " srv=" + listener.connection + " sys=" + listener.isSystem);
         return true;
     }
 
