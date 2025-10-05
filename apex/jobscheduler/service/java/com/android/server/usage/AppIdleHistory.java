@@ -425,7 +425,7 @@ public class AppIdleHistory {
                 if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle forced -> STANDBY_BUCKET_EXEMPTED > 1 :" + packageName);
                 return false;
             } else {
-                if( profile.getBackgroundMode(false) > 0 ) {
+                if( profile.getBackgroundMode(false) > 1 ) {
                 if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "isIdle forced -> STANDBY_BUCKET_RESTRICTED > 1 :" + packageName);
                 return true;
                 }
@@ -598,7 +598,7 @@ public class AppIdleHistory {
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);
         BaikalAppProfile profile = BaikalAppProfileManager.getBaikalProfile(packageName,-1);
         int backgroundMode = profile == null ? 0 : profile.getBackgroundMode(false);
-        if( backgroundMode > 0 ) {
+        if( backgroundMode > 1 ) {
             if( BaikalConstants.BAIKAL_DEBUG_OOM ) Slog.d(TAG, "getAppStandbyBucket forced STANDBY_BUCKET_RESTRICTED :" + packageName);
             return STANDBY_BUCKET_RESTRICTED;
         } else {

@@ -1217,7 +1217,8 @@ public final class JobStatus {
     }
 
     public boolean canRunInBatterySaver() {
-        return (getInternalFlags() & INTERNAL_FLAG_HAS_FOREGROUND_EXEMPTION) != 0
+        return appHasBatterySaverExemption
+                ||(getInternalFlags() & INTERNAL_FLAG_HAS_FOREGROUND_EXEMPTION) != 0
                 || ((shouldTreatAsExpeditedJob() || startedAsExpeditedJob)
                 && (mDynamicConstraints & CONSTRAINT_BACKGROUND_NOT_RESTRICTED) == 0);
     }
@@ -2198,6 +2199,9 @@ public final class JobStatus {
 
             if (appHasDozeExemption) {
                 pw.println("Doze whitelisted: true");
+            }
+            if (appHasBatterySaverExemption) {
+                pw.println("BatterySaver whitelisted: true");
             }
             if (uidActive) {
                 pw.println("Uid: active");

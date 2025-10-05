@@ -224,7 +224,7 @@ public final class DeviceIdleJobsController extends StateController {
 
         BaikalAppProfile srcProfile = BaikalAppProfileManager.getInstance().getBaikalProfile(job.getSourcePackageName(),job.getSourceUid());
         if( srcProfile != null ) {
-            if( srcProfile.getBackgroundMode(false) < 0 ) return true;
+            if( srcProfile.getBackgroundMode(false) < -1 ) return true;
             if( srcProfile.mAllowWhileIdle ) return true;
         }
 
