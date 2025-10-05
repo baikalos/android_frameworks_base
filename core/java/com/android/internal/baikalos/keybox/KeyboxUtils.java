@@ -83,7 +83,7 @@ public class KeyboxUtils {
 
 
     private static void dlog(String msg) {
-        if (SystemProperties.getBoolean("persist.sys.keybox_debug", false)) {
+        if (SystemProperties.getBoolean("persist.baikal.kb_debug", false)) {
             Log.d(TAG, msg);
         }
     }
@@ -204,4 +204,9 @@ public class KeyboxUtils {
     public static KeyEntryResponse retrieve(int uid, String a) {
         return response.get(new Key(uid, a));
     }
+
+    public static boolean remove(int uid, String a) {
+        return (response.remove(new Key(uid, a)) != null);
+    }
+
 }

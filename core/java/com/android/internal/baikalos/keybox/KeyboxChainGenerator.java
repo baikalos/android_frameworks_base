@@ -15,6 +15,7 @@ import android.hardware.security.keymint.KeyParameter;
 import android.hardware.security.keymint.Tag;
 import android.os.Binder;
 import android.os.Build;
+import android.os.SystemProperties;
 import android.security.keystore.KeyProperties;
 import android.system.keystore2.KeyDescriptor;
 import android.util.Log;
@@ -28,6 +29,7 @@ import com.android.internal.org.bouncycastle.asn1.ASN1Integer;
 import com.android.internal.org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import com.android.internal.org.bouncycastle.asn1.ASN1OctetString;
 import com.android.internal.org.bouncycastle.asn1.ASN1Sequence;
+import com.android.internal.org.bouncycastle.asn1.ASN1TaggedObject;
 import com.android.internal.org.bouncycastle.asn1.DERNull;
 import com.android.internal.org.bouncycastle.asn1.DEROctetString;
 import com.android.internal.org.bouncycastle.asn1.DERSequence;
@@ -57,6 +59,7 @@ import java.security.spec.ECGenParameterSpec;
 import java.security.spec.RSAKeyGenParameterSpec;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -71,7 +74,7 @@ import javax.security.auth.x500.X500Principal;
 public final class KeyboxChainGenerator {
 
     private static final String TAG = "KeyboxChainGenerator";
-    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    //private static boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
 
     private static final int ATTESTATION_APPLICATION_ID_PACKAGE_INFOS_INDEX = 0;
     private static final int ATTESTATION_APPLICATION_ID_SIGNATURE_DIGESTS_INDEX = 1;
@@ -139,18 +142,52 @@ public final class KeyboxChainGenerator {
         return result;
     }
 
+    static byte[] verifiedBoot = null;
+    static byte[] verifiedBootHash = null;
+
     private static Extension createExtension(KeyGenParameters params, int uid) {
         try {
-            SecureRandom random = new SecureRandom();
 
-            byte[] bytes1 = new byte[32];
-            byte[] bytes2 = new byte[32];
+            if( verifiedBoot == null || verifiedBootHash == null ) {
+                SecureRandom random = new SecureRandom();
+                String bootid = SystemProperties.get("ro.boot.vbmeta.digest","");
 
-            random.nextBytes(bytes1);
-            random.nextBytes(bytes2);
+                if( "".equals(bootid) ) {
+                    Log.e(TAG, "Missing vbmeta digest. Incompatible kernel");
+                    return null;
+                }
 
-            ASN1Encodable[] rootOfTrustEncodables = {new DEROctetString(bytes1), ASN1Boolean.TRUE,
-                    new ASN1Enumerated(0), new DEROctetString(bytes2)};
+                try {
+                    if( "".equals(bootid) ) bootid = byteArrayToString(sha256(Build.ID));
+                    verifiedBootHash = hexStringToByteArray(bootid);
+                    verifiedBoot = sha256(verifiedBootHash);
+                    //verifiedBootHash = verifiedBoot; //sha256(verifiedBoot);
+                } catch(Exception e){
+                    //verifiedBoot = null;
+                    //verifiedBootHash = null;
+                }
+    
+                if( verifiedBootHash == null ) {
+                    verifiedBootHash = new byte[32];
+                    random.nextBytes(verifiedBootHash);
+                    Log.w(TAG, "invalid verified boot hash, using random");
+                } 
+    
+                if( verifiedBoot == null ) {
+                    verifiedBoot = new byte[32];
+                    random.nextBytes(verifiedBoot);
+                    Log.w(TAG, "invalid verified boot key, using random");
+                } 
+
+            }
+
+            final boolean spoofDevice = SystemProperties.getBoolean("persist.baikal.spf.att.device",false);
+            final boolean spoofV4 = false; // SystemProperties.getBoolean("persist.baikal.spf.att.v4",false);
+            //final boolean spoofMintVersion = SystemProperties.getBoolean("persist.baikal.spf.att.v4",false);
+
+
+            ASN1Encodable[] rootOfTrustEncodables = {new DEROctetString(verifiedBoot), ASN1Boolean.TRUE,
+                    new ASN1Enumerated(0), new DEROctetString(verifiedBootHash)};
 
             ASN1Sequence rootOfTrustSeq = new DERSequence(rootOfTrustEncodables);
 
@@ -187,39 +224,112 @@ public final class KeyboxChainGenerator {
             var vendorPatchLevel = new DERTaggedObject(true, 718, AvendorPatchLevel);
             var bootPatchLevel = new DERTaggedObject(true, 719, AbootPatchlevel);
 
-            ASN1Encodable[] teeEnforcedEncodables;
+            //var AmoduleHash = new DEROctetString(ModuleInfoHelper.getModuleHash());
+            //var moduleHash = new DERTaggedObject(true, 724 , AmoduleHash);
 
-            // Support device properties attestation
-            if (params.brand != null) {
-                var Abrand = new DEROctetString(params.brand);
-                var Adevice = new DEROctetString(params.device);
-                var Aproduct = new DEROctetString(params.product);
-                var Amanufacturer = new DEROctetString(params.manufacturer);
-                var Amodel = new DEROctetString(params.model);
+            //ASN1Encodable[] teeEnforcedEncodables;
+
+            var arrayList = new ArrayList<>(Arrays.asList(purpose, algorithm, keySize, digest, ecCurve,
+                        noAuthRequired, origin, rootOfTrust, osVersion, osPatchLevel, vendorPatchLevel,
+                        bootPatchLevel/*, moduleHash*/));
+
+
+            /*if( spoofV4 ) {
+                arrayList.add(moduleHash);
+            }*/
+
+            /*
+            teeEnforcedEncodables = new ASN1Encodable[]{purpose, algorithm, keySize, digest, ecCurve,
+                        noAuthRequired, origin, rootOfTrust, osVersion, osPatchLevel, vendorPatchLevel,
+                        bootPatchLevel, moduleHash, brand, device, product, manufacturer, model};
+            */
+
+
+            /*byte[] attestationChallenge = KeyboxImitationHooks.getAttestationChallenge();
+            if( attestationChallenge != null ) {
+
+            var AattestationChallenge = new DEROctetString(attestationChallenge);
+            if( AattestationChallenge != null ) {
+                var attestationChallengeObject = new DERTaggedObject(true, 708 , AattestationChallenge);
+                arrayList.add(attestationChallengeObject);
+            }*/
+
+            byte[] paramBrand = params.brand;
+            byte[] paramDevice = params.device;
+            byte[] paramProduct = params.product;
+            byte[] paramManufacturer = params.manufacturer;
+            byte[] paramModel = params.model;
+            //byte[] paramImei1 = params.imei1;
+            //byte[] paramMeid = params.meid;
+            //byte[] paramSerial = params.serial;
+
+
+            if( spoofDevice ) {
+
+                paramBrand = Build.BRAND.getBytes(StandardCharsets.UTF_8);
+                paramDevice = Build.DEVICE.getBytes(StandardCharsets.UTF_8);
+                paramProduct = Build.PRODUCT.getBytes(StandardCharsets.UTF_8);
+                paramManufacturer = Build.MANUFACTURER.getBytes(StandardCharsets.UTF_8);
+                paramModel = Build.MODEL.getBytes(StandardCharsets.UTF_8);
+
+                var Abrand = new DEROctetString(paramBrand);
+                var Adevice = new DEROctetString(paramDevice);
+                var Aproduct = new DEROctetString(paramProduct);
+                var Amanufacturer = new DEROctetString(paramManufacturer);
+                var Amodel = new DEROctetString(paramModel);
                 var brand = new DERTaggedObject(true, 710, Abrand);
                 var device = new DERTaggedObject(true, 711, Adevice);
                 var product = new DERTaggedObject(true, 712, Aproduct);
                 var manufacturer = new DERTaggedObject(true, 716, Amanufacturer);
                 var model = new DERTaggedObject(true, 717, Amodel);
 
-                teeEnforcedEncodables = new ASN1Encodable[]{purpose, algorithm, keySize, digest, ecCurve,
-                        noAuthRequired, origin, rootOfTrust, osVersion, osPatchLevel, vendorPatchLevel,
-                        bootPatchLevel, brand, device, product, manufacturer, model};
-            } else {
-                teeEnforcedEncodables = new ASN1Encodable[]{purpose, algorithm, keySize, digest, ecCurve,
-                        noAuthRequired, origin, rootOfTrust, osVersion, osPatchLevel, vendorPatchLevel,
-                        bootPatchLevel};
+                arrayList.addAll(List.of(brand, device, product, manufacturer, model));
+                //arrayList.addAll(ModuleInfoHelper.getTelephonyInfos());
+
+                Log.w(TAG, "spoof device identification params"); // + paramBrand + "," + paramDevice + "," + paramProduct + "," + paramManufacturer + "," + paramModel);
+
+            } else if ( paramBrand != null )  {
+                Log.w(TAG, "Copy device identification params");
+
+                addDerObject(arrayList,710,paramBrand);
+                addDerObject(arrayList,711,paramDevice);
+                addDerObject(arrayList,712,paramProduct);
+                addDerObject(arrayList,716,paramManufacturer);
+                addDerObject(arrayList,717,paramModel);
+
+                /*addDerObject(arrayList,713,paramSerial);
+                addDerObject(arrayList,714,paramImei1);
+                addDerObject(arrayList,715,paramMeid);*/
             }
+
+            
+             /*else {
+                teeEnforcedEncodables = new ASN1Encodable[]{purpose, algorithm, keySize, digest, ecCurve,
+                        noAuthRequired, origin, rootOfTrust, osVersion, osPatchLevel, vendorPatchLevel,
+                        bootPatchLevel, moduleHash};
+            }*/
+
+            arrayList.sort(Comparator.comparingInt(ASN1TaggedObject::getTagNo));
 
             ASN1Encodable[] softwareEnforced = {applicationID, creationDateTime};
 
-            ASN1OctetString keyDescriptionOctetStr = getAsn1OctetString(teeEnforcedEncodables, softwareEnforced, params);
+            //ASN1OctetString keyDescriptionOctetStr = getAsn1OctetString(teeEnforcedEncodables, softwareEnforced, params);
+            ASN1OctetString keyDescriptionOctetStr = getAsn1OctetString(arrayList.toArray(new ASN1Encodable[]{}), softwareEnforced, params);
 
             return new Extension(new ASN1ObjectIdentifier("1.3.6.1.4.1.11129.2.1.17"), false, keyDescriptionOctetStr);
         } catch (Throwable t) {
             Log.e(TAG, Log.getStackTraceString(t));
         }
         return null;
+    }
+
+
+    private static void addDerObject(ArrayList<DERTaggedObject> list, int tag, byte[] object) {
+        if( object != null ) {
+            var string = new DEROctetString(object);
+            var der = new DERTaggedObject(true, tag, string);
+            list.add(der);
+        }
     }
 
     private static int getOsVersion() {
@@ -255,14 +365,14 @@ public final class KeyboxChainGenerator {
             }
         } catch (Exception e) {
             Log.e(TAG, "Invalid patch level: " + patchLevel, e);
-            return 202404;
+            return 202505;
         }
     }
 
     private static ASN1OctetString getAsn1OctetString(ASN1Encodable[] teeEnforcedEncodables, ASN1Encodable[] softwareEnforcedEncodables, KeyGenParameters params) throws IOException {
-        ASN1Integer attestationVersion = new ASN1Integer(100);
+        ASN1Integer attestationVersion = new ASN1Integer(4);
         ASN1Enumerated attestationSecurityLevel = new ASN1Enumerated(1);
-        ASN1Integer keymasterVersion = new ASN1Integer(100);
+        ASN1Integer keymasterVersion = new ASN1Integer(41);
         ASN1Enumerated keymasterSecurityLevel = new ASN1Enumerated(1);
         ASN1OctetString attestationChallenge = new DEROctetString(params.attestationChallenge);
         ASN1OctetString uniqueId = new DEROctetString("".getBytes());
@@ -327,20 +437,6 @@ public final class KeyboxChainGenerator {
 
         return new DEROctetString(new DERSequence(applicationIdAA).getEncoded());
     }
-    /*
-    record Digest(byte[] digest) {
-        @Override
-        public boolean equals(@Nullable Object o) {
-            if (o instanceof Digest d)
-                return Arrays.equals(digest, d.digest);
-            return false;
-        }
-
-        @Override
-        public int hashCode() {
-            return Arrays.hashCode(digest);
-        }
-    }*/
 
     public static class Digest {
         private final byte[] digest;
@@ -391,8 +487,46 @@ public final class KeyboxChainGenerator {
         return kpg.generateKeyPair();
     }
 
+    private static byte[] sha256(byte [] input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return digest.digest(input);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    private static byte[] sha256(String input) {
+        return sha256(input.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String byteArrayToString(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : bytes) {
+            hexString.append(String.format("%02x", b));
+        }
+        return hexString.toString();
+    }
+        
+    public static byte[] hexStringToByteArray(String hex) {
+        int len = hex.length();
+        byte[] data = new byte[len / 2];
+
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
+                                + Character.digit(hex.charAt(i + 1), 16));
+        }
+    
+        return data;
+    }
+
     private static void dlog(String msg) {
-        if (DEBUG) Log.d(TAG, msg);
+        if (SystemProperties.getBoolean("persist.baikal.kb_debug", false)) {
+            Log.d(TAG, msg);
+        }
+    }
+
+    private static void dlogbytearray(String prefix, byte [] array) {
+        dlog(prefix + new String(array, StandardCharsets.UTF_8));
     }
 
     public static class KeyGenParameters {
@@ -416,6 +550,13 @@ public final class KeyboxChainGenerator {
         public byte[] product;
         public byte[] manufacturer;
         public byte[] model;
+        //public byte[] imei1;
+        //public byte[] imei2;
+        //public byte[] meid;
+        //public byte[] serial;
+
+
+        //public byte[] uniqueId;
 
         public int securityLevel;
 
@@ -424,58 +565,99 @@ public final class KeyboxChainGenerator {
                 var p = kp.value;
                 switch (kp.tag) {
                     case Tag.KEY_SIZE:
+                        dlog("KeyParameter: Tag.KEY_SIZE");
                         keySize = p.getInteger();
                         break;
                     case Tag.ALGORITHM:
+                        dlog("KeyParameter: Tag.ALGORITHM");
                         algorithm = p.getAlgorithm();
                         break;
                     case Tag.CERTIFICATE_SERIAL:
                         certificateSerial = new BigInteger(p.getBlob());
+                        dlog("KeyParameter: Tag.CERTIFICATE_SERIAL:" + certificateSerial);
                         break;
                     case Tag.CERTIFICATE_NOT_BEFORE:
                         certificateNotBefore = new Date(p.getDateTime());
+                        dlog("KeyParameter: Tag.CERTIFICATE_NOT_BEFORE:" + certificateNotBefore);
                         break;
                     case Tag.CERTIFICATE_NOT_AFTER:
                         certificateNotAfter = new Date(p.getDateTime());
+                        dlog("KeyParameter: Tag.CERTIFICATE_NOT_AFTER:" + certificateNotAfter);
                         break;
                     case Tag.CERTIFICATE_SUBJECT:
+                        dlog("KeyParameter: Tag.CERTIFICATE_SUBJECT");
                         certificateSubject = new X500Name(new X500Principal(p.getBlob()).getName());
                         break;
                     case Tag.RSA_PUBLIC_EXPONENT:
+                        dlog("KeyParameter: Tag.RSA_PUBLIC_EXPONENT");
                         rsaPublicExponent = new BigInteger(p.getBlob());
                         break;
                     case Tag.EC_CURVE:
+                        dlog("KeyParameter: Tag.EC_CURVE");
                         ecCurve = p.getEcCurve();
                         ecCurveName = getEcCurveName(ecCurve);
                         break;
                     case Tag.PURPOSE:
+                        dlog("KeyParameter: Tag.PURPOSE");
                         purpose.add(p.getKeyPurpose());
                         break;
                     case Tag.DIGEST:
+                        dlog("KeyParameter: Tag.DIGEST");
                         digest.add(p.getDigest());
                         break;
                     case Tag.ATTESTATION_CHALLENGE:
+                        dlog("KeyParameter: Tag.ATTESTATION_CHALLENGE");
                         attestationChallenge = p.getBlob();
                         break;
                     case Tag.ATTESTATION_ID_BRAND:
                         brand = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_BRAND:", brand);
                         break;
                     case Tag.ATTESTATION_ID_DEVICE:
                         device = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_DEVICE:", device);
                         break;
                     case Tag.ATTESTATION_ID_PRODUCT:
                         product = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_PRODUCT:", product);
                         break;
                     case Tag.ATTESTATION_ID_MANUFACTURER:
                         manufacturer = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_MANUFACTURER:", manufacturer);
                         break;
                     case Tag.ATTESTATION_ID_MODEL:
                         model = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_MODEL:", model);
                         break;
                     case Tag.HARDWARE_TYPE:
                         securityLevel = p.getSecurityLevel();
                         break;
+/*                    case Tag.INCLUDE_UNIQUE_ID:
+                        uniqueId = p.getBlob();
+
+                    case Tag.ATTESTATION_ID_IMEI:
+                        imei1 = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_IMEI:", imei1);
+                        break;
+                    //case Tag.ATTESTATION_ID_SECOND_IMEI:
+                    //    imei2 = p.getBlob();
+                    //    break;
+                    case Tag.ATTESTATION_ID_MEID:
+                        meid = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_MEID:", meid);
+                        break;
+
+                    case Tag.ATTESTATION_ID_SERIAL:
+                        serial = p.getBlob();
+                        dlogbytearray("KeyParameter: Tag.ATTESTATION_ID_SERIAL:", meid);
+                        break;
+
+                    case Tag.NO_AUTH_REQUIRED:
+                        dlog("KeyParameter: Tag.NO_AUTH_REQUIRED");
+                        break;*/
+
                     default:
+                        Log.e(TAG, "KeyParameter: unknown tag:" + kp.tag);
                         break;
                 }
             }

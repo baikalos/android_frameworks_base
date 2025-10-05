@@ -10,6 +10,7 @@ import android.hardware.security.keymint.KeyParameter;
 import android.hardware.security.keymint.KeyParameterValue;
 import android.hardware.security.keymint.Tag;
 import android.os.Binder;
+import android.os.SystemProperties;
 import android.system.keystore2.Authorization;
 import android.system.keystore2.IKeystoreSecurityLevel;
 import android.system.keystore2.KeyDescriptor;
@@ -33,35 +34,42 @@ import java.util.List;
 public class KeyboxImitationHooks {
 
     private static final String TAG = "KeyboxImitationHooks";
-    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    //private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
     private static boolean mFailed = false;
     private static boolean mIsAttestation = false;
+    private static byte[] mAttestationChallenge = null;
     private static boolean hasAttestKeyDescriptor = false;
     private static Integer keyAlgo;
 
     public static KeyEntryResponse onGetKeyEntry(KeyDescriptor descriptor) {
 
         if( BaikalSpoofer.disableCertificateSpoof() ) {
+            dlog("Key entry spoofer disabled");
             return null;
         }
 
         if (!KeyProviderManager.isKeyboxAvailable()) {
+            dlog("Keybox not available");
             return null;
         }
 
         if (mFailed) {
-            return null;
-        }
-
-        if (keyAlgo == null || (keyAlgo != Algorithm.EC && keyAlgo != Algorithm.RSA)) {
+            dlog("Key entry spoofer failed");
             return null;
         }
 
         if (!mIsAttestation) {
+            dlog("Key entry spoofer not an attestation");
             return null;
         }
 
         if (hasAttestKeyDescriptor) {
+            dlog("Key entry spoofer no attestkey descriptor");
+            return null;
+        }
+
+        if (keyAlgo == null || (keyAlgo != Algorithm.EC && keyAlgo != Algorithm.RSA)) {
+            dlog("Key entry spoofer invalid parameter");
             return null;
         }
 
@@ -72,15 +80,23 @@ public class KeyboxImitationHooks {
             return spoofed;
         }
 
+        dlog("Key entry not spoofed, Algorithm: " + keyAlgo);
         return null;
+    }
+
+    public static boolean deleteKey(KeyDescriptor descriptor) {
+        int uid = Binder.getCallingUid();
+        return KeyboxUtils.remove(uid, descriptor.alias);
     }
 
     public static KeyMetadata generateKey(IKeystoreSecurityLevel level, KeyDescriptor descriptor, Collection<KeyParameter> args) {
         if( BaikalSpoofer.disableCertificateSpoof() ) {
+            dlog("generateKey spoofer disabled");
             return null;
         }
 
         if (!KeyProviderManager.isKeyboxAvailable()) {
+            dlog("generateKey spoofer disabled");
             return null;
         }
 
@@ -94,10 +110,12 @@ public class KeyboxImitationHooks {
         try {
             List<Certificate> chain = KeyboxChainGenerator.generateCertChain(uid, descriptor, params);
             if (chain == null || chain.isEmpty()) {
+                dlog("generateKey chain is empty");
                 return null;
             }
             KeyEntryResponse response = buildResponse(level, chain, params, descriptor);
             if (response == null) {
+                dlog("generateKey response is empty");
                 return null;
             }
             KeyboxUtils.append(uid, descriptor.alias, response);
@@ -206,7 +224,17 @@ public class KeyboxImitationHooks {
         hasAttestKeyDescriptor = flag;
     }
 
+    public static void setAttestationChallenge(byte[] challenge) {
+        mAttestationChallenge = challenge;
+    }
+
+    public static byte[] getAttestationChallenge() {
+        return mAttestationChallenge;
+    }
+
     private static void dlog(String msg) {
-        if (DEBUG) Log.d(TAG, msg);
+        if (SystemProperties.getBoolean("persist.baikal.kb_debug", false)) {
+            Log.d(TAG, msg);
+        }
     }
 }
