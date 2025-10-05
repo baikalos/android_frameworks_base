@@ -136,6 +136,8 @@ import com.android.server.wm.BackgroundActivityStartController.BalCode;
 import com.android.server.wm.LaunchParamsController.LaunchParams;
 import com.android.server.wm.TaskFragment.EmbeddingCheckResult;
 
+import com.android.server.baikalos.BaikalAppProfileManager;
+
 import ink.kaleidoscope.server.ParallelSpaceManagerService;
 
 import java.io.PrintWriter;
@@ -908,6 +910,7 @@ class ActivityStarter {
                     + "} from uid " + callingUid);
         }
 
+
         ActivityRecord sourceRecord = null;
         ActivityRecord resultRecord = null;
         if (resultTo != null) {
@@ -956,15 +959,31 @@ class ActivityStarter {
             }
         }
 
+        if( err == ActivityManager.START_SUCCESS && aInfo != null ) {
+            boolean isSystem = (aInfo.applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;
+            if( BaikalAppProfileManager.isPackageDisabledForUid(aInfo.applicationInfo.packageName, userId, callingUid, isSystem) ) {
+                if( aInfo.applicationInfo.packageName != null && !aInfo.applicationInfo.packageName.equals(callingPackage) ) {
+                    Slog.w(TAG_RESULTS, "Package Disabled by Hide3P app option:" + aInfo.applicationInfo.packageName);
+                    err = ActivityManager.START_CLASS_NOT_FOUND;
+                }
+            }
+        }
+
         if (err == ActivityManager.START_SUCCESS && intent.getComponent() == null) {
             // We couldn't find a class that can handle the given Intent.
             // That's the end of that!
+            if (DEBUG_RESULTS) {
+                Slog.v(TAG_RESULTS, "We couldn't find a class that can handle the given Intent:" + intent.toShortString(true, true, true, false) );
+            }
             err = ActivityManager.START_INTENT_NOT_RESOLVED;
         }
 
         if (err == ActivityManager.START_SUCCESS && aInfo == null) {
             // We couldn't find the specific class specified in the Intent.
             // Also the end of the line.
+            if (DEBUG_RESULTS) {
+                Slog.v(TAG_RESULTS, "We couldn't find the specific class specified in the Intent.:" + intent.toShortString(true, true, true, false) );
+            }
             err = ActivityManager.START_CLASS_NOT_FOUND;
         }
 
@@ -1015,6 +1034,7 @@ class ActivityStarter {
                 resultRecord.sendResult(INVALID_UID, resultWho, requestCode, RESULT_CANCELED,
                         null /* data */, null /* dataGrants */);
             }
+            Slog.e(TAG, "WTF! err=" + err);
             SafeActivityOptions.abort(options);
             return err;
         }
@@ -1100,6 +1120,9 @@ class ActivityStarter {
             }
             // We pretend to the caller that it was really started, but they will just get a
             // cancel result.
+            if (DEBUG_RESULTS) {
+                Slog.v(TAG_RESULTS, "We pretend to the caller that it was really started, but they will just get a cancel result.:" + intent.toShortString(true, true, true, false) );
+            }
             ActivityOptions.abort(checkedOptions);
             return START_ABORTED;
         }
