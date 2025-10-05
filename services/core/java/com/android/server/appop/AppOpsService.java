@@ -183,6 +183,8 @@ import com.android.server.pm.parsing.pkg.AndroidPackage;
 import com.android.server.pm.pkg.component.ParsedAttribution;
 import com.android.server.policy.AppOpsPolicy;
 
+import com.android.server.baikalos.BaikalAppProfileManager;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import libcore.util.EmptyArray;
@@ -4642,8 +4644,11 @@ public class AppOpsService extends IAppOpsService.Stub {
         } else {
             pkgUid = resolveUid(packageName);
         }
+
+        boolean isGms = isGmsAllowed(uid,pkgUid);
+
         if (pkgUid != Process.INVALID_UID) {
-            if (pkgUid != UserHandle.getAppId(uid)) {
+            if (!isGms && pkgUid != UserHandle.getAppId(uid)) {
                 Slog.e(TAG, "Bad call made by uid " + callingUid + ". "
                         + "Package \"" + packageName + "\" does not belong to uid " + uid + ".");
                 String otherUidMessage = DEBUG ? " but it is really " + pkgUid : " but it is not";
@@ -4701,7 +4706,9 @@ public class AppOpsService extends IAppOpsService.Stub {
             Binder.restoreCallingIdentity(ident);
         }
 
-        if (pkgUid != uid) {
+        isGms = isGmsAllowed(uid,callingUid);
+
+        if (!isGms && pkgUid != uid && callingUid != uid) {
             Slog.e(TAG, "Bad call made by uid " + callingUid + ". "
                     + "Package \"" + packageName + "\" does not belong to uid " + uid + ".");
             String otherUidMessage = DEBUG ? " but it is really " + pkgUid : " but it is not";
@@ -4710,6 +4717,18 @@ public class AppOpsService extends IAppOpsService.Stub {
         }
 
         return new PackageVerificationResult(bypass, isAttributionTagValid);
+    }
+
+
+    private boolean isGmsAllowed(int uid, int pkgUid) {
+        return  (BaikalAppProfileManager.getInstance().isGmsUid(uid) || 
+                 BaikalAppProfileManager.getInstance().isGmsUid(pkgUid) );
+
+
+                                 /* &&
+                                BaikalAppProfileManager.getInstance().isAaUid(pkgUid) ) || 
+                               (BaikalAppProfileManager.getInstance().isGmsUid(pkgUid) &&
+                                BaikalAppProfileManager.getInstance().isAaUid(uid) ); */
     }
 
     private boolean isAttributionInPackage(@Nullable AndroidPackage pkg,
