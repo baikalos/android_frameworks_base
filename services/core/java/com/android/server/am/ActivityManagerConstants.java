@@ -151,7 +151,7 @@ final public class ActivityManagerConstants extends ContentObserver {
     private static final long DEFAULT_FGSERVICE_SCREEN_ON_BEFORE_TIME = 1*1000;
     private static final long DEFAULT_FGSERVICE_SCREEN_ON_AFTER_TIME = 5*1000;
     private static final long DEFAULT_CONTENT_PROVIDER_RETAIN_TIME = 20*1000;
-    private static final long DEFAULT_GC_TIMEOUT = 5*1000;
+    private static final long DEFAULT_GC_TIMEOUT = 15*1000;
     private static final long DEFAULT_GC_MIN_INTERVAL = 60*1000;
     private static final long DEFAULT_FULL_PSS_MIN_INTERVAL = 20*60*1000;
     private static final boolean DEFAULT_FORCE_BACKGROUND_CHECK_ON_RESTRICTED_APPS = true;
@@ -170,8 +170,8 @@ final public class ActivityManagerConstants extends ContentObserver {
     private static final int DEFAULT_SERVICE_RESTART_DURATION_FACTOR = 4;
     private static final long DEFAULT_SERVICE_MIN_RESTART_TIME_BETWEEN = 10*1000;
     private static final long DEFAULT_MAX_SERVICE_INACTIVITY = 30*60*1000;
-    private static final long DEFAULT_BG_START_TIMEOUT = 15*1000;
-    private static final long DEFAULT_SERVICE_BG_ACTIVITY_START_TIMEOUT = 10_000;
+    private static final long DEFAULT_BG_START_TIMEOUT = 30*1000;
+    private static final long DEFAULT_SERVICE_BG_ACTIVITY_START_TIMEOUT = 30_000;
     private static final long DEFAULT_BOUND_SERVICE_CRASH_RESTART_DURATION = 30*60_000;
     private static final int DEFAULT_BOUND_SERVICE_CRASH_MAX_RETRY = 16;
     private static final boolean DEFAULT_PROCESS_START_ASYNC = true;
@@ -189,10 +189,10 @@ final public class ActivityManagerConstants extends ContentObserver {
     private static final float DEFAULT_FGS_ATOM_SAMPLE_RATE = 1; // 100 %
     private static final float DEFAULT_FGS_START_ALLOWED_LOG_SAMPLE_RATE = 0.25f; // 25%
     private static final float DEFAULT_FGS_START_DENIED_LOG_SAMPLE_RATE = 1; // 100%
-    private static final long DEFAULT_PROCESS_KILL_TIMEOUT_MS = 10 * 1000;
-    private static final long DEFAULT_NETWORK_ACCESS_TIMEOUT_MS = 200; // 0.2 sec
+    private static final long DEFAULT_PROCESS_KILL_TIMEOUT_MS = 30 * 1000;
+    private static final long DEFAULT_NETWORK_ACCESS_TIMEOUT_MS = 2000; // 0.2 sec
 
-    static final long DEFAULT_BACKGROUND_SETTLE_TIME = 90 * 1000;
+    static final long DEFAULT_BACKGROUND_SETTLE_TIME = 60 * 1000;
     static final long DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS = 300 * 1000;
     static final boolean DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE = true;
 
@@ -228,11 +228,11 @@ final public class ActivityManagerConstants extends ContentObserver {
              DEFER_BOOT_COMPLETED_BROADCAST_BACKGROUND_RESTRICTED_ONLY
              | DEFER_BOOT_COMPLETED_BROADCAST_TARGET_T_ONLY;
 
-    private static final int DEFAULT_SERVICE_START_FOREGROUND_TIMEOUT_MS = 60 * 1000;
+    private static final int DEFAULT_SERVICE_START_FOREGROUND_TIMEOUT_MS = 90 * 1000;
 
-    private static final int DEFAULT_SERVICE_START_FOREGROUND_ANR_DELAY_MS = 30 * 1000;
+    private static final int DEFAULT_SERVICE_START_FOREGROUND_ANR_DELAY_MS = 60 * 1000;
 
-    private static final long DEFAULT_SERVICE_BIND_ALMOST_PERCEPTIBLE_TIMEOUT_MS = 30 * 1000;
+    private static final long DEFAULT_SERVICE_BIND_ALMOST_PERCEPTIBLE_TIMEOUT_MS = 60 * 1000;
 
     // Flag stored in the DeviceConfig API.
     /**
@@ -847,7 +847,7 @@ final public class ActivityManagerConstants extends ContentObserver {
 
     private static final boolean DEFAULT_PROACTIVE_KILLS_ENABLED = true;
 
-    private static final float DEFAULT_LOW_SWAP_THRESHOLD_PERCENT = 0.10f;
+    private static final float DEFAULT_LOW_SWAP_THRESHOLD_PERCENT = 0.30f;
 
     private static final String KEY_MIN_ASSOC_LOG_DURATION = "min_assoc_log_duration";
 
