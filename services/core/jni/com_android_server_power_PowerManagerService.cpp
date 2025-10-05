@@ -77,7 +77,7 @@ static power::PowerHalController gPowerHalController;
 static nsecs_t gLastEventTime[USER_ACTIVITY_EVENT_LAST + 1];
 
 // Throttling interval for user activity calls.
-static const nsecs_t MIN_TIME_BETWEEN_USERACTIVITIES = 100 * 1000000L; // 100ms
+static const nsecs_t MIN_TIME_BETWEEN_USERACTIVITIES = 32 * 1000000L; // 100ms
 
 // ----------------------------------------------------------------------------
 
@@ -99,8 +99,8 @@ static void setPowerBoost(Boost boost, int32_t durationMs) {
 static bool setPowerMode(Mode mode, bool enabled) {
     android::base::Timer t;
     auto result = gPowerHalController.setMode(mode, enabled);
-    if (mode == Mode::INTERACTIVE && t.duration() > 20ms) {
-        ALOGD("Excessive delay in setting interactive mode to %s while turning screen %s",
+    if (/*mode == Mode::INTERACTIVE &&*/ t.duration() > 20ms) {
+        ALOGD("Excessive delay in setting %d mode to %s while turning screen %s", mode,
               enabled ? "true" : "false", enabled ? "on" : "off");
     }
     return result.isOk();
@@ -124,7 +124,7 @@ void android_server_PowerManagerService_userActivity(nsecs_t eventTime, int32_t 
             gLastEventTime[eventType] = eventTime;
 
             // Tell the power HAL when user activity occurs.
-            setPowerBoost(Boost::INTERACTION, 0);
+            setPowerBoost(Boost::INTERACTION, 32);
         }
 
         JNIEnv* env = AndroidRuntime::getJNIEnv();
