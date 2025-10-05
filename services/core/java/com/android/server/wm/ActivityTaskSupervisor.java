@@ -1158,6 +1158,11 @@ public class ActivityTaskSupervisor implements RecentTasks.Callbacks {
             return true;
         }
 
+        if( aInfo == null ) {
+            //ProtoLog.d(WM_DEBUG_TASKS, "Launch on display check: no app info, skip check");
+            return true;
+        }
+
         final DisplayContent displayContent =
                 mRootWindowContainer.getDisplayContentOrCreate(launchDisplayId);
         if (displayContent == null || displayContent.isRemoved()) {
