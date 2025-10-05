@@ -85,6 +85,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 /**
@@ -120,7 +122,7 @@ import java.util.NoSuchElementException;
 public final class BatteryService extends SystemService {
     private static final String TAG = BatteryService.class.getSimpleName();
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     private static final int BATTERY_SCALE = 100;    // battery capacity is a percentage
 
@@ -193,6 +195,7 @@ public final class BatteryService extends SystemService {
     private boolean mTurboPower;
     private boolean mHasTurboPower;
     private boolean mLastTurboPower;
+    private List<String> mOemChargerValues = null;
 
     private long mDischargeStartTime;
     private int mDischargeStartLevel;
@@ -248,12 +251,19 @@ public final class BatteryService extends SystemService {
         mHasTurboPower = mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_hasTurboPowerCharger);
 
+        String oemChargerValues = mContext.getResources().getString(
+                com.android.internal.R.string.config_oemFastChargerStatusValue);
+        if( oemChargerValues != null && !"".equals(oemChargerValues) ) {
+            mOemChargerValues = Arrays.asList(oemChargerValues.split(","));
+        }
+
+
         mCriticalBatteryLevel = mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_criticalBatteryWarningLevel);
 
-
         mLowBatteryWarningLevel = mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_lowBatteryWarningLevel);
+
         mLowBatteryCloseWarningLevel = mLowBatteryWarningLevel + mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_lowBatteryCloseWarningBump);
         mShutdownBatteryTemperature = mContext.getResources().getInteger(
@@ -396,7 +406,7 @@ public final class BatteryService extends SystemService {
         mLastLowBatteryWarningLevel = mLowBatteryWarningLevel;
 
         mCriticalBatteryLevel = Settings.Global.getInt(resolver, Settings.Global.BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL, 
-                                mContext.getResources().getInteger(com.android.internal.R.integer.config_lowBatteryWarningLevel));
+                                mContext.getResources().getInteger(com.android.internal.R.integer.config_criticalBatteryWarningLevel));
 
         int defWarnLevel = mContext.getResources().getInteger(
                 com.android.internal.R.integer.config_lowBatteryWarningLevel);
@@ -901,6 +911,7 @@ public final class BatteryService extends SystemService {
             // send now if last event was before throttle interval, otherwise delay
             long delay = now - mLastBatteryLevelChangedSentMs > BATTERY_LEVEL_CHANGE_THROTTLE_MS
                     ? 0 : mLastBatteryLevelChangedSentMs + BATTERY_LEVEL_CHANGE_THROTTLE_MS - now;
+            if( mPlugType != BATTERY_PLUGGED_NONE ) delay = 0;
             mHandler.postDelayed(this::sendEnqueuedBatteryLevelChangedEvents, delay);
         }
     }
@@ -985,18 +996,16 @@ public final class BatteryService extends SystemService {
                 com.android.internal.R.string.config_oemFastChargerStatusPath2);
         if (TextUtils.isEmpty(path) && TextUtils.isEmpty(path2))
             return false;
-        String value = mContext.getResources().getString(
-                com.android.internal.R.string.config_oemFastChargerStatusValue);
-        if (TextUtils.isEmpty(value))
-            value = "1";
+        if( mOemChargerValues == null || mOemChargerValues.size() < 1 ) return false;
+
         try {
             boolean isFastCharge = false;
             boolean isFastCharge2 = false;
             if (!TextUtils.isEmpty(path)) {
-                isFastCharge = FileUtils.readTextFile(new File(path), value.length(), null).equals(value);
+                isFastCharge = mOemChargerValues.contains(FileUtils.readTextFile(new File(path), 1024, null));
             } 
             if (!TextUtils.isEmpty(path2)) {
-                isFastCharge2 = FileUtils.readTextFile(new File(path2), value.length(), null).equals(value);
+                isFastCharge2 = mOemChargerValues.contains(FileUtils.readTextFile(new File(path2), 1024, null));
             } 
             return isFastCharge || isFastCharge2;
         } catch (IOException e) {
