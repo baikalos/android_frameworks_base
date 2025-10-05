@@ -505,14 +505,14 @@ public class ActivityManagerService extends IActivityManager.Stub
     public static final String ANR_TRACE_DIR = "/data/anr";
 
     // Maximum number of receivers an app can register.
-    private static final int MAX_RECEIVERS_ALLOWED_PER_APP = 1000;
+    private static final int MAX_RECEIVERS_ALLOWED_PER_APP = 2000;
 
     // How long we wait for a launched process to attach to the activity manager
     // before we decide it's never going to come up for real.
-    static final int PROC_START_TIMEOUT = 10 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
+    static final int PROC_START_TIMEOUT = 30 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
     // How long we wait to kill an application zygote, after the last process using
     // it has gone away.
-    static final int KILL_APP_ZYGOTE_DELAY_MS = 5 * 1000;
+    static final int KILL_APP_ZYGOTE_DELAY_MS = 15 * 1000;
 
     // How long we wait for a launched process to attach to the activity manager
     // before we decide it's never going to come up for real, when the process was
@@ -521,22 +521,22 @@ public class ActivityManagerService extends IActivityManager.Stub
     static final int PROC_START_TIMEOUT_WITH_WRAPPER = 1200*1000;
 
     // How long we allow a receiver to run before giving up on it.
-    static final int BROADCAST_FG_TIMEOUT = 10 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
-    static final int BROADCAST_BG_TIMEOUT = 60 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
+    static final int BROADCAST_FG_TIMEOUT = 30 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
+    static final int BROADCAST_BG_TIMEOUT = 120 * 1000 * Build.HW_TIMEOUT_MULTIPLIER;
 
     public static final int MY_PID = myPid();
 
     static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     // How many bytes to write into the dropbox log before truncating
-    static final int DROPBOX_DEFAULT_MAX_SIZE = 192 * 1024;
+    static final int DROPBOX_DEFAULT_MAX_SIZE = 16 * 1024;
     // Assumes logcat entries average around 100 bytes; that's not perfect stack traces count
     // as one line, but close enough for now.
     static final int RESERVED_BYTES_PER_LOGCAT_LINE = 100;
 
     // Necessary ApplicationInfo flags to mark an app as persistent
     static final int PERSISTENT_MASK =
-            ApplicationInfo.FLAG_SYSTEM|ApplicationInfo.FLAG_PERSISTENT;
+            /*ApplicationInfo.FLAG_SYSTEM|*/ApplicationInfo.FLAG_PERSISTENT;
 
     // Intent sent when remote bugreport collection has been completed
     private static final String INTENT_REMOTE_BUGREPORT_FINISHED =
@@ -566,7 +566,7 @@ public class ActivityManagerService extends IActivityManager.Stub
     private static final int MAX_BUGREPORT_DESCRIPTION_SIZE = 150;
 
     private static final int NATIVE_DUMP_TIMEOUT_MS =
-            2000 * Build.HW_TIMEOUT_MULTIPLIER; // 2 seconds;
+            8000 * Build.HW_TIMEOUT_MULTIPLIER; // 2 seconds;
     private static final int JAVA_DUMP_MINIMUM_SIZE = 100; // 100 bytes.
 
     OomAdjuster mOomAdjuster;
@@ -3070,6 +3070,15 @@ public class ActivityManagerService extends IActivityManager.Stub
         return mBaikalAppProfileManager.getPackageOptionFromActivityManager(packageName,uid,opCode,def);
     }
 
+    @Override
+    public String getBaikalPackageString(String packageName, int uid, int opCode,String def) {
+        if( mBaikalAppProfileManager == null ) { 
+            Slog.e(TAG_SWITCH, "mBaikalAppProfileManager = null !!!!!!!!!!!!!!!");
+            return def;
+        }
+        return mBaikalAppProfileManager.getPackageStringFromActivityManager(packageName,uid,opCode,def);
+    }
+
     public int getBaikalOption(int opCode, int def, int callingUid, String callingPackage) {
         if( mBaikalAppProfileManager == null ) { 
             Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
@@ -3085,6 +3094,23 @@ public class ActivityManagerService extends IActivityManager.Stub
             return def;
         }
         return mBaikalAppProfileManager.getBaikalOptionFromActivityManager(opCode,def,callingUid,callingPackage,bundle);
+    }
+
+    public String getBaikalString(int opCode, String def, int callingUid, String callingPackage) {
+        if( mBaikalAppProfileManager == null ) { 
+            Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
+            return def;
+        }
+        return mBaikalAppProfileManager.getBaikalStringFromActivityManager(opCode,def,callingUid,callingPackage,null);
+    }
+
+    @Override
+    public String getBaikalString(int opCode, String def, int callingUid, String callingPackage, Bundle bundle) {
+        if( mBaikalAppProfileManager == null ) { 
+            Slog.e(TAG_SWITCH, "mAppProfileManager = null !!!!!!!!!!!!!!!");
+            return def;
+        }
+        return mBaikalAppProfileManager.getBaikalStringFromActivityManager(opCode,def,callingUid,callingPackage,bundle);
     }
 
     @Override
@@ -3498,7 +3524,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             // We'll take the stack crawls of just the top apps using CPU.
             final int N = processCpuTracker.countWorkingStats();
             extraPids = new ArrayList<>();
-            for (int i = 0; i < N && extraPids.size() < 5; i++) {
+            for (int i = 0; i < N && extraPids.size() < 10; i++) {
                 ProcessCpuTracker.Stats stats = processCpuTracker.getWorkingStats(i);
                 if (lastPids.indexOfKey(stats.pid) >= 0) {
                     if (DEBUG_ANR) Slog.d(TAG, "Collecting stacks for extra pid " + stats.pid);
@@ -3571,7 +3597,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         final File anrFile = new File(tracesDir, ANR_FILE_PREFIX + formattedDate);
 
         if (anrFile.createNewFile()) {
-            FileUtils.setPermissions(anrFile.getAbsolutePath(), 0600, -1, -1); // -rw-------
+            FileUtils.setPermissions(anrFile.getAbsolutePath(), 0640, -1, -1); // -rw-------
             return anrFile;
         } else {
             throw new IOException("Unable to create ANR dump file: createNewFile failed");
@@ -6085,6 +6111,9 @@ public class ActivityManagerService extends IActivityManager.Stub
     int appRestrictedInBackgroundLOSP(BaikalAppProfile appProfile, int uid, String packageName, int packageTargetSdk) {
         // Apps that target O+ are always subject to background check
 
+        int mode = appProfile.getBackgroundMode();
+        if( mode < -1 ) return ActivityManager.APP_START_MODE_NORMAL;
+
         if (packageTargetSdk >= Build.VERSION_CODES.O) {
             if (DEBUG_BACKGROUND_CHECK) {
                 Slog.i(TAG, "App " + uid + "/" + packageName + " targets O+, restricted");
@@ -6092,7 +6121,6 @@ public class ActivityManagerService extends IActivityManager.Stub
             return ActivityManager.APP_START_MODE_DELAYED_RIGID;
         }
 
-        int mode = appProfile.getBackgroundMode();
         if( mode < 0 ) return ActivityManager.APP_START_MODE_NORMAL;
         if( appProfile.mAllowWhileIdle ) return ActivityManager.APP_START_MODE_NORMAL;
 
@@ -14440,8 +14468,13 @@ public class ActivityManagerService extends IActivityManager.Stub
             }
         }
 
-        final boolean replacePending =
+        boolean replacePending =
                 (intent.getFlags()&Intent.FLAG_RECEIVER_REPLACE_PENDING) != 0;
+
+        if( intent != null && intent.toString().contains("play.integrity.autoprotect.LOG_TELEMETRY") ) {
+            replacePending = false;
+        }
+
 
         if (DEBUG_BROADCAST) Slog.v(TAG_BROADCAST, "Enqueueing broadcast: " + intent.getAction()
                 + " replacePending=" + replacePending);
