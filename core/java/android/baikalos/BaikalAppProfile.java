@@ -44,6 +44,14 @@ public class BaikalAppProfile {
     public static final int OPCODE_BLOCK_SMS = 8;
     public static final int OPCODE_BLOCK_NOTIFICATION = 9;
 
+    public static final int OPCODE_SPOOF_SIM_COUNTRY = 101;
+    public static final int OPCODE_SPOOF_SIM_MNC = 102;
+    public static final int OPCODE_SPOOF_SIM_OP = 103;
+    public static final int OPCODE_SPOOF_SIM_LN = 104;
+
+    public static final int OPCODE_DEFAULT_DIALER = 201;
+    public static final int OPCODE_DEFAULT_SMS = 202;
+    public static final int OPCODE_DEFAULT_CALLERID = 203;
 
     private static final String TAG = "Baikal.BaikalAppProfile";
 
@@ -251,6 +259,30 @@ public class BaikalAppProfile {
     @SuppressLint({"MutableBareField","InternalField"})
     public int mDarkMode;
 
+    @SuppressLint({"MutableBareField","InternalField"})
+    public @Nullable String mSpoofSimCountry;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public @Nullable String mSpoofSimMnc;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public @Nullable String mSpoofSimOpName;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public @Nullable String mSpoofSimLN;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mSpoofAsDefaultDialer;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mSpoofAsDefaultCallerID;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mSpoofAsDefaultSMS;
+
+    @SuppressLint({"MutableBareField","InternalField"})
+    public boolean mAllowSigOverride;
+
     // internal
     @SuppressLint({"MutableBareField","InternalField"})
     public boolean mSystemApp;
@@ -387,6 +419,7 @@ public class BaikalAppProfile {
         mPackageName = "";
         mUid = -1;
         clear();
+        // getBackgroundModeInternal(false);
     }
 
     public BaikalAppProfile(@Nullable String packageName, int uid) {
@@ -396,10 +429,12 @@ public class BaikalAppProfile {
 
         mUid = uid;
         clear();
+        getBackgroundModeInternal(false);
     }
 
     public BaikalAppProfile(@Nullable BaikalAppProfile profile) {
         update(profile);
+        getBackgroundModeInternal(false);
     }
 
 
@@ -463,6 +498,10 @@ public class BaikalAppProfile {
         mFilterFS = false;
         mFilterFSadd = false;
         mDarkMode = 0;
+        mSpoofSimCountry = "";
+        mSpoofSimMnc = "";
+        mSpoofSimOpName = "";
+        mSpoofSimLN = "";
         
         mBlockContacts = 0;
         mBlockCalllog = 0;
@@ -470,6 +509,11 @@ public class BaikalAppProfile {
         mBlockMedia = 0;
         mBlockSms = 0;
         mBlockNotification = 0;
+
+        mAllowSigOverride = false;
+        mSpoofAsDefaultDialer = false;
+        mSpoofAsDefaultCallerID = false;
+        mSpoofAsDefaultSMS = false;
 
         mSystemApp = false;
         mImportantApp = false;
@@ -500,8 +544,8 @@ public class BaikalAppProfile {
     public int getBackgroundMode(boolean disableOnPowerSaver) {
         if( !DEBUG ) return getBackgroundModeInternal(disableOnPowerSaver);
         int result = getBackgroundModeInternal(disableOnPowerSaver);
-        if( TRACE && result != 0 ) {
-            if( mDebug ) {
+        if( (TRACE && result != 0) || mUid < 0) {
+            if( mDebug || mUid < 0 ) {
                 Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid + " result=" + result, new Throwable());
             } else {
                 Slog.d(TAG, "getBackgroundMode: " + mPackageName + "/" + mUid + " result=" + result);
@@ -513,9 +557,23 @@ public class BaikalAppProfile {
     public int getBackgroundModeInternal(boolean disableOnPowerSaver) {
 
         if( (isInvalidated ||
+            !mIsInitialized) && UserHandle.getAppId(mUid) >= 90000 ) {
+            mImportantApp = false;
+            mAllowWhileIdle = false;
+            mStaminaEnforced = false;
+            mIsInitialized = true;
+            isInvalidated = false;
+            mSystemWhitelisted = false;
+            mSystemApp = false;
+            Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid + ", isolated=true");
+        }
+
+
+        if( (isInvalidated ||
             !mIsInitialized) && mUid >=0 && UserHandle.getAppId(mUid) < 10000 ) {
-            mImportantApp = true;
+            // mImportantApp = true;
             // mAllowWhileIdle = true;
+            mSystemApp = true;
             mStaminaEnforced = true;
             mIsInitialized = true;
             isInvalidated = false;
@@ -534,7 +592,7 @@ public class BaikalAppProfile {
             mPackageName != null &&
             ( mPackageName.startsWith("com.android.vending")  ) ) {
             Slog.d(TAG, "getBackgroundMode: init " + mPackageName + "/" + mUid);
-            mImportantApp = true;
+            // mImportantApp = true;
             mBootDisabled = false;
             mIsInitialized = true;
             isInvalidated = false;
@@ -552,15 +610,14 @@ public class BaikalAppProfile {
 
         
             if( (mIsGms && mIsGmsPersistent) || !mIsGms) {
-                mSystemWhitelisted = true;
-                mStaminaEnforced = true;
-                mImportantApp = true;
+                mAllowWhileIdle = true;
+                // mImportantApp = true;
             } else {
-                mSystemWhitelisted = false;
-                mStaminaEnforced = false;
-                mImportantApp = false;
             }
-            // mAllowWhileIdle = true;
+
+            mSystemWhitelisted = true;
+            mStaminaEnforced = true;
+
             mBootDisabled = false;
             mPriviledgedPhoneState = true;
             mAllowIdleNetwork = true;
@@ -588,113 +645,93 @@ public class BaikalAppProfile {
 
         if( mIsGms && !mIsGmsPersistent /*&& !mIsGmsUnstable*/ ) {
             int rc = mBackgroundMode; // mSystemWhitelisted ? -1 : mBackgroundMode >=0 ? ;
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(-2) non important gms: " + rc);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(-2) non important gms: " + rc);
             return rc;
         }
 
         if( mSystemWhitelisted ) {
             if( mBackgroundMode >= 0 ) { 
-                if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(1) mSystemWhitelisted:-1");
+                //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(1) mSystemWhitelisted:-1");
                 return -1;
             }
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(2) mSystemWhitelisted:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(2) mSystemWhitelisted:" + mBackgroundMode);
             return mBackgroundMode;
         }
         
         if( sTopUid == mUid ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(0) mTopUid:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(0) mTopUid:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mSystemApp ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(3) mSystemApp:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(3) mSystemApp:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mBackgroundMode < 0 ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(4) mWhitelisted:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(4) mWhitelisted:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( sHomeUid == mUid ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(5) mHomeUid:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(5) mHomeUid:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mImportantApp ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(6) mImportantApp:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(6) mImportantApp:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mAllowWhileIdle ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(7) mAllowWhileIdle:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(7) mAllowWhileIdle:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
         if( mStamina || mStaminaEnforced ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(8) mStamina:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(8) mStamina:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
-        if( mBackgroundMode > 0 )  {
+        /*if( mBackgroundMode > 0 )  {
             if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9) mBackgroundMode:" + mBackgroundMode);
             return mBackgroundMode;
-        }
+        }*/
 
         if( mCurAdj <= 100 )  {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9.1) mCurAdj:" + mBackgroundMode);
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(9.1) mCurAdj:" + mBackgroundMode);
             return mBackgroundMode;
         }
 
-        /*if( mBackgroundMode > 0 && !sScreenOn )  {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(10) mBackgroundMode:2");
-            return 2;
-        }*/
-
-        // make it a bit more complex
-        /*if( sStaminaActive && mBackgroundMode >= 0 && !mStamina ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(11) stamina:2");
-            return 2;
-        }*/
-
-        /* if( !sAutoLimit || disableOnPowerSaver ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(12.1) no limit:" + mBackgroundMode);
+        if( mUid >=0 && UserHandle.getAppId(mUid) < 10000) {
             return mBackgroundMode;
         }
-
-        if( sPowerMode >= 4 && mBackgroundMode >= 0 ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(12.2) extreme:2");
-            return 2;
-        }
-        
-        if( sPowerMode >= 3 && mBackgroundMode >= 0 ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(12.3) aggressive:2");
-            return 2;
-        }
-
-        if( sPowerMode >= 2 && mBackgroundMode >= 0 ) {
-            if( !sScreenOn ) {
-                if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(13) moderate/screenoff:2");
-                return 2;
-            }
-        } */
 
         if( mBackgroundModeConfig > 99 ) {
-            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) overriden default:" + 0);
-            return 0;
+            //if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) overriden default:" + (mBackgroundModeConfig - 100));
+            return mBackgroundModeConfig - 100;
         }
 
         if( mBackgroundMode >= 0 && mDefaultBackgroundMode > mBackgroundMode ) {
-            final long now = SystemClock.uptimeMillis();
-            final long timeout = now - 30 * 1000;
-            if( mLastTopTime < timeout ) {
-                if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) overriden auto:" + mDefaultBackgroundMode);
-                return mDefaultBackgroundMode;
-            }
+            if( getBackgroundModeOnCativity(45) ) return mDefaultBackgroundMode;
         }
 
-        if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(15) default:" + mBackgroundMode);
+        if( mBackgroundMode > 0 && (VERBOSE || mDebug) ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(15) default:" + mBackgroundMode);
         return mBackgroundMode;
+    }
+
+    public boolean isActive() {
+        return !getBackgroundModeOnCativity(15);
+    }
+
+    private boolean getBackgroundModeOnCativity(int timeout) {
+        final long now = SystemClock.uptimeMillis();
+        final long elapsed = now - timeout * 1000;
+        if( mLastTopTime < elapsed ) {
+            if( VERBOSE || mDebug ) Slog.d(TAG, "" + mPackageName + "/" + mUid + ".getBackgroundMode(14) overriden auto:" + mDefaultBackgroundMode);
+            return true;
+        }
+        return false;
     }
 
     public boolean getStamina() {
@@ -771,6 +808,14 @@ public class BaikalAppProfile {
             !mFilterFS &&
             !mFilterFSadd &&
             mDarkMode == 0 &&
+            "".equals(mSpoofSimCountry) &&
+            "".equals(mSpoofSimMnc) &&
+            "".equals(mSpoofSimOpName) &&
+            "".equals(mSpoofSimLN) &&
+            !mAllowSigOverride &&
+            !mSpoofAsDefaultDialer &&
+            !mSpoofAsDefaultCallerID && 
+            !mSpoofAsDefaultSMS &&
             mThermalProfile == 0 ) return true;
         return false;
     }
@@ -801,7 +846,7 @@ public class BaikalAppProfile {
         this.mSpoofDevice = profile.mSpoofDevice;
         this.mCamera = profile.mCamera;
         this.mKeepOn = profile.mKeepOn;
-        this.mPreventHwKeyAttestation = profile.mPreventHwKeyAttestation;
+        this.mPreventHwKeyAttestation = false; // profile.mPreventHwKeyAttestation;
         this.mHideDevMode = profile.mHideDevMode;
         this.mPerformanceLevel = profile.mPerformanceLevel;
         this.mBoostControl = profile.mBoostControl;
@@ -848,6 +893,14 @@ public class BaikalAppProfile {
         this.mFilterFS = profile.mFilterFS;
         this.mFilterFSadd = profile.mFilterFSadd;
         this.mDarkMode = profile.mDarkMode;
+        this.mSpoofSimCountry = profile.mSpoofSimCountry;
+        this.mSpoofSimMnc = profile.mSpoofSimMnc;
+        this.mSpoofSimOpName = profile.mSpoofSimOpName;
+        this.mSpoofSimLN = profile.mSpoofSimLN;
+        this.mAllowSigOverride = profile.mAllowSigOverride;
+        this.mSpoofAsDefaultDialer = profile.mSpoofAsDefaultDialer;
+        this.mSpoofAsDefaultCallerID = profile.mSpoofAsDefaultCallerID;
+        this.mSpoofAsDefaultSMS = profile.mSpoofAsDefaultSMS;
         
         this.mIsGms = profile.mIsGms;
         this.mIsGmsPersistent = profile.mIsGmsPersistent;
@@ -914,6 +967,10 @@ public class BaikalAppProfile {
         if( mFilterFS ) result += "," + "ffs=" + mFilterFS;
         if( mFilterFSadd ) result += "," + "ffsa=" + mFilterFSadd;
         if( mDarkMode != 0 ) result += "," + "dkm=" + mDarkMode;
+        if( !"".equals(mSpoofSimCountry) ) result += "," + "spsc=" + mSpoofSimCountry;
+        if( !"".equals(mSpoofSimMnc) ) result += "," + "spsm=" + mSpoofSimMnc;
+        if( !"".equals(mSpoofSimOpName) ) result += "," + "spso=" + mSpoofSimOpName;
+        if( !"".equals(mSpoofSimLN) ) result += "," + "spsl=" + mSpoofSimLN;
 
 
         if( mBlockSms != 0 ) result +=  "," + "blsm=" + mBlockSms;
@@ -923,6 +980,11 @@ public class BaikalAppProfile {
         if( mBlockCalllog !=0 ) result +=  "," + "blcl=" + mBlockCalllog;
         if( mBlockCalendar !=0 ) result +=  "," + "blcd=" + mBlockCalendar;
         if( mBlockMedia != 0 ) result +=  "," + "blmd=" + mBlockMedia;
+
+        if( mAllowSigOverride ) result += "," + "aso=" + mAllowSigOverride;
+        if( mSpoofAsDefaultDialer ) result += "," + "spdd=" + mSpoofAsDefaultDialer;
+        if( mSpoofAsDefaultCallerID ) result += "," + "spdc=" + mSpoofAsDefaultCallerID;
+        if( mSpoofAsDefaultSMS ) result += "," + "spds=" + mSpoofAsDefaultSMS;
 
         return result;
     }
@@ -958,7 +1020,7 @@ public class BaikalAppProfile {
             mAudioMode = parser.getInt("am",0);
             mSpoofDevice = parser.getInt("sd",0);
             mKeepOn = parser.getInt("koi",0);
-            mPreventHwKeyAttestation = parser.getBoolean("pka",false);
+            mPreventHwKeyAttestation = false; //parser.getBoolean("pka",false);
             mCamera = parser.getInt("cm",0);
             mPerformanceLevel = parser.getInt("pl",0);
             mMicrophone = parser.getInt("mic",0);
@@ -1017,6 +1079,17 @@ public class BaikalAppProfile {
             mBlockCalendar = parser.getInt("blcd",0);
             mBlockMedia = parser.getInt("blmd",0);
 
+            mSpoofSimCountry = parser.getString("spsc","");
+            mSpoofSimMnc = parser.getString("spsm","");
+            mSpoofSimOpName = parser.getString("spso","");
+            mSpoofSimLN = parser.getString("spsl","");
+
+            mAllowSigOverride = parser.getBoolean("aso",false);
+            mSpoofAsDefaultDialer = parser.getBoolean("spdd",false);
+            mSpoofAsDefaultCallerID = parser.getBoolean("spdc",false);
+            mSpoofAsDefaultSMS = parser.getBoolean("spds",false);
+
+
         } catch( Exception e ) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
         }
@@ -1038,6 +1111,7 @@ public class BaikalAppProfile {
         BaikalAppProfile profile = new BaikalAppProfile();
         try {
             profile.deserialize(profileString);
+            profile.getBackgroundModeInternal(false);
             return profile;
         } catch (IllegalArgumentException e) {
             Slog.e(TAG, "Bad profile settings :" + profileString, e);
