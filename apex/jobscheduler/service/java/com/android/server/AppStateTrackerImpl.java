@@ -253,6 +253,10 @@ public class AppStateTrackerImpl implements AppStateTracker {
 
             mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
                     Settings.Global.FORCED_APP_STANDBY_FOR_SMALL_BATTERY_ENABLED), false, this);
+
+            mContext.getContentResolver().registerContentObserver(Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_POWER_LEVEL_CURRENT), false, this);
+
         }
 
         boolean isForcedAppStandbyEnabled() {
@@ -294,9 +298,20 @@ public class AppStateTrackerImpl implements AppStateTracker {
                     }
                     updateForceAllAppStandbyState();
                 }
+            } else if (Settings.Global.getUriFor(
+                    Settings.Global.BAIKALOS_POWER_LEVEL_CURRENT).equals(uri)) {
+                    synchronized (mLock) {
+                        updateBackgroundRestrictedUidPackagesLocked();
+                        if (true /*DEBUG*/) {
+                            Slog.d(TAG, "CurrentPowerSaverLevel changed");
+                        }
+                    }
             } else {
                 Slog.w(TAG, "Unexpected feature flag uri encountered: " + uri);
             }
+
+
+
         }
     }
 
@@ -1318,7 +1333,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
         int backgroundMode = 0;
         if( profile != null ) {
             backgroundMode =  profile.getBackgroundMode(true);
-            if( backgroundMode < 0 ) return false;
+            if( backgroundMode < -1 ) return false;
             if( profile.mAllowWhileIdle ) return false;
         }
 
@@ -1354,7 +1369,7 @@ public class AppStateTrackerImpl implements AppStateTracker {
                 return false;
             }
 
-            if( backgroundMode < 0 ) {
+            if( backgroundMode < -1 ) {
                 return false;
             }
 
