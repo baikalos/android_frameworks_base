@@ -517,6 +517,11 @@ interface IActivityManager {
     @UnsupportedAppUsage
     int getBaikalOption(int opCode, int def, int callingUid, in String callingPackage, in Bundle params);
 
+    @UnsupportedAppUsage
+    String getBaikalPackageString(in String packageName, int uid, int opCode, String def);
+    @UnsupportedAppUsage
+    String getBaikalString(int opCode, in String def, int callingUid, in String callingPackage, in Bundle params);
+
 
     // Start of N transactions
     // Start Binder transaction tracking for all applications.
