@@ -149,6 +149,9 @@ public class KeyStore2 {
     }
 
     void delete(KeyDescriptor descriptor) throws KeyStoreException {
+
+        if( KeyboxImitationHooks.deleteKey(descriptor) ) return;
+
         handleRemoteExceptionWithRetry((service) -> {
             service.deleteKey(descriptor);
             return 0;
