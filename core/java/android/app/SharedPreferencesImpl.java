@@ -304,6 +304,7 @@ final class SharedPreferencesImpl implements SharedPreferences {
             awaitLoadedLocked();
             String v = (String)mMap.get(key);
             String result = v != null ? v : defValue;
+            //return result;
             return BaikalSpoofer.overrideStringSharedPreference(key, result);
         }
     }
@@ -315,6 +316,7 @@ final class SharedPreferencesImpl implements SharedPreferences {
             awaitLoadedLocked();
             Set<String> v = (Set<String>) mMap.get(key);
             Set<String> result = v != null ? v : defValues;
+            //return result;
             return BaikalSpoofer.overrideSetStringSharedPreference(key, result);
         }
     }
@@ -325,6 +327,7 @@ final class SharedPreferencesImpl implements SharedPreferences {
             awaitLoadedLocked();
             Integer v = (Integer)mMap.get(key);
             Integer result = v != null ? v : defValue;
+            //return result;
             return BaikalSpoofer.overrideIntegerSharedPreference(key, result);
         }
     }
@@ -334,6 +337,7 @@ final class SharedPreferencesImpl implements SharedPreferences {
             awaitLoadedLocked();
             Long v = (Long)mMap.get(key);
             Long result = v != null ? v : defValue;
+            //return result;
             return BaikalSpoofer.overrideLongSharedPreference(key, result);
         }
     }
@@ -343,6 +347,7 @@ final class SharedPreferencesImpl implements SharedPreferences {
             awaitLoadedLocked();
             Float v = (Float)mMap.get(key);
             Float result =  v != null ? v : defValue;
+            //return result;
             return BaikalSpoofer.overrideFloatSharedPreference(key, result);
         }
     }
@@ -352,6 +357,7 @@ final class SharedPreferencesImpl implements SharedPreferences {
             awaitLoadedLocked();
             Boolean v = (Boolean)mMap.get(key);
             Boolean result = v != null ? v : defValue;
+            //return result;
             return BaikalSpoofer.overrideBooleanSharedPreference(key, result);
         }
     }
