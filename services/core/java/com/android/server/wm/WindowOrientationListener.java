@@ -140,7 +140,7 @@ public abstract class WindowOrientationListener {
             }
         }
 
-        if (wakeUpDeviceOrientationSensor != null) {
+        if (nonWakeUpDeviceOrientationSensor != null) {
             mSensor = wakeUpDeviceOrientationSensor;
         } else {
             mSensor = nonWakeUpDeviceOrientationSensor;
