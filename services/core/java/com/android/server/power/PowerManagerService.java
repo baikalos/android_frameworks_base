@@ -2943,6 +2943,11 @@ public final class PowerManagerService extends SystemService
             return;
         }
 
+        if( !BaikalConstants.isKernelCompatible() ) {
+            Slog.w(TAG, "Bypass charging disabled. Unsupported kernel!");
+            return;
+        }
+
         if( !mBypassChargingEnabled ) {
             if( mPowerInputSuspended ) {
                 Slog.i(TAG, "Bypass charging mBypassChargingEnabled: " + mBypassChargingEnabled);
@@ -4726,12 +4731,12 @@ public final class PowerManagerService extends SystemService
                 || wakeLock.mTag.startsWith("*job*")
                 || wakeLock.mTag.startsWith("*sync*")) ) {
                 // Cached inactive processes are never allowed to hold wake locks.
-                if (mConstants.NO_CACHED_WAKE_LOCKS) {
+                /*if (mConstants.NO_CACHED_WAKE_LOCKS) {
                     disabled = mForceSuspendActive
                             || (!wakeLock.mUidState.mActive && wakeLock.mUidState.mProcState
                                     != ActivityManager.PROCESS_STATE_NONEXISTENT &&
                             wakeLock.mUidState.mProcState > ActivityManager.PROCESS_STATE_RECEIVER);
-                }
+                }*/
                 int mode = wakeLock.getBackgroundMode(true,false, /*-1*/ 0);
                 int wakefulness = getGlobalWakefulnessLocked();
 
@@ -4746,13 +4751,14 @@ public final class PowerManagerService extends SystemService
 
                 if( !disabled && !wakeLock.mAudio && mode >= 0 ) {
 
-                    //boolean tempWhitelisted = Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) >= 0;
-                    //if ( !tempWhitelisted ) {
+                    boolean tempWhitelisted = Arrays.binarySearch(mDeviceIdleTempWhitelist, appid) >= 0;
 
-                        final UidState state = wakeLock.mUidState;
+                    final UidState state = wakeLock.mUidState;
 
-                        if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) 
-                            Slog.d(TAG, "setWakeLockDisabledStateLocked: (check) wakefulness=" + wakefulness + ", mProcState=" + state.mProcState + ", " + wakeLock);
+                    if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) 
+                        Slog.d(TAG, "setWakeLockDisabledStateLocked: (check) wakefulness=" + wakefulness + ", mProcState=" + state.mProcState + ", twl=" + tempWhitelisted +  ", " + wakeLock);
+
+                    if ( !tempWhitelisted ) {
 
                         if (!disabled && (wakefulness != WAKEFULNESS_AWAKE) ) {
                             if (appid < Process.FIRST_APPLICATION_UID ||
@@ -4790,7 +4796,7 @@ public final class PowerManagerService extends SystemService
                                 if(!wasDisabled && BaikalConstants.BAIKAL_DEBUG_WAKELOCKS ) Slog.d(TAG, "setWakeLockDisabledStateLocked: (6) " + disabled + ", " + wakeLock);
                             }
                         }
-                    //}
+                    }
                 }
             }
             boolean changed = wakeLock.setDisabled(disabled);
