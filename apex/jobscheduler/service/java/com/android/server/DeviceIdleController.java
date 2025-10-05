@@ -344,6 +344,8 @@ public class DeviceIdleController extends SystemService
     @GuardedBy("this")
     private boolean mCharging;
     @GuardedBy("this")
+    private boolean mCarMode;
+    @GuardedBy("this")
     private boolean mNotMoving = true;
     @GuardedBy("this")
     private boolean mLocating;
@@ -692,6 +694,12 @@ public class DeviceIdleController extends SystemService
                         if (data != null && (ssp = data.getSchemeSpecificPart()) != null) {
                             removePowerSaveWhitelistAppInternal(ssp);
                         }
+                    }
+                } break;
+                case BaikalActions.ACTION_CAR_MODE_CHANGED: {
+                    boolean carMode = intent.getBooleanExtra(BaikalActions.EXTRA_BOOL_MODE, false);
+                    synchronized (DeviceIdleController.this) {
+                        updateCarModeLocked(carMode);
                     }
                 } break;
             }
@@ -2492,6 +2500,7 @@ public class DeviceIdleController extends SystemService
             // Start out assuming we are charging.  If we aren't, we will at least get
             // a battery update the next time the level drops.
             mCharging = true;
+            mCarMode = false;
             mActiveReason = ACTIVE_REASON_UNKNOWN;
             moveToStateLocked(STATE_ACTIVE, "boot");
             moveToLightStateLocked(LIGHT_STATE_ACTIVE, "boot");
@@ -2578,9 +2587,16 @@ public class DeviceIdleController extends SystemService
                 getContext().registerReceiver(mReceiver, filter);
 
                 filter = new IntentFilter();
+                filter.addAction(BaikalActions.ACTION_CAR_MODE_CHANGED);
+                getContext().registerReceiver(mReceiver, filter);
+
+                filter = new IntentFilter();
                 filter.addAction(Intent.ACTION_SCREEN_OFF);
                 filter.addAction(Intent.ACTION_SCREEN_ON);
                 getContext().registerReceiver(mInteractivityReceiver, filter);
+
+
+
 
                 mLocalActivityManager.setDeviceIdleAllowlist(
                         mPowerSaveWhitelistAllAppIdArray, mPowerSaveWhitelistExceptIdleAppIdArray);
@@ -3062,7 +3078,7 @@ public class DeviceIdleController extends SystemService
         if( mAppProfileManager != null ) {
             BaikalAppProfile profile = mAppProfileManager.getBaikalAppProfile(uid);
             int bMode = profile.getBackgroundMode();
-            if( bMode != 0 ) {
+            if( bMode > 0 ) {
                 if (DEBUG) {
                     Slog.d(TAG, "Ignore Adding AppId " + appId + " to temp whitelist. mode=" + bMode );
                 }
@@ -3260,7 +3276,7 @@ public class DeviceIdleController extends SystemService
         // in a state that we need to keep things running so they will update at a normal
         // frequency.
         boolean screenOn = mPowerManager.isInteractive();
-        if (DEBUG) Slog.d(TAG, "updateInteractivityLocked: screenOn=" + screenOn);
+        /*if (DEBUG)*/ Slog.d(TAG, "updateInteractivityLocked: screenOn=" + screenOn);
         if (!screenOn && mScreenOn) {
             mScreenOn = false;
             if (!mForceIdle) {
@@ -3298,6 +3314,25 @@ public class DeviceIdleController extends SystemService
             }
         }
     }
+
+    @GuardedBy("this")
+    void updateCarModeLocked(boolean carMode) {
+        if (DEBUG) Slog.i(TAG, "updateCarModeLocked: carMode=" + carMode);
+        if (!carMode && mCarMode) {
+            mCarMode = false;
+            if (!mForceIdle) {
+                becomeInactiveIfAppropriateLocked();
+            }
+        } else if (carMode) {
+            mCarMode = carMode;
+            if (!mForceIdle) {
+                mActiveReason = ACTIVE_REASON_CHARGING;
+                becomeActiveLocked("carMode", Process.myUid());
+            }
+        }
+    }
+
+
 
     @VisibleForTesting
     boolean isQuickDozeEnabled() {
@@ -3436,7 +3471,7 @@ public class DeviceIdleController extends SystemService
                     + " mForceIdle=" + mForceIdle
             );
         }
-        if (!mForceIdle && (mCharging || isScreenBlockingInactive)) {
+        if (!mForceIdle && (mCharging || isScreenBlockingInactive || mCarMode)) {
             return;
         }
         // Become inactive and determine if we will ultimately go idle.
@@ -3521,7 +3556,7 @@ public class DeviceIdleController extends SystemService
     void exitForceIdleLocked() {
         if (mForceIdle) {
             mForceIdle = false;
-            if (mScreenOn || mCharging) {
+            if (mScreenOn || mCharging || mCarMode) {
                 mActiveReason = ACTIVE_REASON_FORCED;
                 becomeActiveLocked("exit-force", Process.myUid());
             }
