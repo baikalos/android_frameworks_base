@@ -101,7 +101,7 @@ public class BaikalSpoofer {
     public static String DEF_ID;// = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.id","BP31.250523.010");
     public static String DEF_INCREMENTAL;// = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.incremental","13667654");
     public static String DEF_SECURITY_PATCH;// = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.security_patch","2025-07-05");
-    public static String DEF_FIRST_API_LEVEL;// = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.firs_api_level","21");
+    public static String DEF_FIRST_API_LEVEL;// = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.first_api_level","21");
     public static String DEF_SDK_INT;// = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.sdk_int","33");
 
     public static String MANUFACTURER;// = DEF_MANUFACTURER; // "Google";
@@ -470,7 +470,7 @@ public class BaikalSpoofer {
         DEF_ID = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.id","BP31.250523.010");
         DEF_INCREMENTAL = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.incremental","13667654");
         DEF_SECURITY_PATCH = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.security_patch","2025-07-05");
-        DEF_FIRST_API_LEVEL = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.firs_api_level","32");
+        DEF_FIRST_API_LEVEL = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.first_api_level","32");
         DEF_SDK_INT = SystemPropertiesGetNotNullOrEmpty("persist.spf.def.sdk_int","33");
 
         MANUFACTURER = DEF_MANUFACTURER; // "Google";
@@ -516,7 +516,7 @@ public class BaikalSpoofer {
         ID = SystemPropertiesGetDefaultOrEmpty(prefix + ".id", DEF_ID);
         INCREMENTAL = SystemPropertiesGetDefaultOrEmpty(prefix + ".incremental", DEF_INCREMENTAL);
         SECURITY_PATCH = SystemPropertiesGetDefaultOrEmpty(prefix + ".security_patch", DEF_SECURITY_PATCH);
-        FIRST_API_LEVEL = SystemPropertiesGetDefaultOrEmpty(prefix + ".firs_api_level", DEF_FIRST_API_LEVEL);
+        FIRST_API_LEVEL = SystemPropertiesGetDefaultOrEmpty(prefix + ".first_api_level", DEF_FIRST_API_LEVEL);
         SDK_INT = SystemPropertiesGetDefaultOrEmpty(prefix + ".sdk_int", DEF_SDK_INT);
         
         value = SystemProperties.get("persist.baikal.ovrsdk." + String.valueOf(uid), "");
@@ -541,12 +541,6 @@ public class BaikalSpoofer {
 
 
     private static void maybeSpoofBuild(String packageName, String processName, Context context) {
-
-
-        if( sProcessName == null )
-            sProcessName = processName;
-        if( sPackageName == null )
-            sPackageName = packageName;
 
         Log.e(TAG, "Spoof Device check: " + packageName + "/" + processName);
 
@@ -773,6 +767,11 @@ public class BaikalSpoofer {
 
             sIsInitialized = true;
 
+            if( sProcessName == null )
+                sProcessName = processName;
+            if( sPackageName == null )
+                sPackageName = packageName;
+
         } else {
 
             loadSpooferSettings();
@@ -784,6 +783,11 @@ public class BaikalSpoofer {
                 Log.e(TAG, "Failed to load BaikalAppVolumeDB for:" + packageName, er);
             };
         
+
+            if( sProcessName == null )
+                sProcessName = processName;
+            if( sPackageName == null )
+                sPackageName = packageName;
 
             maybeSpoofBuild(packageName, processName,  context);
 
@@ -858,12 +862,13 @@ public class BaikalSpoofer {
                 setBuildField("TAGS", "release-keys");
     
 
-                sApplicationFilterDisabled = false;
-                sIsInitialized = true;
             } catch(Exception fl) {
                 Log.e(TAG, "Failed to load profile for :" + packageName + ", sBaikalSpooferActive=" + sBaikalSpooferActive, fl);
             }
         }
+
+        sApplicationFilterDisabled = false;
+        sIsInitialized = true;
 
         Log.i(TAG, "Loading completed for :" + packageName);
 
@@ -1620,20 +1625,58 @@ public class BaikalSpoofer {
     }
 
     private static boolean sCachedInfo = false;
-    public static boolean shouldFilterApplication(String packageName, int userId, int callingUid, boolean isSystem) {
+    public static boolean shouldFilterApplication(String packageName, int userId, int _callingUid, boolean isSystem) {
 
         boolean hide3P = false;
         boolean hideGMS = false;
         boolean hideHMS = false;
 
+        int callingUid = _callingUid == 0 ? callingUid = myUid() : _callingUid;
 
         try {
-        if( !sIsInitialized ) return false;
-        if( sActivityManager == null ) return false;
-        if( sApplicationFilterDisabled ) return false;
+        if( !sIsInitialized ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) 
+                Log.i(TAG,"HidePackage !sIsInitialized packageName=" + packageName + 
+                    ", proc=" + sProcessName + 
+                    ", myPkg=" + sPackageName + 
+                    ", myUid=" + myUid() + 
+                    ", callingUid=" + callingUid +
+                    ", isSystem=" + isSystem);
 
-        if( callingUid == 0 ) callingUid = myUid();
+            return false;
+        }
+
+        if( sActivityManager == null ) {
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) 
+                Log.i(TAG,"HidePackage !sActivityManager packageName=" + packageName + 
+                    ", proc=" + sProcessName + 
+                    ", myPkg=" + sPackageName + 
+                    ", myUid=" + myUid() + 
+                    ", callingUid=" + callingUid +
+                    ", isSystem=" + isSystem);
+
+            return false;
+        }
+
+        if( sApplicationFilterDisabled ) { 
+            if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) 
+                Log.i(TAG,"HidePackage sApplicationFilterDisabled packageName=" + packageName + 
+                    ", proc=" + sProcessName + 
+                    ", myPkg=" + sPackageName + 
+                    ", myUid=" + myUid() + 
+                    ", callingUid=" + callingUid +
+                    ", isSystem=" + isSystem);
+            return false;
+        }
+
         if( UserHandle.getAppId(callingUid) < 10000 ) {
+            /*if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) 
+                Log.i(TAG,"HidePackage (callingUid < 10000) packageName=" + packageName + 
+                    ", proc=" + sProcessName + 
+                    ", myPkg=" + sPackageName + 
+                    ", myUid=" + myUid() + 
+                    ", callingUid=" + callingUid +
+                    ", isSystem=" + isSystem);*/
             return false;
         }
 
@@ -1687,12 +1730,26 @@ public class BaikalSpoofer {
                     return true;
                 }
                 if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE ) Log.i(TAG,"Hide3P pass (isSystem) packageName=" + packageName + " proc=" + sProcessName + ", myPkg=" + sPackageName + ", myUid=" + myUid()  + ", callingUid=" + callingUid);
+                return false;
             } 
 
         }
         } catch(Exception ex) {
             Log.i(TAG,"shouldFilterApplication: Exception!",ex);
         }
+
+        if( BaikalConstants.BAIKAL_DEBUG_APP_PROFILE && BaikalConstants.BAIKAL_DEBUG_RAW ) 
+            Log.i(TAG,"HidePackage packageName=" + packageName + 
+                ", proc=" + sProcessName + 
+                ", myPkg=" + sPackageName + 
+                ", myUid=" + myUid() + 
+                ", callingUid=" + callingUid +
+                ", isSystem=" + isSystem +
+                ", hide3P=" + hide3P +
+                ", hideGMS=" + hideGMS +
+                ", hideHMS=" + hideHMS +
+                "");
+
         return false;
     }
 
