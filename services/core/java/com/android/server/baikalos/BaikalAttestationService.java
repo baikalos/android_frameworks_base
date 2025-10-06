@@ -262,7 +262,7 @@ public final class BaikalAttestationService {
             SystemProperties.set("persist.spf.def.release", item.RELEASE);
             SystemProperties.set("persist.spf.def.incremental", item.INCREMENTAL);
             SystemProperties.set("persist.spf.def.security_patch", item.SECURITY_PATCH);
-            SystemProperties.set("persist.spf.def.firs_api_level", item.DEVICE_INITIAL_SDK_INT);
+            SystemProperties.set("persist.spf.def.first_api_level", item.DEVICE_INITIAL_SDK_INT);
             SystemProperties.set("persist.spf.def.sdk_int", item.SDK_INT);
             Settings.Global.putString(mContext.getContentResolver(), "baikal_kb_data", item.ATT_CERT);
         }
