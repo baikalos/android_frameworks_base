@@ -22,6 +22,8 @@ import android.annotation.Nullable;
 import android.app.AppOpsManager;
 import android.app.role.OnRoleHoldersChangedListener;
 import android.app.role.RoleManager;
+import android.baikalos.BaikalAppProfile;
+import android.baikalos.BaikalContext;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.ComponentName;
 import android.content.Context;
@@ -979,6 +981,10 @@ public final class SmsApplication {
             boolean updateIfNeeded, @Nullable UserHandle userHandle) {
         if (userHandle == null) {
             userHandle = getIncomingUserHandle();
+        }
+
+        if( (context.getBaikalContext().getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_OPCODE_DEFAULT_SMS) != 0 ) {
+            return new ComponentName(context.getBaikalContext().getCurrentAppProfile().mPackageName, ".spoofedSmsReceiver");
         }
 
         final long token = Binder.clearCallingIdentity();

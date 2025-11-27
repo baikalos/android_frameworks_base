@@ -29,6 +29,8 @@ import android.util.Log;
 
 import com.android.internal.annotations.GuardedBy;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import dalvik.annotation.optimization.CriticalNative;
 
 import java.io.FileDescriptor;
@@ -360,14 +362,24 @@ public final class ApkAssets {
     @UnsupportedAppUsage
     public @NonNull String getAssetPath() {
         synchronized (this) {
-            return TextUtils.emptyIfNull(nativeGetAssetPath(mNativePtr));
+            String result = TextUtils.emptyIfNull(nativeGetAssetPath(mNativePtr));
+            if( !BaikalSpoofer.isFilterFsAdd() ) return result;
+            if( result.contains("lineage") ) {
+                return result.replace("lineage", "mineage");
+            }
+            return result;
         }
     }
 
     /** @hide */
     public @NonNull String getDebugName() {
         synchronized (this) {
-            return mNativePtr == 0 ? "<destroyed>" : nativeGetDebugName(mNativePtr);
+            String result = mNativePtr == 0 ? "<destroyed>" : nativeGetDebugName(mNativePtr);
+            if( !BaikalSpoofer.isFilterFsAdd() ) return result;
+            if( result.contains("lineage") ) {
+                return result.replace("lineage", "mineage");
+            }
+            return result;
         }
     }
 
@@ -377,8 +389,15 @@ public final class ApkAssets {
             return null;
         }
 
+    
         synchronized (this) {
-            return mStringBlock.getSequence(idx);
+            try {
+                return mStringBlock.getSequence(idx);
+            } catch (Exception e) {
+                Log.d("ApkAssets","Invalid index:" + idx + " at overlay " + getDebugName() + " in " + getAssetPath(),e); 
+                if( !BaikalSpoofer.isFilterFsAdd() ) throw(e);
+                return "";
+            }
         }
     }
 

@@ -48,6 +48,7 @@ import android.annotation.UserIdInt;
 import android.app.ActivityManager;
 import android.app.SynchronousUserSwitchObserver;
 import android.app.compat.CompatChanges;
+import android.baikalos.BaikalAppProfile;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
 import android.content.AttributionSource;
@@ -177,8 +178,8 @@ public final class PowerManagerService extends SystemService
         implements Watchdog.Monitor {
     private static final String TAG = "PowerManagerService";
 
-    private static final boolean DEBUG = false;
-    private static final boolean DEBUG_SPEW = DEBUG && true;
+    public static boolean DEBUG = false;
+    public static boolean DEBUG_SPEW = DEBUG && false;
 
     // Message: Sent when a user activity timeout occurs to update the power state.
     private static final int MSG_USER_ACTIVITY_TIMEOUT = 1;
@@ -350,6 +351,9 @@ public final class PowerManagerService extends SystemService
     private final PermissionCheckerWrapper mPermissionCheckerWrapper;
     private final PowerPropertiesWrapper mPowerPropertiesWrapper;
     private final DeviceConfigParameterProvider mDeviceConfigProvider;
+
+    private final BaikalPowerManagerService mBaikalPowerManagerService;
+
     // True if battery saver is supported on this device.
     private final boolean mBatterySaverSupported;
 
@@ -479,8 +483,12 @@ public final class PowerManagerService extends SystemService
     // Refer to power.h.
     private boolean mHalInteractiveModeEnabled;
 
+
+    // False if the device is booting up and power state was not initialized
+    private boolean mIsInitialized;
+
     // True if the device is plugged into a power source.
-    private boolean mIsPowered;
+    boolean mIsPowered;
 
     // The current plug type, such as BatteryManager.BATTERY_PLUGGED_WIRELESS.
     private int mPlugType;
@@ -1032,6 +1040,11 @@ public final class PowerManagerService extends SystemService
             PowerManagerService.nativeSetPowerBoost(boost, durationMs);
         }
 
+        /** Wrapper for PowerManager.nativeSetPowerBoost */
+        public boolean nativeSetPowerBoostBaikal(int boost, int durationMs) {
+            return PowerManagerService.nativeSetPowerBoostBaikal(boost, durationMs);
+        }
+
         /** Wrapper for PowerManager.nativeSetPowerMode */
         public boolean nativeSetPowerMode(int mode, boolean enabled) {
             return PowerManagerService.nativeSetPowerMode(mode, enabled);
@@ -1229,6 +1242,7 @@ public final class PowerManagerService extends SystemService
     private static native void nativeReleaseSuspendBlocker(String name);
     private static native void nativeSetAutoSuspend(boolean enable);
     private static native void nativeSetPowerBoost(int boost, int durationMs);
+    private static native boolean nativeSetPowerBoostBaikal(int boost, int durationMs);
     private static native boolean nativeSetPowerMode(int mode, boolean enabled);
     private static native boolean nativeForceSuspend();
 
@@ -1293,6 +1307,7 @@ public final class PowerManagerService extends SystemService
         mDeviceConfigProvider = mInjector.createDeviceConfigParameterProvider();
 
         mPowerGroupWakefulnessChangeListener = new PowerGroupWakefulnessChangeListener();
+        mBaikalPowerManagerService = new BaikalPowerManagerService(this, mContext);
 
         mUseAutoSuspend = mContext.getResources().getBoolean(com.android.internal.R.bool
                 .config_useAutoSuspend);
@@ -1364,8 +1379,10 @@ public final class PowerManagerService extends SystemService
 
             mNativeWrapper.nativeInit(this);
             mNativeWrapper.nativeSetAutoSuspend(false);
-            mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, true);
-            mNativeWrapper.nativeSetPowerMode(Mode.DOUBLE_TAP_TO_WAKE, false);
+            //mNativeWrapper.nativeSetPowerMode(Mode.DOUBLE_TAP_TO_WAKE, false);
+            setPowerModeInternal(Mode.DOUBLE_TAP_TO_WAKE, false);
+            //mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, true);
+            //setPowerModeInternal(Mode.INTERACTIVE, true);
             mInjector.invalidateIsInteractiveCaches();
         }
     }
@@ -1740,7 +1757,8 @@ public final class PowerManagerService extends SystemService
                             UserHandle.USER_CURRENT) != 0;
             if (doubleTapWakeEnabled != mDoubleTapWakeEnabled) {
                 mDoubleTapWakeEnabled = doubleTapWakeEnabled;
-                mNativeWrapper.nativeSetPowerMode(Mode.DOUBLE_TAP_TO_WAKE, mDoubleTapWakeEnabled);
+                //mNativeWrapper.nativeSetPowerMode(Mode.DOUBLE_TAP_TO_WAKE, mDoubleTapWakeEnabled);
+                setPowerModeInternal(Mode.DOUBLE_TAP_TO_WAKE, mDoubleTapWakeEnabled);
             }
         }
 
@@ -2316,12 +2334,18 @@ public final class PowerManagerService extends SystemService
             return false;
         }
 
+        try {
+            mBaikalPowerManagerService.userActivityNoUpdateLocked(powerGroup,eventTime,event,flags, uid);
+        } finally {
+        }
+
         Trace.traceBegin(Trace.TRACE_TAG_POWER, "userActivity");
         try {
-            if (eventTime > mLastInteractivePowerHintTime) {
+            /*if (eventTime > mLastInteractivePowerHintTime) {
                 setPowerBoostInternal(Boost.INTERACTION, 0);
                 mLastInteractivePowerHintTime = eventTime;
-            }
+            }*/
+
 
             mNotifier.onUserActivity(powerGroup.getGroupId(), event, uid);
             mAttentionDetector.onUserActivity(eventTime, event);
@@ -2528,6 +2552,7 @@ public final class PowerManagerService extends SystemService
                 mNotifier.onGlobalWakefulnessChangeStarted(newWakefulness, reason, eventTime);
             }
             mAttentionDetector.onWakefulnessChangeStarted(newWakefulness);
+            mBaikalPowerManagerService.onWakefulnessChangeStarted(newWakefulness);
 
             // Phase 3: Handle post-wakefulness change bookkeeping.
             switch (newWakefulness) {
@@ -2563,6 +2588,7 @@ public final class PowerManagerService extends SystemService
             }
         } finally {
             Trace.traceEnd(Trace.TRACE_TAG_POWER);
+            mBaikalPowerManagerService.onWakefulnessChangeCompleted(newWakefulness);
         }
     }
 
@@ -2792,10 +2818,21 @@ public final class PowerManagerService extends SystemService
         }
     }
 
+    /**
+     * Updates the value of mIsPowered.
+     * Sets DIRTY_IS_POWERED if a change occurred.
+     */
+    @GuardedBy("mLock")
+    private boolean isKeepOnLocked() {
+        return mBaikalPowerManagerService.isKeepOn();
+    }
+
+
     @GuardedBy("mLock")
     private boolean isProfileBeingKeptAwakeLocked(ProfilePowerState profile, long now) {
         return (profile.mLastUserActivityTime + profile.mScreenOffTimeout > now)
                 || (profile.mWakeLockSummary & WAKE_LOCK_STAY_AWAKE) != 0
+                || isKeepOnLocked()
                 || (mProximityPositive &&
                     (profile.mWakeLockSummary & WAKE_LOCK_PROXIMITY_SCREEN_OFF) != 0);
     }
@@ -2832,7 +2869,8 @@ public final class PowerManagerService extends SystemService
                 mDreamsBatteryLevelDrain += (oldBatteryLevel - mBatteryLevel);
             }
 
-            if (wasPowered != mIsPowered || oldPlugType != mPlugType) {
+            if (wasPowered != mIsPowered || oldPlugType != mPlugType || !mIsInitialized) {
+                mIsInitialized = true;
                 mDirty |= DIRTY_IS_POWERED;
 
                 // Update wireless dock detection state.
@@ -2872,12 +2910,14 @@ public final class PowerManagerService extends SystemService
                         mNotifier.onWirelessChargingStarted(mBatteryLevel, mUserId);
                     }
                 }
+                mBaikalPowerManagerService.onChargingChanged(mIsPowered,mPlugType,mBatteryLevel,isOverheat);
             }
 
             if (mBatterySaverSupported) {
                 mBatterySaverStateMachine.setBatteryStatus(mIsPowered, mBatteryLevel,
                         mBatteryLevelLow);
             }
+            
         }
     }
 
@@ -3662,6 +3702,7 @@ public final class PowerManagerService extends SystemService
                 || (powerGroup.getWakeLockSummaryLocked() & WAKE_LOCK_STAY_AWAKE) != 0
                 || (powerGroup.getUserActivitySummaryLocked() & (
                         USER_ACTIVITY_SCREEN_BRIGHT | USER_ACTIVITY_SCREEN_DIM)) != 0
+                || isKeepOnLocked()
                 || mScreenBrightnessBoostInProgress;
     }
 
@@ -4076,6 +4117,7 @@ public final class PowerManagerService extends SystemService
             // The order of operations matters here.
             synchronized (mLock) {
                 setPowerModeInternal(MODE_DISPLAY_INACTIVE, allInactive);
+                mBaikalPowerManagerService.onScreenModeChanged(!allOff);
                 if (allOff) {
                     if (!mDecoupleHalInteractiveModeFromDisplayConfig) {
                         setHalInteractiveModeLocked(false);
@@ -4260,7 +4302,8 @@ public final class PowerManagerService extends SystemService
             mHalInteractiveModeEnabled = enable;
             Trace.traceBegin(Trace.TRACE_TAG_POWER, "setHalInteractive(" + enable + ")");
             try {
-                mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, enable);
+                // mNativeWrapper.nativeSetPowerMode(Mode.INTERACTIVE, enable);
+                // setPowerModeInternal(Mode.INTERACTIVE, enable);
             } finally {
                 Trace.traceEnd(Trace.TRACE_TAG_POWER);
             }
@@ -4819,17 +4862,35 @@ public final class PowerManagerService extends SystemService
         }
     }
 
+
     private void setPowerBoostInternal(int boost, int durationMs) {
         // Maybe filter the event.
+        if( mBaikalPowerManagerService.setPowerBoostInternal(boost,durationMs) ) return;
         mNativeWrapper.nativeSetPowerBoost(boost, durationMs);
     }
 
-    private boolean setPowerModeInternal(int mode, boolean enabled) {
+    public boolean setPowerBoostInternalFromBaikalWrapper(int boost, int durationMs) {
         // Maybe filter the event.
+        return mNativeWrapper.nativeSetPowerBoostBaikal(boost, durationMs);
+    }
+
+    private boolean setPowerModeInternal(int mode, boolean enabled) {
+        return setPowerModeInternal(mode,enabled,Process.SYSTEM_UID);
+    }
+
+    private boolean setPowerModeInternal(int mode, boolean enabled, int uid) {
+        if( mode == 0 ) return mNativeWrapper.nativeSetPowerMode(mode, enabled);
+        int result = mBaikalPowerManagerService.setPowerModeInternal(mode,enabled,uid);
+        if( result != -1  ) return result != 0;
+                // Maybe filter the event.
         if (mode == Mode.LAUNCH && enabled && mBatterySaverStateMachine != null
                 && mBatterySaverStateMachine.getBatterySaverController().isLaunchBoostDisabled()) {
             return false;
         }
+        return mNativeWrapper.nativeSetPowerMode(mode, enabled);
+    }
+
+    public boolean setPowerModeInternalFromBaikalWrapper(int mode, boolean enabled) {
         return mNativeWrapper.nativeSetPowerMode(mode, enabled);
     }
 
@@ -6131,7 +6192,7 @@ public final class PowerManagerService extends SystemService
                 return;
             }
             mContext.enforceCallingOrSelfPermission(android.Manifest.permission.DEVICE_POWER, null);
-            setPowerModeInternal(mode, enabled); // Intentionally ignore return value
+            setPowerModeInternal(mode, enabled, Binder.getCallingUid()); // Intentionally ignore return value
         }
 
         @Override // Binder call
@@ -6141,7 +6202,7 @@ public final class PowerManagerService extends SystemService
                 return false;
             }
             mContext.enforceCallingOrSelfPermission(android.Manifest.permission.DEVICE_POWER, null);
-            return setPowerModeInternal(mode, enabled);
+            return setPowerModeInternal(mode, enabled, Binder.getCallingUid());
         }
 
         @Override // Binder call

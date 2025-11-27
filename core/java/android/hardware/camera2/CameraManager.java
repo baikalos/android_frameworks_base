@@ -82,6 +82,7 @@ import android.util.Size;
 import android.view.Display;
 import android.window.DesktopModeFlags;
 
+import com.android.internal.baikalos.BaikalSpoofer;
 import com.android.internal.camera.flags.Flags;
 import com.android.internal.util.ArrayUtils;
 
@@ -1100,6 +1101,16 @@ public final class CameraManager {
             throws CameraAccessException {
         CameraCharacteristics characteristics = getCameraCharacteristics(cameraId);
         CameraDevice device = null;
+
+        Map<String, CameraCharacteristics> physicalIdsToChars =
+                getPhysicalIdToCharsMap(characteristics);
+
+
+        if( !BaikalSpoofer.isCameraEnabled(characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) ) {
+            Log.i(TAG, "openCameraDeviceUserAsync: from " + BaikalSpoofer.getPackageName() + " to " + cameraId + ", disabled by baikalos settings.");
+            return null; 
+        }
+
         synchronized (mLock) {
             ICameraDeviceUser cameraUser = null;
             CameraDevice.CameraDeviceSetup cameraDeviceSetup = null;

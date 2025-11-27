@@ -2772,7 +2772,7 @@ public class ApplicationInfo extends PackageItemInfo implements Parcelable {
      * @hide
      */
     public boolean isStopped() {
-        return (flags & ApplicationInfo.FLAG_STOPPED) != 0;
+        return false; // (flags & ApplicationInfo.FLAG_STOPPED) != 0;
     }
 
     /**

@@ -60,6 +60,7 @@ import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.app.IAppOpsCallback;
 import com.android.internal.app.IAppOpsService;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -621,6 +622,14 @@ public class Camera {
         }
 
         boolean forceSlowJpegMode = shouldForceSlowJpegMode();
+
+        CameraInfo cameraInfo = new CameraInfo();
+        getCameraInfo(cameraId, cameraInfo);
+
+        if( !BaikalSpoofer.isCameraEnabled(cameraInfo.facing == CameraInfo.CAMERA_FACING_FRONT) ) {
+            Log.i(TAG, "cameraInit: from " + BaikalSpoofer.getPackageName() + " to " + cameraId + ", disabled by baikalos settings.");
+            return -EACCESS; 
+        }
 
         try (ScopedParcelState clientAttribution =
                 context.getAttributionSource().asScopedParcelState()) {

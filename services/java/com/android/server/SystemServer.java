@@ -143,6 +143,9 @@ import com.android.server.attention.AttentionManagerService;
 import com.android.server.audio.AudioService;
 import com.android.server.autofill.AutofillManagerService;
 import com.android.server.backup.BackupManagerService;
+import com.android.server.baikalos.CpuTopService;
+import com.android.server.baikalos.BaikalService;
+import com.android.server.baikalos.BaikalAppProfileService;
 import com.android.server.biometrics.AuthService;
 import com.android.server.biometrics.BiometricService;
 import com.android.server.biometrics.sensors.face.FaceService;
@@ -167,7 +170,7 @@ import com.android.server.contextualsearch.ContextualSearchManagerService;
 import com.android.server.coverage.CoverageService;
 import com.android.server.cpu.CpuMonitorService;
 import com.android.server.crashrecovery.CrashRecoveryAdaptor;
-import com.android.server.crdroid.AttestationService;
+//import com.android.server.crdroid.AttestationService;
 import com.android.server.crdroid.CustomDeviceConfigService;
 import com.android.server.crdroid.VbmetaHashService;
 import com.android.server.credentials.CredentialManagerService;
@@ -315,6 +318,8 @@ import com.android.server.webkit.WebViewUpdateService;
 import com.android.server.wm.ActivityTaskManagerService;
 import com.android.server.wm.WindowManagerGlobalLock;
 import com.android.server.wm.WindowManagerService;
+
+
 
 import dalvik.system.VMRuntime;
 
@@ -1246,6 +1251,21 @@ public final class SystemServer implements Dumpable {
         mSystemServiceManager.startService(AccessCheckingService.class);
         t.traceEnd();
 
+
+        try {
+            t.traceBegin("StartBaikalAppProfileService");
+            mSystemServiceManager.startService(BaikalAppProfileService.class);
+            t.traceEnd();
+
+            t.traceBegin("StartBaikalService");
+            mSystemServiceManager.startService(BaikalService.class);
+            t.traceEnd();
+        } catch (Throwable e) {
+            Slog.e("System", "******************************************");
+            Slog.e("System", "************ Failure starting baikalos service");
+            // throw e;
+        }
+
         // Activity manager runs the show.
         t.traceBegin("StartActivityManager");
         // TODO: Might need to move after migration to WM.
@@ -1845,7 +1865,7 @@ public final class SystemServer implements Dumpable {
 
         } catch (Throwable e) {
             Slog.e("System", "******************************************");
-            Slog.e("System", "************ Failure starting core service");
+            Slog.e("System", "************ Failure starting other services");
             throw e;
         }
 
@@ -2842,9 +2862,9 @@ public final class SystemServer implements Dumpable {
             }
 
             // AttestationService
-            t.traceBegin("AttestationService");
-            mSystemServiceManager.startService(AttestationService.class);
-            t.traceEnd();
+            //t.traceBegin("AttestationService");
+            //mSystemServiceManager.startService(AttestationService.class);
+            //t.traceEnd();
 
             // VbmetaHashService
             t.traceBegin("VbmetaHashService");
@@ -2870,6 +2890,11 @@ public final class SystemServer implements Dumpable {
         t.traceBegin("StartMediaProjectionManager");
         mSystemServiceManager.startService(MediaProjectionManagerService.class);
         t.traceEnd();
+
+        t.traceBegin("StartCpuTopService");
+        ServiceManager.addService("cpu_top",new CpuTopService());
+        t.traceEnd();
+
 
         if (isWatch) {
             // Must be started before services that depend it, e.g. WearConnectivityService

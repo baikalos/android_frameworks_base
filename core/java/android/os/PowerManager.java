@@ -33,6 +33,8 @@ import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
 import android.annotation.TestApi;
+import android.baikalos.BaikalAppProfile;
+import android.baikalos.BaikalContext;
 import android.app.PropertyInvalidatedCache;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.Context;
@@ -2505,6 +2507,7 @@ public final class PowerManager {
      */
     public boolean isDeviceIdleMode() {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_IDLE) != 0 ) return false;
             return mService.isDeviceIdleMode();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2524,6 +2527,7 @@ public final class PowerManager {
      */
     public boolean isDeviceLightIdleMode() {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_IDLE) != 0 ) return false;
             return mService.isLightDeviceIdleMode();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2573,6 +2577,7 @@ public final class PowerManager {
      */
     public boolean isLowPowerStandbyEnabled() {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_IDLE) != 0 ) return false;
             return mService.isLowPowerStandbyEnabled();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2594,6 +2599,7 @@ public final class PowerManager {
     })
     public void setLowPowerStandbyEnabled(boolean enabled) {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_IDLE) != 0 ) return;
             mService.setLowPowerStandbyEnabled(enabled);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2615,6 +2621,7 @@ public final class PowerManager {
     })
     public void setLowPowerStandbyActiveDuringMaintenance(boolean activeDuringMaintenance) {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_IDLE) != 0 ) return;
             mService.setLowPowerStandbyActiveDuringMaintenance(activeDuringMaintenance);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2635,6 +2642,7 @@ public final class PowerManager {
     })
     public void forceLowPowerStandbyActive(boolean active) {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_IDLE) != 0 ) return;
             mService.forceLowPowerStandbyActive(active);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2658,6 +2666,7 @@ public final class PowerManager {
     })
     public void setLowPowerStandbyPolicy(@Nullable LowPowerStandbyPolicy policy) {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_IDLE) != 0 ) return;
             mService.setLowPowerStandbyPolicy(LowPowerStandbyPolicy.toParcelable(policy));
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2694,6 +2703,7 @@ public final class PowerManager {
      */
     public boolean isExemptFromLowPowerStandby() {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_BATTERY_OPT) != 0 ) return true;
             return mService.isExemptFromLowPowerStandby();
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2710,6 +2720,7 @@ public final class PowerManager {
      */
     public boolean isAllowedInLowPowerStandby(@LowPowerStandbyAllowedReason int reason) {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_BATTERY_OPT) != 0 ) return true;
             return mService.isReasonAllowedInLowPowerStandby(reason);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2722,6 +2733,7 @@ public final class PowerManager {
      */
     public boolean isAllowedInLowPowerStandby(@NonNull String feature) {
         try {
+            if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_BATTERY_OPT) != 0 ) return true;
             return mService.isFeatureAllowedInLowPowerStandby(feature);
         } catch (RemoteException e) {
             throw e.rethrowFromSystemServer();
@@ -2779,6 +2791,7 @@ public final class PowerManager {
      * features to the app. Guardrails for extreme cases may still be applied.
      */
     public boolean isIgnoringBatteryOptimizations(String packageName) {
+        if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_BATTERY_OPT) != 0 ) return true;
         return getPowerExemptionManager().isAllowListed(packageName, true);
     }
 

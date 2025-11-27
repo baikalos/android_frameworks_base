@@ -29,6 +29,7 @@ import android.app.BroadcastOptions;
 import android.app.IApplicationThread;
 import android.app.IServiceConnection;
 import android.app.compat.CompatChanges;
+import android.baikalos.BaikalContext;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
@@ -140,6 +141,11 @@ public class ContextWrapper extends Context {
     @Override
     public Looper getMainLooper() {
         return mBase.getMainLooper();
+    }
+
+    @Override
+    public BaikalContext getBaikalContext() {
+        return mBase.getBaikalContext();
     }
 
     @Override

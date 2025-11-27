@@ -5349,11 +5349,13 @@ public final class ActiveServices {
             }
 
             if (allowCancel) {
-                final boolean shouldStop = r.canStopIfKilled(canceled);
+                final boolean shouldStop = r.canStopIfKilled(canceled) || 
+                mAm.getBaikalAM().stopIfKilled(r);
                 if (shouldStop && !r.hasAutoCreateConnections()) {
                     // Nothing to restart.
                     return false;
                 }
+                
                 reason = (r.startRequested && !shouldStop) ? "start-requested" : "connection";
             } else {
                 reason = "always";
@@ -7386,7 +7388,7 @@ public final class ActiveServices {
                         sr.userId, sr.crashCount, sr.shortInstanceName,
                         sr.app != null ? sr.app.getPid() : -1);
                 bringDownServiceLocked(sr, true);
-            } else if (!allowRestart
+            } else if (!allowRestart || mAm.getBaikalAM().stopIfKilled(sr)
                     || !mAm.mUserController.isUserRunning(sr.userId, 0)) {
                 bringDownServiceLocked(sr, true);
             } else {

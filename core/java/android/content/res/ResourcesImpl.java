@@ -61,6 +61,9 @@ import android.view.DisplayAdjustments;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.GrowingArrayUtils;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
+
 import libcore.util.NativeAllocationRegistry;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -341,6 +344,11 @@ public class ResourcesImpl {
     @NonNull
     String getResourcePackageName(@AnyRes int resid) throws NotFoundException {
         String str = mAssets.getResourcePackageName(resid);
+        if (BaikalSpoofer.isFilterFsAdd()) {
+            if(str != null && str.contains("lineage") ) {
+                //str = str.replace("lineage","baikal");
+            }
+        }
         if (str != null) return str;
         throw new NotFoundException("Unable to find resource ID #0x"
                 + Integer.toHexString(resid));

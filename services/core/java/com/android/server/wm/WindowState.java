@@ -261,6 +261,9 @@ import com.android.server.wm.SurfaceAnimator.AnimationType;
 import com.android.server.wm.utils.RegionUtils;
 import com.android.window.flags.Flags;
 
+import android.baikalos.BaikalAppProfile;
+import com.android.server.baikalos.*;
+
 import dalvik.annotation.optimization.NeverCompile;
 
 import java.io.PrintWriter;
@@ -290,6 +293,8 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
 
     static final int EXCLUSION_LEFT = 0;
     static final int EXCLUSION_RIGHT = 1;
+
+    final BaikalAppProfile mBaikalAppProfile;
 
     final WindowManagerPolicy mPolicy;
     final Context mContext;
@@ -1061,6 +1066,9 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
         if (!surfaceTrustedOverlay()) {
             mInputWindowHandle.setTrustedOverlay(isWindowTrustedOverlay());
         }
+
+        mBaikalAppProfile = BaikalService.getInstance().getBaikalAppProfileNotNullInternal(mAttrs.packageName,s.mUid);
+
         if (DEBUG) {
             Slog.v(TAG, "Window " + this + " client=" + c.asBinder()
                             + " token=" + token + " (" + mAttrs.token + ")" + " params=" + a);
@@ -1805,6 +1813,10 @@ class WindowState extends WindowContainer<WindowState> implements WindowManagerP
 
     boolean isSecureLocked() {
         if (mWmService.getDisableSecureWindows()) {
+            return false;
+        }
+
+        if( (mBaikalAppProfile.mOverride & BaikalAppProfile.BAIKAL_OVERRIDE_FORCED_SCREENSHOT) != 0 ) {
             return false;
         }
 

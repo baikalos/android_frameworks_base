@@ -5934,6 +5934,15 @@ public final class Settings {
         public static final String ACCELEROMETER_ROTATION = "accelerometer_rotation";
 
         /**
+         * Control whether the accelerometer will be used to change screen
+         * orientation.  If 0, it will not be used unless explicitly requested
+         * by the application; if 1, it will be used by default unless explicitly
+         * disabled by the application.
+         */
+        @Readable
+        public static final String ACCELEROMETER_ROTATION_DEFAULT = "accelerometer_rotation_default";
+
+        /**
          * Control the type of rotation which can be performed using the accelerometer
          * if ACCELEROMETER_ROTATION is enabled.
          * Value is a bitwise combination of
@@ -14437,6 +14446,63 @@ public final class Settings {
         /** @hide */
         public static final int PRIVATE_SPACE_AUTO_LOCK_AFTER_DEVICE_RESTART = 2;
 
+
+        /* Start of BaikalOS Secure Settings */
+
+        /**
+         * BaikalOS Trust Settings
+         * @hide
+         */
+
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_ENABLED = "baikalos_trust_enabled";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_ALWAYS = "baikalos_trust_always";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_INCALL = "baikalos_trust_incall";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_BTLE_DEV = "baikalos_trust_btle_dev";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_WIFI_DEV = "baikalos_trust_wifi_dev";
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_EXPAND_ALL_NOTIFICATIONS = "baikalos_expand_all_notifications";
+
+
+        /*
+         * @hide
+         */
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_FP_WAKE_ENABLED = "baikalos_fp_wake_enabled";
+
+
+        /* End of BaikalOS Secure Settings */
+
         /**
          * The different auto lock options for private space.
          *
@@ -14630,23 +14696,6 @@ public final class Settings {
          * @hide
          */
         public static final String AAPM_USB_DATA_PROTECTION = "aapm_usb_data_protection";
-
-
-        /**
-         * BaikalOS Secure Settings Start
-         */        
-
-        /**
-         * Integer property which determines whether advanced protection USB data protection
-         * feature is on or not.
-         *
-         * @hide
-         */
-        public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
-
-        /**
-         * BaikalOS Secure Settings End
-         */        
 
     }
 
@@ -21902,6 +21951,13 @@ public final class Settings {
         @SuppressLint("NoSettingsProvider")
         public static final String BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS = "baikalos_trustable_timeout_in_millis";
 
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BRIGHTNESS_MODE = "baikalos_brightness_mode";
 
         /**
          * BaikalOS Global Settings End

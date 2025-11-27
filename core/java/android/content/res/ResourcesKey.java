@@ -24,6 +24,9 @@ import android.compat.annotation.UnsupportedAppUsage;
 import android.content.res.loader.ResourcesLoader;
 import android.ravenwood.annotation.RavenwoodKeepWholeClass;
 import android.text.TextUtils;
+import android.util.Log;
+
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -206,6 +209,12 @@ public final class ResourcesKey {
             builder.append(TextUtils.join(",", mLoaders));
         }
         builder.append("]}");
-        return builder.toString();
+        String result = builder.toString();
+        if( !BaikalSpoofer.isFilterFsAdd() ) return result;
+        //if( result.contains("lineage") ) {
+        //    Log.d("ResourceKey", "Hide lineage debug overlay:" + result);
+        //    return result.replace("lineage", "xiaomi");
+        //}
+        return result;
     }
 }

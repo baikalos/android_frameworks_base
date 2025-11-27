@@ -19,8 +19,9 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
-import android.provider.Settings.Secure;
+import android.provider.Settings.Global;
 import android.service.quicksettings.Tile;
+import android.util.Log;
 import android.widget.Switch;
 
 import androidx.annotation.Nullable;
@@ -39,10 +40,11 @@ import com.android.systemui.qs.QSHost;
 import com.android.systemui.qs.QsEventLogger;
 import com.android.systemui.qs.UserSettingObserver;
 import com.android.systemui.qs.logging.QSLogger;
+import com.android.systemui.qs.SettingObserver;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
 import com.android.systemui.res.R;
 import com.android.systemui.statusbar.policy.BatteryController;
-import com.android.systemui.util.settings.SecureSettings;
+import com.android.systemui.util.settings.GlobalSettings;
 
 import javax.inject.Inject;
 
@@ -50,10 +52,14 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
         BatteryController.BatteryStateChangeCallback {
 
     public static final String TILE_SPEC = "battery";
+    static final boolean DEBUG = true;
+    static final String TAG = "BatterySaverTile";
 
     private final BatteryController mBatteryController;
     @VisibleForTesting
-    protected final UserSettingObserver mSetting;
+    protected SettingObserver mSetting;
+
+    private GlobalSettings mGlobalSettings;
 
     private int mLevel;
     private boolean mPowerSave;
@@ -72,30 +78,33 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
             ActivityStarter activityStarter,
             QSLogger qsLogger,
             BatteryController batteryController,
-            SecureSettings secureSettings
+            GlobalSettings globalSettings
     ) {
         super(host, uiEventLogger, backgroundLooper, mainHandler, falsingManager, metricsLogger,
                 statusBarStateController, activityStarter, qsLogger);
+        mGlobalSettings = globalSettings;
         mBatteryController = batteryController;
         mBatteryController.observe(getLifecycle(), this);
-        int currentUser = host.getUserContext().getUserId();
-        mSetting = new UserSettingObserver(
-                secureSettings,
-                mHandler,
-                Secure.LOW_POWER_WARNING_ACKNOWLEDGED,
-                currentUser
-        ) {
-            @Override
-            protected void handleValueChanged(int value, boolean observedChange) {
-                // mHandler is the background handler so calling this is OK
-                handleRefreshState(null);
-            }
-        };
+
     }
 
     @Override
     public BooleanState newTileState() {
-        return new BooleanState();
+        BooleanState state = new BooleanState();
+        state.handlesLongClick = false;
+        return state;
+    }
+
+    @Override
+    protected void handleInitialize() {
+        mSetting = new SettingObserver(mGlobalSettings, mHandler, Global.BAIKALOS_EXTREME_IDLE) {
+            @Override
+            protected void handleValueChanged(int value, boolean observedChange) {
+                // mHandler is the background handler so calling this is OK
+                if (DEBUG) Log.d(TAG, "handleValueChanged: value=" + value );
+                refreshState(null);
+            }
+        };
     }
 
     @Override
@@ -104,10 +113,10 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
         mSetting.setListening(false);
     }
 
-    @Override
-    protected void handleUserSwitch(int newUserId) {
-        mSetting.setUserId(newUserId);
-    }
+    //@Override
+    //protected void handleUserSwitch(int newUserId) {
+    //    mSetting.setUserId(newUserId);
+    //}
 
     @Override
     public int getMetricsCategory() {
@@ -125,17 +134,19 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
         }
     }
 
+    @Nullable
     @Override
     public Intent getLongClickIntent() {
-        return new Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS);
+        return null; //return new Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS);
     }
 
     @Override
     protected void handleClick(@Nullable Expandable expandable) {
-        if (getState().state == Tile.STATE_UNAVAILABLE) {
-            return;
-        }
-        mBatteryController.setPowerSaveMode(!mPowerSave, expandable);
+        if (DEBUG) Log.d(TAG, "handleClick: value=" + mState.value );
+        mSetting.setValue(mState.value ? 0 : 1);
+        refreshState();
+
+        //mBatteryController.setPowerSaveMode(!mPowerSave, expandable);
     }
 
     @Override
@@ -145,8 +156,14 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
 
     @Override
     protected void handleUpdateState(BooleanState state, Object arg) {
-        state.state = mPluggedIn ? Tile.STATE_UNAVAILABLE
-                : mPowerSave ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE;
+        if (mSetting == null) {
+            if (DEBUG) Log.d(TAG, "handleSetListening: mSetting=null!");
+            return;
+        }
+        final int value = arg instanceof Integer ? (Integer)arg : mSetting.getValue();
+        if (DEBUG) Log.d(TAG, "handleSetListening: value=" + value);
+        mPowerSave = value != 0;
+        state.state = mPowerSave ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE;
         state.icon = maybeLoadResourceIcon(mPowerSave
                 ? R.drawable.qs_battery_saver_icon_on : R.drawable.qs_battery_saver_icon_off);
         state.label = mContext.getString(R.string.battery_detail_switch_title);
@@ -156,16 +173,17 @@ public class BatterySaverTile extends QSTileImpl<BooleanState> implements
         state.expandedAccessibilityClassName = Switch.class.getName();
     }
 
-    @Override
-    public void onBatteryLevelChanged(int level, boolean pluggedIn, boolean charging) {
-        mLevel = level;
-        mPluggedIn = pluggedIn;
-        mCharging = charging;
-        refreshState(level);
-    }
+    //@Override
+    //public void onBatteryLevelChanged(int level, boolean pluggedIn, boolean charging) {
+    //    mLevel = level;
+    //    mPluggedIn = pluggedIn;
+    //    mCharging = charging;
+    //    refreshState(level);
+    //}
 
     @Override
     public void onPowerSaveChanged(boolean isPowerSave) {
+        if (DEBUG) Log.d(TAG, "onPowerSaveChanged: isPowerSave=" + isPowerSave);
         mPowerSave = isPowerSave;
         refreshState(null);
     }

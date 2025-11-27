@@ -40,6 +40,7 @@ import com.android.server.display.brightness.strategy.OffloadBrightnessStrategy;
 import com.android.server.display.brightness.strategy.OverrideBrightnessStrategy;
 import com.android.server.display.brightness.strategy.ScreenOffBrightnessStrategy;
 import com.android.server.display.brightness.strategy.TemporaryBrightnessStrategy;
+import com.android.server.display.brightness.strategy.BaikalBrightnessStrategy;
 import com.android.server.display.feature.DisplayManagerFlags;
 
 import java.io.PrintWriter;
@@ -207,6 +208,8 @@ public class DisplayBrightnessStrategySelector {
                 displayBrightnessStrategy = mFallbackBrightnessStrategy;
             }
         }
+
+        displayBrightnessStrategy = BaikalBrightnessStrategy.getInstance(displayBrightnessStrategy);
 
         if (mDisplayManagerFlags.isRefactorDisplayPowerControllerEnabled()) {
             postProcess(constructStrategySelectionNotifyRequest(displayBrightnessStrategy,
