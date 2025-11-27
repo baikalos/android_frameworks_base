@@ -7422,6 +7422,65 @@ public final class Settings {
         public static final String EDGE_LIGHT_ANIMATION_EFFECT = "edge_light_animation_effect";
 
         /**
+         * BaikalOS System Settings Start
+         */        
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING = "baikalos_smart_charging";
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING_RESET_STATS = "baikalos_smart_charging_reset_stats";
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING_LEVEL = "baikalos_smart_charging_level";
+
+        /**
+         * @hide
+         */
+        public static final String BAIKALOS_SMART_CHARGING_RESUME_LEVEL = "baikalos_smart_charging_resume_level";
+
+        /**
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_MINFPS = "baikalos_default_minfps";
+
+        /**
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_MAXFPS = "baikalos_default_maxfps";
+
+        /**
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PULSE_DURATION = "baikalos_pulse_duration";
+
+        /**
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PULSE_DURATION_IN = "baikalos_pulse_duration_in";
+
+        /**
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PULSE_DURATION_OUT = "baikalos_pulse_duration_out";
+
+        /**
+         * BaikalOS System Settings End
+         */        
+
+
+        /**
          * Keys we no longer back up under the current schema, but want to continue to
          * process when restoring historical backup datasets.
          *
@@ -14571,6 +14630,24 @@ public final class Settings {
          * @hide
          */
         public static final String AAPM_USB_DATA_PROTECTION = "aapm_usb_data_protection";
+
+
+        /**
+         * BaikalOS Secure Settings Start
+         */        
+
+        /**
+         * Integer property which determines whether advanced protection USB data protection
+         * feature is on or not.
+         *
+         * @hide
+         */
+        public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
+
+        /**
+         * BaikalOS Secure Settings End
+         */        
+
     }
 
     /**
@@ -21111,6 +21188,725 @@ public final class Settings {
          */
         public static final String REDACT_OTP_NOTIFICATIONS_FROM_UNTRUSTED_LISTENERS =
                 "redact_otp_notifications_from_untrusted_listeners";
+
+
+        /**
+         * BaikalOS Global Settings Start
+         */        
+
+
+        /**
+         * This preference enables Debug
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEBUG = "baikalos_debug";
+
+        /**
+         * This preference DebugMask
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEBUG_MASK = "baikalos_debug_mask";
+
+        /**
+         * This preference enables Aggressive Idle.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_AGGRESSIVE_IDLE = "baikalos_aggressive_idle";
+
+        /**
+         * This preference enables Extreme Idle.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_EXTREME_IDLE = "baikalos_extreme_idle";
+
+        /**
+         * This preference enables Aggressive Device Idle.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_AGGRESSIVE_DEVICE_IDLE = "baikalos_aggressive_device_idle";
+
+        /**
+         * This preference disables Alarm wakeups for regular apps.
+         * @hide
+         */
+        public static final String BAIKALOS_ALARMS_NOWAKE = "baikalos_alarms_no_wake";
+
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_KILL_IN_BACKGROUND = "baikalos_kill_in_background";
+
+        /**
+         * This preference enables Ato Limit in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_AUTO_LIMIT = "baikalos_auto_limit";
+
+        /**
+         * This preference enables Stamina Mode.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_STAMINA_ENABLED = "baikalos_stamina_enabled";
+
+        /**
+         * This preference enables Hide GMS powersave option.
+         * @hide
+         */
+        public static final String BAIKALOS_UNRESTRICTED_NET = "baikalos_unrestricted_net";
+
+        /**
+         * This preference enables Hide GMS powersave option.
+         * @hide
+         */
+        public static final String BAIKALOS_FULL_DATA_SAVER = "baikalos_full_data_saver";
+
+
+        /**
+         * This preference holds SBC priority option.
+         * @hide
+         */
+        public static final String BAIKALOS_BT_SBC_PRIORITY = "baikalos_bt_sbc_priority";
+
+
+        /**
+         * This preference set current active routation mode
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_ROTATION = "baikalos_default_rotation";
+
+        /**
+         * This preference enabled forced fullscreen Incoming Call UI
+         * @hide
+         */
+        public static final String BAIKALOS_HEADSUP_INCALL = "baikalos_headsup_incall";
+
+        /**
+         * This preference enabled forced fullscreen UI
+         * @hide
+         */
+        public static final String BAIKALOS_HEADSUP_FORCE_FULLSCREEN = "baikalos_headsup_force_fullscreen";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_BPCHARGE_FORCE = "baikalos_bpcharge_force";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_LIMITED_CHARGE_FORCE = "baikalos_limited_charge_force";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_BPCHARGE_SCREEN_ON = "baikalos_bpcharge_screen_on";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_LIMITED_CHARGE_SCREEN_ON = "baikalos_limited_charge_screen_on";
+
+        /**
+         * This preference enabled forced Bypass Charging
+         * @hide
+         */
+        public static final String BAIKALOS_AOD_ON_CHARGER = "baikalos_aod_on_charger";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_APP_PROFILES = "baikalos_app_profiles";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_APP_PROFILES_BACKUP = "baikalos_app_profiles_backup";
+
+        /**
+         * This preference holds app profiles.
+         * 
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_SBC_BITRATE = "baikalos_sbc_bitrate";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_PROXIMITY_DISABLE = "baikalos_proximity_disable";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_PERFORMANCE = "baikalos_default_performance";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_THERMAL = "baikalos_default_thermal";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_SCREENOFF_PERFORMANCE = "baikalos_default_screenoff_performance";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_SCREENOFF_THERMAL = "baikalos_default_screenoff_thermal";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_IDLE_PERFORMANCE = "baikalos_default_idle_performance";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_DEFAULT_IDLE_THERMAL = "baikalos_default_idle_thermal";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_R_SECURE = "baikalos_r_secure";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_DISABLE_AUTOREVOKE = "baikalos_disable_autorevoke";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_INTERACTION = "baikalos_boost_interaction";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_DISPLAY_UPDATE_IMMINENT = "baikalos_boost_display_update_imminent";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_RENDERING = "baikalos_boost_rendering";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_SILVER = "baikalos_boost_override_silver";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_GOLD = "baikalos_boost_override_gold";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BOOST_OVERRIDE_PLATINUM = "baikalos_boost_override_platinum";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BRIGHTNESS_CURVE = "baikalos_brightness_curve";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CHARGING_MODE = "baikalos_charging_mode";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_ALLOW_DOWNGRADE = "baikalos_allow_downgrade";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_ALLOW_SIG_OVERRIDE = "baikalos_allow_sig_override";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_IGNORE_ZERO_BATTERY = "baikalos_ignore_zero_battery";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_ON = "baikalos_power_level_on";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_ON_CHARGER = "baikalos_power_level_on_charger";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_STANDBY = "baikalos_power_level_standby";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_IDLE = "baikalos_power_level_idle";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_CURRENT = "baikalos_power_level_current";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWER_LEVEL_IND = "baikalos_power_level_ind";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWERSAVER_POLICY = "baikalos_powersaver_policy";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_POWERSAVER_POLICY_BACKUP = "baikalos_powersaver_policy_backup";
+
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SUPER_SAVER = "baikalos_super_saver";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SUPER_SAVER_DRAW = "baikalos_super_saver_draw";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BLOCK_OVERLAYS = "baikalos_block_overlays";
+
+        /**
+         * This preference holds app profiles.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_ENABLE_OPTIONAL_COMPONENTS = "baikalos_enable_optional_components";
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_OLD_LINKS = "baikalos_old_links";
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_PROFILE_MANAGER_REFRESH = "baikalos_profile_manager_refresh";
+
+        /**
+         * This preference enables Kill in Background.
+         * @hide
+         */
+        public static final String BAIKALOS_PS_MANAGER_REFRESH = "baikalos_ps_manager_refresh";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_GMS_SPOOF = "baikalos_enable_gms_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_VENDING_SPOOF = "baikalos_enable_vending_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_SERVICES_SPOOF = "baikalos_enable_services_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF = "baikalos_enable_certificate_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF_SERVICES = "baikalos_enable_certificate_spoof_services";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF_VENDING = "baikalos_enable_certificate_spoof_vending";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_CERTIFICATE_SPOOF_APPS = "baikalos_enable_certificate_spoof_apps";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_ENABLE_SIGNATURE_SPOOF = "baikalos_enable_signature_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        //@Readable
+        //@SuppressLint("NoSettingsProvider")
+        //public static final String BAIKALOS_DISABLE_GMS_SWA_SPOOF = "baikalos_disable_gms_swa_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_GMS_OVERRIDE_PROPS = "baikalos_gms_override_spoof";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_GMS_SPOOFER_UPDATE = "baikalos_gms_spoofer_update";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_APP_VOLUMES = "baikalos_app_volumes";
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_RESET_PERSISTENT_MAC = "baikalos_reset_persistent_mac";
+
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_LOCATION_MODE = "baikalos_location_mode";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_BLOCK_IF_BUSY = "baikalos_block_if_busy";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_WIFI_DEV = "baikalos_sd_wifi_dev";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_BT_DEV = "baikalos_sd_bt_dev";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_BTLE_DEV = "baikalos_sd_btle_dev";   
+
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_KEEP = "baikalos_sd_keep";   
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_INCALL = "baikalos_sd_incall";   
+
+        /**
+         * This preference holds baikalos option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_SD_INCALL_CHARGER = "baikalos_sd_incall_charger";
+
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_COLOR_DOZE = "baikalos_color_doze";   
+
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CAMERA_DISABLE_BACK = "baikalos_camera_disable_back";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CAMERA_DISABLE_FRONT = "baikalos_camera_disable_front";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CAMERA_IGNORE_IR = "baikalos_camera_ignore_ir";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_LOW_BATTERY_TRIGGER_LEVEL = "baikalos_low_battery_trigger_level";   
+
+        /**
+         * This preference holds autorevoke option.
+         * @hide
+         */
+        @Readable
+        public static final String BAIKALOS_CRITICAL_BATTERY_TRIGGER_LEVEL = "baikalos_critical_battery_trigger_level";   
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_BT = "baikalos_airplane_dont_toggle_bt";   
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_WIFI = "baikalos_airplane_dont_toggle_wifi";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_HIDE_GMS = "baikalos_hide_gms";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_HIDE_HMS = "baikalos_hide_hms";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_HIDE_3P = "baikalos_hide_3p";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_CONTACTS = "baikalos_block_contacts";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_CALENDAR = "baikalos_block_calendar";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_CALLLOG = "baikalos_block_calllog";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_MEDIA = "baikalos_block_media";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_SMS = "baikalos_block_sms";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_BLOCK_NOTIFICATION = "baikalos_block_notification";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUST_TIMEOUT_IN_MILLIS = "baikalos_trust_timeout_in_millis";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = "baikalos_trustable_idle_timeout_in_millis";
+
+        /**
+         * This preference holds autorevoke option.
+         */
+        @Readable
+        @SuppressLint("NoSettingsProvider")
+        public static final String BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS = "baikalos_trustable_timeout_in_millis";
+
+
+        /**
+         * BaikalOS Global Settings End
+         */        
+
 
         /**
          * Settings migrated from Wear OS settings provider.
