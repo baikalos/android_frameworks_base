@@ -163,6 +163,17 @@ public interface AppStandbyInternal {
     void setAppStandbyBucket(@NonNull String packageName, int bucket, int userId, int callingUid,
             int callingPid);
 
+
+    /**
+     * Changes an app's standby bucket to the provided value. The caller can only set the standby
+     * bucket for a different app than itself.
+     * If attempting to automatically place an app in the RESTRICTED bucket, use
+     * {@link #restrictApp(String, int, int)} instead.
+     */
+    void setAppStandbyBucketInternal(@NonNull String packageName, int userId, long elapsedRealtime,
+            int bucket, int reason);
+
+
     /**
      * Changes the app standby bucket for multiple apps at once.
      */

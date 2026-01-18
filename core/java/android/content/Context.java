@@ -63,6 +63,7 @@ import android.app.ambientcontext.AmbientContextManager;
 import android.app.appfunctions.AppFunctionManager;
 import android.app.people.PeopleManager;
 import android.app.time.TimeManager;
+import android.baikalos.BaikalContext;
 import android.companion.virtual.VirtualDeviceManager;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
@@ -1062,6 +1063,12 @@ public abstract class Context {
      */
     @RavenwoodSupported(type = SupportType.SUBCLASS, subclass = "ContextImpl")
     public abstract Looper getMainLooper();
+
+
+    public @NonNull BaikalContext getBaikalContext() {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
 
     /**
      * Return an {@link Executor} that will run enqueued tasks on the main
@@ -4686,7 +4693,9 @@ public abstract class Context {
                 NPU_SERVICE,
                 WEB_APP_SERVICE,
                 D2D_CONNECTIVITY_SERVICE,
+                BAIKAL_SERVICE
             })
+
     @Retention(RetentionPolicy.SOURCE)
     public @interface ServiceName {}
 
@@ -7345,6 +7354,13 @@ public abstract class Context {
      * @hide
      */
     public static final String DYNAMIC_INSTRUMENTATION_SERVICE = "dynamic_instrumentation";
+
+
+    /**
+     * Service to perform operations needed for BaikalOS customizations.
+     * @hide
+     */
+    public static final String BAIKAL_SERVICE = "baikal_service";
 
     /**
      * Bridge service used by uprobestats.

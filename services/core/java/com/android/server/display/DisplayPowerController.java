@@ -3075,7 +3075,10 @@ final class DisplayPowerController implements AutomaticBrightnessController.Call
 
         @Override
         public void onChange(boolean selfChange, Uri uri) {
-            if (uri.equals(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS_MODE))) {
+            if (uri.equals(Settings.Global.getUriFor(Settings.Global.BAIKALOS_BRIGHTNESS_MODE))) {
+                Slog.i(mTag, "BaikalOS brightness mode changed ");
+                sendUpdatePowerState();
+            } else if (uri.equals(Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS_MODE))) {
                 mHandler.postAtTime(() -> {
                     handleBrightnessModeChange();
                     updatePowerState();
