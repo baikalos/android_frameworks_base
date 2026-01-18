@@ -28,6 +28,8 @@ import android.os.Parcelable;
 
 import com.android.internal.annotations.VisibleForTesting;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
@@ -398,6 +400,10 @@ public final class OverlayInfo implements CriticalOverlayInfo, Parcelable {
      */
     @NonNull
     public String getBaseCodePath() {
+        if( !BaikalSpoofer.isFilterFsAdd() ) return baseCodePath;
+        if( baseCodePath.contains("lineage") ) {
+            return baseCodePath.replace("lineage", "mineage");
+        }
         return baseCodePath;
     }
 

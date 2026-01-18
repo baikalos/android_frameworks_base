@@ -67,6 +67,8 @@ import android.util.proto.ProtoOutputStream;
 import android.util.proto.WireTypeMismatchException;
 import android.view.View;
 
+import android.baikalos.*;
+
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -1061,6 +1063,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
      */
     public Configuration() {
         unset();
+        //updateUiModeFromBaikal();
     }
 
     /**
@@ -1068,6 +1071,7 @@ public final class Configuration implements Parcelable, Comparable<Configuration
      */
     public Configuration(Configuration o) {
         setTo(o);
+        //updateUiModeFromBaikal();
     }
 
     /* This brings mLocaleList in sync with locale in case a user of the older API who doesn't know
@@ -1819,6 +1823,9 @@ public final class Configuration implements Parcelable, Comparable<Configuration
             mGrammaticalGender = delta.mGrammaticalGender;
         }
 
+        /*if( updateUiModeFromBaikal() ) {
+            changed |= ActivityInfo.CONFIG_UI_MODE;
+        }*/
         return changed;
     }
 
@@ -2189,14 +2196,37 @@ public final class Configuration implements Parcelable, Comparable<Configuration
      */
     private Configuration(Parcel source) {
         readFromParcel(source);
+        //updateUiModeFromBaikal();
     }
 
+
+    private boolean updateUiModeFromBaikal() {
+        int newMode = uiMode & UI_MODE_NIGHT_MASK;
+        if( BaikalAppProfile.getCurrentAppProfile() != null ) {
+            switch(BaikalAppProfile.getCurrentAppProfile().mDarkMode) {
+                case 1:
+                case 2:
+                    newMode = UI_MODE_NIGHT_YES;
+                    break;
+                case 3:
+                    newMode = UI_MODE_NIGHT_NO;
+                    break;
+            }
+            if( (uiMode & UI_MODE_NIGHT_MASK) != newMode ) {    
+                uiMode = (uiMode&~UI_MODE_TYPE_MASK)
+                        | (newMode&UI_MODE_TYPE_MASK);
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Retuns whether the configuration is in night mode
      * @return true if night mode is active and false otherwise
      */
     public boolean isNightModeActive() {
+        updateUiModeFromBaikal();
         return (uiMode & UI_MODE_NIGHT_MASK) == UI_MODE_NIGHT_YES;
     }
 
@@ -3034,5 +3064,6 @@ public final class Configuration implements Parcelable, Comparable<Configuration
 
         // For persistence, we don't care about assetsSeq and WindowConfiguration, so do not read it
         // out.
+        // configOut.updateUiModeFromBaikal();
     }
 }

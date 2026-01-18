@@ -1289,6 +1289,7 @@ public final class ActiveServices {
                 }
                 if (DEBUG_DELAYED_STARTS) Slog.v(TAG_SERVICE, "Not delaying: " + r);
                 addToStarting = true;
+                mAm.getBaikalAM().incBackgroundStartCount(r.appInfo.uid,callingUid,callingPid);
             } else if (proc.getCurProcState() >= ActivityManager.PROCESS_STATE_SERVICE) {
                 // We slightly loosen when we will enqueue this new service as a background
                 // starting service we are waiting for, to also include processes that are
@@ -5506,7 +5507,8 @@ public final class ActiveServices {
             }
 
             if (allowCancel) {
-                final boolean shouldStop = r.canStopIfKilled(canceled);
+                final boolean shouldStop = r.canStopIfKilled(canceled) || 
+                mAm.getBaikalAM().stopIfKilled(r);
                 if (shouldStop && !r.hasAutoCreateConnections()) {
                     // Nothing to restart.
                     return false;

@@ -146,6 +146,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringTokenizer;
 
+
+import android.baikalos.*;
+import com.android.internal.baikalos.*;
+import android.os.ServiceManager;
+import android.os.ServiceManager.ServiceNotFoundException;
+
+
 /**
  * TODO(b/135203078): Differentiate between parse_ methods and some add_ method for whether it
  * mutates the passed-in component or not. Or consolidate so all parse_ methods mutate.
@@ -1077,6 +1084,8 @@ public class ParsingPackageUtils {
                     "Found duplicate permission with a different attribute value."
             );
         }
+
+        convertBaikalPermissions(pkg);
 
         convertCompatPermissions(pkg);
 
@@ -3204,7 +3213,31 @@ public class ParsingPackageUtils {
         }
     }
 
+    private static void convertBaikalPermissions(ParsingPackage pkg) {
+        Slog.i(TAG, "convertBaikalPermissions:" + pkg);
+
+        IBaikalAppProfileService baikal = IBaikalAppProfileService.Stub.asInterface(ServiceManager.getService("baikal_app_profile"));
+
+        if( baikal == null ) {
+            Slog.w(TAG, "convertBaikalPermissions: baikal service not ready yet! " + pkg);
+            return;
+        }
+        try {
+            BaikalAppProfile profile = baikal.getProfileByPackageName(pkg.getPackageName());
+
+            if( profile != null && profile.mFileAccess  != 0) {
+                Slog.w(TAG, "convertBaikalPermissions: BaikalOS: MANAGE_EXTERNAL_STORAGE forcibly granted for pkg=" + pkg.getPackageName());
+                if (!pkg.getRequestedPermissions().contains("android.permission.MANAGE_EXTERNAL_STORAGE")) {
+                    pkg.addImplicitPermission("android.permission.MANAGE_EXTERNAL_STORAGE");
+                }
+            }
+        } catch(RemoteException e) {
+            Slog.w(TAG, "convertBaikalPermissions: baikal service not ready yet! " + pkg, e);
+        }
+    }
+
     private static void convertCompatPermissions(ParsingPackage pkg) {
+        Slog.i(TAG, "convertCompatPermissions:" + pkg);
         for (int i = 0, size = CompatibilityPermissionInfo.COMPAT_PERMS.length; i < size; i++) {
             final CompatibilityPermissionInfo info = CompatibilityPermissionInfo.COMPAT_PERMS[i];
             if (pkg.getTargetSdkVersion() >= info.getSdkVersion()) {
@@ -3217,6 +3250,7 @@ public class ParsingPackageUtils {
     }
 
     private void convertSplitPermissions(ParsingPackage pkg) {
+        Slog.i(TAG, "convertSplitPermissions:" + pkg);
         final int listSize = mSplitPermissionInfos.size();
         for (int is = 0; is < listSize; is++) {
             final PermissionManager.SplitPermissionInfo spi = mSplitPermissionInfos.get(is);

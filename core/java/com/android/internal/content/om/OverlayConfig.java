@@ -539,7 +539,8 @@ public class OverlayConfig {
 
         for (Map.Entry<String, String> target : new HashMap<String, String>() {{
                 put(AssetManager.FRAMEWORK_APK_PATH, "android");
-                put("/system/framework/org.lineageos.platform-res.apk", "lineageos.platform");
+                //put("/system/framework/org.lineageos.platform-res.apk", "lineageos.platform");
+                put("/system/framework/org.mineageos.platform-res.apk", "lineageos.platform");
         }}.entrySet()) {
             final String targetPath = target.getKey();
             final String targetPackageName = target.getValue();
