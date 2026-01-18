@@ -1638,6 +1638,13 @@ public class ActivityManagerService extends IActivityManager.Stub
     @NonNull
     private final Freezer mFreezer;
 
+
+    /**
+     * The interface to the baikal wrapper.
+     */
+    @NonNull
+    private final BaikalActivityManagerService mBaikal;
+
     /*
      * The default duration for the binder heavy hitter auto sampler
      */
@@ -2467,6 +2474,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         mComponentAliasResolver = new ComponentAliasResolver(this);
         mApplicationSharedMemoryReadOnlyFd = null;
         sCreatorTokenCacheCleaner = new Handler(mHandlerThread.getLooper());
+        mBaikal = injector.getBaikalAM(this);
     }
 
     // Note: This method is invoked on the main thread but may need to attach various
@@ -2594,6 +2602,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             Slog.e(TAG, "Failed to get read only fd for shared memory", e);
             throw new RuntimeException(e);
         }
+        mBaikal = mInjector.getBaikalAM(this);
     }
 
     void setBroadcastQueueForTest(BroadcastQueue broadcastQueue) {
@@ -4580,6 +4589,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                     mProcessList.mAppExitInfoTracker.mIsolatedUidRecords.removeIsolatedUid(
                             app.uid, app.info.uid);
                     getPackageManagerInternal().removeIsolatedUid(app.uid);
+                    getBaikalAM().removeIsolatedUid(app.uid, app.info.uid);
                 }
             }
             final BackupRecord backupTarget = mBackupTargets.get(app.userId);
@@ -6056,6 +6066,22 @@ public class ActivityManagerService extends IActivityManager.Stub
         return mAppErrors.isBadProcess(processName, uid);
     }
 
+    // NOTE: those are an internal method used by the BaikalActivityManagerService implementation only and should
+    // be guarded by permission checking.
+    UidRecord getUidRecord(int uid) {
+        synchronized (mProcLock) {
+            return mProcessList.mActiveUids.get(uid);
+        }
+    }
+
+    ProcessRecord getProcessRecord(int uid) {
+        synchronized (mProcLock) {
+            UidRecord uidRec = mProcessList.mActiveUids.get(uid);
+            if( uidRec == null ) return null;
+            return uidRec.getProcessRecordByIndex(0);
+        }
+    }
+
     // NOTE: this is an internal method used by the OnShellCommand implementation only and should
     // be guarded by permission checking.
     int getUidState(int uid) {
@@ -7346,6 +7372,9 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     @VisibleForTesting
     public boolean isBackgroundRestrictedNoCheck(final int uid, final String packageName) {
+
+        if( mBaikal.isBackgroundRestrictedNoCheck(uid,packageName) ) return true;
+
         final int mode = getAppOpsManager().checkOpNoThrow(AppOpsManager.OP_RUN_ANY_IN_BACKGROUND,
                 uid, packageName);
         return mode != AppOpsManager.MODE_ALLOWED;
@@ -8733,6 +8762,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                     continue;
                 }
                 int adj = proc.getSetAdj();
+                if( proc.getBaikalAppProfile().isProtected() ) continue;
                 if (adj >= worstType && !proc.isKilledByAm()) {
                     killCandidates.add(proc);
                     killed = true;
@@ -8828,6 +8858,7 @@ public class ActivityManagerService extends IActivityManager.Stub
                         if (proc == null) continue;
 
                         final int adj = proc.getSetAdj();
+                        if( proc.getBaikalAppProfile().isProtected() ) continue;
                         if (adj > belowAdj && !proc.isKilledByAm()) {
                             proc.killLocked(reason, ApplicationExitInfo.REASON_PERMISSION_CHANGE,
                                     true);
@@ -9046,6 +9077,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             }
 
             t.traceBegin("controllersReady");
+            mBaikal.onSystemReady();
             mLocalDeviceIdleController =
                     LocalServices.getService(DeviceIdleInternal.class);
             mActivityTaskManager.onSystemReady();
@@ -15588,6 +15620,7 @@ public class ActivityManagerService extends IActivityManager.Stub
     void updateTopAppListeners(ProcessRecord r) {
         String pkg;
         int uid;
+        boolean changed = false;
         if (r != null) {
             pkg = r.processName;
             uid = r.info.uid;
@@ -15600,6 +15633,7 @@ public class ActivityManagerService extends IActivityManager.Stub
             if (uid != mCurResumedUid || (pkg != mCurResumedPackage
                     && (pkg == null || !pkg.equals(mCurResumedPackage)))) {
 
+                changed = true;
                 final long identity = Binder.clearCallingIdentity();
                 try {
                     if (mCurResumedPackage != null) {
@@ -15617,6 +15651,8 @@ public class ActivityManagerService extends IActivityManager.Stub
                 }
             }
         }
+        // Notify BaikalOS core about top app change
+        if( changed ) mBaikal.sendTopAppChanged(mCurResumedUid,mCurResumedPackage);
     }
 
     /**
@@ -19273,6 +19309,10 @@ public class ActivityManagerService extends IActivityManager.Stub
         public Freezer getFreezer() {
             return new Freezer();
         }
+
+        public BaikalActivityManagerService getBaikalAM(ActivityManagerService service) {
+            return new BaikalActivityManagerService(service, getContext());
+        }
     }
 
     @Override
@@ -19711,6 +19751,11 @@ public class ActivityManagerService extends IActivityManager.Stub
         return mFreezer;
     }
 
+    @NonNull
+    BaikalActivityManagerService getBaikalAM() {
+        return mBaikal;
+    }
+
     // Set of IntentCreatorToken objects that are currently active.
     private static final Map<IntentCreatorToken.Key, WeakReference<IntentCreatorToken>>
             sIntentCreatorTokenCache = new ConcurrentHashMap<>();
@@ -19991,12 +20036,14 @@ public class ActivityManagerService extends IActivityManager.Stub
                     final int state = proc.getSetProcState();
 
                     // Exclusions
+                    if (proc.getBaikalAppProfile().isProtected()) return;
                     if (proc.isPersistent()) return;
                     if (proc.userId != currentUser) return;
                     if (state <= ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND) return;
                     if (state == ActivityManager.PROCESS_STATE_HOME) return;
                     if (!includeUIProcesses && proc.hasActivities()) return;
-
+                    final UidRecord uidRec = proc.getUidRecord();
+                    if (uidRec != null && uidRec.isCurAllowListed()) return;
                     if (setAdj >= minAdj) victims.add(proc);
                 });
             }

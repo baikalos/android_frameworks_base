@@ -22,6 +22,8 @@ import com.android.systemui.qs.shared.model.TileCategory
 import com.android.systemui.qs.tileimpl.QSTileImpl
 import com.android.systemui.qs.tiles.AmbientDisplayTile
 import com.android.systemui.qs.tiles.AODTile
+import com.android.systemui.qs.tiles.BoostTile
+import com.android.systemui.qs.tiles.BypassChargingTile
 import com.android.systemui.qs.tiles.CPUInfoTile
 import com.android.systemui.qs.tiles.CaffeineTile
 import com.android.systemui.qs.tiles.CompassTile
@@ -29,6 +31,7 @@ import com.android.systemui.qs.tiles.DataSwitchTile
 import com.android.systemui.qs.tiles.DnsTile
 import com.android.systemui.qs.tiles.FPSInfoTile
 import com.android.systemui.qs.tiles.HeadsUpTile
+import com.android.systemui.qs.tiles.InCallUiTile
 import com.android.systemui.qs.tiles.LocaleTile
 import com.android.systemui.qs.tiles.OnTheGoTile
 import com.android.systemui.qs.tiles.PowerShareTile
@@ -206,6 +209,24 @@ interface LineageModule {
     @IntoMap
     @StringKey(WeatherTile.TILE_SPEC)
     fun bindWeatherTile(weatherTile: WeatherTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(BoostTile.TILE_SPEC)
+    fun BoostTile(boostTile: BoostTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(BypassChargingTile.TILE_SPEC)
+    fun BypassChargingTile(bypassChargingTile: BypassChargingTile): QSTileImpl<*>
+
+    /** Inject BoostTile into tileMap in QSModule */
+    @Binds
+    @IntoMap
+    @StringKey(InCallUiTile.TILE_SPEC)
+    fun InCallUiTileTile(inCallUiTile: InCallUiTile): QSTileImpl<*>
 
     companion object {
         const val AMBIENT_DISPLAY_TILE_SPEC = "ambient_display"
@@ -590,6 +611,48 @@ interface LineageModule {
                         iconRes = R.drawable.ic_qs_weather,
                         labelRes = R.string.omnijaws_label_default
                     ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.UTILITIES,
+            )
+
+        @Provides
+        @IntoMap
+        @StringKey(BoostTile.TILE_SPEC)
+        fun provideBoostConfig(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(BoostTile.TILE_SPEC),
+                uiConfig = QSTileUIConfig.Resource(
+                    iconRes = R.drawable.ic_qs_boost,
+                    labelRes = R.string.quick_settings_boost_label
+                ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.UTILITIES,
+            )
+
+        @Provides
+        @IntoMap
+        @StringKey(BypassChargingTile.TILE_SPEC)
+        fun provideBypassChargingConfig(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(BypassChargingTile.TILE_SPEC),
+                uiConfig = QSTileUIConfig.Resource(
+                    iconRes = R.drawable.ic_qs_battery_saver_charging,
+                    labelRes = R.string.quick_settings_bypass_label
+                ),
+                instanceId = uiEventLogger.getNewInstanceId(),
+                category = TileCategory.UTILITIES,
+            )
+
+        @Provides
+        @IntoMap
+        @StringKey(InCallUiTile.TILE_SPEC)
+        fun provideInCallUiConfig(uiEventLogger: QsEventLogger): QSTileConfig =
+            QSTileConfig(
+                tileSpec = TileSpec.create(InCallUiTile.TILE_SPEC),
+                uiConfig = QSTileUIConfig.Resource(
+                    iconRes = R.drawable.ic_qs_sim_card,
+                    labelRes = R.string.quick_settings_incallui_label
+                ),
                 instanceId = uiEventLogger.getNewInstanceId(),
                 category = TileCategory.UTILITIES,
             )

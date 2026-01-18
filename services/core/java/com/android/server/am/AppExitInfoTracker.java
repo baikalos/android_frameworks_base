@@ -649,6 +649,7 @@ public final class AppExitInfoTracker {
                         allUsers ? UserHandle.USER_ALL : UserHandle.getUserId(uid));
                 schedulePersistProcessExitInfo(true);
             }
+            mService.getBaikalAM().onPackageRemoved(packageName, uid, allUsers);
         }
     }
 

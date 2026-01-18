@@ -2532,6 +2532,7 @@ package android {
 
   public static final class R.integer {
     ctor public R.integer();
+    field public static final int config_criticalBatteryWarningLevel = 17694828; // 0x10e006c
     field public static final int config_longAnimTime = 17694722; // 0x10e0002
     field public static final int config_mediumAnimTime = 17694721; // 0x10e0001
     field @FlaggedApi("android.os.material_motion_tokens") public static final int config_motionExpressiveDefaultEffectStiffness = 17694733; // 0x10e000d
@@ -10253,6 +10254,256 @@ package android.appwidget {
 
 }
 
+package android.baikalos {
+
+  public final class BaikalAppProfile implements android.os.Parcelable {
+    ctor public BaikalAppProfile(int);
+    ctor public BaikalAppProfile(@Nullable android.baikalos.BaikalAppProfile);
+    method public void active(long);
+    method public void clear();
+    method public int describeContents();
+    method public void deserialize(@Nullable String);
+    method @Nullable public static android.baikalos.BaikalAppProfile deserializeProfile(@Nullable String);
+    method public boolean equals(@Nullable android.baikalos.BaikalAppProfile);
+    method @Nullable public static android.baikalos.BaikalAppProfile getCurrentAppProfile();
+    method public long getLastActive();
+    method public boolean isDebug();
+    method public boolean isDefault();
+    method public boolean isImportant();
+    method public boolean isPinned();
+    method public boolean isProtected();
+    method public boolean isRestricted();
+    method public boolean isSystem();
+    method public boolean isSystemImportant();
+    method public boolean isTrace();
+    method public boolean isVerbose();
+    method public boolean isWhitelisted();
+    method @Nullable public String serialize();
+    method @Nullable public android.baikalos.BaikalAppProfile setUid(int);
+    method @Nullable public android.baikalos.BaikalAppProfile update(@Nullable android.baikalos.BaikalAppProfile);
+    method public void writeToParcel(@NonNull android.os.Parcel, int);
+    field public static final int BAIKAL_APPINFO_IS_DEFAULT_PROFILE = 1073741824; // 0x40000000
+    field public static final int BAIKAL_APPINFO_IS_GMS = 256; // 0x100
+    field public static final int BAIKAL_APPINFO_IS_GMS_PERS = 512; // 0x200
+    field public static final int BAIKAL_APPINFO_IS_HMS = 1024; // 0x400
+    field public static final int BAIKAL_APPINFO_IS_HOME = 8; // 0x8
+    field public static final int BAIKAL_APPINFO_IS_IMPORTANT = 4; // 0x4
+    field public static final int BAIKAL_APPINFO_IS_SYSTEM = 1; // 0x1
+    field public static final int BAIKAL_APPINFO_IS_SYSTEM_WITELISTED = 32; // 0x20
+    field public static final int BAIKAL_APPINFO_IS_USER_PROFILE = 536870912; // 0x20000000
+    field public static final int BAIKAL_APPINFO_IS_USER_RESTRICTED = 128; // 0x80
+    field public static final int BAIKAL_APPINFO_IS_USER_WITELISTED = 64; // 0x40
+    field public static final int BAIKAL_APP_ALLOW_ALL_PERMISSIONS = 131072; // 0x20000
+    field public static final int BAIKAL_APP_ALLOW_HIDDEN_API = 65536; // 0x10000
+    field public static final int BAIKAL_APP_BLOCK_OVERLAYS = 16; // 0x10
+    field public static final int BAIKAL_APP_BYPASS_CHARGING = 32; // 0x20
+    field public static final int BAIKAL_APP_DEBUG = 1; // 0x1
+    field public static final int BAIKAL_APP_DEFAULT_CALLERID = 512; // 0x200
+    field public static final int BAIKAL_APP_DEFAULT_DIALER = 128; // 0x80
+    field public static final int BAIKAL_APP_DEFAULT_SMS = 256; // 0x100
+    field public static final int BAIKAL_APP_FAKE_SU = 32768; // 0x8000
+    field public static final int BAIKAL_APP_HIDE_BATTERY_OPT = 2048; // 0x800
+    field public static final int BAIKAL_APP_HIDE_IDLE = 1024; // 0x400
+    field public static final int BAIKAL_APP_HIDE_LOCATION = 4096; // 0x1000
+    field public static final int BAIKAL_APP_HIDE_PHONE = 8192; // 0x2000
+    field public static final int BAIKAL_APP_HIDE_SMS = 16384; // 0x4000
+    field public static final int BAIKAL_APP_OLD_LINKS = 4; // 0x4
+    field public static final int BAIKAL_APP_PRIVELEGED_PHONE = 8; // 0x8
+    field public static final int BAIKAL_APP_PUSH_PROVIDER = 64; // 0x40
+    field public static final int BAIKAL_APP_VERBOSE = 2; // 0x2
+    field public static final int BAIKAL_AUDIO_BAFR = 2; // 0x2
+    field public static final int BAIKAL_AUDIO_BAFS = 4; // 0x4
+    field public static final int BAIKAL_AUDIO_FORCE_SPEAKER = 8; // 0x8
+    field public static final int BAIKAL_BACKGROUND_ALLOW_WHILE_IDLE = 64; // 0x40
+    field public static final int BAIKAL_BACKGROUND_BOOT_DISABLED = 16; // 0x10
+    field public static final int BAIKAL_BACKGROUND_DISABLED = 8; // 0x8
+    field public static final int BAIKAL_BACKGROUND_DONOTCLOSE = 2; // 0x2
+    field public static final int BAIKAL_BACKGROUND_DONOTWAKE = 32; // 0x20
+    field public static final int BAIKAL_BACKGROUND_HEAVY_CPU = 256; // 0x100
+    field public static final int BAIKAL_BACKGROUND_HEAVY_MEM = 512; // 0x200
+    field public static final int BAIKAL_BACKGROUND_NET_WHILE_IDLE = 128; // 0x80
+    field public static final int BAIKAL_BACKGROUND_PINNED = 1; // 0x1
+    field public static final int BAIKAL_OPCODE_BACKGROUND = 10; // 0xa
+    field public static final int BAIKAL_OPCODE_BLOCK_3P = 22; // 0x16
+    field public static final int BAIKAL_OPCODE_BLOCK_CALENDAR = 24; // 0x18
+    field public static final int BAIKAL_OPCODE_BLOCK_CALLLOG = 28; // 0x1c
+    field public static final int BAIKAL_OPCODE_BLOCK_CONTACTS = 23; // 0x17
+    field public static final int BAIKAL_OPCODE_BLOCK_GMS = 20; // 0x14
+    field public static final int BAIKAL_OPCODE_BLOCK_HMS = 21; // 0x15
+    field public static final int BAIKAL_OPCODE_BLOCK_MEDIA = 27; // 0x1b
+    field public static final int BAIKAL_OPCODE_BLOCK_NOTIFICATION = 26; // 0x1a
+    field public static final int BAIKAL_OPCODE_BLOCK_SMS = 25; // 0x19
+    field public static final int BAIKAL_OPCODE_DEFAULT_CALLERID = 42; // 0x2a
+    field public static final int BAIKAL_OPCODE_DEFAULT_DIALER = 40; // 0x28
+    field public static final int BAIKAL_OPCODE_DEFAULT_SMS = 41; // 0x29
+    field public static final int BAIKAL_OPCODE_LOCATION = 0; // 0x0
+    field public static final int BAIKAL_OPCODE_OVERRIDE = 12; // 0xc
+    field public static final int BAIKAL_OPCODE_SPOOF = 11; // 0xb
+    field public static final int BAIKAL_OPCODE_SPOOF_SIM_COUNTRY = 101; // 0x65
+    field public static final int BAIKAL_OPCODE_SPOOF_SIM_LN = 104; // 0x68
+    field public static final int BAIKAL_OPCODE_SPOOF_SIM_MNC = 102; // 0x66
+    field public static final int BAIKAL_OPCODE_SPOOF_SIM_OP = 103; // 0x67
+    field public static final int BAIKAL_OVERRIDE_FONTS = 2; // 0x2
+    field public static final int BAIKAL_OVERRIDE_FORCED_SCREENSHOT = 1; // 0x1
+    field public static final int BAIKAL_OVERRIDE_FULL_SCREEN = 8; // 0x8
+    field public static final int BAIKAL_OVERRIDE_SIGNATURE = 4; // 0x4
+    field public static final int BAIKAL_SPOOF_INTEGRITY_FILTER_FS = 256; // 0x100
+    field public static final int BAIKAL_SPOOF_INTEGRITY_FILTER_FS_ADD = 512; // 0x200
+    field public static final int BAIKAL_SPOOF_INTEGRITY_HIDE_DEBUG = 2; // 0x2
+    field public static final int BAIKAL_SPOOF_INTEGRITY_SW_ATTEST = 1; // 0x1
+    field @NonNull public static final android.os.Parcelable.Creator<android.baikalos.BaikalAppProfile> CREATOR;
+    field public static boolean DEBUG;
+    field public static boolean TRACE;
+    field public static boolean VERBOSE;
+    field public long lastActiveTime;
+    field public int mAppInfo;
+    field public int mAppOpts;
+    field public int mAudio;
+    field public int mBackgroundLevel;
+    field public int mBackgroundMode;
+    field public int mBlock3P;
+    field public int mBlockCalendar;
+    field public int mBlockCallLog;
+    field public int mBlockContacts;
+    field public int mBlockGMS;
+    field public int mBlockHMS;
+    field public int mBlockMedia;
+    field public int mBlockNotification;
+    field public int mBlockSMS;
+    field public int mBoostControl;
+    field public int mBrightness;
+    field public int mCameraMode;
+    field public int mDarkMode;
+    field public int mDefiningUid;
+    field public int mFileAccess;
+    field public int mInstaller;
+    field public boolean mIsInitialized;
+    field public boolean mIsValidated;
+    field public int mKeepOn;
+    field public int mLocationLevel;
+    field public int mMaxFrameRate;
+    field public int mMicrophoneMode;
+    field public int mMinFrameRate;
+    field public int mOverride;
+    field public int mPerfProfile;
+    field public int mPerformanceLevel;
+    field public int mRotation;
+    field public int mSpoof;
+    field public int mSpoofDevice;
+    field @Nullable public String mSpoofSimCountry;
+    field @Nullable public String mSpoofSimLN;
+    field @Nullable public String mSpoofSimMnc;
+    field @Nullable public String mSpoofSimOpName;
+    field public int mThermalProfile;
+    field public int mUid;
+  }
+
+  public final class BaikalContext {
+    ctor public BaikalContext(@NonNull android.content.Context, @NonNull android.content.ContentResolver, int, @Nullable String, @Nullable String, @NonNull android.content.ContextParams);
+    method @Nullable public void commit();
+    method @Nullable public float getAppVolume(String);
+    method public static android.baikalos.BaikalContext getApplicationBaikalContext();
+    method @Nullable public android.baikalos.BaikalAppProfile getBaikalAppProfile(int);
+    method public android.baikalos.BaikalAppProfile getBaikalAppProfileNotNull(int);
+    method public android.baikalos.IBaikalAppProfileService getBaikalAppProfileService();
+    method @Nullable public int getBaikalOption(int, int, int, @Nullable String);
+    method @Nullable public String getBaikalOptionString(int, @Nullable String, int, @Nullable String);
+    method @Nullable public String getBaikalOptionStringWithParams(int, @Nullable String, int, @Nullable String, @Nullable android.os.Bundle);
+    method @Nullable public int getBaikalOptionWithParams(int, int, int, @Nullable String, @Nullable android.os.Bundle);
+    method @Nullable public int getBaikalPackageOption(@Nullable String, int, int, int);
+    method @Nullable public String getBaikalPackageOptionString(@Nullable String, int, int, @Nullable String);
+    method public android.baikalos.IBaikalService getBaikalService();
+    method public int getBaikalSettingInt(int, String, int);
+    method @Nullable public String getBaikalSettingString(int, String, String);
+    method public static String getBasePackageName();
+    method @Nullable public android.baikalos.BaikalAppProfile getCurrentAppProfile();
+    method @Nullable public android.baikalos.BaikalAppProfile getProfile(int);
+    method @Nullable public String getTopAppPackageName();
+    method public int getTopAppUid();
+    method @Nullable public void saveProfile(@NonNull android.baikalos.BaikalAppProfile);
+    method public void setAppVolume(String, float);
+    method public void updateContext();
+    method @Nullable public void updateProfile(@NonNull android.baikalos.BaikalAppProfile);
+  }
+
+  public interface IBaikalAppProfileService extends android.os.IInterface {
+    method public void commit() throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getProfile(int) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getProfileByPackageName(String) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getProfileNotNull(int) throws android.os.RemoteException;
+    method public void saveProfile(android.baikalos.BaikalAppProfile) throws android.os.RemoteException;
+    method public void updateProfile(android.baikalos.BaikalAppProfile) throws android.os.RemoteException;
+  }
+
+  public static class IBaikalAppProfileService.Default implements android.baikalos.IBaikalAppProfileService {
+    ctor public IBaikalAppProfileService.Default();
+    method public android.os.IBinder asBinder();
+    method public void commit() throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getProfile(int) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getProfileByPackageName(String) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getProfileNotNull(int) throws android.os.RemoteException;
+    method public void saveProfile(android.baikalos.BaikalAppProfile) throws android.os.RemoteException;
+    method public void updateProfile(android.baikalos.BaikalAppProfile) throws android.os.RemoteException;
+  }
+
+  public abstract static class IBaikalAppProfileService.Stub extends android.os.Binder implements android.baikalos.IBaikalAppProfileService {
+    ctor public IBaikalAppProfileService.Stub();
+    method public android.os.IBinder asBinder();
+    method public static android.baikalos.IBaikalAppProfileService asInterface(android.os.IBinder);
+    method public boolean onTransact(int, android.os.Parcel, android.os.Parcel, int) throws android.os.RemoteException;
+  }
+
+  public interface IBaikalService extends android.os.IInterface {
+    method public float getAppVolume(String) throws android.os.RemoteException;
+    method public int getBackgroundStartCount(int) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getBaikalAppProfile(int) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getBaikalAppProfileByPackageName(String) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getBaikalAppProfileNotNull(int) throws android.os.RemoteException;
+    method public int getBaikalOption(int, int, int, String) throws android.os.RemoteException;
+    method public String getBaikalOptionString(int, String, int, String) throws android.os.RemoteException;
+    method public String getBaikalOptionStringWithParams(int, String, int, String, android.os.Bundle) throws android.os.RemoteException;
+    method public int getBaikalOptionWithParams(int, int, int, String, android.os.Bundle) throws android.os.RemoteException;
+    method public int getBaikalPackageOption(String, int, int, int) throws android.os.RemoteException;
+    method public String getBaikalPackageOptionString(String, int, int, String) throws android.os.RemoteException;
+    method public String getBaikalPowerModeName(int) throws android.os.RemoteException;
+    method public int getBaikalSettingInt(int, String, int) throws android.os.RemoteException;
+    method public String getBaikalSettingString(int, String, String) throws android.os.RemoteException;
+    method public String getTopAppPackageName() throws android.os.RemoteException;
+    method public int getTopAppUid() throws android.os.RemoteException;
+    method public void setAppVolume(String, float) throws android.os.RemoteException;
+  }
+
+  public static class IBaikalService.Default implements android.baikalos.IBaikalService {
+    ctor public IBaikalService.Default();
+    method public android.os.IBinder asBinder();
+    method public float getAppVolume(String) throws android.os.RemoteException;
+    method public int getBackgroundStartCount(int) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getBaikalAppProfile(int) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getBaikalAppProfileByPackageName(String) throws android.os.RemoteException;
+    method public android.baikalos.BaikalAppProfile getBaikalAppProfileNotNull(int) throws android.os.RemoteException;
+    method public int getBaikalOption(int, int, int, String) throws android.os.RemoteException;
+    method public String getBaikalOptionString(int, String, int, String) throws android.os.RemoteException;
+    method public String getBaikalOptionStringWithParams(int, String, int, String, android.os.Bundle) throws android.os.RemoteException;
+    method public int getBaikalOptionWithParams(int, int, int, String, android.os.Bundle) throws android.os.RemoteException;
+    method public int getBaikalPackageOption(String, int, int, int) throws android.os.RemoteException;
+    method public String getBaikalPackageOptionString(String, int, int, String) throws android.os.RemoteException;
+    method public String getBaikalPowerModeName(int) throws android.os.RemoteException;
+    method public int getBaikalSettingInt(int, String, int) throws android.os.RemoteException;
+    method public String getBaikalSettingString(int, String, String) throws android.os.RemoteException;
+    method public String getTopAppPackageName() throws android.os.RemoteException;
+    method public int getTopAppUid() throws android.os.RemoteException;
+    method public void setAppVolume(String, float) throws android.os.RemoteException;
+  }
+
+  public abstract static class IBaikalService.Stub extends android.os.Binder implements android.baikalos.IBaikalService {
+    ctor public IBaikalService.Stub();
+    method public android.os.IBinder asBinder();
+    method public static android.baikalos.IBaikalService asInterface(android.os.IBinder);
+    method public boolean onTransact(int, android.os.Parcel, android.os.Parcel, int) throws android.os.RemoteException;
+  }
+
+}
+
 package android.companion {
 
   @FlaggedApi("android.companion.enable_data_sync") public final class ActionRequest implements android.os.Parcelable {
@@ -11173,6 +11424,7 @@ package android.content {
     method public abstract android.content.res.AssetManager getAssets();
     method @NonNull public android.content.AttributionSource getAttributionSource();
     method @Nullable public String getAttributionTag();
+    method @NonNull public android.baikalos.BaikalContext getBaikalContext();
     method public abstract java.io.File getCacheDir();
     method public abstract ClassLoader getClassLoader();
     method public abstract java.io.File getCodeCacheDir();
@@ -38923,6 +39175,22 @@ package android.provider {
     field @Deprecated public static final String APPLY_RAMPING_RINGER = "apply_ramping_ringer";
     field public static final String AUTO_TIME = "auto_time";
     field public static final String AUTO_TIME_ZONE = "auto_time_zone";
+    field public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_BT = "baikalos_airplane_dont_toggle_bt";
+    field public static final String BAIKALOS_AIRPLANE_DONT_TOGGLE_WIFI = "baikalos_airplane_dont_toggle_wifi";
+    field public static final String BAIKALOS_BLOCK_CALENDAR = "baikalos_block_calendar";
+    field public static final String BAIKALOS_BLOCK_CALLLOG = "baikalos_block_calllog";
+    field public static final String BAIKALOS_BLOCK_CONTACTS = "baikalos_block_contacts";
+    field public static final String BAIKALOS_BLOCK_MEDIA = "baikalos_block_media";
+    field public static final String BAIKALOS_BLOCK_NOTIFICATION = "baikalos_block_notification";
+    field public static final String BAIKALOS_BLOCK_SMS = "baikalos_block_sms";
+    field public static final String BAIKALOS_BRIGHTNESS_MODE = "baikalos_brightness_mode";
+    field public static final String BAIKALOS_HIDE_3P = "baikalos_hide_3p";
+    field public static final String BAIKALOS_HIDE_GMS = "baikalos_hide_gms";
+    field public static final String BAIKALOS_HIDE_HMS = "baikalos_hide_hms";
+    field public static final String BAIKALOS_SBC_BITRATE = "baikalos_sbc_bitrate";
+    field public static final String BAIKALOS_TRUSTABLE_IDLE_TIMEOUT_IN_MILLIS = "baikalos_trustable_idle_timeout_in_millis";
+    field public static final String BAIKALOS_TRUSTABLE_TIMEOUT_IN_MILLIS = "baikalos_trustable_timeout_in_millis";
+    field public static final String BAIKALOS_TRUST_TIMEOUT_IN_MILLIS = "baikalos_trust_timeout_in_millis";
     field public static final String BLUETOOTH_ON = "bluetooth_on";
     field public static final String BOOT_COUNT = "boot_count";
     field public static final String CONTACT_METADATA_SYNC_ENABLED = "contact_metadata_sync_enabled";
@@ -39001,6 +39269,13 @@ package android.provider {
     field @Deprecated public static final String ALLOW_MOCK_LOCATION = "mock_location";
     field public static final String ANDROID_ID = "android_id";
     field @Deprecated public static final String BACKGROUND_DATA = "background_data";
+    field public static final String BAIKALOS_EXPAND_ALL_NOTIFICATIONS = "baikalos_expand_all_notifications";
+    field public static final String BAIKALOS_FP_WAKE_ENABLED = "baikalos_fp_wake_enabled";
+    field public static final String BAIKALOS_TRUST_ALWAYS = "baikalos_trust_always";
+    field public static final String BAIKALOS_TRUST_BTLE_DEV = "baikalos_trust_btle_dev";
+    field public static final String BAIKALOS_TRUST_BT_DEV = "baikalos_trust_bt_dev";
+    field public static final String BAIKALOS_TRUST_INCALL = "baikalos_trust_incall";
+    field public static final String BAIKALOS_TRUST_WIFI_DEV = "baikalos_trust_wifi_dev";
     field @Deprecated public static final String BLUETOOTH_ON = "bluetooth_on";
     field public static final android.net.Uri CONTENT_URI;
     field @Deprecated public static final String DATA_ROAMING = "data_roaming";
@@ -39086,6 +39361,7 @@ package android.provider {
     method public static boolean putString(android.content.ContentResolver, String, String);
     method @Deprecated public static void setShowGTalkServiceStatus(android.content.ContentResolver, boolean);
     field public static final String ACCELEROMETER_ROTATION = "accelerometer_rotation";
+    field public static final String ACCELEROMETER_ROTATION_DEFAULT = "accelerometer_rotation_default";
     field @Deprecated public static final String ADB_ENABLED = "adb_enabled";
     field @Deprecated public static final String AIRPLANE_MODE_ON = "airplane_mode_on";
     field @Deprecated public static final String AIRPLANE_MODE_RADIOS = "airplane_mode_radios";

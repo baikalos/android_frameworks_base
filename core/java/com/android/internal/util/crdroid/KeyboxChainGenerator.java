@@ -82,6 +82,9 @@ public final class KeyboxChainGenerator {
     private static final int ATTESTATION_PACKAGE_INFO_PACKAGE_NAME_INDEX = 0;
     private static final int ATTESTATION_PACKAGE_INFO_VERSION_INDEX = 1;
 
+    private static int mKmVersion = -1;
+    private static int mAttestationVersion = -1;
+
     public static List<Certificate> generateCertChain(int uid, KeyDescriptor descriptor, KeyGenParameters params) {
         dlog("Requested KeyPair with alias: " + descriptor.alias);
         int size = params.keySize;
@@ -199,7 +202,7 @@ public final class KeyboxChainGenerator {
             ASN1Encodable[] teeEnforcedEncodables;
 
             // Support device properties attestation
-            if (params.brand != null) {
+            if (!KeyProviderManager.getForceLegacyKeymaster() && params.brand != null ) {
                 var Abrand = new DEROctetString(params.brand);
                 var Adevice = new DEROctetString(params.device);
                 var Aproduct = new DEROctetString(params.product);
@@ -277,14 +280,19 @@ public final class KeyboxChainGenerator {
             }
         } catch (Exception e) {
             Log.e(TAG, "Invalid patch level: " + patchLevel, e);
-            return 202404;
+            if( longFormat ) {
+                return 20260305;
+            } else {
+                return 202603;
+            }
         }
     }
 
     private static ASN1OctetString getAsn1OctetString(ASN1Encodable[] teeEnforcedEncodables, ASN1Encodable[] softwareEnforcedEncodables, KeyGenParameters params) throws IOException {
-        ASN1Integer attestationVersion = new ASN1Integer(100);
+        Log.d(TAG, "getAsn1OctetString: " + KeyProviderManager.getAttestationVersion() + "/" + KeyProviderManager.getKeymasterVersion() );
+        ASN1Integer attestationVersion = new ASN1Integer( KeyProviderManager.getAttestationVersion() );
         ASN1Enumerated attestationSecurityLevel = new ASN1Enumerated(1);
-        ASN1Integer keymasterVersion = new ASN1Integer(100);
+        ASN1Integer keymasterVersion = new ASN1Integer( KeyProviderManager.getKeymasterVersion() );
         ASN1Enumerated keymasterSecurityLevel = new ASN1Enumerated(1);
         ASN1OctetString attestationChallenge = new DEROctetString(params.attestationChallenge);
         ASN1OctetString uniqueId = new DEROctetString(new byte[0]);
@@ -398,7 +406,7 @@ public final class KeyboxChainGenerator {
     }
 
     private static void dlog(String msg) {
-        if (DEBUG) Log.d(TAG, msg);
+        if (true/*DEBUG*/) Log.d(TAG, msg);
     }
 
     public static class KeyGenParameters {

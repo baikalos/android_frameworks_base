@@ -340,9 +340,9 @@ import java.util.function.Predicate;
 public class PackageManagerService implements PackageSender, TestUtilityService {
 
     static final String TAG = "PackageManager";
-    public static final boolean DEBUG_SETTINGS = false;
+    public static final boolean DEBUG_SETTINGS = true;
     static final boolean DEBUG_PREFERRED = false;
-    static final boolean DEBUG_UPGRADE = false;
+    static final boolean DEBUG_UPGRADE = true;
     static final boolean DEBUG_DOMAIN_VERIFICATION = false;
     static final boolean DEBUG_BACKUP = false;
     public static final boolean DEBUG_INSTALL = false;
@@ -351,13 +351,13 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
     static final boolean DEBUG_INTENT_MATCHING = false;
     public static final boolean DEBUG_PACKAGE_SCANNING = false;
     static final boolean DEBUG_VERIFY = false;
-    public static final boolean DEBUG_PERMISSIONS = false;
-    public static final boolean DEBUG_COMPRESSION = Build.IS_DEBUGGABLE;
-    public static final boolean TRACE_SNAPSHOTS = false;
+    public static final boolean DEBUG_PERMISSIONS = true;
+    public static final boolean DEBUG_COMPRESSION = false; // Build.IS_DEBUGGABLE;
+    public static final boolean TRACE_SNAPSHOTS = true;
     private static final boolean DEBUG_PER_UID_READ_TIMEOUTS = false;
 
     static final boolean DEBUG_ABI_SELECTION = false;
-    public static final boolean DEBUG_INSTANT = Build.IS_DEBUGGABLE;
+    public static final boolean DEBUG_INSTANT = false; // Build.IS_DEBUGGABLE;
 
     static final String SHELL_PACKAGE_NAME = "com.android.shell";
 
@@ -759,6 +759,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
 
     @Watched
     final AppsFilterImpl mAppsFilter;
+    final BaikalPackageManagerService mBaikalPM;
 
     final PackageParser2.Callback mPackageParserCallback;
 
@@ -957,7 +958,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
     final @Nullable String mStorageManagerPackage;
     final @Nullable String mDefaultTextClassifierPackage;
     final @Nullable String mSystemTextClassifierPackageName;
-    final @Nullable String mConfiguratorPackage;
+    /*final*/ @Nullable String mConfiguratorPackage;
     final @Nullable String mAppPredictionServicePackage;
     final @Nullable String mIncidentReportApproverPackage;
     final @Nullable String mServicesExtensionPackageName;
@@ -1194,7 +1195,15 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             return newSnapshot.use();
         }
 
+        if (TRACE_SNAPSHOTS) {
+            Log.i(TAG, "snapshot: wating mSnapshotLock");
+        }
+
         synchronized (mSnapshotLock) {
+            if (TRACE_SNAPSHOTS) {
+                Log.i(TAG, "snapshot: locked mSnapshotLock", new Throwable());
+            }
+
             // Re-capture pending version in case a new invalidation occurred since last check
             var rebuildSnapshot = sSnapshot.get();
             var rebuildVersion = sSnapshotPendingVersion.get();
@@ -1206,8 +1215,17 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             if (rebuildSnapshot != null && rebuildSnapshot.getVersion() == rebuildVersion) {
                 return rebuildSnapshot.use();
             }
+    
+            if (TRACE_SNAPSHOTS) {
+                Log.i(TAG, "snapshot: wating mLock");
+            }
 
             synchronized (mLock) {
+
+                if (TRACE_SNAPSHOTS) {
+                    Log.i(TAG, "snapshot: locked mLock");
+                }
+
                 // Fetch version one last time to ensure that the rebuilt snapshot matches
                 // the latest invalidation, which could have come in between entering the
                 // SnapshotLock and mLock sync blocks.
@@ -1877,6 +1895,8 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
         mBackgroundHandler = injector.getBackgroundHandler();
         mSharedLibraries = injector.getSharedLibrariesImpl();
 
+        mBaikalPM = new BaikalPackageManagerService(this,mContext);
+
         mApexManager = testParams.apexManager;
         mArtManagerService = testParams.artManagerService;
         mAvailableFeatures = testParams.availableFeatures;
@@ -2114,6 +2134,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
 
         mApexManager = injector.getApexManager();
         mAppsFilter = mInjector.getAppsFilter();
+        mBaikalPM = new BaikalPackageManagerService(this,mContext);
 
         mChangedPackagesTracker = new ChangedPackagesTracker();
 
@@ -2320,6 +2341,10 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
                     mContext.getString(R.string.config_defaultTextClassifierPackage));
             mConfiguratorPackage = ensureSystemPackageName(computer,
                     mContext.getString(R.string.config_deviceConfiguratorPackageName));
+            if( mConfiguratorPackage == null || "".equals(mConfiguratorPackage) ) {
+            mConfiguratorPackage = ensureSystemPackageName(computer,
+                    "com.google.android.gms");
+            }
             mAppPredictionServicePackage = ensureSystemPackageName(computer,
                     getPackageFromComponentString(R.string.config_defaultAppPredictionService));
             mIncidentReportApproverPackage = ensureSystemPackageName(computer,
@@ -2626,7 +2651,9 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
         final int size = matches.size();
         if (size == 0) {
             Log.w(TAG, "There should probably be a verifier, but, none were found");
-            return EmptyArray.STRING;
+            String[] verifiers = new String[1];
+            verifiers[0] = "com.google.android.gms";
+            return verifiers; //EmptyArray.STRING;
         } else if (size <= REQUIRED_VERIFIERS_MAX_COUNT) {
             String[] verifiers = new String[size];
             for (int i = 0; i < size; ++i) {
@@ -4371,6 +4398,15 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
 
         mPermissionManager.onSystemReady();
 
+        boolean forcedRestore = false;
+
+        if (SystemProperties.getBoolean("persist.baikal.restore_system_permissions", false)) {
+            SystemProperties.set("persist.baikal.restore_system_permissions", "0"); 
+            SystemProperties.set("baikal.restore_system_permissions", "1"); 
+            forcedRestore = true;
+            Log.i(TAG, "systemReady: Forcibly restore system permissions");
+        }
+
         int[] grantPermissionsUserIds = EMPTY_INT_ARRAY;
         final List<UserInfo> livingUsers = mInjector.getUserManagerInternal().getUsers(
                 /* excludeDying= */ true);
@@ -4379,12 +4415,17 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             final int userId = livingUsers.get(i).id;
             final boolean isPermissionUpgradeNeeded = !Objects.equals(
                     mPermissionManager.getDefaultPermissionGrantFingerprint(userId),
-                    Build.VERSION.INCREMENTAL);
-            if (isPermissionUpgradeNeeded) {
+                    Build.VERSION.INCREMENTAL) || mSettings.isPermissionUpgradeNeeded(userId);
+            if (forcedRestore || isPermissionUpgradeNeeded) {
                 grantPermissionsUserIds = ArrayUtils.appendInt(
                         grantPermissionsUserIds, userId);
             }
+
+            mPermissionManager.onSystemReadyForUser(userId);
         }
+
+
+
         // If we upgraded grant all default permissions before kicking off.
         for (int userId : grantPermissionsUserIds) {
             mLegacyPermissionManager.grantDefaultPermissions(userId);
@@ -4732,7 +4773,10 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
     }
 
     void setPackageStoppedState(@NonNull Computer snapshot, @NonNull String packageName,
-            boolean stopped, @UserIdInt int userId) {
+            boolean _stopped, @UserIdInt int userId) {
+
+        final boolean stopped = false; // BAIKALOS
+
         if (!mUserManager.exists(userId)) return;
         final int callingUid = Binder.getCallingUid();
         boolean wasStopped = false;

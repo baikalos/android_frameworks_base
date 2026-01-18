@@ -242,6 +242,7 @@ import android.view.WindowInsets;
 import android.view.WindowInsets.Type.InsetsType;
 import android.view.WindowManager;
 import android.view.WindowManager.DisplayImePolicy;
+import android.view.WindowManager.LayoutParams;
 import android.view.WindowManagerPolicyConstants.PointerEventListener;
 import android.view.inputmethod.ImeTracker;
 import android.window.DesktopExperienceFlags;
@@ -5623,6 +5624,65 @@ class DisplayContent extends RootDisplayArea implements WindowManagerPolicy.Disp
     void assignChildLayers(SurfaceControl.Transaction t) {
         assignRelativeLayerForIme(t, false /* forceUpdate */);
         super.assignChildLayers(t);
+        /*WindowState state = getTopVisibleWindow(); // TODO: sdv
+
+        int topUid = state != null ? state.mOwnerUid : -1;
+        Slog.d(TAG_WM, "getTopVisibleWindow:" + topUid + ", state=" + state);*/
+    }
+
+    private WindowState getTopVisibleWindow() {
+    // getWindow iterates through windows in Z-order (top to bottom)
+    return getWindow(w -> {
+        // Basic lifecycle and visibility checks for Android 16
+        // isVisibleNow() is the standard check for active windows
+        if (!w.isVisibleNow() || w.mRemoved || w.mDestroying) {
+            return false;
+        }
+
+        final WindowManager.LayoutParams attrs = w.mAttrs;
+        final int type = attrs.type;
+
+        // 1. EXCLUDE: Persistent system bars that are always "on top" but not the focus.
+        // We skip TYPE_STATUS_BAR so we can see the app behind it.
+        if (type == WindowManager.LayoutParams.TYPE_STATUS_BAR || 
+            type == WindowManager.LayoutParams.TYPE_NAVIGATION_BAR || 
+            type == 2024 /* TYPE_NAVIGATION_BAR_PANEL / Taskbar */ ||
+            type == WindowManager.LayoutParams.TYPE_INPUT_METHOD) {
+            return false;
+        }
+
+        // 2. EXCLUDE: Technical decorations (Notches, Rounded Corners)
+        final int PRIVATE_FLAG_IS_ROUNDED_CORNERS_OVERLAY = 0x00100000;
+        if (type == 2040 && (attrs.privateFlags & PRIVATE_FLAG_IS_ROUNDED_CORNERS_OVERLAY) != 0) {
+            return false;
+        }
+        
+        if (type == WindowManager.LayoutParams.TYPE_WALLPAPER) {
+            return false;
+        }
+
+        // 3. INCLUDE: The "Shade" (Expanded notification panel)
+        // In many AOSP 16 builds, expanded shade is TYPE_NOTIFICATION_SHADE (2040).
+        // We check if it doesn't have the rounded corner flag.
+        if (type == 2040 || type == WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG) {
+            return true;
+        }
+
+        // 4. INCLUDE: Application Windows (This is our main target)
+        if (type >= WindowManager.LayoutParams.FIRST_APPLICATION_WINDOW && 
+            type <= WindowManager.LayoutParams.LAST_APPLICATION_WINDOW) {
+            return true;
+        }
+
+        // 5. INCLUDE: Overlays that user interacts with
+        if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY ||
+            type == WindowManager.LayoutParams.TYPE_SYSTEM_ALERT) {
+            return true;
+        }
+
+        // Fallback: only if it's focusable
+        return w.canReceiveKeys();
+    });
     }
 
     private void assignRelativeLayerForIme(SurfaceControl.Transaction t, boolean forceUpdate) {

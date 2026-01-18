@@ -3205,6 +3205,7 @@ public class ParsingPackageUtils {
     }
 
     private static void convertCompatPermissions(ParsingPackage pkg) {
+        Slog.i(TAG, "convertCompatPermissions:" + pkg);
         for (int i = 0, size = CompatibilityPermissionInfo.COMPAT_PERMS.length; i < size; i++) {
             final CompatibilityPermissionInfo info = CompatibilityPermissionInfo.COMPAT_PERMS[i];
             if (pkg.getTargetSdkVersion() >= info.getSdkVersion()) {
@@ -3217,6 +3218,7 @@ public class ParsingPackageUtils {
     }
 
     private void convertSplitPermissions(ParsingPackage pkg) {
+        Slog.i(TAG, "convertSplitPermissions:" + pkg);
         final int listSize = mSplitPermissionInfos.size();
         for (int is = 0; is < listSize; is++) {
             final PermissionManager.SplitPermissionInfo spi = mSplitPermissionInfos.get(is);
