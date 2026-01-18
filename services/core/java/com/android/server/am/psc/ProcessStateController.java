@@ -45,6 +45,7 @@ import android.util.SparseBooleanArray;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.ServiceThread;
+import com.android.server.am.ActivityManagerService;
 import com.android.server.am.Flags;
 import com.android.server.am.HostingRecord;
 import com.android.server.am.psc.Constants.OomAdjust;
@@ -86,7 +87,7 @@ public class ProcessStateController {
      */
     private final ConcurrentLinkedQueue<Runnable> mStagingQueue = new ConcurrentLinkedQueue<>();
 
-    private ProcessStateController(ProcessListInternal processList,
+    private ProcessStateController(ActivityManagerService service,ProcessListInternal processList,
             ActiveUidsInternal activeUids, ServiceThread handlerThread,
             Object lock, Object procLock, Consumer<ProcessRecordInternal> topChangeCallback,
             ProcessLruUpdater lruUpdater, OomAdjuster.Injector oomAdjInjector,
@@ -111,7 +112,7 @@ public class ProcessStateController {
             }
         };
         mOomConstants = oomConstants;
-        mOomAdjuster = new OomAdjusterImpl(mLock, mProcLock, processList, activeUids,
+        mOomAdjuster = new OomAdjusterImpl(service, mLock, mProcLock, processList, activeUids,
                 handlerThread, mOomConstants, mGlobalState, oomAdjInjector, callback,
                 updateHandler, hostingTypeProvider);
         mTopChangeCallback = topChangeCallback;
@@ -1500,6 +1501,7 @@ public class ProcessStateController {
         private final OomAdjuster.Constants mOomConstants;
         private final OomAdjuster.Callback mOomAdjCallback;
 
+        private ActivityManagerService mService = null;
         private ServiceThread mHandlerThread = null;
         private Object mLock = null;
         private Object mProcLock = null;
@@ -1508,13 +1510,14 @@ public class ProcessStateController {
         private OomAdjuster.Injector mOomAdjInjector = null;
         private OomAdjuster.HostingTypeProvider mHostingTypeProvider = null;
 
-        public Builder(ProcessListInternal processList,
+        public Builder(ActivityManagerService service, ProcessListInternal processList,
                 ActiveUidsInternal activeUids, OomAdjuster.Constants oomConstants,
                 OomAdjuster.Callback oomAdjCallback) {
             mProcessList = processList;
             mActiveUids = activeUids;
             mOomConstants = oomConstants;
             mOomAdjCallback = oomAdjCallback;
+            mService = service;
         }
 
         /**
@@ -1547,9 +1550,18 @@ public class ProcessStateController {
             if (mHostingTypeProvider == null) {
                 mHostingTypeProvider = app -> HostingRecord.HOSTING_TYPE_EMPTY;
             }
-            return new ProcessStateController(mProcessList, mActiveUids, mHandlerThread,
+            return new ProcessStateController(mService, mProcessList, mActiveUids, mHandlerThread,
                     mLock, mProcLock, mTopChangeCallback, mProcessLruUpdater, mOomAdjInjector,
                     mOomConstants, mOomAdjCallback, mHostingTypeProvider);
+        }
+
+        /**
+         * For Testing Purposes. Set what thread OomAdjuster will offload tasks on to.
+         */
+        @VisibleForTesting
+        public Builder setActivityManager(ActivityManagerService service) {
+            mService = service;
+            return this;
         }
 
         /**

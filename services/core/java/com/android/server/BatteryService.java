@@ -146,7 +146,7 @@ public final class BatteryService extends SystemService {
     private static final int BATTERY_SCALE = 100;    // battery capacity is a percentage
 
     private static final long HEALTH_HAL_WAIT_MS = 1000;
-    private static final long BATTERY_LEVEL_CHANGE_THROTTLE_MS = 60_000;
+    private static final long BATTERY_LEVEL_CHANGE_THROTTLE_MS = 3_000;
     private static final int MAX_BATTERY_LEVELS_QUEUE_SIZE = 100;
 
     // Used locally for determining when to make a last ditch effort to log
@@ -400,7 +400,7 @@ public final class BatteryService extends SystemService {
      * only send the broadcast if the last voltage was updated at least 20 seconds back and has a
      * fluctuation of at least 1%.
      */
-    private static final int TIME_DIFF_FOR_VOLTAGE_UPDATE_MS = 20000;
+    private static final int TIME_DIFF_FOR_VOLTAGE_UPDATE_MS = 3000;
     /**
      * The value is used to rate limit the {@link Intent#ACTION_BATTERY_CHANGED} broadcast. We
      * only send the broadcast if the last voltage was updated at least 20 seconds back and has a
@@ -411,7 +411,7 @@ public final class BatteryService extends SystemService {
      * This value is used to rate limit the {@link Intent#ACTION_BATTERY_CHANGED} broadcast. We
      * only send the broadcast if the last max charging current was updated at least 5 seconds back.
      */
-    private static final int TIME_DIFF_FOR_MAX_CHARGING_CURRENT_UPDATE_MS = 5000;
+    private static final int TIME_DIFF_FOR_MAX_CHARGING_CURRENT_UPDATE_MS = 1000;
 
     private final Handler.Callback mLocalCallback = msg -> {
         switch (msg.what) {
@@ -616,6 +616,8 @@ public final class BatteryService extends SystemService {
     private boolean isPoweredLocked(int plugTypeSet) {
         // assume we are powered if battery state is unknown so
         // the "stay on while plugged in" option will work.
+        if (mHealthInfo == null) return true;
+
         if (mHealthInfo.batteryStatus == BatteryManager.BATTERY_STATUS_UNKNOWN) {
             return true;
         }
@@ -642,6 +644,8 @@ public final class BatteryService extends SystemService {
         final boolean plugged = mPlugType != BATTERY_PLUGGED_NONE;
         final boolean oldPlugged = mLastBroadcastPlugType != BATTERY_PLUGGED_NONE;
 
+        if (mHealthInfo == null) return false;
+
         /* The ACTION_BATTERY_LOW broadcast is sent in these situations:
          * - is just un-plugged (previously was plugged) and battery level is
          *   less than or equal to WARNING, or
@@ -656,6 +660,8 @@ public final class BatteryService extends SystemService {
     }
 
     private boolean shouldShutdownLocked() {
+        if (mHealthInfo == null) return false;
+
         if (mHealthInfo.batteryCapacityLevel != BatteryCapacityLevel.UNSUPPORTED) {
             return (mHealthInfo.batteryCapacityLevel == BatteryCapacityLevel.CRITICAL);
         }
@@ -696,6 +702,8 @@ public final class BatteryService extends SystemService {
         // shut down gracefully if temperature is too high (> 68.0C by default)
         // wait until the system has booted before attempting to display the
         // shutdown dialog.
+        if (mHealthInfo == null) return;
+
         if (mHealthInfo.batteryTemperatureTenthsCelsius > mShutdownBatteryTemperature) {
             Intent intent = new Intent(Intent.ACTION_REQUEST_SHUTDOWN);
             intent.putExtra(Intent.EXTRA_KEY_CONFIRM, false);
@@ -805,6 +813,8 @@ public final class BatteryService extends SystemService {
         boolean logOutlier = false;
         long dischargeDuration = 0;
         @BatteryManager.BatteryChargingPolicy int translatedChargingPolicy;
+
+        if (mHealthInfo == null) return;
 
         mBatteryLevelCritical =
                 mHealthInfo.batteryStatus != BatteryManager.BATTERY_STATUS_UNKNOWN
@@ -1067,6 +1077,10 @@ public final class BatteryService extends SystemService {
         intent.addFlags(Intent.FLAG_RECEIVER_REGISTERED_ONLY
                 | Intent.FLAG_RECEIVER_REPLACE_PENDING);
 
+
+        if (mHealthInfo == null) return;
+
+
         int icon = getIconLocked(mHealthInfo.batteryLevel);
 
         intent.putExtra(BatteryManager.EXTRA_SEQUENCE, mSequence);
@@ -1173,6 +1187,9 @@ public final class BatteryService extends SystemService {
 
     private void sendBatteryLevelChangedIntentLocked() {
         Bundle event = new Bundle();
+
+        if (mHealthInfo == null) return;
+
         long now = SystemClock.elapsedRealtime();
         event.putInt(BatteryManager.EXTRA_SEQUENCE, mSequence);
         event.putInt(BatteryManager.EXTRA_STATUS, mHealthInfo.batteryStatus);
@@ -1309,6 +1326,9 @@ public final class BatteryService extends SystemService {
         String durationThresholdString = Settings.Global.getString(cr,
                 Settings.Global.BATTERY_DISCHARGE_DURATION_THRESHOLD);
 
+        if (mHealthInfo == null) return;
+
+
         if (dischargeThresholdString != null && durationThresholdString != null) {
             try {
                 long durationThreshold = Long.parseLong(durationThresholdString);
@@ -1330,6 +1350,9 @@ public final class BatteryService extends SystemService {
     }
 
     private int getIconLocked(int level) {
+
+        if (mHealthInfo == null) return com.android.internal.R.drawable.stat_sys_battery_unknown;
+
         if (mHealthInfo.batteryStatus == BatteryManager.BATTERY_STATUS_CHARGING) {
             return com.android.internal.R.drawable.stat_sys_battery_charge;
         } else if (mHealthInfo.batteryStatus == BatteryManager.BATTERY_STATUS_DISCHARGING) {
@@ -1351,6 +1374,8 @@ public final class BatteryService extends SystemService {
      * Rate limit's the broadcast based on the changes in temp, voltage and chargeCounter.
      */
     private boolean rateLimitBatteryChangedBroadcast(boolean forceUpdate) {
+
+        if (mHealthInfo == null) return true;
         if (mIsFirstBatteryChangedUpdate) {
             mLastBroadcastVoltageUpdateTime = SystemClock.elapsedRealtime();
             mLastBroadcastMaxChargingCurrentUpdateTime = SystemClock.elapsedRealtime();
@@ -1985,6 +2010,7 @@ public final class BatteryService extends SystemService {
         @Override
         public int getBatteryLevel() {
             synchronized (mLock) {
+                if( mHealthInfo == null ) return 100;
                 return mHealthInfo.batteryLevel;
             }
         }
@@ -1992,6 +2018,7 @@ public final class BatteryService extends SystemService {
         @Override
         public int getBatteryChargeCounter() {
             synchronized (mLock) {
+                if( mHealthInfo == null ) return 0;
                 return mHealthInfo.batteryChargeCounterUah;
             }
         }
@@ -1999,6 +2026,7 @@ public final class BatteryService extends SystemService {
         @Override
         public int getBatteryFullCharge() {
             synchronized (mLock) {
+                if( mHealthInfo == null ) return 0;
                 return mHealthInfo.batteryFullChargeUah;
             }
         }
@@ -2006,6 +2034,7 @@ public final class BatteryService extends SystemService {
         @Override
         public int getBatteryHealth() {
             synchronized (mLock) {
+                if( mHealthInfo == null ) return 0;
                 return mHealthInfo.batteryHealth;
             }
         }

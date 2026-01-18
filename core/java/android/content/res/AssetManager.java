@@ -50,6 +50,9 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.content.om.OverlayConfig;
 import com.android.internal.ravenwood.RavenwoodHelperBridge;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
+
 import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -85,7 +88,7 @@ public final class AssetManager implements AutoCloseable {
     private static final String FRAMEWORK_APK_PATH_DEVICE = "/system/framework/framework-res.apk";
     private static final String FRAMEWORK_APK_PATH_RAVENWOOD = "ravenwood-data/framework-res.apk";
     private static final String PLATFORM_EXT_APK_PATH =
-            "/system/framework/org.lineageos.platform-res.apk";
+            "/system/framework/org.mineageos.platform-res.apk";
 
     private static final Object sSync = new Object();
 
@@ -432,8 +435,19 @@ public final class AssetManager implements AutoCloseable {
     public @NonNull ApkAssets[] getApkAssets() {
         synchronized (this) {
             if (mOpen) {
-                return mApkAssets;
-            }
+                // English comment: If the filter is active, return a filtered copy of the array
+                /*if (BaikalSpoofer.isFilterFsAdd()) {
+                    java.util.ArrayList<ApkAssets> filtered = new java.util.ArrayList<>();
+                    for (ApkAssets asset : mApkAssets) {
+                        String path = asset.getAssetPath();
+                        //if (path == null || (!path.contains("lineage") && !path.contains("baikal"))) {
+                            filtered.add(asset);
+                        //}
+                    }
+                    // English comment: Return filtered array only to the caller
+                    return filtered.toArray(new ApkAssets[0]);
+                }*/
+                return mApkAssets;            }
         }
         return sEmptyApkAssets;
     }
@@ -447,6 +461,11 @@ public final class AssetManager implements AutoCloseable {
                 final int count = mApkAssets.length;
                 for (int i = 0; i < count; i++) {
                     paths[i] = mApkAssets[i].getAssetPath();
+                    if( BaikalSpoofer.isFilterFsAdd() ) {
+                        //if( paths[i].contains("lineage") ) {
+                        //    paths[i] = paths[i].replace("lineage","xiaomi");
+                        //}
+                    }
                 }
                 return paths;
             }
@@ -467,6 +486,9 @@ public final class AssetManager implements AutoCloseable {
             final int count = mApkAssets.length;
             for (int i = 0; i < count; i++) {
                 if (path.equals(mApkAssets[i].getAssetPath())) {
+                    if( BaikalSpoofer.isFilterFsAdd() ) {
+                        //if( path.contains("lineage") ) continue;
+                    }
                     return i + 1;
                 }
             }
@@ -879,7 +901,13 @@ public final class AssetManager implements AutoCloseable {
     @Nullable String getResourcePackageName(@AnyRes int resId) {
         synchronized (this) {
             ensureValidLocked();
-            return nativeGetResourcePackageName(mObject, resId);
+            String str = nativeGetResourcePackageName(mObject, resId);
+            if (BaikalSpoofer.isFilterFsAdd()) {
+                //if(str != null && str.contains("lineage") ) {
+                //    str = str.replace("lineage","xiaomi");
+                //}
+            }
+            return str;
         }
     }
 

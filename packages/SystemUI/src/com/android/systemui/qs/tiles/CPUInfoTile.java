@@ -97,9 +97,9 @@ public class CPUInfoTile extends QSTileImpl<BooleanState> {
                 .setClassName("com.android.systemui",
                 "com.android.systemui.CPUInfoService");
         if (mSetting.getValue() == 0) {
-            mContext.stopService(service);
+            //mContext.stopService(service);
         } else {
-            mContext.startService(service);
+            //mContext.startService(service);
         }
     }
 

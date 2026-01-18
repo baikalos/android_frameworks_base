@@ -16,8 +16,11 @@
 
 package android.app;
 
+import android.baikalos.BaikalContext;
 import android.compat.Compatibility;
 import android.os.Process;
+import android.util.Slog;
+
 
 import com.android.internal.compat.CompatibilityRules;
 import com.android.internal.compat.ChangeReporter;
@@ -31,6 +34,9 @@ import java.util.Arrays;
  */
 @android.ravenwood.annotation.RavenwoodKeepWholeClass
 public final class AppCompatCallbacks implements Compatibility.BehaviorChangeDelegate {
+
+    public static final String TAG = "AppCompatCallbacks";
+
     private final long[] mDisabledChanges;
     private final long[] mEnabledChanges;
     private final long[] mLoggableChanges;
@@ -120,6 +126,11 @@ public final class AppCompatCallbacks implements Compatibility.BehaviorChangeDel
     }
 
     public boolean isChangeEnabled(long changeId) {
+        if( (changeId & 0x00BA000000000000L ) != 0 ) {
+            //Slog.w(TAG, "BaikalOS change id " + Long.toHexString(changeId) + "(" + changeId + ")" + " ignored for " + Process.myUid());
+            return BaikalContext.isCompatChangeEnabled(changeId);
+        }
+
         boolean isLoggable = mLogChangeChecksToStatsD ||
             changeIdInChangeList(mLoggableChanges, changeId);
         if (!isLoggable) {
