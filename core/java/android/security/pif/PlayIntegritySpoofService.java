@@ -537,9 +537,12 @@ public final class PlayIntegritySpoofService {
         if (isVending) {
             if (mSpoofVendingBuild) {
                 for (Map.Entry<String, String> entry : mBuildFields.entrySet()) {
-                    spoofField(entry.getKey(), entry.getValue(), "PS");
+                    if( "FINGERPRINT".equals(entry.getKey()) ) {
+                        spoofField(entry.getKey(), entry.getValue(), "PS");
+                    }
                 }
-            } else if (mSpoofVendingSdk) {
+            } 
+            if (mSpoofVendingSdk) {
                 spoofSdkInt();
             }
             return;
@@ -573,7 +576,7 @@ public final class PlayIntegritySpoofService {
         if (initialSdk != null && !initialSdk.isEmpty()) {
             props.putIfAbsent("ro.board.first_api_level", initialSdk);
             props.putIfAbsent("ro.product.first_api_level", initialSdk);
-        }
+        } 
         putPropIfPresent(props, "ro.build.fingerprint", mBuildFields.get("FINGERPRINT"));
         putPropIfPresent(props, "ro.build.id", mBuildFields.get("ID"));
         putPropIfPresent(props, "ro.product.device", mBuildFields.get("DEVICE"));
@@ -585,6 +588,7 @@ public final class PlayIntegritySpoofService {
             putPropIfPresent(props, "ro.build.version.security_patch", securityPatch);
             putPropIfPresent(props, "ro.vendor.build.security_patch", securityPatch);
             putPropIfPresent(props, "ro.system.build.security_patch", securityPatch);
+            putPropIfPresent(props, "ro.product.build.security_patch", securityPatch);
         }
 
         if (props.isEmpty()) return;
@@ -644,8 +648,12 @@ public final class PlayIntegritySpoofService {
     private static native boolean nativeSpoofProperties(
             String[] keys, String[] values, boolean debug);
 
-    public void spoofSignature() {
+    public void spoofSignature(String processName) {
         if (!mSpoofSignature || mSignatureSpoofed) return;
+        if (isVending(processName)) {
+            if (mVerboseLogs > 0) Log.d(TAG, "Signature spoofing skipped for Vending");
+            return;
+        }
 
         Signature spoofedSignature = new Signature(Base64.decode(ROM_SIGNATURE_DATA, Base64.DEFAULT));
         Parcelable.Creator<PackageInfo> originalCreator = PackageInfo.CREATOR;

@@ -1428,7 +1428,7 @@
 
     <!-- Display low battery warning when battery level dips to this value.
          Also, the battery stats are flushed to disk when we hit this level.  -->
-    <integer name="config_criticalBatteryWarningLevel">10</integer>
+    <integer name="config_criticalBatteryWarningLevel">5</integer>
 
     <!-- Shutdown if the battery temperature exceeds (this value * 0.1) Celsius. -->
     <integer name="config_shutdownBatteryTemperature">680</integer>
@@ -1637,7 +1637,7 @@
          May be less than the minimum allowed brightness setting
          that can be set by the user. -->
     <integer name="config_screenBrightnessDoze">1</integer>
-    <item name="config_screenBrightnessDozeFloat" format="float" type="dimen">0.0</item>
+    <item name="config_screenBrightnessDozeFloat" format="float" type="dimen">-2</item>
 
     <!-- Whether or not to skip the initial brightness ramps when the display transitions to
          STATE_ON. Setting this to true will skip the brightness ramp to the last stored active
@@ -1696,13 +1696,13 @@
          timeout expires.  May be less than the minimum allowed brightness setting
          that can be set by the user. -->
     <integer name="config_screenBrightnessDim">10</integer>
-    <item name="config_screenBrightnessDimFloat" format="float" type="dimen">0.05</item>
+    <item name="config_screenBrightnessDimFloat" format="float" type="dimen">-2</item>
 
     <!-- If the screen brightness is already set at or below config_screenBrightnessDim, and the
          user activity timeout expires, we still want to dim the screen slightly to indicate that
          the device is about to go to sleep. The screen will dim by this amount in that case.
          -->
-    <item name="config_screenBrightnessMinimumDimAmountFloat" format="float" type="dimen">0.04</item>
+    <item name="config_screenBrightnessMinimumDimAmountFloat" format="float" type="dimen">-2</item>
 
     <!-- Minimum allowable screen brightness to use in a very dark room.
          This value sets the floor for the darkest possible auto-brightness
@@ -7859,7 +7859,7 @@
         brightness follows the display state i.e. ON means bright, DOZE means dim. If true,
         POLICY_DOZE can also dim the screen unless parameter useNormalBrightnessForDoze of
         DreamService#setDozeScreenState requests an exception. -->
-    <bool name="config_allowNormalBrightnessForDozePolicy">false</bool>
+    <bool name="config_allowNormalBrightnessForDozePolicy">true</bool>
 
     <!-- List of protected packages that require biometric authentication for modification
          (Disable, force-stop or uninstalling updates). -->

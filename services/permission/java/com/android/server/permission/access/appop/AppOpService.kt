@@ -124,11 +124,16 @@ class AppOpService(private val service: AccessCheckingService) : AppOpsCheckingS
                 // Multiple ops might map to a single permission but only one is considered the
                 // runtime appop calculations.
                 if (appOpCode == AppOpsManager.permissionToOpCode(permissionName)) {
-                    val permission =
-                        checkNotNull(permissions[permissionName]) {
+                    val permission = permissions[permissionName]
+                    if (permission == null) {
+                        // Skip this permission if it's not found in the map
+                        // Logging can be added here if needed for debugging
+                        Slog.w(LOG_TAG,
                             "Missing permission definition for permission \"$permissionName\"" +
                                 " associated with app op $appOpCode"
-                        }
+                        )
+                        return@let
+                    }
                     if (permission.isRuntime) {
                         runtimePermissionNameToAppOp[permissionName] = appOpCode
                         runtimeAppOpToPermissionNames[appOpCode] = permissionName

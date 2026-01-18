@@ -125,10 +125,13 @@ public class VintfObject {
         var activityThread = ActivityThread.currentActivityThread();
         var instrumentation = activityThread.getInstrumentation();
         var automation = instrumentation.getUiAutomation();
-        var pfd = automation.executeShellCommand(command);
-        try (var is = new ParcelFileDescriptor.AutoCloseInputStream(pfd)) {
-            return new String(is.readAllBytes());
+        if( automation != null ) {
+            var pfd = automation.executeShellCommand(command);
+            try (var is = new ParcelFileDescriptor.AutoCloseInputStream(pfd)) {
+                return new String(is.readAllBytes());
+            }
         }
+        return null;
     }
 
     private VintfObject() {}

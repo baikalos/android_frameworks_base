@@ -250,6 +250,7 @@ import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.app.IVoiceInteractor;
+import com.android.internal.baikalos.BaikalSpoofer;
 import com.android.internal.content.ReferrerIntent;
 import com.android.internal.os.ApplicationSharedMemory;
 import com.android.internal.os.BackgroundThread;
@@ -8235,15 +8236,15 @@ public final class ActivityThread extends ClientTransactionHandler
             PlayIntegritySpoofService pifService = PlayIntegritySpoofService.getInstance();
             if (pifService.shouldSpoof(data.processName)) {
                 pifService.spoofBuildFields(data.processName);
-                if (pifService.isDroidGuard(data.processName)) {
+                //if (pifService.isDroidGuard(data.processName)) {
                     pifService.spoofProperties();
                     if (pifService.isSpoofProviderEnabled()) {
                         pifService.spoofProvider();
                     }
                     if (pifService.isSpoofSignatureEnabled()) {
-                        pifService.spoofSignature();
+                        pifService.spoofSignature(data.processName);
                     }
-                }
+                //}
             }
         } else if (PlayIntegritySpoofService.isPhotosPackage(data.appInfo.packageName)) {
             PlayIntegritySpoofService pifService = PlayIntegritySpoofService.getInstance();
@@ -8251,6 +8252,8 @@ public final class ActivityThread extends ClientTransactionHandler
                 pifService.spoofPhotosProps();
             }
         }
+
+   		BaikalSpoofer.maybeSpoofProperties(data.processName,data.appInfo.packageName,data.appInfo,appContext);
 
         // Initialize the default http proxy in this process.
         Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Setup proxies");

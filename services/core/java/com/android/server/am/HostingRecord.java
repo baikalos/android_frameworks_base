@@ -125,7 +125,7 @@ public final class HostingRecord {
     private final String mHostingName;
     @HostingZygoteType private final int mHostingZygote;
     private final String mDefiningPackageName;
-    private final int mDefiningUid;
+    public final int mDefiningUid;
     private final boolean mIsTopApp;
     private final String mDefiningProcessName;
     private final boolean mIsPcc;

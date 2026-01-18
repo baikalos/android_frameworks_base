@@ -207,6 +207,15 @@ public final class Zygote {
     /** Whether this process sends a copy of its binder transactions to the PCC audit log. */
     public static final int AUDIT_OUTGOING_TRANSACTIONS = 1 << 27;
 
+    /** Bind mount BaikalOS Fake SU binary */
+    public static final int BAIKAL_SPOOF_SU = 1 << 28;
+
+    /** Set BaikalOS DEBUG */
+    public static final int BAIKAL_DEBUG = 1 << 29;
+
+    /** Set BaikalOS FILTER_FS */
+    public static final int BAIKAL_FILTER_FS = 1 << 30;
+
     /** No external storage should be mounted. */
     public static final int MOUNT_EXTERNAL_NONE = IVold.REMOUNT_MODE_NONE;
     /** Default external storage should be mounted. */
