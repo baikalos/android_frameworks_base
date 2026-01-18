@@ -105,7 +105,7 @@ public class BatterySaverStateMachine {
     private static final int STICKY_AUTO_DISABLED_NOTIFICATION_ID = 1993;
     private final Object mLock;
 
-    private static final boolean DEBUG = BatterySaverPolicy.DEBUG;
+    public static boolean DEBUG = BatterySaverPolicy.DEBUG;
 
     private static final long ADAPTIVE_CHANGE_TIMEOUT_MS = 24 * 60 * 60 * 1000L;
 
@@ -299,8 +299,8 @@ public class BatterySaverStateMachine {
 
     /** @return true if the dynamic mode should be used */
     private boolean isDynamicModeActiveLocked() {
-        return mSettingAutomaticBatterySaver == PowerManager.POWER_SAVE_MODE_TRIGGER_DYNAMIC
-                && mDynamicPowerSavingsEnableBatterySaver;
+        return false; //mSettingAutomaticBatterySaver == PowerManager.POWER_SAVE_MODE_TRIGGER_DYNAMIC
+                //&& mDynamicPowerSavingsEnableBatterySaver;
     }
 
     /**
@@ -613,7 +613,7 @@ public class BatterySaverStateMachine {
         updateStateLocked(false, false);
 
         // Adaptive control.
-        if (SystemClock.elapsedRealtime() - mLastAdaptiveBatterySaverChangedExternallyElapsed
+        /*if (SystemClock.elapsedRealtime() - mLastAdaptiveBatterySaverChangedExternallyElapsed
                 > ADAPTIVE_CHANGE_TIMEOUT_MS) {
             mBatterySaverController.setAdaptivePolicyEnabledLocked(
                     false, BatterySaverController.REASON_TIMEOUT);
@@ -622,7 +622,7 @@ public class BatterySaverStateMachine {
         } else if (mIsPowered && mBatteryLevel >= ADAPTIVE_AUTO_DISABLE_BATTERY_LEVEL) {
             mBatterySaverController.setAdaptivePolicyEnabledLocked(false,
                     BatterySaverController.REASON_PLUGGED_IN);
-        }
+        }*/
     }
 
     /**

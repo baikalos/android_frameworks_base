@@ -120,7 +120,7 @@ public class NetworkManagementService extends INetworkManagementService.Stub {
     }
 
     private static final String TAG = "NetworkManagement";
-    private static final boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
+    public static boolean DBG = Log.isLoggable(TAG, Log.DEBUG);
 
     /**
      * Binder context for this service

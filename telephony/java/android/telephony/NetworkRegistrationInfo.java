@@ -37,12 +37,15 @@ import android.compat.annotation.EnabledSince;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.os.SystemProperties;
 import android.telephony.AccessNetworkConstants.TransportType;
 import android.telephony.Annotation.NetworkType;
 import android.telephony.satellite.SatelliteManager.NTRadioTechnology;
 import android.text.TextUtils;
 
+
 import com.android.internal.telephony.flags.Flags;
+import com.android.telephony.Rlog;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -56,6 +59,9 @@ import java.util.stream.Collectors;
  * Description of a mobile network registration info
  */
 public final class NetworkRegistrationInfo implements Parcelable {
+
+    private static final String LOG_TAG = "NetworkRegistrationInfo";
+
 
     /**
      * A new registration state, REGISTRATION_STATE_EMERGENCY, is added to
@@ -666,9 +672,17 @@ public final class NetworkRegistrationInfo implements Parcelable {
      * @hide
      */
     public void setAccessNetworkTechnology(@NetworkType int tech) {
+       // HACK: Force LTE Carrier Aggregation
+        if (SystemProperties.getBoolean("persist.sys.radio.force_lte_ca", false)
+                && tech == TelephonyManager.NETWORK_TYPE_LTE) {
+            Rlog.i(LOG_TAG, "force_lte_ca: for " + tech);
+            mIsUsingCarrierAggregation = true;
+        }
+
         if (tech == TelephonyManager.NETWORK_TYPE_LTE_CA) {
             // For old device backward compatibility support
-            tech = TelephonyManager.NETWORK_TYPE_LTE;
+            // tech = TelephonyManager.NETWORK_TYPE_LTE;
+            Rlog.i(LOG_TAG, "lte_ca: for " + tech);
             mIsUsingCarrierAggregation = true;
         }
         mAccessNetworkTechnology = tech;
