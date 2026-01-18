@@ -351,6 +351,15 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
                         && !isImplicitlyQueryable(callingUid, targetUid)
                         && !isQueryableBySdkSandbox(callingUid, targetUid);
             }
+
+            if( BaikalPackageManagerService.getInstance().shouldFilterApplication(snapshot, 
+                callingUid, callingSetting, targetPkgSetting, userId) ) {
+                if (DEBUG_LOGGING || mFeatureConfig.isLoggingEnabled(callingAppId)) {
+                    log(callingSetting, targetPkgSetting, "BLOCKED");
+                }
+                return !DEBUG_ALLOW_ALL;
+            }
+
             // use cache
             if (mCacheReady && mCacheEnabled) {
                 if (!shouldFilterApplicationUsingCache(callingUid,

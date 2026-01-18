@@ -204,6 +204,9 @@ public final class Zygote {
     /** Load 4KB ELF files on 16KB device using appcompat mode */
     public static final int ENABLE_PAGE_SIZE_APP_COMPAT = 1 << 26;
 
+    /** Bind mount BaikalOS Fake SU binary */
+    public static final int BAIKAL_SPOOF_SU = 1 << 27;
+
     /** No external storage should be mounted. */
     public static final int MOUNT_EXTERNAL_NONE = IVold.REMOUNT_MODE_NONE;
     /** Default external storage should be mounted. */

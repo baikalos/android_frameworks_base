@@ -38,12 +38,13 @@ constructor(
             UserHandle.USER_CURRENT
         )
         if (showAppVolume == 1) {
-            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            /*val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             for (appVolume in audioManager.listAppVolumes()) {
                 if (appVolume.isActive) {
                     return true
                 }
-            }
+            }*/
+            return true
         }
         return false
     }

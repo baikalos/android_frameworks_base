@@ -352,6 +352,7 @@ enum RuntimeFlags : uint32_t {
     PROFILEABLE = 1 << 24,
     DEBUG_ENABLE_PTRACE = 1 << 25,
     ENABLE_PAGE_SIZE_APP_COMPAT = 1 << 26,
+    BAIKAL_SPOOF_SU = 1 << 27,
 };
 
 enum UnsolicitedZygoteMessageTypes : uint32_t {
@@ -1894,6 +1895,43 @@ static void BindMountStorageDirs(JNIEnv* env, jobjectArray pkg_data_info_list,
   }
 }
 
+static void MountBaikalSu(uint32_t runtime_flags, uid_t uid) {
+    if (!(runtime_flags & RuntimeFlags::BAIKAL_SPOOF_SU)) {
+        return;
+    }
+
+    // This matches our Android.bp path
+    const char* source_layer = "/system/baikalos/bin";
+    const char* target_dir = "/system/xbin";
+
+    // 1. Check if our dummy exists
+    struct stat st;
+    if (stat(android::base::StringPrintf("%s/su", source_layer).c_str(), &st) != 0) {
+        // ALOGE("BaikalOS: Fake su binary not found in %s", source_layer);
+        return;
+    }
+
+
+    //ALOGW("BaikalOS: mount %s over %s for UID %d", source_layer, target_dir, uid);
+    // 2. Create a private mount for /system/bin to avoid leakage to other apps
+    if (mount(target_dir, target_dir, nullptr, MS_BIND | MS_REC, nullptr) == -1) {
+        ALOGE("BaikalOS: Failed to bind self for %s: %s", target_dir, strerror(errno));
+        return;
+    }
+    mount(nullptr, target_dir, nullptr, MS_PRIVATE, nullptr);
+
+    // 3. Prepare OverlayFS options
+    // lowerdir: first our custom bin, then the original system bin
+    std::string opts = android::base::StringPrintf("lowerdir=%s:%s", source_layer, target_dir);
+
+    // 4. Perform the overlay mount
+    if (mount("overlay", target_dir, "overlay", MS_RDONLY, opts.c_str()) == -1) {
+        ALOGE("BaikalOS: Failed to mount su overlay for UID %d: %s", uid, strerror(errno));
+    } else {
+        ALOGW("BaikalOS: Fake su successfully injected for UID %d", uid);
+    }
+}
+
 // Utility routine to specialize a zygote child process.
 static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, jint runtime_flags,
                              jobjectArray rlimits, jlong permitted_capabilities,
@@ -1962,6 +2000,10 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
     if (mount_sysprop_overrides) {
         BindMountSyspropOverride(fail_fn, env);
         MountInitOverride(fail_fn, env);
+    }
+
+    if( uid >= 10000 ) {
+        MountBaikalSu(runtime_flags,uid); 
     }
 
     // If this zygote isn't root, it won't be able to create a process group,
@@ -2155,7 +2197,7 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
     // Make it easier to debug audit logs by setting the main thread's name to the
     // nice name rather than "app_process".
     if (nice_name.has_value()) {
-        ALOGI("Process %d created for %s", getpid(), nice_name.value().c_str());
+        ALOGW("Process %d/%d created for %s", getpid(), getuid(), nice_name.value().c_str());
         SetThreadName(nice_name.value());
     } else if (is_system_server) {
         SetThreadName("system_server");
@@ -2190,6 +2232,7 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
     if (env->ExceptionCheck()) {
         fail_fn("Error calling post fork hooks.");
     }
+
 }
 
 static uint64_t GetEffectiveCapabilityMask(JNIEnv* env) {
