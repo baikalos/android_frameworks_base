@@ -2260,6 +2260,9 @@ public final class AppRestrictionController {
     }
 
     private void handleBackgroundRestrictionChanged(int uid, String pkgName, boolean restricted) {
+
+        mActivityManagerService.getBaikalAM().handleBackgroundRestrictionChanged(uid,pkgName,restricted);
+
         // Firstly, notify the trackers.
         for (int i = 0, size = mAppStateTrackers.size(); i < size; i++) {
             mAppStateTrackers.get(i)
