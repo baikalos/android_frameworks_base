@@ -144,6 +144,9 @@ import com.android.server.attention.AttentionManagerService;
 import com.android.server.audio.AudioService;
 import com.android.server.autofill.AutofillManagerService;
 import com.android.server.backup.BackupManagerService;
+import com.android.server.baikalos.CpuTopService;
+import com.android.server.baikalos.BaikalService;
+import com.android.server.baikalos.BaikalAppProfileService;
 import com.android.server.biometrics.AuthService;
 import com.android.server.biometrics.BiometricService;
 import com.android.server.biometrics.sensors.face.FaceService;
@@ -1299,6 +1302,21 @@ public final class SystemServer implements Dumpable {
                 new AppOpMigrationHelperImpl());
         mSystemServiceManager.startService(AccessCheckingService.class);
         t.traceEnd();
+
+
+        try {
+            t.traceBegin("StartBaikalAppProfileService");
+            mSystemServiceManager.startService(BaikalAppProfileService.class);
+            t.traceEnd();
+
+            t.traceBegin("StartBaikalService");
+            mSystemServiceManager.startService(BaikalService.class);
+            t.traceEnd();
+        } catch (Throwable e) {
+            Slog.e("System", "******************************************");
+            Slog.e("System", "************ Failure starting baikalos service");
+            // throw e;
+        }
 
         // Activity manager runs the show.
         t.traceBegin("StartActivityManager");
@@ -2961,6 +2979,11 @@ public final class SystemServer implements Dumpable {
         t.traceBegin("StartMediaProjectionManager");
         mSystemServiceManager.startService(MediaProjectionManagerService.class);
         t.traceEnd();
+
+        t.traceBegin("StartCpuTopService");
+        ServiceManager.addService("cpu_top",new CpuTopService());
+        t.traceEnd();
+
 
         if (isWatch) {
             // Must be started before services that depend it, e.g. WearConnectivityService

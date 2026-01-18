@@ -8799,6 +8799,7 @@ android.util.Spline$LinearSpline
 android.util.Spline$MonotoneCubicSpline
 android.util.Spline
 android.util.StateSet
+android.util.StatsLog
 android.util.StringBuilderPrinter
 android.util.SuperNotCalledException
 android.util.SystemConfigFileCommitEventLogger
