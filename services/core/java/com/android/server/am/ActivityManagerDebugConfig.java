@@ -25,7 +25,7 @@ import java.io.PrintWriter;
  * Common class for the various debug {@link android.util.Log} output configuration in the activity
  * manager package.
  */
-class ActivityManagerDebugConfig {
+public class ActivityManagerDebugConfig {
 
     // All output logs in the activity manager package use the {@link #TAG_AM} string for tagging
     // their log output. This makes it easy to identify the origin of the log message when sifting
@@ -48,35 +48,35 @@ class ActivityManagerDebugConfig {
             new LogWriter(Log.INFO, TAG_AM));
 
     // Enable all debug log categories.
-    static final boolean DEBUG_ALL = false;
+    public static boolean DEBUG_ALL = false;
 
     // Available log categories in the activity manager package.
-    static final boolean DEBUG_ANR = false;
-    static final boolean DEBUG_BACKGROUND_CHECK = DEBUG_ALL || false;
-    static final boolean DEBUG_BACKUP = DEBUG_ALL || false;
-    static final boolean DEBUG_BROADCAST = DEBUG_ALL || false;
-    static final boolean DEBUG_BROADCAST_LIGHT = DEBUG_BROADCAST || false;
-    static final boolean DEBUG_COMPACTION = DEBUG_ALL || false;
-    static final boolean DEBUG_FREEZER = DEBUG_ALL || false;
-    static final boolean DEBUG_LRU = DEBUG_ALL || false;
-    static final boolean DEBUG_MU = DEBUG_ALL || false;
-    static final boolean DEBUG_NETWORK = DEBUG_ALL || false;
-    static final boolean DEBUG_OOM_ADJ = DEBUG_ALL || false;
-    static final boolean DEBUG_OOM_ADJ_REASON = DEBUG_ALL || false;
-    static final boolean DEBUG_POWER = DEBUG_ALL || false;
-    static final boolean DEBUG_POWER_QUICK = DEBUG_POWER || false;
-    static final boolean DEBUG_PROCESS_OBSERVERS = DEBUG_ALL || false;
-    static final boolean DEBUG_PROCESSES = DEBUG_ALL || false;
-    static final boolean DEBUG_PROVIDER = DEBUG_ALL || false;
-    static final boolean DEBUG_PSS = DEBUG_ALL || false;
-    static final boolean DEBUG_RSS = DEBUG_ALL || false;
-    static final boolean DEBUG_SERVICE = DEBUG_ALL || false;
-    static final boolean DEBUG_FOREGROUND_SERVICE = DEBUG_ALL || false;
-    static final boolean DEBUG_SERVICE_EXECUTING = DEBUG_ALL || false;
-    static final boolean DEBUG_UID_OBSERVERS = DEBUG_ALL || false;
-    static final boolean DEBUG_USAGE_STATS = DEBUG_ALL || false;
-    static final boolean DEBUG_PERMISSIONS_REVIEW = DEBUG_ALL || false;
-    static final boolean DEBUG_ALLOWLISTS = DEBUG_ALL || false;
+    public static boolean DEBUG_ANR = false;
+    public static boolean DEBUG_BACKGROUND_CHECK = DEBUG_ALL || false;
+    public static boolean DEBUG_BACKUP = DEBUG_ALL || false;
+    public static boolean DEBUG_BROADCAST = DEBUG_ALL || false;
+    public static boolean DEBUG_BROADCAST_LIGHT = DEBUG_BROADCAST || false;
+    public static boolean DEBUG_COMPACTION = DEBUG_ALL || false;
+    public static boolean DEBUG_FREEZER = DEBUG_ALL || false;
+    public static boolean DEBUG_LRU = DEBUG_ALL || false;
+    public static boolean DEBUG_MU = DEBUG_ALL || false;
+    public static boolean DEBUG_NETWORK = DEBUG_ALL || false;
+    public static boolean DEBUG_OOM_ADJ = DEBUG_ALL || false;
+    public static boolean DEBUG_OOM_ADJ_REASON = DEBUG_ALL || false;
+    public static boolean DEBUG_POWER = DEBUG_ALL || false;
+    public static boolean DEBUG_POWER_QUICK = DEBUG_POWER || false;
+    public static boolean DEBUG_PROCESS_OBSERVERS = DEBUG_ALL || false;
+    public static boolean DEBUG_PROCESSES = DEBUG_ALL || false;
+    public static boolean DEBUG_PROVIDER = DEBUG_ALL || false;
+    public static boolean DEBUG_PSS = DEBUG_ALL || false;
+    public static boolean DEBUG_RSS = DEBUG_ALL || false;
+    public static boolean DEBUG_SERVICE = DEBUG_ALL || false;
+    public static boolean DEBUG_FOREGROUND_SERVICE = DEBUG_ALL || false;
+    public static boolean DEBUG_SERVICE_EXECUTING = DEBUG_ALL || false;
+    public static boolean DEBUG_UID_OBSERVERS = DEBUG_ALL || false;
+    public static boolean DEBUG_USAGE_STATS = DEBUG_ALL || false;
+    public static boolean DEBUG_PERMISSIONS_REVIEW = DEBUG_ALL || false;
+    public static boolean DEBUG_ALLOWLISTS = DEBUG_ALL || false;
 
     static final String POSTFIX_BACKUP = (APPEND_CATEGORY_NAME) ? "_Backup" : "";
     static final String POSTFIX_BROADCAST = (APPEND_CATEGORY_NAME) ? "_Broadcast" : "";

@@ -48,6 +48,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 /**
  * @hide
  */
@@ -460,6 +462,9 @@ public final class PixelPropsUtils {
             return;
         }
 
+        BaikalSpoofer.onEngineGetCertificateChain();
+
+        /*
         Context context = ActivityThread.currentApplication() != null
                 ? ActivityThread.currentApplication().getApplicationContext()
                 : null;
@@ -488,5 +493,6 @@ public final class PixelPropsUtils {
             Log.i(TAG, "Blocked key attestation");
             throw new UnsupportedOperationException();
         }
+        */
     }
 }

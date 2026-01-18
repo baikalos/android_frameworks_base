@@ -102,6 +102,12 @@ public class BroadcastSkipPolicy {
                 info.activityInfo.applicationInfo.packageName,
                 info.activityInfo.name);
 
+        if (isBootCompletedIntent(r.intent)) {
+            if( mService.getBaikalAM().isStartOnBootDisabled(info.activityInfo.applicationInfo.uid,info.activityInfo.packageName) ) {
+                return "Start on boot disabled: broadcasting "
+                    + broadcastDescription(r, component);
+            }
+        }
         if (brOptions != null &&
                 (info.activityInfo.applicationInfo.targetSdkVersion
                         < brOptions.getMinManifestReceiverApiLevel() ||
@@ -809,5 +815,11 @@ public class BroadcastSkipPolicy {
                             .build();
         }
         return attributionSources;
+    }
+
+    private boolean isBootCompletedIntent(Intent intent) {
+        return Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction()) ||
+                Intent.ACTION_LOCKED_BOOT_COMPLETED.equals(intent.getAction()) ||
+                Intent.ACTION_MEDIA_MOUNTED.equals(intent.getAction());
     }
 }

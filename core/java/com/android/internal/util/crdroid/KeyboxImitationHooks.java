@@ -27,6 +27,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 /**
  * @hide
  */
@@ -36,6 +38,11 @@ public class KeyboxImitationHooks {
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
 
     public static KeyEntryResponse onGetKeyEntry(KeyDescriptor descriptor) {
+
+        if( BaikalSpoofer.disableCertificateSpoof() ) {
+            return null;
+        }
+
         if (!KeyProviderManager.isKeyboxAvailable()) {
             return null;
         }
@@ -50,6 +57,11 @@ public class KeyboxImitationHooks {
     }
 
     public static KeyMetadata generateKey(IKeystoreSecurityLevel level, KeyDescriptor descriptor, Collection<KeyParameter> args) {
+
+        if( BaikalSpoofer.disableCertificateSpoof() ) {
+            return null;
+        }
+
         if (!KeyProviderManager.isKeyboxAvailable()) {
             return null;
         }
