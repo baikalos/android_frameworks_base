@@ -17,6 +17,7 @@
 package android.media;
 
 import android.annotation.NonNull;
+import android.util.Log;
 
 /**
  * @hide
@@ -48,6 +49,7 @@ public class AppVolume {
     }
 
     public boolean isActive() {
+        Log.w("AppVolume", "isActive: packageName:" + mPackageName + ":" + mActive, new Throwable());
         return mActive;
     }
 }

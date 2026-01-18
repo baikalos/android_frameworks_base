@@ -73,7 +73,7 @@ import java.util.stream.Collectors;
 /**
  * Settings constants that can modify the activity manager's behavior.
  */
-final class ActivityManagerConstants extends ContentObserver {
+public final class ActivityManagerConstants extends ContentObserver {
     private static final String TAG = "ActivityManagerConstants";
 
     // Key names stored in the settings value.
@@ -251,7 +251,7 @@ final class ActivityManagerConstants extends ContentObserver {
 
     static final long DEFAULT_BACKGROUND_SETTLE_TIME = 60 * 1000;
     static final long DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS = 60 * 1000;
-    static final boolean DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE = false;
+    static final boolean DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE = true;
 
     static final int DEFAULT_MAX_SERVICE_CONNECTIONS_PER_PROCESS = 3000;
 
@@ -797,7 +797,7 @@ final class ActivityManagerConstants extends ContentObserver {
      * Whether or not to kill apps in background restricted mode and it's cached, its UID state is
      * idle.
      */
-    volatile boolean mKillBgRestrictedAndCachedIdle = DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE;
+    public volatile boolean mKillBgRestrictedAndCachedIdle = DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE;
 
     /**
      * The amount of time we allow an app in background restricted mode to settle after it goes

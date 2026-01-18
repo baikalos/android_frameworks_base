@@ -48,6 +48,7 @@ import android.annotation.WorkerThread;
 import android.app.PendingIntent;
 import android.app.PropertyInvalidatedCache;
 import android.app.role.RoleManager;
+import android.baikalos.*;
 import android.compat.Compatibility;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledAfter;
@@ -75,8 +76,10 @@ import android.os.ParcelUuid;
 import android.os.Parcelable;
 import android.os.ParcelableException;
 import android.os.PersistableBundle;
+import android.os.Process;
 import android.os.RemoteException;
 import android.os.ResultReceiver;
+import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.WorkSource;
 import android.provider.Settings.SettingNotFoundException;
@@ -532,7 +535,8 @@ public class TelephonyManager {
     /** @hide */
     @UnsupportedAppUsage
     private TelephonyManager() {
-        mContext = null;
+        // mContext = null;
+        mContext = BaikalContext.getApplicationContext();
         mSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
     }
 
@@ -4015,7 +4019,12 @@ public class TelephonyManager {
      */
     @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.P)
     public String getSimOperatorNumericForPhone(int phoneId) {
-        return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_numeric(), "");
+        String result = getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_numeric(), "");
+        if( mContext != null ) {
+            result = mContext.getBaikalContext().getBaikalPackageOptionString(null, getCallingUid(), BaikalAppProfile.BAIKAL_OPCODE_SPOOF_SIM_MNC, result);
+        }
+        Log.d(TAG, "getSimOperatorNumericForPhone:" + ProcessmyUid() + ", result = \'" + result + "\'");
+        return result;
     }
 
     /**
@@ -4053,7 +4062,11 @@ public class TelephonyManager {
      */
     @UnsupportedAppUsage
     public String getSimOperatorNameForPhone(int phoneId) {
-        return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_alpha(), "");
+        String result = getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_alpha(), "");
+        if( mContext != null ) {
+            result = mContext.getBaikalContext().getBaikalPackageOptionString(null, getCallingUid(), BaikalAppProfile.BAIKAL_OPCODE_SPOOF_SIM_OP, result);
+        }
+        return result;
     }
 
     /**
@@ -4087,7 +4100,15 @@ public class TelephonyManager {
      */
     @UnsupportedAppUsage
     public static String getSimCountryIsoForPhone(int phoneId) {
-        return getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_iso_country(), "");
+        String result = getTelephonyProperty(phoneId, TelephonyProperties.icc_operator_iso_country(), "");
+        IBaikalService mBaikalService = IBaikalService.Stub.asInterface(ServiceManager.getService("baikal_service"));
+        if( mBaikalService != null ) { 
+            try {
+                result = mBaikalService.getBaikalPackageOptionString(null, getCallingUid(), BaikalAppProfile.BAIKAL_OPCODE_SPOOF_SIM_COUNTRY, result);
+            } catch(Exception e) {}
+        }
+        Log.d(TAG, "getSimCountryIsoForPhone:" + ProcessmyUid() + ", result = \'" + result + "\'");
+        return result;
     }
 
     /**
@@ -5261,16 +5282,31 @@ public class TelephonyManager {
         } catch (RemoteException ex) {
         }
         if (number != null) {
+            if( mContext != null ) {
+                number = mContext.getBaikalContext().getBaikalPackageOptionString(null, getCallingUid(), BaikalAppProfile.BAIKAL_OPCODE_SPOOF_SIM_LN, number);
+            }
             return number;
         }
         try {
             IPhoneSubInfo info = getSubscriberInfoService();
-            if (info == null) return null;
-            return info.getLine1NumberForSubscriber(subId, getOpPackageName(),
-                    getAttributionTag());
+            if (info != null) {
+                number = info.getLine1NumberForSubscriber(subId, getOpPackageName(), getAttributionTag());
+                if( mContext != null ) {
+                    number = mContext.getBaikalContext().getBaikalPackageOptionString(null, getCallingUid(), BaikalAppProfile.BAIKAL_OPCODE_SPOOF_SIM_LN, number);
+                }
+                return number;
+            }
+            // return null;
         } catch (RemoteException ex) {
-            return null;
+            // return null;
+        } catch (NullPointerException ex) {
+            // This could happen before phone restarts due to crashing
+            // return null;
         }
+        if( mContext != null ) {
+            number = mContext.getBaikalContext().getBaikalPackageOptionString(null, getCallingUid(), BaikalAppProfile.BAIKAL_OPCODE_SPOOF_SIM_LN, number);
+        }
+        return number;
     }
 
     /**
@@ -20214,5 +20250,18 @@ public class TelephonyManager {
             Rlog.e(TAG, "getAutoManagedPinForSim() RemoteException : " + ex);
             ex.rethrowFromSystemServer();
         }
+    }
+
+    static String ProcessmyUid() {
+        return "" + Process.myUid() + ",c=" + getCallingUid();
+    }
+
+    static int getCallingUid() {
+        int callingUid = Process.myUid();
+        try {
+            callingUid = Binder.getCallingUid();
+        } catch(Exception e) {
+        }
+        return callingUid;
     }
 }
