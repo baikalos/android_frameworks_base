@@ -1848,8 +1848,8 @@ public class Build {
      * @hide
      */
     @UnsupportedAppUsage
-    public static final boolean IS_DEBUGGABLE =
-            SystemProperties.getInt("ro.debuggable", 0) == 1;
+    public static final boolean IS_DEBUGGABLE = false;
+            //SystemProperties.getInt("ro.debuggable", 0) == 1;
 
     /**
      * Returns true if the device is running a debuggable build such as "userdebug" or "eng".
@@ -1868,9 +1868,9 @@ public class Build {
     /** @hide */
     public static final boolean IS_ENG = "eng".equals(TYPE);
     /** @hide */
-    public static final boolean IS_USERDEBUG = "userdebug".equals(TYPE);
+    public static final boolean IS_USERDEBUG = false; // "userdebug".equals(TYPE);
     /** @hide */
-    public static final boolean IS_USER = "user".equals(TYPE);
+    public static final boolean IS_USER = true; // "user".equals(TYPE);
 
     /**
      * Whether this build is running on ARC, the Android Runtime for Chrome

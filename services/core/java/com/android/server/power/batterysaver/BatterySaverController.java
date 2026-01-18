@@ -61,7 +61,7 @@ import java.util.Optional;
 public class BatterySaverController implements BatterySaverPolicyListener {
     static final String TAG = "BatterySaverController";
 
-    static final boolean DEBUG = BatterySaverPolicy.DEBUG;
+    public static boolean DEBUG = BatterySaverPolicy.DEBUG;
 
     private final Object mLock;
     private final Context mContext;
@@ -246,7 +246,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
     @Override
     public void onBatterySaverPolicyChanged(BatterySaverPolicy policy) {
         if (!isPolicyEnabled()) {
-            return; // No need to send it if not enabled.
+            //return; // No need to send it if not enabled.
         }
         mHandler.postStateChanged(/*sendBroadcast=*/ true, REASON_POLICY_CHANGED);
     }
@@ -287,6 +287,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
     /** Enable or disable full battery saver. */
     @VisibleForTesting
     public void enableBatterySaver(boolean enable, int reason) {
+        enable = false;
         synchronized (mLock) {
             if (getFullEnabledLocked() == enable) {
                 return;
@@ -379,14 +380,15 @@ public class BatterySaverController implements BatterySaverPolicyListener {
     }
 
     boolean setAdaptivePolicyEnabledLocked(boolean enabled, int reason) {
-        if (getAdaptiveEnabledLocked() == enabled) {
-            return false;
-        }
+        //if (getAdaptiveEnabledLocked() == enabled) {
+        //    return false;
+        //}
         setAdaptiveEnabledLocked(enabled);
         if (updatePolicyLevelLocked()) {
             mHandler.postStateChanged(/*sendBroadcast=*/ true, reason);
             return true;
         }
+        mHandler.postStateChanged(/*sendBroadcast=*/ true, reason);
         return false;
     }
 
@@ -451,7 +453,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
 
         final PowerManagerInternal pmi = LocalServices.getService(PowerManagerInternal.class);
         if (pmi != null) {
-            pmi.setPowerMode(Mode.LOW_POWER, isEnabled());
+            //pmi.setPowerMode(Mode.LOW_POWER, isEnabled());
         }
 
         updateBatterySavingStats();
@@ -531,6 +533,7 @@ public class BatterySaverController implements BatterySaverPolicyListener {
 
     @GuardedBy("mLock")
     private void setFullEnabledLocked(boolean value) {
+        value = false;
         if (mFullEnabledRaw == value) {
             return;
         }
