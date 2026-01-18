@@ -244,6 +244,7 @@ import com.android.internal.R;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.app.IVoiceInteractor;
+import com.android.internal.baikalos.BaikalSpoofer;
 import com.android.internal.content.ReferrerIntent;
 import com.android.internal.os.ApplicationSharedMemory;
 import com.android.internal.os.BackgroundThread;
@@ -8033,6 +8034,8 @@ public final class ActivityThread extends ClientTransactionHandler
         if (pifService.shouldSpoofPhotos(data.appInfo.packageName)) {
             pifService.spoofPhotosProps();
         }
+
+   		BaikalSpoofer.maybeSpoofProperties(data.processName,data.appInfo.packageName,data.appInfo,appContext);
 
         // Initialize the default http proxy in this process.
         Trace.traceBegin(Trace.TRACE_TAG_ACTIVITY_MANAGER, "Setup proxies");

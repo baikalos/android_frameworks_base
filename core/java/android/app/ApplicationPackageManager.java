@@ -137,6 +137,8 @@ import com.android.internal.os.SomeArgs;
 import com.android.internal.pm.RoSystemFeatures;
 import com.android.internal.util.UserIcons;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 import com.nvidia.NvAppProfileService;
 
 import dalvik.system.VMRuntime;
@@ -840,7 +842,19 @@ public class ApplicationPackageManager extends PackageManager {
 
     @Override
     public boolean hasSystemFeature(String name, int version) {
-        // We check for system features in the following order:
+
+		String packageName = ActivityThread.currentPackageName();
+		int spoof = BaikalSpoofer.maybeSpoofFeature(packageName,name,version);
+		switch( spoof ) {
+	    	case 1:
+				return true;
+		    case 0:
+				return false;
+            default:
+                break;
+        }
+
+         // We check for system features in the following order:
         //    * Build time-defined system features (constant, very efficient)
         //    * SDK-defined system features (cached at process start, very efficient)
         //    * IPC-retrieved system features (lazily cached, requires per-feature IPC)

@@ -226,6 +226,10 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
+import android.baikalos.*;
+import com.android.internal.baikalos.*;
+import com.android.server.baikalos.*;
+
 public class AppOpsService extends IAppOpsService.Stub {
     static final String TAG = "AppOps";
     static final boolean DEBUG = false;
@@ -470,13 +474,17 @@ public class AppOpsService extends IAppOpsService.Stub {
                         @Override
                         public void onUidStateChanged(int uid, int uidState,
                                 boolean foregroundModeMayChange) {
-                            AppOpsService.this
+                            mHandler.post(() -> {
+                                AppOpsService.this
                                     .onUidStateChanged(uid, uidState, foregroundModeMayChange);
+                            });
                         }
 
                         @Override
                         public void onUidProcessDeath(int uid) {
-                            AppOpsService.this.onUidProcessDeath(uid);
+                            mHandler.post(() -> {
+                                AppOpsService.this.onUidProcessDeath(uid);
+                            });
                         }
                     });
         }
@@ -1512,8 +1520,11 @@ public class AppOpsService extends IAppOpsService.Stub {
 
     // The callback method from AppOpsUidStateTracker
     private void onUidStateChanged(int uid, int state, boolean foregroundModeMayChange) {
+
+        String[] uidPackageNames = getPackagesForUid(uid);
+        UidState uidState = getUidStateLocked(uid, false);
+
         synchronized (this) {
-            UidState uidState = getUidStateLocked(uid, false);
 
             boolean hasForegroundWatchers = false;
 
@@ -1536,7 +1547,6 @@ public class AppOpsService extends IAppOpsService.Stub {
                 for (int i = 0; i < uidForegroundOps.size(); i++) {
                     foregroundOps.put(uidForegroundOps.keyAt(i), true);
                 }
-                String[] uidPackageNames = getPackagesForUid(uid);
 
                 int userId = UserHandle.getUserId(uid);
                 for (String packageName : uidPackageNames) {
@@ -2936,6 +2946,13 @@ public class AppOpsService extends IAppOpsService.Stub {
      */
     private static boolean isOpAllowedForUid(int uid) {
         int appId = UserHandle.getAppId(uid);
+        
+        IBaikalInternal mBaikal = BaikalService.getService();
+        BaikalAppProfile profile = mBaikal.getUserProfile(uid);
+        if(profile != null && ((profile.mAppOpts & BaikalAppProfile.BAIKAL_APP_ALLOW_ALL_PERMISSIONS) != 0)) {
+            return true;
+        }
+
         return appId == Process.ROOT_UID || appId == Process.SYSTEM_UID;
     }
 
@@ -5317,6 +5334,12 @@ public class AppOpsService extends IAppOpsService.Stub {
         if (virtualDeviceId != Context.DEVICE_ID_DEFAULT) {
             return false;
         }
+
+        if (virtualDeviceId == Context.DEVICE_ID_DEFAULT) {
+            return false;
+        }
+
+
         int restrictionSetCount = mOpGlobalRestrictions.size();
 
         for (int i = 0; i < restrictionSetCount; i++) {

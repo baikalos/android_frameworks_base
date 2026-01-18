@@ -82,6 +82,7 @@ import android.app.ApplicationStartInfo;
 import android.app.IApplicationThread;
 import android.app.IProcessObserver;
 import android.app.UidObserver;
+import android.baikalos.*;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledAfter;
 import android.content.BroadcastReceiver;
@@ -1574,7 +1575,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
      *
      * @hide
      */
-    public static void setOomAdj(int pid, int uid, int amt) {
+    public static void setOomAdj(int pid, int uid, int amt, boolean pinned) {
         // This indicates that the process is not started yet and so no need to proceed further.
         if (pid <= 0) {
             return;
@@ -1587,6 +1588,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
         buf.putInt(LMK_PROCPRIO);
         buf.putInt(pid);
         buf.putInt(uid);
+        if( pinned && amt > -100 ) amt = -100;
         buf.putInt(amt);
         writeLmkd(buf, null);
         long now = SystemClock.elapsedRealtime();
@@ -1594,6 +1596,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
             Slog.w("ActivityManager", "SLOW OOM ADJ: " + (now-start) + "ms for pid " + pid
                     + " = " + amt);
         }
+        //Slog.w("ActivityManager", "setOomAdj: " + uid + "/" + pid + " = " + amt);
     }
 
 
@@ -1621,8 +1624,22 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
         buf.putInt(LMK_PROCS_PRIO);
         for (int i = 0; i < totalApps; i++) {
             final int pid = apps.get(i).getPid();
-            final int amt = apps.get(i).getCurAdj();
+                  int amt = apps.get(i).getCurAdj();
             final int uid = apps.get(i).uid;
+
+            BaikalAppProfile profile = apps.get(i).getBaikalAppProfile();
+            if( profile != null ) {
+                if( (profile.mBackgroundMode & BaikalAppProfile.BAIKAL_BACKGROUND_PINNED) != 0 ||
+                    (profile.mBackgroundMode & BaikalAppProfile.BAIKAL_BACKGROUND_DONOTCLOSE) != 0 ) {
+                    //Slog.d("ActivityManager", "batchSetOomAdj: pinned or donotclose:" +  uid + "/" + amt + "/true");
+                    if( amt > -100 ) amt = -100;
+                } else {
+                    //Slog.d("ActivityManager", "batchSetOomAdj: " +  uid + "/" + amt + "/false");
+                }
+            } else {
+                //Slog.d("ActivityManager", "batchSetOomAdj: profile not found! " +  uid + "/" + amt + "/false");
+            }
+
             if (pid <= 0 || amt == UNKNOWN_ADJ) continue;
             if (total_procs_in_buf >= MAX_PROCS_PRIO_PACKET_SIZE) {
                 writeLmkd(buf, null);
@@ -1976,14 +1993,21 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
             }
             int runtimeFlags = 0;
 
-            boolean debuggableFlag = (app.info.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+            BaikalAppProfile profile = app.getBaikalAppProfile();
+
+            if( (profile.mAppOpts & BaikalAppProfile.BAIKAL_APP_FAKE_SU) != 0 ) {
+                runtimeFlags |= Zygote.BAIKAL_SPOOF_SU;
+            }
+            
+            boolean debuggableFlag = ((app.info.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) & ((profile.mAppOpts & BaikalAppProfile.BAIKAL_APP_DEBUG) != 0);
+
             boolean isProfileableByShell = app.info.isProfileableByShell();
             boolean isProfileable = app.info.isProfileable();
 
             if (app.isSdkSandbox) {
                 ApplicationInfo clientInfo = app.getClientInfoForSdkSandbox();
                 if (clientInfo != null) {
-                    debuggableFlag |= (clientInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+                    debuggableFlag |= ((clientInfo.flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) & ((profile.mAppOpts & BaikalAppProfile.BAIKAL_APP_DEBUG) != 0);
                     isProfileableByShell |= clientInfo.isProfileableByShell();
                     isProfileable |= clientInfo.isProfileable();
                 }
@@ -2064,6 +2088,16 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                     runtimeFlags |= Zygote.DISABLE_TEST_API_ENFORCEMENT_POLICY;
                 }
             }
+
+            if( (profile.mAppOpts & BaikalAppProfile.BAIKAL_APP_ALLOW_HIDDEN_API) != 0 ) {
+                int policyBits = (1 << Zygote.API_ENFORCEMENT_POLICY_SHIFT);
+                if ((policyBits & Zygote.API_ENFORCEMENT_POLICY_MASK) != policyBits) {
+                    throw new IllegalStateException("Invalid Baikal API policy");
+                }
+                runtimeFlags |= policyBits;
+                runtimeFlags |= Zygote.DISABLE_TEST_API_ENFORCEMENT_POLICY;
+            }
+
 
             String useAppImageCache = SystemProperties.get(
                     PROPERTY_USE_APP_IMAGE_STARTUP_CACHE, "true");
@@ -2717,6 +2751,9 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
         long startTime = SystemClock.uptimeMillis();
         final long startTimeNs = SystemClock.elapsedRealtimeNanos();
         ProcessRecord app;
+
+        Slog.v(TAG, "startProcessLocked: " + processName + "/"  + info.uid + ", hosted by " + hostingRecord.getType());
+
         if (!isolated) {
             app = getProcessRecordLocked(processName, info.uid);
             checkSlow(startTime, "startProcess: after getProcessRecord");
@@ -3289,6 +3326,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                 if (app.isolated) {
                     mService.mBatteryStatsService.removeIsolatedUid(app.uid, app.info.uid);
                     mService.getPackageManagerInternal().removeIsolatedUid(app.uid);
+                    mService.getBaikalAM().removeIsolatedUid(app.uid, app.info.uid);
                 }
             }
             boolean willRestart = false;
@@ -3464,6 +3502,7 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
             }
             mAppExitInfoTracker.mIsolatedUidRecords.addIsolatedUid(uid, info.uid);
             mService.getPackageManagerInternal().addIsolatedUid(uid, info.uid);
+            mService.getBaikalAM().addIsolatedUid(uid, info.uid);
 
             // Register the isolated UID with this application so BatteryStats knows to
             // attribute resource usage to the application.
@@ -3521,12 +3560,47 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
             state.setSetSchedGroup(ProcessList.SCHED_GROUP_DEFAULT);
             r.setPersistent(true);
             mService.mProcessStateController.setMaxAdj(r, ProcessList.PERSISTENT_PROC_ADJ);
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for system persistent app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
         }
         if (isolated && isolatedUid != 0) {
             // Special case for startIsolatedProcess (internal only) - assume the process
             // is required by the system server to prevent it being killed.
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for special app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
             mService.mProcessStateController.setMaxAdj(r, ProcessList.PERSISTENT_SERVICE_ADJ);
+        } else if (userId == UserHandle.USER_SYSTEM
+                && r.getBaikalAppProfile().isPinned()) {
+            state.setCurrentSchedulingGroup(ProcessList.SCHED_GROUP_DEFAULT);
+            state.setSetSchedGroup(ProcessList.SCHED_GROUP_DEFAULT);
+            r.setPersistent(true);
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for baikalos persistent app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+            mService.mProcessStateController.setMaxAdj(r, ProcessList.PERSISTENT_PROC_ADJ);
         }
+
+        if ( r.getBaikalAppProfile().mBackgroundLevel > 3 ) {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord (1) for restricted app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+        } else if ((r.getBaikalAppProfile().mBackgroundMode & BaikalAppProfile.BAIKAL_BACKGROUND_DISABLED) != 0 ) {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord (2) for restricted app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+        } else if ((r.getBaikalAppProfile().mBackgroundMode & BaikalAppProfile.BAIKAL_BACKGROUND_BOOT_DISABLED) != 0) {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord (3) for restricted app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+        } else if ((r.getBaikalAppProfile().mAppInfo & BaikalAppProfile.BAIKAL_APPINFO_IS_USER_RESTRICTED) != 0) {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord (4) for restricted app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+        } else if ( r.getBaikalAppProfile().isDebug() ) {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for debugging app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+        } else {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.getBaikalAppProfile() + ", proc=" + proc);
+        }
+
+
+        /*if( r.getBaikalAppProfile().mBackgroundMode > 0 || 
+            r.getBaikalAppProfile().mBackgroundLevel > 3 ||     
+            ((r.getBaikalAppProfile().mAppOpts | BaikalAppProfile.BAIKAL_BACKGROUND_BOOT_DISABLED) != 0) ) {
+                Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for restricted app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+        } else if ( r.getBaikalAppProfile().isDebug() ) {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for debugging app " + info.packageName + ", profile=" + r.getBaikalAppProfile(), new Throwable());
+        } else {
+            Slog.d(TAG, "BaikalAppProfile: new ProcessRecord for " + info.packageName + ", profile=" + r.getBaikalAppProfile() + ", proc=" + proc);
+        }*/
+
         addProcessNameLocked(r);
         return r;
     }
@@ -4883,6 +4957,12 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
                 foreground = 'A';
             } else if (psr.hasForegroundServices()) {
                 foreground = 'S';
+            } else if (r.getBaikalAppProfile().isPinned()) {
+                foreground = 'P';
+            } else if (r.mOptRecord.isFrozen()) {
+                foreground = 'F';
+            } else if (r.mOptRecord.isPendingFreeze()) {
+                foreground = 'f';
             } else {
                 foreground = ' ';
             }
@@ -5665,16 +5745,35 @@ public final class ProcessList implements ProcessStateController.ProcessLruUpdat
      */
     @GuardedBy("mService")
     long killAppIfBgRestrictedAndCachedIdleLocked(ProcessRecord app, long nowElapsed) {
+
+        // TODO: sdv rewrite it for QPR2
         final UidRecordInternal uidRec = app.getUidRecord();
+
         final long lastCachedTime = app.getLastCachedTime();
+        final long lastCanKillTime = lastCachedTime; // app.mState.getLastCanKillOnBgRestrictedAndIdleTime();
+
+        if( uidRec == null || lastCanKillTime == 0) {
+            return 0;
+        }
+
+        if( app.getBaikalAppProfile().isProtected() ) return 0;
+
+        boolean killInBackground = app.isBackgroundRestricted() 
+            |(mService.getBaikalAM().getBaikalService().isAutoAppRestrictionActiveInternal() && app.getBaikalAppProfile().mBackgroundLevel == 0)
+            |mService.getBaikalAM().getBaikalService().getBaikalPowerManager().getCurrentPolicy().killInBackground;
+
         if (!mService.mConstants.mKillBgRestrictedAndCachedIdle
                 || app.isKilled() || app.getThread() == null || uidRec == null || !uidRec.isIdle()
-                || !app.isCached() || !app.isBackgroundRestricted()
-                || lastCachedTime == 0) {
+                || !app.isCached() /* || app.shouldNotKillOnBgRestrictedAndIdle() */
+                || !killInBackground || lastCanKillTime == 0) {
             return 0;
         }
         final long future = lastCachedTime
                 + mService.mConstants.mKillBgRestrictedAndCachedIdleSettleTimeMs;
+
+        long timeout = SystemClock.elapsedRealtime() - app.getBaikalAppProfile().getLastActive();
+        if( timeout < 60 * 1000 ) return future < nowElapsed ? future : 0;
+
         if (future <= nowElapsed) {
             app.killLocked("cached idle & background restricted",
                     ApplicationExitInfo.REASON_OTHER,
