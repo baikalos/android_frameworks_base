@@ -73,7 +73,7 @@ import java.util.stream.Collectors;
 /**
  * Settings constants that can modify the activity manager's behavior.
  */
-final class ActivityManagerConstants extends ContentObserver {
+public final class ActivityManagerConstants extends ContentObserver {
     private static final String TAG = "ActivityManagerConstants";
 
     // Key names stored in the settings value.
@@ -189,7 +189,7 @@ final class ActivityManagerConstants extends ContentObserver {
      */
     static final String KEY_FREEZER_CUTOFF_ADJ = "freezer_cutoff_adj";
 
-    private static final int DEFAULT_MAX_CACHED_PROCESSES = 1024;
+    private static final int DEFAULT_MAX_CACHED_PROCESSES = 64;
     private static final boolean DEFAULT_PRIORITIZE_ALARM_BROADCASTS = true;
     private static final long DEFAULT_FGSERVICE_MIN_SHOWN_TIME = 2*1000;
     private static final long DEFAULT_FGSERVICE_MIN_REPORT_TIME = 3*1000;
@@ -251,7 +251,7 @@ final class ActivityManagerConstants extends ContentObserver {
 
     static final long DEFAULT_BACKGROUND_SETTLE_TIME = 60 * 1000;
     static final long DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS = 60 * 1000;
-    static final boolean DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE = false;
+    static final boolean DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE = true;
 
     static final int DEFAULT_MAX_SERVICE_CONNECTIONS_PER_PROCESS = 3000;
 
@@ -797,7 +797,7 @@ final class ActivityManagerConstants extends ContentObserver {
      * Whether or not to kill apps in background restricted mode and it's cached, its UID state is
      * idle.
      */
-    volatile boolean mKillBgRestrictedAndCachedIdle = DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE;
+    public volatile boolean mKillBgRestrictedAndCachedIdle = DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE;
 
     /**
      * The amount of time we allow an app in background restricted mode to settle after it goes
@@ -919,7 +919,7 @@ final class ActivityManagerConstants extends ContentObserver {
 
     /** @see #mNoKillCachedProcessesPostBootCompletedDurationMillis */
     private static final long
-            DEFAULT_NO_KILL_CACHED_PROCESSES_POST_BOOT_COMPLETED_DURATION_MILLIS = 600_000;
+            DEFAULT_NO_KILL_CACHED_PROCESSES_POST_BOOT_COMPLETED_DURATION_MILLIS = 120_000;
 
     /**
      * If true, do not kill excessive cached processes proactively, until user-0 is unlocked.
@@ -950,7 +950,7 @@ final class ActivityManagerConstants extends ContentObserver {
     private static final String KEY_MAX_EMPTY_TIME_MILLIS =
             "max_empty_time_millis";
 
-    private static final long DEFAULT_MAX_EMPTY_TIME_MILLIS = 1000L * 60L * 60L * 1000L;
+    private static final long DEFAULT_MAX_EMPTY_TIME_MILLIS = /*1000L*/ 3L * 60L * 60L * 1000L;
 
     private volatile long mMaxEmptyTimeMillis = DEFAULT_MAX_EMPTY_TIME_MILLIS;
 
@@ -1019,9 +1019,9 @@ final class ActivityManagerConstants extends ContentObserver {
      */
     private static final long DEFAULT_MIN_ASSOC_LOG_DURATION = 5 * 60 * 1000; // 5 mins
 
-    private static final boolean DEFAULT_PROACTIVE_KILLS_ENABLED = false;
+    private static final boolean DEFAULT_PROACTIVE_KILLS_ENABLED = true;
 
-    private static final float DEFAULT_LOW_SWAP_THRESHOLD_PERCENT = 0.10f;
+    private static final float DEFAULT_LOW_SWAP_THRESHOLD_PERCENT = 0.25f;
 
     private static final String KEY_MIN_ASSOC_LOG_DURATION = "min_assoc_log_duration";
 
@@ -1871,11 +1871,11 @@ final class ActivityManagerConstants extends ContentObserver {
 
     private void updateKillBgRestrictedCachedIdleSettleTime() {
         final long currentSettleTime = mKillBgRestrictedAndCachedIdleSettleTimeMs;
-        mKillBgRestrictedAndCachedIdleSettleTimeMs = DeviceConfig.getLong(
+        /*mKillBgRestrictedAndCachedIdleSettleTimeMs = DeviceConfig.getLong(
                 DeviceConfig.NAMESPACE_ACTIVITY_MANAGER,
                 KEY_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME,
-                DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS);
-        if (mKillBgRestrictedAndCachedIdleSettleTimeMs < currentSettleTime) {
+                DEFAULT_KILL_BG_RESTRICTED_CACHED_IDLE_SETTLE_TIME_MS);*/
+        if (mKillBgRestrictedAndCachedIdleSettleTimeMs <= currentSettleTime) {
             // Don't remove existing messages in case other IDLE_UIDS_MSG initiators use lower
             // delays, but send a new message if the settle time has decreased.
             mService.mHandler.sendEmptyMessageDelayed(

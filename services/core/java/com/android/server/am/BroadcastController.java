@@ -1184,7 +1184,7 @@ class BroadcastController {
 
             // TODO: b/329211459 - Remove this when the remote intent broadcast receiver is removed
             // from Wear.
-            if (mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH)
+            /*if (mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_WATCH)
                     && getWearRemoteIntentAction().equals(action)
                     && CompatChanges.isChangeEnabled(
                             WEAR_REMOTE_INTENT_BLOCKED_IN_BACKGROUND, callingUid)) {
@@ -1196,7 +1196,7 @@ class BroadcastController {
                         > ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
                     return ActivityManager.START_CANCELED;
                 }
-            }
+            }*/
 
             switch (action) {
                 case Intent.ACTION_MEDIA_SCANNER_SCAN_FILE:

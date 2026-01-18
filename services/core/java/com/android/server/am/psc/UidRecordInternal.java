@@ -240,7 +240,7 @@ public abstract class UidRecordInternal {
      * @param lastIdleTime The elapsed real-time when the UID became idle.
      */
     @GuardedBy({"mService", "mProcLock"})
-    void setLastIdleTime(@ElapsedRealtimeLong long lastIdleTime) {
+    public void setLastIdleTime(@ElapsedRealtimeLong long lastIdleTime) {
         mLastIdleTimeIfStillIdle = lastIdleTime;
         if (lastIdleTime > 0) {
             mRealLastIdleTime = lastIdleTime;
@@ -293,7 +293,7 @@ public abstract class UidRecordInternal {
     }
 
     @GuardedBy({"mService", "mProcLock"})
-    void setIdle(boolean idle) {
+    public void setIdle(boolean idle) {
         mIdle = idle;
     }
 
@@ -303,7 +303,7 @@ public abstract class UidRecordInternal {
     }
 
     @GuardedBy({"mService", "mProcLock"})
-    void setSetIdle(boolean setIdle) {
+    public void setSetIdle(boolean setIdle) {
         mSetIdle = setIdle;
     }
 

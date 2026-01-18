@@ -32,6 +32,7 @@ import android.annotation.UiThread;
 import android.annotation.WorkerThread;
 import android.app.ActivityThread;
 import android.app.Application;
+import android.baikalos.*;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.Build;
@@ -867,7 +868,8 @@ public class InteractionJankMonitor {
             mSurfaceOnly = surfaceOnly;
             mContext = context != null
                     ? context
-                    : (view != null ? view.getContext().getApplicationContext() : null);
+                    : (view != null ? view.getContext().getApplicationContext() : BaikalContext.getApplicationContext());
+
             mSurfaceControl = surfaceControl;
             mDeferMonitor = deferMonitor;
             if (handler != null) {

@@ -507,6 +507,15 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
                 // if the caller is pcc uid, use the visibility of its app uid
                 callingUid = UserHandle.getUid(userId, packageSetting.getAppId());
             }
+
+            if( BaikalPackageManagerService.getInstance().shouldFilterApplication(snapshot, 
+                callingUid, callingSetting, targetPkgSetting, userId) ) {
+                if (DEBUG_LOGGING || mFeatureConfig.isLoggingEnabled(callingAppId)) {
+                    log(callingSetting, targetPkgSetting, "BLOCKED");
+                }
+                return !DEBUG_ALLOW_ALL;
+            }
+
             // use cache
             if (mCacheReady && mCacheEnabled) {
                 if (!shouldFilterApplicationUsingCache(callingUid,
@@ -860,7 +869,7 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
 
     private static void log(Object callingSetting, PackageStateInternal targetPkgSetting,
             String description) {
-        Slog.i(TAG,
+        if( DEBUG_LOGGING ) Slog.i(TAG,
                 "interaction: " + (callingSetting == null ? "system" : callingSetting) + " -> "
                         + targetPkgSetting + " " + description);
     }
