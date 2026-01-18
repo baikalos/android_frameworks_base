@@ -264,6 +264,30 @@
         <item>Best Effort (Adaptive Bit Rate)</item>
     </string-array>
 
+    <!-- Titles for Bluetooth Audio Codec LDAC Playback Quality selection preference. [CHAR LIMIT=70] -->
+    <string-array name="bluetooth_a2dp_codec_sbchd_playback_bitrate_titles">
+        <item>Default</item>
+        <item>512 Kb/s</item>
+        <item>720 Kb/s</item>
+        <item>800 Kb/s</item>
+        <item>990 Kb/s</item>
+        <item>1100 Kb/s</item>
+        <item>1230 Kb/s</item>
+        <item>1440 Kb/s</item>
+    </string-array>
+
+    <!-- Summaries for Bluetooth Audio Codec LDAC Playback Quality selection preference. [CHAR LIMIT=70]-->
+    <string-array name="bluetooth_a2dp_codec_sbchd_playback_bitrate_summaries" >
+        <item>327 Kb/s Joint Stereo (default)</item>
+        <item>512 Kb/s Dual Channel</item>
+        <item>720 Kb/s Dual Channel</item>
+        <item>800 Kb/s Dual Channel</item>
+        <item>990 Kb/s Dual Channel</item>
+        <item>1100 Kb/s Dual Channel</item>
+        <item>1230 Kb/s Dual Channel</item>
+        <item>1440 Kb/s Dual Channel</item>
+    </string-array>
+
     <!-- Summaries for Android Auto Bluetooth Audio Active Device status. [CHAR LIMIT=50]-->
     <string-array name="bluetooth_audio_active_device_summaries" >
         <!-- Status message when the device is not Active. -->

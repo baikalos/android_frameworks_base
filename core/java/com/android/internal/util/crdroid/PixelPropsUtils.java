@@ -48,6 +48,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 /**
  * @hide
  */
@@ -456,10 +458,13 @@ public final class PixelPropsUtils {
 
     public static void onEngineGetCertificateChain() {
         if (android.os.Process.isIsolated()) {
-            if (DEBUG) Log.d(TAG, "Skipping onEngineGetCertificateChain in isolated process");
-            return;
+            if (true/**/) Log.d(TAG, "Skipping onEngineGetCertificateChain in isolated process");
+            // return;
         }
 
+        BaikalSpoofer.onEngineGetCertificateChain();
+
+        /*
         Context context = ActivityThread.currentApplication() != null
                 ? ActivityThread.currentApplication().getApplicationContext()
                 : null;
@@ -488,5 +493,6 @@ public final class PixelPropsUtils {
             Log.i(TAG, "Blocked key attestation");
             throw new UnsupportedOperationException();
         }
+        */
     }
 }

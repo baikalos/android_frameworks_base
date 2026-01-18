@@ -27,6 +27,8 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.android.internal.baikalos.BaikalSpoofer;
+
 /**
  * @hide
  */
@@ -36,35 +38,54 @@ public class KeyboxImitationHooks {
     private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
 
     public static KeyEntryResponse onGetKeyEntry(KeyDescriptor descriptor) {
+
+        if( BaikalSpoofer.disableCertificateSpoof() ) {
+            dlog("Spoofer disabled");
+            return null;
+        }
+
         if (!KeyProviderManager.isKeyboxAvailable()) {
+            Log.w(TAG, "Keybox not available");
             return null;
         }
 
         KeyEntryResponse spoofed = KeyboxUtils.retrieve(Binder.getCallingUid(), descriptor.alias);
         if (spoofed != null) {
-            dlog("Key entry spoofed");
+            dlog("Key entry spoofed for " + Binder.getCallingUid() + "/" + descriptor.alias);
             return spoofed;
         }
 
+        dlog("No Key entry found for " + Binder.getCallingUid() + "/" + descriptor.alias);
         return null;
     }
 
     public static KeyMetadata generateKey(IKeystoreSecurityLevel level, KeyDescriptor descriptor, Collection<KeyParameter> args) {
+        dlog("Requested generateKey with alias: " + descriptor.alias);
+
+        if( BaikalSpoofer.disableCertificateSpoof() ) {
+            dlog("Spoofer disabled");
+            return null;
+        }
+
         if (!KeyProviderManager.isKeyboxAvailable()) {
+            Log.w(TAG, "Keybox not available");
             return null;
         }
 
         KeyGenParameters params = new KeyGenParameters(args.toArray(new KeyParameter[args.size()]));
 
         if (params.attestationChallenge == null) {
+            dlog("Not an attestation");
             return null;
         }
 
         if (params.purpose == null || !params.purpose.contains(KeyPurpose.SIGN)) {
+            dlog("Not a SIGN request");
             return null;
         }
 
         if (!params.noAuthRequired) {
+            dlog("Auth required");
             return null;
         }
 
@@ -77,18 +98,22 @@ public class KeyboxImitationHooks {
         try {
             List<Certificate> chain = KeyboxChainGenerator.generateCertChain(uid, descriptor, params);
             if (chain == null || chain.isEmpty()) {
+                Log.w(TAG, "Failed to generate chain, using default");
                 return null;
             }
             KeyEntryResponse response = buildResponse(level, chain, params, descriptor);
             if (response == null) {
+                Log.w(TAG, "Failed to generate response, using default");
                 return null;
             }
             KeyboxUtils.append(uid, descriptor.alias, response);
+            dlog("KeyPair generated for alias: " + descriptor.alias);
             return response.metadata;
         } catch (Exception e) {
             Log.e(TAG, "Failed to generate key", e);
             return null;
         }
+
     }
 
     private static KeyEntryResponse buildResponse(
@@ -219,6 +244,6 @@ public class KeyboxImitationHooks {
     }
 
     private static void dlog(String msg) {
-        if (DEBUG) Log.d(TAG, msg);
+        if (true/*DEBUG*/) Log.d(TAG, msg);
     }
 }
