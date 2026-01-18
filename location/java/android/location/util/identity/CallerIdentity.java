@@ -141,6 +141,8 @@ public final class CallerIdentity {
 
     @Nullable private final String mListenerId;
 
+    private @Nullable WorkSource mWorkSource;
+
     private CallerIdentity(int uid, int pid, String packageName,
             @Nullable String attributionTag, @Nullable String listenerId) {
         this.mUid = uid;
@@ -212,11 +214,21 @@ public final class CallerIdentity {
      */
     public WorkSource addToWorkSource(@Nullable WorkSource workSource) {
         if (workSource == null) {
-            return new WorkSource(mUid, mPackageName);
+            mWorkSource = new WorkSource(mUid, mPackageName);
+            return mWorkSource;
         } else {
             workSource.add(mUid, mPackageName);
-            return workSource;
+            mWorkSource = workSource;
+            return mWorkSource;
         }
+    }
+
+    public void setWorkSource(@Nullable WorkSource workSource) {
+        mWorkSource = workSource;
+    }
+
+    public WorkSource getWorkSource() {
+        return mWorkSource;
     }
 
     @Override

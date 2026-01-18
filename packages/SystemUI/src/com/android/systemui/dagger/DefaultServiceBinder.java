@@ -123,7 +123,7 @@ public abstract class DefaultServiceBinder {
     @ClassKey(FPSInfoService.class)
     public abstract Service bindFPSInfoService(FPSInfoService service);
 
-    /** Inject into FPSInfoService */
+    /** Inject into CpuInfoService */
     @Binds
     @IntoMap
     @ClassKey(CPUInfoService.class)

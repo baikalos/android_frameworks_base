@@ -42,6 +42,10 @@ import com.android.server.LocalServices;
 import com.android.server.pm.PackageManagerServiceUtils;
 import com.android.server.pm.UserManagerService;
 
+import android.baikalos.*;
+import com.android.internal.baikalos.*;
+import com.android.server.baikalos.*;
+
 /**
  * Legacy permission manager service.
  */
@@ -404,6 +408,18 @@ public class LegacyPermissionManagerService extends ILegacyPermissionManager.Stu
         }
 
         @Override
+        public void grantDefaultPermissionsBaikalModules(int userId) {
+            //mDefaultPermissionGrantPolicy.grantDefaultPermissionsBaikalModules(userId);
+        }
+
+        @Override
+        public void grantDefaultGmsPermissionsBaikal(int userId) {
+            mDefaultPermissionGrantPolicy.grantDefaultGmsPermissionsBaikal(userId);
+            mDefaultPermissionGrantPolicy.grantDefaultPermissionsBaikalModules(userId);
+            grantDefaultPermissionsBaikalPackages();
+        }
+
+        @Override
         public void scheduleReadDefaultPermissionExceptions() {
             mDefaultPermissionGrantPolicy.scheduleReadDefaultPermissionExceptions();
         }
@@ -422,6 +438,35 @@ public class LegacyPermissionManagerService extends ILegacyPermissionManager.Stu
                     attributionTag, reason);
             return result;
         }
+
+        private void grantDefaultPermissionsBaikalPackages() {
+
+            final PackageManagerInternal packageManagerInternal = LocalServices.getService(
+                    PackageManagerInternal.class);
+
+            if( packageManagerInternal == null ) return;
+            final PermissionManagerServiceInternal permissionManagerInternal =
+                    LocalServices.getService(PermissionManagerServiceInternal.class);
+
+            if( permissionManagerInternal == null ) return;
+
+            final IBaikalInternal baikal = BaikalService.getService();
+            if( baikal == null ) return;
+
+            for (final int userId : UserManagerService.getInstance().getUserIds()) {
+                packageManagerInternal.forEachPackage(pkg -> {
+                    // Filter out packages that don't have app IDs which means they don't have
+                    // permission states either.
+                    if (pkg.getUid() != -1) {
+                        BaikalAppProfile profile = baikal.getUserProfile(pkg.getUid());
+                        if( profile != null ) {
+                            mDefaultPermissionGrantPolicy.grantDefaultPermissionsBaikalPackage(userId, pkg.getPackageName(), profile);
+                        }
+                    }
+                });
+            }
+        }
+
     }
 
     /**

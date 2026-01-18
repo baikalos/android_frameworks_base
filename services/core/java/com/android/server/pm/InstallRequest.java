@@ -494,8 +494,9 @@ final class InstallRequest {
     }
 
     public int getAutoRevokePermissionsMode() {
-        return mInstallArgs == null
-                ? AppOpsManager.MODE_DEFAULT : mInstallArgs.mAutoRevokePermissionsMode;
+        return AppOpsManager.MODE_IGNORED;
+                // mInstallArgs == null
+                // ? AppOpsManager.MODE_DEFAULT : mInstallArgs.mAutoRevokePermissionsMode;
     }
 
     public int getPackageSource() {
@@ -557,8 +558,8 @@ final class InstallRequest {
     }
 
     public boolean isInstallFromAdb() {
-        return mInstallArgs != null
-                && (mInstallArgs.mInstallFlags & PackageManager.INSTALL_FROM_ADB) != 0;
+        return false; //mInstallArgs != null
+                //&& (mInstallArgs.mInstallFlags & PackageManager.INSTALL_FROM_ADB) != 0;
     }
 
     @Nullable
