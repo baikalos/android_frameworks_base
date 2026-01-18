@@ -70,6 +70,7 @@ import android.os.PersistableBundle;
 import android.os.Process;
 import android.os.SELinux;
 import android.os.SystemClock;
+import android.os.SystemProperties;
 import android.os.Trace;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -6204,6 +6205,8 @@ public final class Settings implements Watchable, Snappable, ResilientAtomicFile
         // The mapping keys are user ids.
         private final SparseBooleanArray mPermissionUpgradeNeeded = new SparseBooleanArray();
 
+        private boolean mForecedRestore = false;
+
         @GuardedBy("mLock")
         // Staging area for states prepared to be written.
         private final SparseArray<RuntimePermissionsState> mPendingStatesToWrite =
@@ -6233,7 +6236,17 @@ public final class Settings implements Watchable, Snappable, ResilientAtomicFile
         }
 
         public boolean isPermissionUpgradeNeeded(int userId) {
+
+            boolean forcedRestore = true;
+            if (SystemProperties.getBoolean("baikal.restore_system_permissions", false)) {
+                forcedRestore = true;
+                Log.i(TAG, "systemReady: Forcibly restore system permissions for user " + userId);
+            }
             synchronized (mLock) {
+                if( mForecedRestore || forcedRestore ) {
+                    mForecedRestore = true;
+                    return true;
+                }
                 return mPermissionUpgradeNeeded.get(userId, true);
             }
         }
