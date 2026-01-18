@@ -5527,7 +5527,8 @@ public final class ActiveServices {
             }
 
             if (allowCancel) {
-                final boolean shouldStop = r.canStopIfKilled(canceled);
+                final boolean shouldStop = r.canStopIfKilled(canceled) || 
+                mAm.getBaikalAM().stopIfKilled(r);
                 if (shouldStop && !r.hasAutoCreateConnections()) {
                     // Nothing to restart.
                     return false;

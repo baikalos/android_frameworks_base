@@ -2628,13 +2628,13 @@ public class SettingsProvider extends ContentProvider {
                 if (!namespaceAllowed && !DeviceConfig.getAdbWritableFlags().contains(flag)) {
                     throw new SecurityException("Permission denial for flag '" + flag
                             + "'; allowlist permission granted, but must add flag to the "
-                            + "allowlist");
+                            + "allowlist. uid=" + Binder.getCallingUid());
                 }
             }
             assertCallingUserDenyList(flags);
         } else {
             throw new SecurityException("Permission denial to mutate flag, must have root, "
-                + "WRITE_DEVICE_CONFIG, or WRITE_ALLOWLISTED_DEVICE_CONFIG");
+                + "WRITE_DEVICE_CONFIG, or WRITE_ALLOWLISTED_DEVICE_CONFIG. uid=" + Binder.getCallingUid());
         }
     }
 
