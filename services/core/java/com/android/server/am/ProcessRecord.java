@@ -35,6 +35,7 @@ import android.app.ApplicationExitInfo.SubReason;
 import android.app.BackgroundStartPrivileges;
 import android.app.IApplicationThread;
 import android.content.ComponentName;
+import android.baikalos.BaikalAppProfile;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManagerInternal;
 import android.content.pm.ProcessInfo;
@@ -579,6 +580,11 @@ class ProcessRecord extends ProcessRecordInternal implements WindowProcessListen
         mProfile.init(now);
         mOptRecord.init(now);
         super.init(mWindowProcessController, mProfile, now);
+        BaikalAppProfile baikalAppProfile = mService.getBaikalAM() != null ? 
+                                    mService.getBaikalAM().createProfileForProcessRecord(uid,info,isolated,isSdkSandbox,_definingUid,_processName)
+                                    : new BaikalAppProfile(processName,uid);
+        setBaikalAppProfile(baikalAppProfile);
+        getBaikalAppProfile().active(now);
         mPkgList.put(_info.packageName, new ProcessStats.ProcessStateHolder(_info.longVersionCode));
         updateProcessRecordNodes(this);
     }
@@ -1752,7 +1758,7 @@ class ProcessRecord extends ProcessRecordInternal implements WindowProcessListen
     }
 
     public void setWasForceStopped(boolean stopped) {
-        mWasForceStopped = stopped;
+        mWasForceStopped = false; //stopped;
     }
 
     public boolean wasForceStopped() {

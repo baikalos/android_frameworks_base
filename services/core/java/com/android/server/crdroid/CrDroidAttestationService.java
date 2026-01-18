@@ -41,9 +41,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-public final class AttestationService extends SystemService {
+public final class CrDroidAttestationService extends SystemService {
 
-    private static final String TAG = AttestationService.class.getSimpleName();
+    private static final String TAG = CrDroidAttestationService.class.getSimpleName();
 
     private static final String API = "https://raw.githubusercontent.com/crdroidandroid/android_vendor_certification/refs/heads/15.0/gms_certified_props.json";
     private static final String DATA_FILE = "gms_certified_props.json";
@@ -63,7 +63,7 @@ public final class AttestationService extends SystemService {
     private volatile long mLastSuccessFetchMs = 0L;
     private static final long MIN_REFETCH_MS = TimeUnit.MINUTES.toMillis(5);
 
-    public AttestationService(Context context) {
+    public CrDroidAttestationService(Context context) {
         super(context);
         mContext = context;
         mDataFile = new File(Environment.getDataSystemDirectory(), DATA_FILE);

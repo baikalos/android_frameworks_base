@@ -35,10 +35,10 @@ public class WindowManagerDebugConfig {
 
     static final boolean DEBUG = false;
     static final boolean DEBUG_LAYOUT = false;
-    static final boolean DEBUG_LAYERS = false;
+    static final boolean DEBUG_LAYERS = true;
     static final boolean DEBUG_INPUT = false;
     static final boolean DEBUG_INPUT_METHOD = false;
-    static final boolean DEBUG_VISIBILITY = false;
+    static final boolean DEBUG_VISIBILITY = true;
     static final boolean DEBUG_CONFIGURATION = false;
     static final boolean DEBUG_STARTING_WINDOW_VERBOSE = false;
     static final boolean DEBUG_WALLPAPER = false;
@@ -46,8 +46,8 @@ public class WindowManagerDebugConfig {
     static final boolean DEBUG_SCREENSHOT = false;
     static final boolean DEBUG_LAYOUT_REPEATS = false;
     static final boolean DEBUG_WINDOW_TRACE = false;
-    static final boolean DEBUG_TASK_MOVEMENT = false;
-    static final boolean DEBUG_ROOT_TASK = false;
+    static final boolean DEBUG_TASK_MOVEMENT = true;
+    static final boolean DEBUG_ROOT_TASK = true;
     static final boolean DEBUG_DISPLAY = false;
     static final boolean DEBUG_POWER = false;
     static final boolean SHOW_VERBOSE_TRANSACTIONS = false;

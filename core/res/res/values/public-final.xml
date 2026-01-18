@@ -4147,4 +4147,6 @@
       @hide @SystemApi -->
   <public type="bool" name="config_enableMaterialDesignInPackageInstaller" id="0x0111000c" />
 
+  <public type="integer" name="config_criticalBatteryWarningLevel" id="0x010e006c" />
+
 </resources>

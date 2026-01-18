@@ -118,7 +118,7 @@ import java.util.Set;
  */
 public class MediaSessionService extends SystemService implements Monitor {
     private static final String TAG = "MediaSessionService";
-    static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    static final boolean DEBUG = true; //Log.isLoggable(TAG, Log.DEBUG);
     // Leave log for key event always.
     static final boolean DEBUG_KEY_EVENT = true;
 
