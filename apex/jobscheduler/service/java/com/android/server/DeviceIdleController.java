@@ -108,6 +108,7 @@ import com.android.internal.util.FastXmlSerializer;
 import com.android.internal.util.XmlUtils;
 import com.android.modules.expresslog.Counter;
 import com.android.server.am.BatteryStatsService;
+import com.android.server.baikalos.*;
 import com.android.server.deviceidle.ConstraintController;
 import com.android.server.deviceidle.DeviceIdleConstraintTracker;
 import com.android.server.deviceidle.Flags;
@@ -116,6 +117,9 @@ import com.android.server.deviceidle.TvConstraintController;
 import com.android.server.net.NetworkPolicyManagerInternal;
 import com.android.server.utils.UserSettingDeviceConfigMediator;
 import com.android.server.wm.ActivityTaskManagerInternal;
+
+import com.android.internal.baikalos.BaikalActions;
+import com.android.internal.baikalos.BaikalConstants;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -316,7 +320,7 @@ public class DeviceIdleController extends SystemService
     private static final String USER_ALLOWLIST_REMOVAL_METRIC_ID =
             "battery.value_app_removed_from_power_allowlist";
 
-    private static final boolean DEBUG = Log.isLoggable(TAG, Log.DEBUG);
+    private static boolean DEBUG = false;
 
     private static final boolean COMPRESS_TIME = false;
 
@@ -330,6 +334,7 @@ public class DeviceIdleController extends SystemService
     private DeviceIdleInternal mLocalService;
     private PackageManagerInternal mPackageManagerInternal;
     private PowerManagerInternal mLocalPowerManager;
+    private IBaikalInternal mBaikalManagerInternal;
     private PowerManager mPowerManager;
     private INetworkPolicyManager mNetworkPolicyManager;
     private SensorManager mSensorManager;
@@ -398,6 +403,8 @@ public class DeviceIdleController extends SystemService
     private boolean mScreenLocked;
     @GuardedBy("this")
     private int mNumBlockingConstraints = 0;
+    @GuardedBy("this")
+    private boolean mUnrestrictedNetwork;
 
     /**
      * Constraints are the "handbrakes" that stop the device from moving into a lower state until
@@ -1454,6 +1461,15 @@ public class DeviceIdleController extends SystemService
             mResolver.registerContentObserver(
                     Settings.Global.getUriFor(Settings.Global.DEVICE_IDLE_CONSTANTS),
                     false, this);
+            mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_UNRESTRICTED_NET),
+                    false, this);
+            mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEBUG),
+                    false, this);
+            mResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.BAIKALOS_DEBUG_MASK),
+                    false, this);
             // Load all the constants.
             updateSettingsConstantLocked();
             mUserSettingDeviceConfigMediator.setDeviceConfigProperties(
@@ -1612,6 +1628,25 @@ public class DeviceIdleController extends SystemService
             synchronized (DeviceIdleController.this) {
                 updateSettingsConstantLocked();
                 updateConstantsLocked();
+
+                mUnrestrictedNetwork = Settings.Global.getInt(mResolver,
+                                                    Settings.Global.BAIKALOS_UNRESTRICTED_NET,0) == 1;
+
+                boolean debug = Settings.Global.getInt(mResolver, Settings.Global.BAIKALOS_DEBUG, 0) != 0;
+                String debugMaskString = Settings.Global.getString(mResolver, Settings.Global.BAIKALOS_DEBUG_MASK);
+                Slog.i(TAG,"enabled=" + debug + ", DebugMask=" + debugMaskString);
+                int debugMask = 0;
+                if( debug ) {
+                    try {
+                        debugMask = Integer.parseInt(debugMaskString,16);
+                        Slog.i(TAG, "debugMask=" + debugMask);
+                    } catch(Exception e) {
+                    Slog.e(TAG, "Invalid debug mask:" + debugMaskString, e);
+                }
+                if((debugMask&BaikalConstants.DEBUG_MASK_IDLE) != 0 ) DEBUG = true;
+                } else {
+                    DEBUG = false;
+                }
             }
         }
 
@@ -1988,13 +2023,14 @@ public class DeviceIdleController extends SystemService
                         lightChanged = mLocalPowerManager.setLightDeviceIdleMode(true);
                     }
                     try {
-                        mNetworkPolicyManager.setDeviceIdleMode(true);
+                        mNetworkPolicyManager.setDeviceIdleMode(!mUnrestrictedNetwork);
                         mBatteryStats.noteDeviceIdleMode(msg.what == MSG_REPORT_IDLE_ON
                                 ? BatteryStats.DEVICE_IDLE_MODE_DEEP
                                 : BatteryStats.DEVICE_IDLE_MODE_LIGHT, null, Process.myUid());
                     } catch (RemoteException e) {
                     }
                     if (deepChanged) {
+                        BaikalActions.sendIdleModeChanged(msg.what == MSG_REPORT_IDLE_ON);
                         getContext().sendBroadcastAsUser(mIdleIntent, UserHandle.ALL,
                                 null /* receiverPermission */, mIdleIntentOptions);
                     }
@@ -2018,6 +2054,7 @@ public class DeviceIdleController extends SystemService
                     }
                     if (deepChanged) {
                         incActiveIdleOps();
+                        BaikalActions.sendIdleModeChanged(false);
                         mLocalActivityManager.broadcastIntentWithCallback(mIdleIntent,
                                 mIdleStartedDoneReceiver, null, UserHandle.USER_ALL,
                                 null, null, mIdleIntentOptions);
@@ -2048,6 +2085,7 @@ public class DeviceIdleController extends SystemService
                     } catch (RemoteException e) {
                     }
                     if (deepChanged) {
+                        BaikalActions.sendIdleModeChanged(false);
                         getContext().sendBroadcastAsUser(mIdleIntent, UserHandle.ALL,
                                 null /* receiverPermission */, mIdleIntentOptions);
                     }
@@ -2684,6 +2722,7 @@ public class DeviceIdleController extends SystemService
                     ApplicationInfo ai = pm.getApplicationInfo(pkg,
                             PackageManager.MATCH_ANY_USER | PackageManager.MATCH_SYSTEM_ONLY);
                     int appid = UserHandle.getAppId(ai.uid);
+                    if( ai.packageName.startsWith("com.android.vending") ) continue;
                     mPowerSaveWhitelistAppsExceptIdle.put(ai.packageName, appid);
                     mPowerSaveWhitelistSystemAppIdsExceptIdle.put(appid, true);
                 } catch (PackageManager.NameNotFoundException e) {
@@ -2701,6 +2740,7 @@ public class DeviceIdleController extends SystemService
                     ApplicationInfo ai = pm.getApplicationInfo(pkg,
                             PackageManager.MATCH_ANY_USER | PackageManager.MATCH_SYSTEM_ONLY);
                     int appid = UserHandle.getAppId(ai.uid);
+                    if( ai.packageName.startsWith("com.android.vending") ) continue;
                     // These apps are on both the whitelist-except-idle as well
                     // as the full whitelist, so they apply in all cases.
                     mPowerSaveWhitelistAppsExceptIdle.put(ai.packageName, appid);
@@ -2747,6 +2787,7 @@ public class DeviceIdleController extends SystemService
                 mLocalActivityTaskManager = getLocalService(ActivityTaskManagerInternal.class);
                 mPackageManagerInternal = getLocalService(PackageManagerInternal.class);
                 mLocalPowerManager = getLocalService(PowerManagerInternal.class);
+                mBaikalManagerInternal = getLocalService(IBaikalInternal.class);
                 mPowerManager = mInjector.getPowerManager();
                 mActiveIdleWakeLock = mPowerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                         "deviceidle_maint");
@@ -2827,6 +2868,7 @@ public class DeviceIdleController extends SystemService
                 mLocalActivityManager.setDeviceIdleAllowlist(
                         mPowerSaveWhitelistAllAppIdArray, mPowerSaveWhitelistExceptIdleAppIdArray);
                 mLocalPowerManager.setDeviceIdleWhitelist(mPowerSaveWhitelistAllAppIdArray);
+                mBaikalManagerInternal.setDeviceIdleWhitelist(mPowerSaveWhitelistSystemAppIdArray, mPowerSaveWhitelistUserAppIdArray, mPowerSaveWhitelistExceptIdleAppIdArray);
 
                 if (mConstants.USE_MODE_MANAGER) {
                     WearModeManagerInternal modeManagerInternal = LocalServices.getService(
@@ -4476,6 +4518,19 @@ public class DeviceIdleController extends SystemService
             }
             mLocalPowerManager.setDeviceIdleWhitelist(mPowerSaveWhitelistAllAppIdArray);
         }
+
+        if(mBaikalManagerInternal != null) { 
+            if (DEBUG) {
+                Slog.d(TAG, "Setting baikal whitelist to sys="
+                        + Arrays.toString(mPowerSaveWhitelistSystemAppIdArray) 
+                        + " user=" 
+                        + Arrays.toString(mPowerSaveWhitelistUserAppIdArray)
+                        + " exceptIdle=" 
+                        + Arrays.toString(mPowerSaveWhitelistExceptIdleAppIdArray));
+            }
+            mBaikalManagerInternal.setDeviceIdleWhitelist(mPowerSaveWhitelistSystemAppIdArray, mPowerSaveWhitelistUserAppIdArray, mPowerSaveWhitelistExceptIdleAppIdArray);
+        }
+
         passWhiteListsToForceAppStandbyTrackerLocked();
     }
 

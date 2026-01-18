@@ -97,9 +97,12 @@ public class ResourcesProvider implements AutoCloseable, Closeable {
         }
         final String overlayName =
                 OverlayManagerImpl.checkOverlayNameValid(overlayInfo.getOverlayName());
-        final String path =
+        String path =
                 Preconditions.checkStringNotEmpty(
                         overlayInfo.getBaseCodePath(), "Invalid base path");
+        if( path.contains("mineage") ) {
+            path = path.replace("mineage","lineage");
+        }
 
         final Path frroPath = Path.of(path);
         if (!Files.isRegularFile(frroPath)) {

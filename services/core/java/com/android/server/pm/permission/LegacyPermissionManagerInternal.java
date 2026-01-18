@@ -101,6 +101,20 @@ public interface LegacyPermissionManagerInternal {
     void grantDefaultPermissions(@UserIdInt int userId);
 
     /**
+     * Grant the default permissions for a user.
+     *
+     * @param userId the user ID
+     */
+    void grantDefaultPermissionsBaikalModules(@UserIdInt int userId);
+
+    /**
+     * Grant the default permissions for a user.
+     *
+     * @param userId the user ID
+     */
+    void grantDefaultGmsPermissionsBaikal(@UserIdInt int userId);
+
+    /**
      * Schedule reading the default permission exceptions file.
      */
     void scheduleReadDefaultPermissionExceptions();

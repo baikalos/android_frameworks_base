@@ -364,8 +364,8 @@ import java.util.stream.Collectors;
  */
 public class NetworkPolicyManagerService extends INetworkPolicyManager.Stub {
     static final String TAG = NetworkPolicyLogger.TAG;
-    private static final boolean LOGD = NetworkPolicyLogger.LOGD;
-    private static final boolean LOGV = NetworkPolicyLogger.LOGV;
+    public static boolean LOGD = NetworkPolicyLogger.LOGD;
+    public static boolean LOGV = NetworkPolicyLogger.LOGV;
 
     /**
      * No opportunistic quota could be calculated from user data plan or data settings.

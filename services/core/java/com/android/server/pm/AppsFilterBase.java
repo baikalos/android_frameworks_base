@@ -68,8 +68,8 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
 
     // Logs all filtering instead of enforcing
     protected static final boolean DEBUG_ALLOW_ALL = false;
-    protected static final boolean DEBUG_LOGGING = false;
-    public static final boolean DEBUG_TRACING = false;
+    protected static final boolean DEBUG_LOGGING = true;
+    public static final boolean DEBUG_TRACING = true;
 
     // Allow some time for cache rebuilds.
     protected static final int CACHE_REBUILD_DELAY_MIN_MS = 10000;
@@ -351,6 +351,15 @@ public abstract class AppsFilterBase implements AppsFilterSnapshot {
                         && !isImplicitlyQueryable(callingUid, targetUid)
                         && !isQueryableBySdkSandbox(callingUid, targetUid);
             }
+
+            if( BaikalPackageManagerService.getInstance().shouldFilterApplication(snapshot, 
+                callingUid, callingSetting, targetPkgSetting, userId) ) {
+                if (DEBUG_LOGGING || mFeatureConfig.isLoggingEnabled(callingAppId)) {
+                    log(callingSetting, targetPkgSetting, "BLOCKED");
+                }
+                return !DEBUG_ALLOW_ALL;
+            }
+
             // use cache
             if (mCacheReady && mCacheEnabled) {
                 if (!shouldFilterApplicationUsingCache(callingUid,

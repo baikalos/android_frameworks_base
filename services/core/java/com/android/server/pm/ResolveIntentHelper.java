@@ -26,6 +26,7 @@ import android.annotation.NonNull;
 import android.annotation.UserIdInt;
 import android.app.ActivityManager;
 import android.app.PendingIntent;
+import android.baikalos.*;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -397,7 +398,14 @@ final class ResolveIntentHelper {
                                 && ((!matchInstantApp && !isCallerInstantApp && isTargetInstantApp)
                                 || (matchVisibleToInstantAppOnly && isCallerInstantApp
                                 && isTargetHiddenFromInstantApp));
-                if (!blockResolution) {
+
+                boolean blockBaikalResolution = false;
+                if(isAppBackgroundBlocked(ai.applicationInfo) ) {
+                    blockBaikalResolution = true;
+                    Slog.e(TAG, "queryIntentReceiversInternal: baikal blocked (" + queryingUid + "):" + ai.applicationInfo.packageName + "/" + ai.applicationInfo.uid + " for intent=" + intent);
+                }
+
+                if (!blockResolution && !blockBaikalResolution) {
                     ResolveInfo ri = new ResolveInfo();
                     ri.activityInfo = ai;
                     list = new ArrayList<>(1);
@@ -422,6 +430,18 @@ final class ResolveIntentHelper {
                     list = result;
                 }
             }
+
+            List<ResolveInfo> _list = list;
+            list = new ArrayList<>();
+            for(int i = 0; i < _list.size() ; i++) {
+                ResolveInfo ri = _list.get(i);
+                if(ri != null && ri.activityInfo != null && isAppBackgroundBlocked(ri.activityInfo.applicationInfo) ) {
+                    Slog.e(TAG, "queryIntentReceiversInternal: (2) baikal blocked (" + queryingUid + "):" + ri.activityInfo.applicationInfo.packageName + "/" + ri.activityInfo.applicationInfo.uid + " for intent=" + intent);
+                    continue;
+                }
+                list.add(ri);
+            }
+
             SaferIntentUtils.blockNullAction(args, list);
         }
 
@@ -446,11 +466,19 @@ final class ResolveIntentHelper {
         List<ResolveInfo> query = computer.queryIntentServicesInternal(
                 intent, resolvedType, flags, userId, callingUid, callingPid,
                 /*includeInstantApps*/ false, resolveForStart);
+
         if (query != null) {
             if (query.size() >= 1) {
                 // If there is more than one service with the same priority,
                 // just arbitrarily pick the first one.
-                return query.get(0);
+                // return query.get(0);
+                final ResolveInfo ri = query.get(0); 
+            
+                if( ri != null && ri.serviceInfo != null && ri.serviceInfo.applicationInfo != null && isAppBackgroundBlocked(ri.serviceInfo.applicationInfo) ) {
+                    Slog.e(TAG, "resolveServiceInternal: baikal blocked (" + callingUid + "):" + ri.serviceInfo.applicationInfo.packageName + "/" + ri.serviceInfo.applicationInfo.uid + " for intent=" + intent);
+                    return null;
+                }
+                return ri;
             }
         }
         return null;
@@ -502,6 +530,13 @@ final class ResolveIntentHelper {
                         && computer.shouldFilterApplication(
                         computer.getPackageStateInternal(pi.applicationInfo.packageName,
                                 Process.SYSTEM_UID), callingUid, userId);
+
+                boolean blockBaikalResolution = false;
+                if(pi != null && pi.applicationInfo != null && isAppBackgroundBlocked(pi.applicationInfo) ) {
+                    blockBaikalResolution = true;
+                    Slog.e(TAG, "queryIntentContentProvidersInternal: baikal blocked (" + callingUid + "):" + pi.applicationInfo.packageName + "/" + pi.applicationInfo.uid + " for intent=" + intent);
+                }
+
                 if (!blockResolution && !blockNormalResolution) {
                     final ResolveInfo ri = new ResolveInfo();
                     ri.providerInfo = pi;
@@ -540,6 +575,12 @@ final class ResolveIntentHelper {
             @UserIdInt int userId, int callingUid) {
         for (int i = resolveInfos.size() - 1; i >= 0; i--) {
             final ResolveInfo info = resolveInfos.get(i);
+
+            if(info != null && info.providerInfo != null && isAppBackgroundBlocked(info.providerInfo.applicationInfo) ) {
+                resolveInfos.remove(i);
+                Slog.e(TAG, "applyPostContentProviderResolutionFilter: baikal blocked (" + callingUid + "):" + info.providerInfo.packageName + "/" + info.providerInfo.applicationInfo.uid);
+                continue;
+            }
 
             if (instantAppPkgName == null) {
                 PackageStateInternal resolvedSetting = computer.getPackageStateInternal(
@@ -773,4 +814,14 @@ final class ResolveIntentHelper {
         return results;
     }
 
+    boolean isAppBackgroundBlocked(ApplicationInfo info) {
+        BaikalAppProfile appProfile = null;
+        BaikalPackageManagerService mBaikal = BaikalPackageManagerService.getInstance();
+        if( mBaikal == null ) {
+            Slog.e(TAG, "isAppBackgroundBlocked: baikal not ready:" + info.packageName + "/" + info.uid, new Throwable());
+            return false; 
+        }
+               
+        return mBaikal.isApplicationBackgroundRestricted(info);
+    }
 }
