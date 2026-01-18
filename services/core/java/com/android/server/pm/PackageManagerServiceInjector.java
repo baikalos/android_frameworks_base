@@ -157,6 +157,7 @@ public class PackageManagerServiceInjector {
     private final Singleton<CrossProfileIntentFilterHelper> mCrossProfileIntentFilterHelperProducer;
     private final Singleton<UpdateOwnershipHelper> mUpdateOwnershipHelperProducer;
     private final Singleton<PackageMonitorCallbackHelper> mPackageMonitorCallbackHelper;
+    
 
     PackageManagerServiceInjector(Context context, PackageManagerTracedLock lock,
             Installer installer, PackageManagerTracedLock installLock, PackageAbiHelper abiHelper,

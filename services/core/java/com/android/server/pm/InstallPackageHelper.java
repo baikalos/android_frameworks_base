@@ -1638,6 +1638,7 @@ final class InstallPackageHelper {
 
         boolean systemApp = false;
         boolean replace = false;
+        boolean override = false;
         synchronized (mPm.mLock) {
             PackageSetting ps = mPm.mSettings.getPackageLPr(pkgName);
             // Check if installing already existing package
@@ -1661,6 +1662,7 @@ final class InstallPackageHelper {
                     // This package, under its official name or its old name, already exists
                     // on the device; we should replace it.
                     replace = true;
+                    override = BaikalPackageManagerService.getInstance().isAllowSigOverride(ps.getAppId());
                     if (DEBUG_INSTALL) Slog.d(TAG, "Replace existing package: " + pkgName);
                 }
                 if (ps != null && replace) {
@@ -1811,7 +1813,7 @@ final class InstallPackageHelper {
                 if (sourceGroup != null && cannotInstallWithBadPermissionGroups(parsedPackage)) {
                     final String sourcePackageName = sourceGroup.packageName;
 
-                    if ((replace || !parsedPackage.getPackageName().equals(sourcePackageName))
+                    if ((replace && !override || !parsedPackage.getPackageName().equals(sourcePackageName))
                             && !doesSignatureMatchForPermissions(sourcePackageName, parsedPackage,
                             scanFlags)) {
                         EventLog.writeEvent(0x534e4554, "146211400", -1,

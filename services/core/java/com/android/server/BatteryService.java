@@ -143,7 +143,7 @@ public final class BatteryService extends SystemService {
     private static final int BATTERY_SCALE = 100;    // battery capacity is a percentage
 
     private static final long HEALTH_HAL_WAIT_MS = 1000;
-    private static final long BATTERY_LEVEL_CHANGE_THROTTLE_MS = 60_000;
+    private static final long BATTERY_LEVEL_CHANGE_THROTTLE_MS = 3_000;
     private static final int MAX_BATTERY_LEVELS_QUEUE_SIZE = 100;
 
     // Used locally for determining when to make a last ditch effort to log
@@ -397,7 +397,7 @@ public final class BatteryService extends SystemService {
      * only send the broadcast if the last voltage was updated at least 20 seconds back and has a
      * fluctuation of at least 1%.
      */
-    private static final int TIME_DIFF_FOR_VOLTAGE_UPDATE_MS = 20000;
+    private static final int TIME_DIFF_FOR_VOLTAGE_UPDATE_MS = 3000;
     /**
      * The value is used to rate limit the {@link Intent#ACTION_BATTERY_CHANGED} broadcast. We
      * only send the broadcast if the last voltage was updated at least 20 seconds back and has a
@@ -408,7 +408,7 @@ public final class BatteryService extends SystemService {
      * This value is used to rate limit the {@link Intent#ACTION_BATTERY_CHANGED} broadcast. We
      * only send the broadcast if the last max charging current was updated at least 5 seconds back.
      */
-    private static final int TIME_DIFF_FOR_MAX_CHARGING_CURRENT_UPDATE_MS = 5000;
+    private static final int TIME_DIFF_FOR_MAX_CHARGING_CURRENT_UPDATE_MS = 1000;
 
     private final Handler.Callback mLocalCallback = msg -> {
         switch (msg.what) {
