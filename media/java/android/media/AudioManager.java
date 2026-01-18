@@ -1177,6 +1177,7 @@ public class AudioManager {
     @UnsupportedAppUsage
     @RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_ROUTING)
     public int setAppVolume(String packageName, float volume) {
+        getContext().getBaikalContext().setAppVolume(packageName, volume);
         return AudioSystem.setAppVolume(packageName, volume);
     }
 

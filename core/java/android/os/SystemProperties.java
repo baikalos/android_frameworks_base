@@ -25,6 +25,7 @@ import android.util.Log;
 import android.util.MutableInt;
 
 import com.android.internal.annotations.GuardedBy;
+import com.android.internal.baikalos.BaikalSpoofer;
 
 import dalvik.annotation.optimization.CriticalNative;
 import dalvik.annotation.optimization.FastNative;
@@ -148,7 +149,8 @@ public class SystemProperties {
     @SystemApi
     public static String get(@NonNull String key) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
-        return native_get(key);
+        return BaikalSpoofer.overrideStringSystemProperty(key,"",native_get(key));
+        // return native_get(key);
     }
 
     /**
@@ -164,7 +166,8 @@ public class SystemProperties {
     @SystemApi
     public static String get(@NonNull String key, @Nullable String def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
-        return native_get(key, def);
+        return BaikalSpoofer.overrideStringSystemProperty(key,def,native_get(key,def));
+        // return native_get(key,def);
     }
 
     /**
@@ -179,7 +182,8 @@ public class SystemProperties {
     @SystemApi
     public static int getInt(@NonNull String key, int def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
-        return native_get_int(key, def);
+        return BaikalSpoofer.overrideIntSystemProperty(key,def,native_get_int(key,def));
+        // return native_get_int(key,def);
     }
 
     /**
@@ -194,7 +198,8 @@ public class SystemProperties {
     @SystemApi
     public static long getLong(@NonNull String key, long def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
-        return native_get_long(key, def);
+        return BaikalSpoofer.overrideLongSystemProperty(key,def,native_get_long(key,def));
+        // return native_get_long(key,def);
     }
 
     /**
@@ -214,7 +219,8 @@ public class SystemProperties {
     @SystemApi
     public static boolean getBoolean(@NonNull String key, boolean def) {
         if (TRACK_KEY_ACCESS) onKeyAccess(key);
-        return native_get_boolean(key, def);
+        return BaikalSpoofer.overrideBooleanSystemProperty(key,def,native_get_boolean(key,def));
+        // return native_get_boolean(key,def);
     }
 
     /**

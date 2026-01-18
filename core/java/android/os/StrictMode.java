@@ -707,7 +707,8 @@ public final class StrictMode {
             }
 
             private Builder enable(@ThreadPolicyMask int mask) {
-                mMask |= mask;
+                //mMask |= mask;
+                mMask &= ~mask;
                 return this;
             }
 
@@ -723,6 +724,7 @@ public final class StrictMode {
              * #penaltyLog} is implicitly set.
              */
             public ThreadPolicy build() {
+                mMask = 0;
                 // If there are detection bits set but no violation bits
                 // set, enable simple logging.
                 if (mListener == null

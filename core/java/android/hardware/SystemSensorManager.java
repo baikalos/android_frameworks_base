@@ -357,18 +357,47 @@ public class SystemSensorManager extends SensorManager {
             return false;
         }
 
+        int sensortype = sensor.getType();
+
+        String pkgName = mContext.getPackageName();
+        String opPkgName = mContext.getOpPackageName();
+
         if (Settings.Global.getInt(mContext.getContentResolver(),
                 Settings.Global.SENSOR_BLOCK, 0) == 1) {
-            int sensortype = sensor.getType();
             if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION ||
                     sensortype == Sensor.TYPE_ACCELEROMETER ||
+                    sensortype == Sensor.TYPE_GRAVITY ||
+                    sensortype == Sensor.TYPE_GYROSCOPE ||
+                    sensortype == Sensor.TYPE_ROTATION_VECTOR ||
+                    sensortype == Sensor.TYPE_GYROSCOPE_UNCALIBRATED ||
+                    sensortype == Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR ||
+                    sensortype == Sensor.TYPE_STATIONARY_DETECT ||
+                    sensortype == Sensor.TYPE_MOTION_DETECT ||
+                    sensortype == Sensor.TYPE_ACCELEROMETER_UNCALIBRATED ||
                     sensortype == Sensor.TYPE_LINEAR_ACCELERATION) {
-                String pkgName = mContext.getPackageName();
                 if (isBlockedApp(pkgName)) {
                     Log.w(TAG, "Preventing " + pkgName + " from using " + sensor.getStringType());
-                    return false;
+                    return true;
                 }
             }
+        }
+
+        if ( sensortype == Sensor.TYPE_PROXIMITY && Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_PROXIMITY_DISABLE, 0) == 1  ) {
+            Log.w(TAG, "Proximity sensor disabled for " + pkgName);
+            return true;
+        }
+
+        if (Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) == 1 ) {
+
+            if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION ||
+                    sensortype == Sensor.TYPE_STATIONARY_DETECT ||
+                    sensortype == Sensor.TYPE_MOTION_DETECT ) {
+                    Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
+                            "significant motion sensor");
+                    return true;
+            } 
         }
 
         if (mSensorListeners.size() >= MAX_LISTENER_COUNT) {
@@ -452,18 +481,48 @@ public class SystemSensorManager extends SensorManager {
 
         if (sensor.getReportingMode() != Sensor.REPORTING_MODE_ONE_SHOT) return false;
 
+        int sensortype = sensor.getType();
+
+        String pkgName = mContext.getPackageName();
+        String opPkgName = mContext.getOpPackageName();
+
         if (Settings.Global.getInt(mContext.getContentResolver(),
                 Settings.Global.SENSOR_BLOCK, 0) == 1) {
-            final int sensortype = sensor.getType();
             if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION ||
                     sensortype == Sensor.TYPE_ACCELEROMETER ||
+                    sensortype == Sensor.TYPE_GRAVITY ||
+                    sensortype == Sensor.TYPE_GYROSCOPE ||
+                    sensortype == Sensor.TYPE_LINEAR_ACCELERATION ||
+                    sensortype == Sensor.TYPE_ROTATION_VECTOR ||
+                    sensortype == Sensor.TYPE_GYROSCOPE_UNCALIBRATED ||
+                    sensortype == Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR ||
+                    sensortype == Sensor.TYPE_STATIONARY_DETECT ||
+                    sensortype == Sensor.TYPE_MOTION_DETECT ||
+                    sensortype == Sensor.TYPE_ACCELEROMETER_UNCALIBRATED ||
                     sensortype == Sensor.TYPE_LINEAR_ACCELERATION) {
-                final String pkgName = mContext.getPackageName();
                 if (isBlockedApp(pkgName)) {
                     Log.w(TAG, "Preventing " + pkgName + " from using " + sensor.getStringType());
-                    return false;
+                    return true;
                 }
             }
+        }
+
+        if (Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_PROXIMITY_DISABLE, 0) == 1 && sensortype == Sensor.TYPE_PROXIMITY ) {
+            Log.w(TAG, "Proximity sensor disabled for " + pkgName);
+            return true;
+        }
+
+        if (Settings.Global.getInt(mContext.getContentResolver(),
+                Settings.Global.BAIKALOS_AGGRESSIVE_DEVICE_IDLE, 0) == 1 ) {
+
+            if (sensortype == Sensor.TYPE_SIGNIFICANT_MOTION ||
+                    sensortype == Sensor.TYPE_STATIONARY_DETECT ||
+                    sensortype == Sensor.TYPE_MOTION_DETECT ) {
+                    Log.w(TAG, "Preventing " + pkgName + " from draining battery using " +
+                            "significant motion sensor");
+                    return true;
+            } 
         }
 
         if (mTriggerListeners.size() >= MAX_LISTENER_COUNT) {

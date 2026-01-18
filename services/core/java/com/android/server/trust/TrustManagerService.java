@@ -148,6 +148,7 @@ public class TrustManagerService extends SystemService {
     private static final int MSG_USER_REQUESTED_UNLOCK = 16;
     private static final int MSG_REFRESH_TRUSTABLE_TIMERS_AFTER_AUTH = 17;
     private static final int MSG_USER_MAY_REQUEST_UNLOCK = 18;
+    private static final int MSG_UPDATE_TRUST_ALL = 19;
 
     private static final String REFRESH_DEVICE_LOCKED_EXCEPT_USER = "except";
 
@@ -176,6 +177,7 @@ public class TrustManagerService extends SystemService {
     private FingerprintManager mFingerprintManager;
     private FaceManager mFaceManager;
     private UserManagerInternal mUserManagerInternal;
+    private final BaikalTrust mBaikalTrust;
 
     private enum TrustState {
         // UNTRUSTED means that TrustManagerService is currently *not* giving permission for the
@@ -281,6 +283,7 @@ public class TrustManagerService extends SystemService {
 
     private boolean mTrustAgentsCanRun = false;
     private int mCurrentUser = UserHandle.USER_SYSTEM;
+    private boolean mBaikalTrusted = false;
 
     private ServiceWatcher mSignificantPlaceServiceWatcher;
     private volatile boolean mIsInSignificantPlace = false;
@@ -328,6 +331,7 @@ public class TrustManagerService extends SystemService {
         mKeyStoreAuthorization = injector.getKeyStoreAuthorization();
         mStrongAuthTracker = new StrongAuthTracker(context, injector.getLooper());
         mAlarmManager = injector.getAlarmManager();
+	    mBaikalTrust = new BaikalTrust(this,mHandler,context);
     }
 
     @Override
@@ -595,6 +599,10 @@ public class TrustManagerService extends SystemService {
         }
     }
 
+    public void requestUpdateTrustAll() {
+        mHandler.obtainMessage(MSG_UPDATE_TRUST_ALL, 0, 0, null).sendToTarget();
+    }
+
     private void updateTrustAll() {
         List<UserInfo> userInfos = mUserManager.getAliveUsers();
         for (UserInfo userInfo : userInfos) {
@@ -654,7 +662,7 @@ public class TrustManagerService extends SystemService {
         synchronized (mUserTrustState) {
             wasTrusted = (mUserTrustState.get(userId) == TrustState.TRUSTED);
             wasTrustable = (mUserTrustState.get(userId) == TrustState.TRUSTABLE);
-            boolean renewingTrust = wasTrustable && (
+            boolean renewingTrust = wasTrustable && ( mBaikalTrusted ||
                     (flags & TrustAgentService.FLAG_GRANT_TRUST_TEMPORARY_AND_RENEWABLE) != 0);
             boolean canMoveToTrusted =
                     alreadyUnlocked || isFromUnlock || renewingTrust || isAutomotive();
@@ -1428,6 +1436,20 @@ public class TrustManagerService extends SystemService {
             }
             return false;
         }
+
+	    if( mBaikalTrust != null ) {
+            // BaikalOS Smart Trust hook
+            boolean baikalTrusted = mBaikalTrust.isKeepUnlocked();
+	        if( baikalTrusted != mBaikalTrusted ) {
+	            mBaikalTrusted = baikalTrusted;
+	        }
+
+            if( mBaikalTrusted ) {
+                if (DEBUG) Slogf.d(TAG, "aggregateIsTrusted: baikal trusted");
+                return true; 
+            }
+	    }
+
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
             if (info.userId == userId) {
@@ -1448,6 +1470,9 @@ public class TrustManagerService extends SystemService {
             }
             return false;
         }
+
+        if( mBaikalTrust != null && mBaikalTrust.isTrustable() ) return true;
+
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
             if (info.userId == userId) {
@@ -1502,6 +1527,12 @@ public class TrustManagerService extends SystemService {
             return new ArrayList<>();
         }
 
+        if( mBaikalTrust != null && mBaikalTrust.isKeepUnlocked() ) {
+            List<String> trustGrantedMessages = new ArrayList<>();
+            trustGrantedMessages.add("Trusted by BaikalOS trust");
+            return trustGrantedMessages;
+        }
+
         List<String> trustGrantedMessages = new ArrayList<>();
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
@@ -1525,6 +1556,12 @@ public class TrustManagerService extends SystemService {
             }
             return false;
         }
+
+        if( mBaikalTrust != null && mBaikalTrust.isTrustable() ) {
+            if (DEBUG) Slogf.d(TAG, "aggregateIsTrustManaged:managed by baikalos");
+            return true;
+        }
+
         for (int i = 0; i < mActiveAgents.size(); i++) {
             AgentInfo info = mActiveAgents.valueAt(i);
             if (info.userId == userId) {
@@ -2262,6 +2299,9 @@ public class TrustManagerService extends SystemService {
                         if (trustableAlarm != null && trustableAlarm.isQueued()) {
                             refreshTrustableTimers(msg.arg1);
                         }
+                        break;
+                    case MSG_UPDATE_TRUST_ALL:
+                        updateTrustAll();
                         break;
                 }
             }

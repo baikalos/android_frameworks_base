@@ -124,7 +124,7 @@ import java.util.regex.Pattern;
 /** An hint service implementation that runs in System Server process. */
 public final class HintManagerService extends SystemService {
     private static final String TAG = "HintManagerService";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     private static final int EVENT_CLEAN_UP_UID = 3;
     @VisibleForTesting  static final int CLEAN_UP_UID_DELAY_MILLIS = 1000;

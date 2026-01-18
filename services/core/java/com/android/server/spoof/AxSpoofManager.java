@@ -40,7 +40,9 @@ public class AxSpoofManager implements IAxSpoofManager {
             Settings.Secure.SPOOF_GAMEPROPS_CONFIG,
             Settings.Secure.SPOOF_TRICKYSTORE_TARGET,
             Settings.Secure.SPOOF_TRICKYSTORE_KEYBOX,
+            Settings.Secure.SPOOF_TRICKYSTORE_AUTO_KEYBOX,
             Settings.Secure.SPOOF_TRICKYSTORE_PATCH,
+
     };
 
     private final Map<String, String> mCache = new ConcurrentHashMap<>();
@@ -127,7 +129,11 @@ public class AxSpoofManager implements IAxSpoofManager {
 
     @Override
     public String getTrickyStoreKeyBox() {
-        return getCached(Settings.Secure.SPOOF_TRICKYSTORE_KEYBOX);
+        String keyBox = getCached(Settings.Secure.SPOOF_TRICKYSTORE_KEYBOX);
+        if( keyBox == null || "".equals(keyBox) ) {
+            keyBox = getCached(Settings.Secure.SPOOF_TRICKYSTORE_AUTO_KEYBOX);
+        }
+        return keyBox;
     }
 
     @Override

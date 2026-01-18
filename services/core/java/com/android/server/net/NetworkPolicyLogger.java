@@ -63,8 +63,8 @@ import java.util.Set;
 public class NetworkPolicyLogger {
     static final String TAG = "NetworkPolicy";
 
-    static final boolean LOGD = Log.isLoggable(TAG, Log.DEBUG);
-    static final boolean LOGV = Log.isLoggable(TAG, Log.VERBOSE);
+    public static boolean LOGD = Log.isLoggable(TAG, Log.DEBUG);
+    public static boolean LOGV = Log.isLoggable(TAG, Log.VERBOSE);
 
     private static final int MAX_LOG_SIZE =
             ActivityManager.isLowRamDeviceStatic() ? 100 : 400;

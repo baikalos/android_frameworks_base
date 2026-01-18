@@ -1,5 +1,10 @@
 package com.android.systemui.axdynamicbar.ui
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+
 import com.android.systemui.animation.Expandable
 import com.android.systemui.axdynamicbar.domain.AxDynamicBarInteractor
 import com.android.systemui.axdynamicbar.model.IslandEvent
@@ -11,18 +16,25 @@ import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.statusbar.KeyguardIndicationController
 import com.android.systemui.statusbar.pipeline.battery.domain.interactor.BatteryInteractor
 import com.android.systemui.statusbar.policy.BatteryController
+
 import javax.inject.Inject
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+//import kotlinx.coroutines.flow.awaitClose
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
+
 
 data class AxDynamicBarChipState(
     val event: IslandEvent,
@@ -46,6 +58,7 @@ class AxDynamicBarChipViewModel
 @Inject
 constructor(
     @Application private val applicationScope: CoroutineScope,
+    @Application private val context: Context,
     val interactor: AxDynamicBarInteractor,
     batteryInteractor: BatteryInteractor,
     private val batteryController: BatteryController,
@@ -55,24 +68,34 @@ constructor(
     val statusBarExpansion: AxDynamicBarStatusBarExpansion,
     private val keyguardIndicationController: KeyguardIndicationController,
 ) {
+
     val isLowUdfps: StateFlow<Boolean> =
         udfpsOverlayInteractor.udfpsOverlayParams
             .map { params ->
                 if (!authController.isUdfpsSupported) return@map false
+
                 val sensorBottom = params.sensorBounds.bottom
                 val displayHeight = params.naturalDisplayHeight
+
                 if (displayHeight <= 0) return@map false
+
                 sensorBottom > displayHeight * LOW_UDFPS_THRESHOLD
             }
             .distinctUntilChanged()
-            .stateIn(applicationScope, SharingStarted.Eagerly, false)
+            .stateIn(
+                applicationScope,
+                SharingStarted.Eagerly,
+                false,
+            )
 
     val chipState: StateFlow<AxDynamicBarChipState?> =
         interactor.uiState
             .map { uiState ->
                 if (!uiState.shouldShow) return@map null
+
                 val alert = uiState.notificationAlert
                 val topEvent = uiState.topEvent ?: alert ?: return@map null
+
                 AxDynamicBarChipState(
                     event = topEvent,
                     eventCount = uiState.activeEvents.size,
@@ -82,11 +105,20 @@ constructor(
                 )
             }
             .distinctUntilChanged()
-            .stateIn(applicationScope, SharingStarted.Lazily, null)
+            .stateIn(
+                applicationScope,
+                SharingStarted.Lazily,
+                null,
+            )
 
-    val isEnabled: StateFlow<Boolean> = interactor.settings.isEnabled
-    val isKeyguardEnabled: StateFlow<Boolean> = interactor.settings.isKeyguardEnabled
-    val keyguardBatteryChipMode: StateFlow<Int> = interactor.settings.keyguardBatteryChipMode
+    val isEnabled: StateFlow<Boolean> =
+        interactor.settings.isEnabled
+
+    val isKeyguardEnabled: StateFlow<Boolean> =
+        interactor.settings.isKeyguardEnabled
+
+    val keyguardBatteryChipMode: StateFlow<Int> =
+        interactor.settings.keyguardBatteryChipMode
 
     val keyguardBatteryInfo: StateFlow<KeyguardBatteryInfo> =
         combine(
@@ -105,8 +137,47 @@ constructor(
         }.stateIn(
             applicationScope,
             SharingStarted.Lazily,
-            KeyguardBatteryInfo(0, false, false, false, null),
+            KeyguardBatteryInfo(
+                0,
+                false,
+                false,
+                false,
+                null,
+            ),
         )
+
+    /**
+     * Raw BATTERY_CHANGED trigger.
+     *
+     * This is intentionally only a trigger and does not carry any battery data.
+     * batteryString uses the latest keyguardBatteryInfo when this flow emits.
+     *
+     * BATTERY_CHANGED is sticky, so registering the receiver also produces
+     * the current battery state once when the flow becomes active.
+     */
+    private val batteryChanged: Flow<Unit> =
+        callbackFlow {
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(
+                    context: Context,
+                    intent: Intent,
+                ) {
+                    if (intent.action == Intent.ACTION_BATTERY_CHANGED) {
+                        trySend(Unit)
+                    }
+                }
+            }
+
+            context.registerReceiver(
+                receiver,
+                IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+                Context.RECEIVER_NOT_EXPORTED,
+            )
+
+            awaitClose {
+                context.unregisterReceiver(receiver)
+            }
+        }
 
     init {
         applicationScope.launch {
@@ -114,13 +185,16 @@ constructor(
                 .map { state ->
                     state.events
                         .filterIsInstance<IslandEvent.Call>()
-                        .firstOrNull { it.callType == "Phone:incoming" }
+                        .firstOrNull {
+                            it.callType == "Phone:incoming"
+                        }
                         ?.id
                 }
                 .distinctUntilChanged()
                 .collect { incomingCallId ->
                     if (incomingCallId != null) {
                         interactor.dismissNotificationAlert()
+
                         if (interactor.isOnKeyguard.value) {
                             keyguardExpansion.expand()
                         } else {
@@ -134,78 +208,121 @@ constructor(
         }
     }
 
-    // Re-compute charging string only when battery state changes. Polling this while idle is costly
-    // because KeyguardIndicationController formats through Resources on the main thread.
+    // Re-compute charging string on every BATTERY_CHANGED.
+    //
+    // keyguardBatteryInfo remains the actual data source.
+    // batteryChanged is only a trigger which forces the calculation below
+    // to execute again, even when keyguardBatteryInfo itself has not changed.
+    //
+    // distinctUntilChanged() remains after the calculation, so batteryString
+    // emits only when the resulting string is actually different.
     val batteryString: StateFlow<String> =
-        keyguardBatteryInfo
-            .map {
-                if (it.isCharging) {
-                    formatChargingString(keyguardIndicationController.powerChargingString)
-                } else {
-                    ""
-                }
+        combine(
+            keyguardBatteryInfo,
+            batteryChanged,
+        ) { batteryInfo, _ ->
+            if (batteryInfo.isCharging) {
+                formatChargingString(
+                    keyguardIndicationController.powerChargingString
+                )
+            } else {
+                ""
             }
+        }
             .distinctUntilChanged()
-            .stateIn(applicationScope, SharingStarted.Lazily, "")
+            .stateIn(
+                applicationScope,
+                SharingStarted.Lazily,
+                "",
+            )
 
-    val isOnKeyguard: StateFlow<Boolean> = interactor.isOnKeyguard
+    val isOnKeyguard: StateFlow<Boolean> =
+        interactor.isOnKeyguard
 
-    val isKeyguardFadingAway: StateFlow<Boolean> = interactor.isKeyguardFadingAway
+    val isKeyguardFadingAway: StateFlow<Boolean> =
+        interactor.isKeyguardFadingAway
 
-    val isBouncerShowing: StateFlow<Boolean> = interactor.isBouncerShowing
+    val isBouncerShowing: StateFlow<Boolean> =
+        interactor.isBouncerShowing
 
-    private val _keyguardCarrierText = MutableStateFlow("")
-    val keyguardCarrierText: StateFlow<String> = _keyguardCarrierText.asStateFlow()
+    private val _keyguardCarrierText =
+        MutableStateFlow("")
+
+    val keyguardCarrierText: StateFlow<String> =
+        _keyguardCarrierText.asStateFlow()
 
     fun updateKeyguardCarrierText(text: String) {
         _keyguardCarrierText.value = text
     }
 
-    private val _chipCenterXFraction = MutableStateFlow(0.5f)
-    val chipCenterXFraction: StateFlow<Float> = _chipCenterXFraction.asStateFlow()
+    private val _chipCenterXFraction =
+        MutableStateFlow(0.5f)
+
+    val chipCenterXFraction: StateFlow<Float> =
+        _chipCenterXFraction.asStateFlow()
 
     fun updateChipCenterX(fraction: Float) {
         _chipCenterXFraction.value = fraction
     }
 
-    val isExpanded: StateFlow<Boolean> = statusBarExpansion.isExpanded
+    val isExpanded: StateFlow<Boolean> =
+        statusBarExpansion.isExpanded
 
-    val isKeyguardExpanded: StateFlow<Boolean> = keyguardExpansion.isExpanded
+    val isKeyguardExpanded: StateFlow<Boolean> =
+        keyguardExpansion.isExpanded
 
-    fun cycleNext() = interactor.cycleNext()
+    fun cycleNext() =
+        interactor.cycleNext()
 
-    fun cyclePrev() = interactor.cyclePrev()
+    fun cyclePrev() =
+        interactor.cyclePrev()
 
-    fun dismissEvent(event: IslandEvent) = interactor.dismissEvent(event)
+    fun dismissEvent(event: IslandEvent) =
+        interactor.dismissEvent(event)
 
-    fun togglePlayPause() = interactor.togglePlayPause()
+    fun togglePlayPause() =
+        interactor.togglePlayPause()
 
-    fun skipNext() = interactor.skipNext()
+    fun skipNext() =
+        interactor.skipNext()
 
-    fun skipPrev() = interactor.skipPrev()
+    fun skipPrev() =
+        interactor.skipPrev()
 
-    fun toggleTorch() = interactor.toggleTorch()
+    fun toggleTorch() =
+        interactor.toggleTorch()
 
-    fun launchNotificationFromKeyguard(event: IslandEvent.Notification) {
+    fun launchNotificationFromKeyguard(
+        event: IslandEvent.Notification
+    ) {
         interactor.launchNotificationDismissingKeyguard(event)
     }
 
-    fun handleAospChipTap(event: IslandEvent.AospChip, expandable: Expandable): Boolean {
+    fun handleAospChipTap(
+        event: IslandEvent.AospChip,
+        expandable: Expandable,
+    ): Boolean {
         val active = event.active
+
         return when (val behavior = active.clickBehavior) {
             is OngoingActivityChipModel.ClickBehavior.ShowHeadsUpNotification -> {
                 behavior.onClick()
                 true
             }
+
             is OngoingActivityChipModel.ClickBehavior.HideHeadsUpNotification -> {
                 behavior.onClick()
                 true
             }
+
             is OngoingActivityChipModel.ClickBehavior.ExpandAction -> {
                 behavior.onClick(expandable)
                 true
             }
-            is OngoingActivityChipModel.ClickBehavior.None -> false
+
+            is OngoingActivityChipModel.ClickBehavior.None -> {
+                false
+            }
         }
     }
 
@@ -215,6 +332,11 @@ constructor(
 
     private fun formatChargingString(text: String?): String {
         val cleaned = text?.trim()
-        return if (cleaned.isNullOrEmpty()) "" else cleaned
+
+        return if (cleaned.isNullOrEmpty()) {
+            ""
+        } else {
+            cleaned
+        }
     }
 }

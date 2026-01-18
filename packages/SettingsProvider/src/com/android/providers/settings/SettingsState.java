@@ -443,8 +443,9 @@ public class SettingsState {
         // get package name and flag name
         int dotIdx = fullFlagName.lastIndexOf(".");
         if (dotIdx == -1) {
-            Slog.e(LOG_TAG, "invalid override flag name " + name);
-            return null;
+            //Slog.w(LOG_TAG, "invalid override flag name " + name);
+            //return null;
+            Slog.w(LOG_TAG, "no package name in override flag name " + name);
         }
         AconfigdFlagInfo flag = flagInfoDefault.get(fullFlagName);
         if (flag == null || !namespace.equals(flag.getNamespace())) {

@@ -103,6 +103,7 @@ import com.android.internal.util.Preconditions;
 import com.android.server.FgThread;
 import com.android.server.IoThread;
 import com.android.server.LocalServices;
+import com.android.server.location.LocationManagerService;
 import com.android.server.location.LocationPermissions;
 import com.android.server.location.LocationPermissions.PermissionLevel;
 import com.android.server.location.fudger.LocationFudger;
@@ -187,6 +188,17 @@ public class LocationProviderManager extends
     private static final int STATE_STARTED = 0;
     private static final int STATE_STOPPING = 1;
     private static final int STATE_STOPPED = 2;
+
+    private boolean mMockProviderEnabled = false;
+    private static boolean mMockEnabled = false;
+
+    public static void setMockEnabled(boolean enabled) {
+        mMockEnabled = enabled;
+    }
+
+    public boolean isMockProviderEnabled() {
+        return mMockProviderEnabled;
+    }
 
     public interface StateChangedListener {
         void onStateChanged(String provider, AbstractLocationProvider.State oldState,
@@ -379,6 +391,7 @@ public class LocationProviderManager extends
         private final LocationRequest mBaseRequest;
         private final CallerIdentity mIdentity;
         private final @PermissionLevel int mPermissionLevel;
+        private final @PermissionLevel int mBaikalPermissionLevel;
 
         // we cache these values because checking/calculating on the fly is more expensive
         @GuardedBy("mMultiplexerLock")
@@ -410,7 +423,9 @@ public class LocationProviderManager extends
 
             mBaseRequest = Objects.requireNonNull(request);
             mIdentity = Objects.requireNonNull(identity);
-            mPermissionLevel = permissionLevel;
+            
+            mPermissionLevel = LocationManagerService.getBaikalLocationManager().overridePermissionLevel(permissionLevel, request, identity);
+            mBaikalPermissionLevel = LocationManagerService.getBaikalLocationManager().getBaikalPermissionLevel(request, identity);
             mProviderLocationRequest = request;
         }
 
@@ -938,6 +953,12 @@ public class LocationProviderManager extends
         @Override
         @Nullable ListenerOperation<LocationTransport> acceptLocationChange(
                 LocationResult fineLocationResult) {
+            if( LocationManagerService.isMockProviderEnabled() ) {
+                if( !mMockProviderEnabled ) {
+                    Log.e(TAG, "acceptLocationChange: not current mock provider. Ignore.");
+                    return null;
+                }
+            }
             // check expiration time - alarm is not guaranteed to go off at the right time,
             // especially for short intervals
             if (SystemClock.elapsedRealtime() >= mExpirationRealtimeMs) {
@@ -1351,6 +1372,12 @@ public class LocationProviderManager extends
         @Override
         @Nullable ListenerOperation<LocationTransport> acceptLocationChange(
                 @Nullable LocationResult fineLocationResult) {
+            if( LocationManagerService.isMockProviderEnabled() ) {
+                if( !mMockProviderEnabled ) {
+                    Log.e(TAG, "acceptLocationChange: (2) not current mock provider. Ignore.");
+                    return null;
+                }
+            }
             // check expiration time - alarm is not guaranteed to go off at the right time,
             // especially for short intervals
             if (SystemClock.elapsedRealtime() >= mExpirationRealtimeMs) {
@@ -1778,6 +1805,7 @@ public class LocationProviderManager extends
                 Binder.restoreCallingIdentity(identity);
             }
 
+            mMockProviderEnabled = provider == null ? false : true;
             // when removing a mock provider, also clear any mock last locations and reset the
             // location fudger. the mock provider could have been used to infer the current
             // location fudger offsets.
@@ -1869,6 +1897,11 @@ public class LocationProviderManager extends
             }
         }
 
+        if(D) Log.d(TAG, "getLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
+
+        if( location != null && location.isMock() ) {
+            location.setMock(false);
+        }
         return location;
     }
 
@@ -1980,6 +2013,23 @@ public class LocationProviderManager extends
         } else if (userId == USER_CURRENT) {
             setLastLocation(location, mUserHelper.getCurrentUserId());
             return;
+        }
+
+
+        if(D) Log.d(TAG, "setLastLocation: mMockProviderEnabled=" + mMockProviderEnabled + " " + location);
+        /*if( GPS_PROVIDER.equals(mName) && !mMockProviderEnabled ) {
+            Log.e(TAG, "setLastLocation: ", new Throwable());
+        }*/
+
+        if( LocationManagerService.isMockProviderEnabled() ) {
+            if( !mMockProviderEnabled ) {
+                Log.e(TAG, "setLastLocation: not current mock provider. Ignore.");
+                return;
+            }
+        }
+
+        if( location != null && location.isMock() ) {
+            location.setMock(false);
         }
 
         Preconditions.checkArgument(userId >= 0);
@@ -2332,40 +2382,85 @@ public class LocationProviderManager extends
     @Override
     protected boolean isActive(Registration registration) {
         if (!registration.isPermitted()) {
+            if (D) {
+                Log.d(TAG, mName + " isPermitted: false for " + registration);
+            }
             return false;
         }
 
         boolean isBypass = registration.getRequest().isBypass();
         if (!isActive(isBypass, registration.getIdentity())) {
+            if (D) {
+                Log.d(TAG, mName + " isActive: false for " + registration);
+            }
             return false;
         }
 
+        int uid = LocationManagerService.getBaikalLocationManager().getRequestUid(registration.getIdentity().getUid(), registration.getRequest());
+
+        int level = LocationManagerService.getBaikalLocationManager().getLocationLevel(uid);
+        if( level > 4 ) {
+            if (D) {
+                Log.d(TAG, mName + " level: " + level + " for " + registration);
+            }
+            return false;
+        }
+
+        int mode = (int)mLocationPowerSaveModeHelper.getLocationPowerSaveMode();
+
         if (!isBypass) {
             switch (mLocationPowerSaveModeHelper.getLocationPowerSaveMode()) {
-                case LOCATION_MODE_FOREGROUND_ONLY:
-                    if (!registration.isForeground()) {
+                case LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF: 
+                    if (D) {
+                        Log.d(TAG, mName + " mode: LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF (" + mode + ") for " + registration);
+                    }
+                    return false;
+                case LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF: // Network only
+                    if (GPS_PROVIDER.equals(mName)) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF (" + mode + ") for " + registration);
+                        }
                         return false;
                     }
                     break;
-                case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF:
-                    if (!GPS_PROVIDER.equals(mName)) {
+                case LOCATION_MODE_FOREGROUND_ONLY: // ForegroundOnly
+                    if (!registration.isForeground()) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: LOCATION_MODE_FOREGROUND_ONLY (" + mode + ") for " + registration);
+                        }
+                        return false;
+                    }
+                    break;
+                case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF: // Foreground GPS + NetworkOnly 
+                    if (registration.isForeground()) {
                         break;
                     }
-                    // fall through
-                case LOCATION_MODE_THROTTLE_REQUESTS_WHEN_SCREEN_OFF:
-                    // fall through
-                case LOCATION_MODE_ALL_DISABLED_WHEN_SCREEN_OFF:
-                    if (!mScreenInteractiveHelper.isInteractive()) {
+                    if (GPS_PROVIDER.equals(mName)) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF (" + mode + ") for " + registration);
+                        }
                         return false;
                     }
                     break;
-                case LOCATION_MODE_NO_CHANGE:
-                    // fall through
+                case LOCATION_MODE_NO_CHANGE: // Default
+                    break;
+
+                case 929292:
+                    if (!mScreenInteractiveHelper.isInteractive()) {
+                        if (D) {
+                            Log.d(TAG, mName + " mode: 929292 (" + mode + ") for " + registration);
+                        }
+                        return false;
+                    }
+                    break;
                 default:
                     break;
             }
         }
 
+        if (D) {
+            Log.d(TAG, mName + " mode: DEFAULT (" + mode + ") for " + registration);
+        }
         return true;
     }
 
@@ -2546,6 +2641,8 @@ public class LocationProviderManager extends
     }
 
     private void onScreenInteractiveChanged(boolean screenInteractive) {
+    	updateRegistrations(registration -> true);
+    	/*
         switch (mLocationPowerSaveModeHelper.getLocationPowerSaveMode()) {
             case LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF:
                 if (!GPS_PROVIDER.equals(mName)) {
@@ -2559,7 +2656,7 @@ public class LocationProviderManager extends
                 break;
             default:
                 break;
-        }
+        }*/
     }
 
     private void onEmergencyStateChanged() {
@@ -2661,6 +2758,13 @@ public class LocationProviderManager extends
         } else {
             // passive provider should get already processed results as input
             processed = locationResult;
+        }
+
+		if( LocationManagerService.isMockProviderEnabled() ) {
+            if( !mMockProviderEnabled ) {
+                Log.e(TAG, "onReportLocation: not current mock provider. Ignore.");
+                return;
+            }
         }
 
         // check for non-monotonic locations if we're not the passive manager. the passive manager

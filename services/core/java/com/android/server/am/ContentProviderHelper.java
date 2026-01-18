@@ -557,6 +557,9 @@ public class ContentProviderHelper {
                                     : PROVIDER_ACQUISITION_EVENT_REPORTED__PACKAGE_STOPPED_STATE__PACKAGE_STATE_NORMAL;
                             final boolean firstLaunch = cpr.appInfo.isNotLaunched();
                             checkTime(startTime, "getContentProviderImpl: before start process");
+
+                            mService.getBaikalAM().incBackgroundStartCount(cpi.applicationInfo.uid,Binder.getCallingUid(),Binder.getCallingPid());
+
                             proc = mService.startProcessLocked(
                                     cpi.processName, cpr.appInfo, false, 0,
                                     new HostingRecord(HostingRecord.HOSTING_TYPE_CONTENT_PROVIDER,

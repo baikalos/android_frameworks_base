@@ -88,7 +88,7 @@ public class Watchdog implements Dumpable {
     static final String TAG = "Watchdog";
 
     /** Debug flag. */
-    public static final boolean DEBUG = false;
+    public static final boolean DEBUG = true;
 
     // Set this to true to use debug default values.
     private static final boolean DB = false;
@@ -992,7 +992,7 @@ public class Watchdog implements Dumpable {
                 Slog.w(TAG, "*** WATCHDOG KILLING SYSTEM PROCESS: " + subject);
                 WatchdogDiagnostics.diagnoseCheckers(blockedCheckers);
                 Slog.w(TAG, "*** GOODBYE!");
-                if (!Build.IS_USER && isCrashLoopFound()
+                if (/*!Build.IS_USER &&*/ isCrashLoopFound()
                         && !WatchdogProperties.should_ignore_fatal_count().orElse(false)) {
                     breakCrashLoop();
                 }
@@ -1043,7 +1043,7 @@ public class Watchdog implements Dumpable {
                 Runnable::run, /* latencyTracker= */null);
         // Give some extra time to make sure the stack traces get written.
         // The system's been hanging for a whlie, another second or two won't hurt much.
-        SystemClock.sleep(5000);
+        SystemClock.sleep(10000);
         processCpuTracker.update();
         report.append(processCpuTracker.printCurrentState(anrTime, 10));
         report.append(tracesFileException.getBuffer());
@@ -1073,7 +1073,7 @@ public class Watchdog implements Dumpable {
             };
         dropboxThread.start();
         try {
-            dropboxThread.join(2000);  // wait up to 2 seconds for it to return.
+            dropboxThread.join(5000);  // wait up to 2 seconds for it to return.
         } catch (InterruptedException ignored) { }
     }
 
@@ -1151,7 +1151,7 @@ public class Watchdog implements Dumpable {
                 Slog.w(TAG, String.format("sysprops '%s' and '%s' should be set or unset together",
                             PROP_FATAL_LOOP_COUNT, PROP_FATAL_LOOP_WINDOWS_SECS));
             }
-            return false;
+            //return false;
         }
 
         // new-history = [last (fatalCount - 1) items in old-history] + [nowMs].
@@ -1167,7 +1167,7 @@ public class Watchdog implements Dumpable {
 
         // Returns false if the device has an active USB connection.
         if (hasActiveUsbConnection()) {
-            return false;
+            //return false;
         }
 
         long firstCrashMs;
