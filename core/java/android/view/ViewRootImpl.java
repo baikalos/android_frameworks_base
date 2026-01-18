@@ -160,6 +160,8 @@ import android.app.UiModeManager.ForceInvertStateChangeListener;
 import android.app.WindowConfiguration;
 import android.app.compat.CompatChanges;
 import android.app.servertransaction.WindowStateTransactionItem;
+import android.baikalos.BaikalAppProfile;
+import android.baikalos.BaikalContext;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
 import android.compat.annotation.UnsupportedAppUsage;
@@ -2057,7 +2059,15 @@ public final class ViewRootImpl implements ViewParent,
     }
 
     private int getNightMode() {
-        return getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        switch(BaikalAppProfile.getCurrentAppProfile().mDarkMode) {
+            case 1:
+            case 2:
+                return Configuration.UI_MODE_NIGHT_YES;
+            case 3:
+                return Configuration.UI_MODE_NIGHT_NO;
+            default:
+                return getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        }
     }
 
     /**
@@ -2073,9 +2083,23 @@ public final class ViewRootImpl implements ViewParent,
             // Checking if the app choose to apply AutoDark for its dark theme before applying
             // forceInvertDark from the system.
             boolean useAutoDark = getNightMode() == Configuration.UI_MODE_NIGHT_YES;
+            if(BaikalAppProfile.getCurrentAppProfile().mDarkMode == 3) return ForceDarkType.NONE;
+            if(BaikalAppProfile.getCurrentAppProfile().mDarkMode == 2) return ForceDarkType.FORCE_INVERT_COLOR_DARK;
+
+            boolean forceDark = BaikalAppProfile.getCurrentAppProfile().mDarkMode == 1;
+
+            if( forceDark ) {
+                if( a.getBoolean(R.styleable.Theme_isLightTheme, true)
+                        && a.getBoolean(R.styleable.Theme_forceDarkAllowed, true) ) {
+                    return ForceDarkType.FORCE_DARK;
+                } else {
+                    return ForceDarkType.FORCE_INVERT_COLOR_DARK;
+                }
+            }
+
             if (useAutoDark) {
                 boolean forceDarkAllowedDefault =
-                        SystemProperties.getBoolean(ThreadedRenderer.DEBUG_FORCE_DARK, false);
+                        SystemProperties.getBoolean(ThreadedRenderer.DEBUG_FORCE_DARK, false) || forceDark;
                 useAutoDark = a.getBoolean(R.styleable.Theme_isLightTheme, true)
                         && a.getBoolean(R.styleable.Theme_forceDarkAllowed,
                             forceDarkAllowedDefault);

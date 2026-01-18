@@ -5667,14 +5667,18 @@ public class ComputerEngine implements Computer {
             final AndroidPackage p = mPackages.valueAt(index);
             var packageState = mSettings.getPackage(p.getPackageName());
 
+            var profile = mService.mBaikalPM.getBaikalUserAppPofile(p.getPackageName());
+
+            final boolean isPinned = (profile != null ? profile.isPinned() : false);
+
             final boolean matchesUnaware = ((flags & MATCH_DIRECT_BOOT_UNAWARE) != 0)
                     && !p.isDirectBootAware();
             final boolean matchesAware = ((flags & MATCH_DIRECT_BOOT_AWARE) != 0)
                     && p.isDirectBootAware();
 
-            if (p.isPersistent()
+            if (((p.isPersistent() || isPinned)
                     && (!safeMode || packageState.isSystem())
-                    && (matchesUnaware || matchesAware)) {
+                    && (matchesUnaware || matchesAware))) {
                 PackageStateInternal ps = mSettings.getPackage(p.getPackageName());
                 if (ps != null) {
                     ApplicationInfo ai = PackageInfoUtils.generateApplicationInfo(p, flags,

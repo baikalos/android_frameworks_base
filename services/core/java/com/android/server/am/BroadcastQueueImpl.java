@@ -1028,6 +1028,9 @@ class BroadcastQueueImpl extends BroadcastQueue {
                     "startProcessLocked failed");
             return true;
         }
+
+        mService.getBaikalAM().incBackgroundStartCount(info.uid, r.callingUid, r.callingPid);
+
         queue.setProcessStartInitiatedTimestampMillis(SystemClock.uptimeMillis());
         // TODO: b/335420031 - cache receiver intent to avoid multiple calls to getReceiverIntent.
         mService.mProcessList.getAppStartInfoTracker().handleProcessBroadcastStart(

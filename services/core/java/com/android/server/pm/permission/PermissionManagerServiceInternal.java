@@ -253,6 +253,12 @@ public interface PermissionManagerServiceInternal extends PermissionManagerInter
     void onSystemReady();
 
     /**
+     * Callback when the system is ready.
+     */
+    //@SystemApi(client = SystemApi.Client.SYSTEM_SERVER)
+    void onSystemReadyForUser(int userId);
+
+    /**
      * Callback when a storage volume is mounted, so that all packages on it become available.
      *
      * @param volumeUuid the UUID of the storage volume

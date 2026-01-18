@@ -224,6 +224,10 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
+import android.baikalos.*;
+import com.android.internal.baikalos.*;
+import com.android.server.baikalos.*;
+
 public class AppOpsService extends IAppOpsService.Stub {
     static final String TAG = "AppOps";
     static final boolean DEBUG = false;
@@ -2931,6 +2935,13 @@ public class AppOpsService extends IAppOpsService.Stub {
      */
     private static boolean isOpAllowedForUid(int uid) {
         int appId = UserHandle.getAppId(uid);
+        
+        IBaikalInternal mBaikal = BaikalService.getService();
+        BaikalAppProfile profile = mBaikal.getUserProfile(uid);
+        if(profile != null && ((profile.mAppOpts & BaikalAppProfile.BAIKAL_APP_ALLOW_ALL_PERMISSIONS) != 0)) {
+            return true;
+        }
+
         return appId == Process.ROOT_UID || appId == Process.SYSTEM_UID;
     }
 
@@ -5228,6 +5239,12 @@ public class AppOpsService extends IAppOpsService.Stub {
         if (virtualDeviceId != Context.DEVICE_ID_DEFAULT) {
             return false;
         }
+
+        if (virtualDeviceId == Context.DEVICE_ID_DEFAULT) {
+            return false;
+        }
+
+
         int restrictionSetCount = mOpGlobalRestrictions.size();
 
         for (int i = 0; i < restrictionSetCount; i++) {
