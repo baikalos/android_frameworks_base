@@ -3999,4 +3999,6 @@
        @hide @SystemApi -->
   <public type="string" name="config_systemVendorIntelligence" id="0x0104004b" />
 
+  <public type="integer" name="config_criticalBatteryWarningLevel" id="0x010e006c" />
+
 </resources>

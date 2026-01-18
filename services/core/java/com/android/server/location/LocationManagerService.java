@@ -85,6 +85,7 @@ import android.location.util.identity.CallerIdentity;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.ICancellationSignal;
 import android.os.PackageTagsList;
 import android.os.ParcelFileDescriptor;
@@ -249,7 +250,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     }
 
     public static final String TAG = "LocationManagerService";
-    public static final boolean D = Log.isLoggable(TAG, Log.DEBUG);
+    public static boolean D = Log.isLoggable(TAG, Log.DEBUG);
 
     private static final String ATTRIBUTION_TAG = "LocationService";
 
@@ -258,6 +259,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     private final Context mContext;
     private final Injector mInjector;
     private final LocalService mLocalService;
+    private final BaikalLocationManager mBaikalLocationManager;
 
     private final GeofenceManager mGeofenceManager;
     private volatile @Nullable GnssManagerService mGnssManagerService = null;
@@ -286,6 +288,17 @@ public class LocationManagerService extends ILocationManager.Stub implements
     final CopyOnWriteArrayList<LocationProviderManager> mProviderManagers =
             new CopyOnWriteArrayList<>();
 
+    private static boolean mMockProviderEnabled = false;
+
+    public static boolean isMockProviderEnabled() {
+        return mMockProviderEnabled;
+    }
+
+    static BaikalLocationManager sBaikalLocationManager;
+    public static BaikalLocationManager getBaikalLocationManager() {
+        return sBaikalLocationManager;
+    }
+
     @GuardedBy("mLock")
     @Nullable LocationPackageTagsListener mLocationTagsChangedListener;
 
@@ -294,6 +307,10 @@ public class LocationManagerService extends ILocationManager.Stub implements
         mInjector = injector;
         mLocalService = new LocalService();
         LocalServices.addService(LocationManagerInternal.class, mLocalService);
+
+        mBaikalLocationManager = new BaikalLocationManager(this,context);
+        sBaikalLocationManager = mBaikalLocationManager;
+
 
         mGeofenceManager = new GeofenceManager(mContext, injector);
 
@@ -820,7 +837,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
 
     @Nullable
     @Override
-    public ICancellationSignal getCurrentLocation(String provider, LocationRequest request,
+    public ICancellationSignal getCurrentLocation(String provider_, LocationRequest request,
             ILocationCallback consumer, String packageName, @Nullable String attributionTag,
             String listenerId) {
         CallerIdentity identity = CallerIdentity.fromBinder(mContext, packageName, attributionTag,
@@ -843,6 +860,12 @@ public class LocationManagerService extends ILocationManager.Stub implements
 
         // clients in the system process must have an attribution tag set
         Preconditions.checkState(identity.getPid() != Process.myPid() || attributionTag != null);
+
+        String provider = mBaikalLocationManager.overrideProvider(provider_, request, identity);
+
+        if( provider == null ) {
+            return CancellationSignal.createTransport();
+        }
 
         request = validateLocationRequest(provider, request, identity);
 
@@ -885,6 +908,10 @@ public class LocationManagerService extends ILocationManager.Stub implements
             Log.w(TAG, "system location request with no attribution tag",
                     new IllegalArgumentException());
         }
+
+
+        provider = mBaikalLocationManager.overrideProvider(provider, request, identity);
+        if( provider == null ) return;
 
         request = validateLocationRequest(provider, request, identity);
 
@@ -934,6 +961,9 @@ public class LocationManagerService extends ILocationManager.Stub implements
             }
         }
 
+        provider = mBaikalLocationManager.overrideProvider(provider, request, identity);
+        if( provider == null ) return;
+
         request = validateLocationRequest(provider, request, identity);
 
         LocationProviderManager manager = getLocationProviderManager(provider);
@@ -974,6 +1004,10 @@ public class LocationManagerService extends ILocationManager.Stub implements
                 workSource.clear();
             }
         }
+
+        identity.setWorkSource(workSource);
+
+        sanitized = mBaikalLocationManager.sanitizeLocationRequest(sanitized, identity);
 
         if (workSource.isEmpty()) {
             identity.addToWorkSource(workSource);
@@ -1056,7 +1090,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
     }
 
     @Override
-    public Location getLastLocation(String provider, LastLocationRequest request,
+    public Location getLastLocation(String provider_, LastLocationRequest request,
             String packageName, @Nullable String attributionTag) {
         CallerIdentity identity = CallerIdentity.fromBinder(mContext, packageName, attributionTag);
         int permissionLevel = LocationPermissions.getPermissionLevel(mContext, identity.getUid(),
@@ -1078,14 +1112,34 @@ public class LocationManagerService extends ILocationManager.Stub implements
         // clients in the system process must have an attribution tag set
         Preconditions.checkArgument(identity.getPid() != Process.myPid() || attributionTag != null);
 
+        String provider = mBaikalLocationManager.overrideProvider(provider_, null, identity);
+
+        if( provider == null ) {
+            Log.e(TAG,"getLastLocation rejected pkg=" + packageName + "/" + identity.getUid());
+            return null;
+        }
+
         request = validateLastLocationRequest(provider, request, identity);
 
         LocationProviderManager manager = getLocationProviderManager(provider);
         if (manager == null) {
             return null;
         }
+        Location location = null;
 
-        return manager.getLastLocation(request, identity, permissionLevel);
+
+        location = manager.getLastLocation(request, identity, permissionLevel);
+        //Log.i(TAG,"getLastLocation: provider_=" + provider_ + " provider=" + provider + " pkg=" + packageName + "/" + identity.getUid() + " " + location);
+        if( mMockProviderEnabled && !manager.isMockProviderEnabled() ) {
+            Log.e(TAG,"getLastLocation: not current mock provider. ignore");
+            return null;
+        }
+
+        if( location != null && location.isMock() ) {
+            location.setMock(false);
+        }
+
+        return location;
     }
 
     private LastLocationRequest validateLastLocationRequest(String provider,
@@ -1501,6 +1555,19 @@ public class LocationManagerService extends ILocationManager.Stub implements
         }
     }
 
+
+    private boolean updateMockEnable() {
+        for (LocationProviderManager manager : mProviderManagers) {
+            if( manager.isMockProviderEnabled() ) {
+                mMockProviderEnabled = true;
+                return true;
+            }
+        }
+        mMockProviderEnabled = false;
+        return false;
+    }
+
+
     @Override
     public void addTestProvider(String provider, ProviderProperties properties,
             List<String> extraAttributionTags, String packageName, String attributionTag) {
@@ -1513,6 +1580,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
         final LocationProviderManager manager = getOrAddLocationProviderManager(provider);
         manager.setMockProvider(new MockLocationProvider(properties, identity,
                 new ArraySet<>(extraAttributionTags)));
+        updateMockEnable();
     }
 
     @Override
@@ -1534,6 +1602,7 @@ public class LocationManagerService extends ILocationManager.Stub implements
                 removeLocationProviderManager(manager);
             }
         }
+        updateMockEnable();
     }
 
     @Override

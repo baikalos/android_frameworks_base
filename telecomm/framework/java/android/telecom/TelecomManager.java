@@ -32,6 +32,8 @@ import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.annotation.SystemService;
 import android.annotation.TestApi;
+import android.baikalos.BaikalAppProfile;
+import android.baikalos.BaikalContext;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
 import android.compat.annotation.UnsupportedAppUsage;
@@ -1842,6 +1844,11 @@ public class TelecomManager {
      *         selected as the default dialer.
      */
     public String getDefaultDialerPackage() {
+
+        if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_OPCODE_DEFAULT_DIALER) != 0 ) {
+            return BaikalAppProfile.getCurrentAppProfile().mPackageName;
+        }
+
         ITelecomService service = getTelecomService();
         if (service != null) {
             try {
@@ -1864,6 +1871,11 @@ public class TelecomManager {
     @SystemApi
     @RequiresPermission(READ_PRIVILEGED_PHONE_STATE)
     public @Nullable String getDefaultDialerPackage(@NonNull UserHandle userHandle) {
+
+        if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_OPCODE_DEFAULT_DIALER) != 0 ) {
+            return BaikalAppProfile.getCurrentAppProfile().mPackageName;
+        }
+
         ITelecomService service = getTelecomService();
         if (service != null) {
             try {
@@ -1916,6 +1928,11 @@ public class TelecomManager {
      *         preloaded.
      */
     public @Nullable String getSystemDialerPackage() {
+
+        if( (BaikalAppProfile.getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_OPCODE_DEFAULT_DIALER) != 0 ) {
+            return BaikalAppProfile.getCurrentAppProfile().mPackageName;
+        }
+
         ITelecomService service = getTelecomService();
         if (service != null) {
             try {

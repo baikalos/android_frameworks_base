@@ -1475,9 +1475,9 @@ public class AppStandbyController
                 return STANDBY_BUCKET_EXEMPTED;
             }
 
-            if (isActiveNetworkScorer(packageName)) {
+            /*if (isActiveNetworkScorer(packageName)) {
                 return STANDBY_BUCKET_EXEMPTED;
-            }
+            }*/
 
             final int uid = UserHandle.getUid(userId, appId);
             synchronized (mSystemExemptionAppOpMode) {
@@ -1497,10 +1497,10 @@ public class AppStandbyController
                 }
             }
 
-            if (mAppWidgetManager != null
+            /*if (mAppWidgetManager != null
                     && mInjector.isBoundWidgetPackage(mAppWidgetManager, packageName, userId)) {
                 return STANDBY_BUCKET_ACTIVE;
-            }
+            }*/
 
             if (isDeviceProvisioningPackage(packageName)) {
                 return STANDBY_BUCKET_EXEMPTED;
@@ -1517,18 +1517,18 @@ public class AppStandbyController
         }
 
         // Check this last, as it can be the most expensive check
-        if (mHasFeatureTelephonySubscription && isCarrierApp(packageName)) {
+        /*if (mHasFeatureTelephonySubscription && isCarrierApp(packageName)) {
             return STANDBY_BUCKET_EXEMPTED;
-        }
+        }*/
 
         if (isHeadlessSystemApp(packageName)) {
             return STANDBY_BUCKET_ACTIVE;
         }
 
-        if (mSystemServicesReady
+        /*if (mSystemServicesReady
                 && mInjector.isBackgroundLocationPermissionGranted(packageName, userId)) {
             return STANDBY_BUCKET_FREQUENT;
-        }
+        }*/
 
         return STANDBY_BUCKET_NEVER;
     }
@@ -1728,6 +1728,20 @@ public class AppStandbyController
     }
 
     @Override
+    public void setAppStandbyBucketInternal(@NonNull String packageName, int userId, long elapsedRealtime,
+            int bucket, int reason) {
+
+        if (!mAppIdleEnabled) return;
+
+        synchronized (mAppIdleLock) {
+            bucket = Math.min(bucket, getAppMinBucket(packageName, userId));
+            mAppIdleHistory.setAppStandbyBucket(packageName, userId, elapsedRealtime, bucket,
+                    reason, true);
+        }
+        maybeInformListeners(packageName, userId, elapsedRealtime, bucket, reason, false);
+    }
+
+    @Override
     public void setAppStandbyBucket(@NonNull String packageName, int bucket, int userId,
             int callingUid, int callingPid) {
         setAppStandbyBuckets(
@@ -1784,6 +1798,7 @@ public class AppStandbyController
             int reason) {
         setAppStandbyBucket(
                 packageName, userId, newBucket, reason, mInjector.elapsedRealtime(), false);
+
     }
 
     private void setAppStandbyBucket(String packageName, int userId, @StandbyBuckets int newBucket,

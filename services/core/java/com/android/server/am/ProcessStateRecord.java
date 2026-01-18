@@ -1228,7 +1228,7 @@ final class ProcessStateRecord {
 
     @GuardedBy("mService")
     boolean isBackgroundRestricted() {
-        return mBackgroundRestricted;
+        return mApp.mService.getBaikalAM().overrideIsBackgroundRestricted(mApp,mBackgroundRestricted);
     }
 
     @GuardedBy("mService")

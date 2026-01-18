@@ -163,6 +163,8 @@ import android.app.UiModeManager.ForceInvertStateChangeListener;
 import android.app.WindowConfiguration;
 import android.app.compat.CompatChanges;
 import android.app.servertransaction.WindowStateTransactionItem;
+import android.baikalos.BaikalAppProfile;
+import android.baikalos.BaikalContext;
 import android.compat.annotation.ChangeId;
 import android.compat.annotation.EnabledSince;
 import android.compat.annotation.UnsupportedAppUsage;
@@ -2043,6 +2045,7 @@ public final class ViewRootImpl implements ViewParent,
     }
 
     private int getNightMode() {
+        if(BaikalAppProfile.getCurrentAppProfile().mDarkMode == 3) return Configuration.UI_MODE_NIGHT_NO;
         return getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
     }
 
@@ -2058,19 +2061,6 @@ public final class ViewRootImpl implements ViewParent,
         try {
             // Checking if the app choose to apply AutoDark for its dark theme before applying
             // forceInvertDark from the system.
-            boolean useAutoDark = getNightMode() == Configuration.UI_MODE_NIGHT_YES;
-            if (useAutoDark) {
-                boolean forceDarkAllowedDefault =
-                        SystemProperties.getBoolean(ThreadedRenderer.DEBUG_FORCE_DARK, false);
-                useAutoDark = a.getBoolean(R.styleable.Theme_isLightTheme, true)
-                        && a.getBoolean(R.styleable.Theme_forceDarkAllowed,
-                            forceDarkAllowedDefault);
-
-                if (useAutoDark) {
-                    return ForceDarkType.FORCE_DARK;
-                }
-            }
-
             if (forceInvertColor()) {
                 // Force invert ignores all developer opt-outs.
                 // We also ignore dark theme, since the app developer can override the user's
@@ -2090,7 +2080,24 @@ public final class ViewRootImpl implements ViewParent,
                 }
             }
 
-            return ForceDarkType.NONE;
+            if(BaikalAppProfile.getCurrentAppProfile().mDarkMode == 3) return ForceDarkType.NONE;
+
+            boolean forceDark = BaikalAppProfile.getCurrentAppProfile().mDarkMode == 2;
+            boolean useAutoDark = getNightMode() == Configuration.UI_MODE_NIGHT_YES;
+
+            if (!forceDark && useAutoDark) {
+                boolean forceDarkAllowedDefault =
+                        SystemProperties.getBoolean(ThreadedRenderer.DEBUG_FORCE_DARK, 
+                        BaikalAppProfile.getCurrentAppProfile().mDarkMode == 1);
+                useAutoDark = a.getBoolean(R.styleable.Theme_isLightTheme, true)
+                        && a.getBoolean(R.styleable.Theme_forceDarkAllowed,
+                            forceDarkAllowedDefault);
+
+                if (useAutoDark) {
+                    return ForceDarkType.FORCE_DARK;
+                }
+            }
+            return (useAutoDark || forceDark) ? ForceDarkType.FORCE_DARK : ForceDarkType.NONE;
         } finally {
             a.recycle();
         }

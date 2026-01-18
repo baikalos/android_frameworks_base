@@ -167,7 +167,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     private static final int TCP_MAX_PORT = 0xffff;
 
     // 1 second, or 1 Hz frequency.
-    private static final long LOCATION_UPDATE_MIN_TIME_INTERVAL_MILLIS = 1000;
+    private static final long LOCATION_UPDATE_MIN_TIME_INTERVAL_MILLIS = 100;
     // Default update duration in milliseconds for REQUEST_LOCATION.
     private static final long LOCATION_UPDATE_DURATION_MILLIS = 10 * 1000;
     // Update duration extension multiplier for emergency REQUEST_LOCATION.
@@ -312,6 +312,7 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
     private int mC2KServerPort;
     private boolean mSuplEsEnabled = false;
     private boolean mNiSuplMessageListenerRegistered = false;
+	private boolean mBaikalLocationMode = true;
 
     private final LocationExtras mLocationExtras = new LocationExtras();
     private final NetworkTimeHelper mNetworkTimeHelper;
@@ -441,6 +442,9 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         // Construct internal handler
         mHandler = FgThread.getHandler();
 
+        mBaikalLocationMode = (Settings.Global.getInt(mContext.getContentResolver(),
+                            Settings.Global.BAIKALOS_LOCATION_MODE, 1) != 0);
+
         // Load GPS configuration and register listeners in the background:
         // some operations, such as opening files and registering broadcast receivers, can take a
         // relative long time, so the ctor() is kept to create objects needed by this instance,
@@ -515,6 +519,20 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
                 new ContentObserver(mHandler) {
                     @Override
                     public void onChange(boolean selfChange) {
+                        updateEnabled();
+                    }
+                }, UserHandle.USER_ALL);
+
+        mContext.getContentResolver().registerContentObserver(
+                Settings.Global.getUriFor(Settings.Global.BAIKALOS_LOCATION_MODE),
+                true,
+                new ContentObserver(mHandler) {
+                    @Override
+                    public void onChange(boolean selfChange) {
+                        mBaikalLocationMode =
+                            (Settings.Global.getInt(mContext.getContentResolver(),
+                            Settings.Global.BAIKALOS_LOCATION_MODE, 1) != 0);
+                        Log.d(TAG, "GPS:BaikalOS location mode changed: " + mBaikalLocationMode);
                         updateEnabled();
                     }
                 }, UserHandle.USER_ALL);
@@ -978,6 +996,8 @@ public class GnssLocationProvider extends AbstractLocationProvider implements
         enabled |= (mProviderRequest != null
                 && mProviderRequest.isActive()
                 && mProviderRequest.isBypass());
+
+        enabled &= mBaikalLocationMode;
 
         // .. disable if automotive device needs to go into suspend
         synchronized (mLock) {

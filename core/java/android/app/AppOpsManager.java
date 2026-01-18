@@ -3160,7 +3160,7 @@ public class AppOpsManager {
         new AppOpInfo.Builder(OP_NONE, "", "").setDefaultMode(AppOpsManager.MODE_IGNORED).build(),
         new AppOpInfo.Builder(OP_AUTO_REVOKE_PERMISSIONS_IF_UNUSED,
                 OPSTR_AUTO_REVOKE_PERMISSIONS_IF_UNUSED, "AUTO_REVOKE_PERMISSIONS_IF_UNUSED")
-            .build(),
+            .setDefaultMode(AppOpsManager.MODE_IGNORED).build(),
         new AppOpInfo.Builder(OP_AUTO_REVOKE_MANAGED_BY_INSTALLER,
                 OPSTR_AUTO_REVOKE_MANAGED_BY_INSTALLER, "AUTO_REVOKE_MANAGED_BY_INSTALLER")
             .setDefaultMode(AppOpsManager.MODE_ALLOWED).build(),

@@ -35,6 +35,7 @@ import android.app.ApplicationExitInfo.Reason;
 import android.app.ApplicationExitInfo.SubReason;
 import android.app.BackgroundStartPrivileges;
 import android.app.IApplicationThread;
+import android.baikalos.BaikalAppProfile;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManagerInternal;
 import android.content.pm.ProcessInfo;
@@ -196,6 +197,12 @@ class ProcessRecord implements WindowProcessListener {
      */
     @GuardedBy("mService")
     private long mStartSeq;
+
+    /**
+     * Seq no. Indicating the latest process start associated with this process record.
+     */
+    @GuardedBy("mService")
+    private BaikalAppProfile mBaikalAppProfile;
 
     /**
      * Params used in starting this process.
@@ -633,6 +640,10 @@ class ProcessRecord implements WindowProcessListener {
         mProfile.init(now);
         mOptRecord.init(now);
         mState.init(now);
+        mBaikalAppProfile = mService.getBaikalAM() != null ? 
+                                    mService.getBaikalAM().createProfileForProcessRecord(uid,info,isolated,isSdkSandbox,_definingUid,_processName)
+                                    : new BaikalAppProfile(processName,uid);
+        mBaikalAppProfile.active(now);
         mWindowProcessController = new WindowProcessController(
                 mService.mActivityTaskManager, info, processName, uid, userId, this, this);
         mPkgList.put(_info.packageName, new ProcessStats.ProcessStateHolder(_info.longVersionCode));
@@ -859,6 +870,16 @@ class ProcessRecord implements WindowProcessListener {
     @GuardedBy("mService")
     void setStartSeq(long startSeq) {
         mStartSeq = startSeq;
+    }
+
+    @GuardedBy("mService")
+    BaikalAppProfile getBaikalAppProfile() {
+        return mBaikalAppProfile;
+    }
+
+    @GuardedBy("mService")
+    void setBaikalAppProfile(BaikalAppProfile profile) {
+        mBaikalAppProfile = profile;
     }
 
     HostingRecord getHostingRecord() {
@@ -1125,6 +1146,7 @@ class ProcessRecord implements WindowProcessListener {
     @GuardedBy({"mService", "mProcLock"})
     void setLastActivityTime(long lastActivityTime) {
         mLastActivityTime = lastActivityTime;
+        if( lastActivityTime > mBaikalAppProfile.getLastActive() ) mBaikalAppProfile.active(lastActivityTime);
     }
 
     @GuardedBy("mService")
@@ -1733,7 +1755,7 @@ class ProcessRecord implements WindowProcessListener {
     }
 
     public void setWasForceStopped(boolean stopped) {
-        mWasForceStopped = stopped;
+        mWasForceStopped = false; //stopped;
     }
 
     public boolean wasForceStopped() {

@@ -297,10 +297,13 @@ public class PermissionManagerService extends IPermissionManager.Stub {
             @NonNull String packageName, boolean exempted, int userId) {
         Objects.requireNonNull(packageName);
 
+        Slog.w(LOG_TAG, "setAutoRevokeExempted: pkg=" + packageName + ", ex=" + exempted + ", user="  + userId);
+
         final AndroidPackage pkg = mPackageManagerInt.getPackage(packageName);
         final int callingUid = Binder.getCallingUid();
 
         if (!checkAutoRevokeAccess(pkg, callingUid)) {
+            Slog.w(LOG_TAG, "setAutoRevokeExempted: checkAutoRevokeAccess=false, pkg=" + packageName + ", ex=" + exempted + ", user="  + userId);
             return false;
         }
 
@@ -316,6 +319,7 @@ public class PermissionManagerService extends IPermissionManager.Stub {
         if (mAppOpsManager.checkOpNoThrow(AppOpsManager.OP_AUTO_REVOKE_MANAGED_BY_INSTALLER,
                 attributionSource) != MODE_ALLOWED) {
             // Allowlist user set - don't override
+            Slog.w(LOG_TAG, "setAutoRevokeExempted: OP_AUTO_REVOKE_MANAGED_BY_INSTALLER, pkg=" + pkg.getPackageName() + ", ex=" + exempted + ", user="  + userId);
             return false;
         }
 
@@ -733,6 +737,7 @@ public class PermissionManagerService extends IPermissionManager.Stub {
             Preconditions.checkArgument(rawUserId >= UserHandle.USER_SYSTEM
                     || rawUserId == UserHandle.USER_ALL, "userId");
 
+
             mPermissionManagerServiceImpl.onPackageInstalled(pkg, previousAppId, params, rawUserId);
             final int[] userIds = rawUserId == UserHandle.USER_ALL ? getAllUserIds()
                     : new int[] { rawUserId };
@@ -740,8 +745,11 @@ public class PermissionManagerService extends IPermissionManager.Stub {
                 final int autoRevokePermissionsMode = params.getAutoRevokePermissionsMode();
                 if (autoRevokePermissionsMode == AppOpsManager.MODE_ALLOWED
                         || autoRevokePermissionsMode == AppOpsManager.MODE_IGNORED) {
+                    Slog.w(LOG_TAG, "Skipping onPackageInstalled().setAutoRevokeExemptedInternal for appop=" + autoRevokePermissionsMode);
                     setAutoRevokeExemptedInternal(pkg,
                             autoRevokePermissionsMode == AppOpsManager.MODE_IGNORED, userId);
+                } else {
+                    Slog.w(LOG_TAG, "Skipping onPackageInstalled().setAutoRevokeExemptedInternal for non-existent appop=" + autoRevokePermissionsMode);
                 }
             }
         }
@@ -1129,6 +1137,9 @@ public class PermissionManagerService extends IPermissionManager.Stub {
                 @NonNull String permission, @NonNull AttributionSource attributionSource,
                 @Nullable String message, boolean forDataDelivery, boolean startDataDelivery,
                 boolean fromDatasource, int attributedOp) {
+
+            boolean log = permission.contains("WRITE_DEVICE_CONFIG") ? true : false;
+
             PermissionInfo permissionInfo = sPlatformPermissions.get(permission);
             if (permissionInfo == null) {
                 try {
@@ -1140,15 +1151,18 @@ public class PermissionManagerService extends IPermissionManager.Stub {
                         sPlatformPermissions.put(permission, permissionInfo);
                     }
                 } catch (PackageManager.NameNotFoundException ignored) {
+                    if(log) Slog.e(LOG_TAG, "PERMISSION_HARD_DENIED " + permission + " for " + context.getOpPackageName());
                     return PermissionChecker.PERMISSION_HARD_DENIED;
                 }
             }
 
             if (permissionInfo.isAppOp()) {
+                if(log) Slog.e(LOG_TAG, "Appop permission " + permission + " for " + context.getOpPackageName());
                 return checkAppOpPermission(context, permissionManagerServiceInt, permission,
                         attributionSource, message, forDataDelivery, fromDatasource);
             }
             if (permissionInfo.isRuntime()) {
+                if(log) Slog.e(LOG_TAG, "isRuntime permission " + permission + " for " + context.getOpPackageName());
                 return checkRuntimePermission(context, permissionManagerServiceInt, permission,
                         attributionSource, message, forDataDelivery, startDataDelivery,
                         fromDatasource, attributedOp);
@@ -1156,15 +1170,18 @@ public class PermissionManagerService extends IPermissionManager.Stub {
 
             if (!fromDatasource && !checkPermission(context, permissionManagerServiceInt,
                     permission, attributionSource)) {
+                if(log) Slog.e(LOG_TAG, "PERMISSION_HARD_DENIED2 permission " + permission + " for " + context.getOpPackageName());
                 return PermissionChecker.PERMISSION_HARD_DENIED;
             }
 
             if (attributionSource.getNext() != null) {
+                if(log) Slog.e(LOG_TAG, "attributionSource permission " + permission + " for " + context.getOpPackageName());
                 return checkPermission(context, permissionManagerServiceInt, permission,
                         attributionSource.getNext(), message, forDataDelivery, startDataDelivery,
                         /*fromDatasource*/ false, attributedOp);
             }
 
+            if(log) Slog.e(LOG_TAG, "PERMISSION_GRANTED permission " + permission + " for " + context.getOpPackageName());
             return PermissionChecker.PERMISSION_GRANTED;
         }
 

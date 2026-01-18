@@ -89,6 +89,17 @@ static void setPowerBoost(Boost boost, int32_t durationMs) {
     SurfaceComposerClient::notifyPowerBoost(static_cast<int32_t>(boost));
 }
 
+static bool setPowerBoostBaikal(Boost boost, int32_t durationMs) {
+    auto result = gPowerHalController.setBoost(boost, durationMs);
+    if( result.isOk() ) {
+        SurfaceComposerClient::notifyPowerBoost(static_cast<int32_t>(boost));
+        return true;
+    }
+
+    ALOGE("setBoost failed: %s", result.errorMessage());
+    return false;
+}
+
 static bool setPowerMode(Mode mode, bool enabled) {
     android::base::Timer t;
     auto result = gPowerHalController.setMode(mode, enabled);
@@ -96,7 +107,13 @@ static bool setPowerMode(Mode mode, bool enabled) {
         ALOGD("Excessive delay in setting interactive mode to %s while turning screen %s",
               enabled ? "true" : "false", enabled ? "on" : "off");
     }
-    return result.isOk();
+
+    if (result.isOk()) {
+        return true;
+    }
+
+    ALOGE("setMode failed: %s", result.errorMessage());
+    return false;
 }
 
 void android_server_PowerManagerService_userActivity(nsecs_t eventTime, int32_t eventType,
@@ -240,6 +257,11 @@ static void nativeSetAutoSuspend(JNIEnv* /* env */, jclass /* clazz */, jboolean
 static void nativeSetPowerBoost(JNIEnv* /* env */, jclass /* clazz */, jint boost,
                                 jint durationMs) {
     setPowerBoost(static_cast<Boost>(boost), durationMs);
+
+}
+static jboolean nativeSetPowerBoostBaikal(JNIEnv* /* env */, jclass /* clazz */, jint boost,
+                                jint durationMs) {
+    return setPowerBoostBaikal(static_cast<Boost>(boost), durationMs);
 }
 
 static jboolean nativeSetPowerMode(JNIEnv* /* env */, jclass /* clazz */, jint mode,
@@ -266,6 +288,7 @@ static const JNINativeMethod gPowerManagerServiceMethods[] = {
         {"nativeSetAutoSuspend", "(Z)V", (void*)nativeSetAutoSuspend},
         {"nativeSetPowerBoost", "(II)V", (void*)nativeSetPowerBoost},
         {"nativeSetPowerMode", "(IZ)Z", (void*)nativeSetPowerMode},
+        {"nativeSetPowerBoostBaikal", "(II)Z", (void*)nativeSetPowerBoostBaikal},
 };
 
 #define FIND_CLASS(var, className) \

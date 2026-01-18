@@ -760,6 +760,11 @@
     <!-- UI debug setting: Select Bluetooth Audio LDAC Codec: LDAC Playback Quality -->
     <string name="bluetooth_select_a2dp_codec_ldac_playback_quality_dialog_title">Trigger Bluetooth Audio LDAC\u000ACodec Selection: Playback Quality</string>
 
+    <!-- UI debug setting: Trigger Bluetooth Audio SBCHD Playback Bitrate Selection -->
+    <string name="bluetooth_select_a2dp_codec_sbchd_playback_bitrate">Bluetooth Audio SBC Codec: Bitrate</string>
+    <!-- UI debug setting: Select Bluetooth Audio SBCHD Codec: SBCHD Playback Bitrate -->
+    <string name="bluetooth_select_a2dp_codec_sbchd_playback_bitrate_dialog_title">Trigger Bluetooth Audio SBC\u000ACodec Selection: Bitrate</string>
+
     <!-- [CHAR LIMIT=NONE] Label for displaying Bluetooth Audio Codec Parameters while streaming -->
     <string name="bluetooth_select_a2dp_codec_streaming_label">Streaming: <xliff:g id="streaming_parameter">%1$s</xliff:g></string>
 

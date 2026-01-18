@@ -30,6 +30,8 @@ import android.annotation.SpecialUsers.CanBeALL;
 import android.annotation.SpecialUsers.CanBeCURRENT;
 import android.annotation.SuppressLint;
 import android.annotation.UiContext;
+import android.baikalos.BaikalAppProfile;
+import android.baikalos.BaikalContext;
 import android.companion.virtual.VirtualDeviceManager;
 import android.compat.annotation.UnsupportedAppUsage;
 import android.content.AttributionSource;
@@ -297,6 +299,8 @@ class ContextImpl extends Context {
 
     private ContentCaptureOptions mContentCaptureOptions = null;
 
+    private BaikalContext mBaikalContext;
+
     /**
      * Indicates this {@link Context} can not handle UI components properly and is not associated
      * with a {@link Display} instance.
@@ -423,6 +427,11 @@ class ContextImpl extends Context {
             context = nextContext;
         }
         return (ContextImpl)context;
+    }
+
+    @Override 
+    public @NonNull BaikalContext getBaikalContext() {
+        return mBaikalContext;
     }
 
     @Override
@@ -2349,6 +2358,51 @@ class ContextImpl extends Context {
                 Binder.getCallingUid()) == PERMISSION_GRANTED;
     }
 
+    private boolean isBaikalForcePermission(String permission, int pid, int uid) {
+
+        int checkUid = uid;
+        try {
+            checkUid = Binder.getCallingUid();
+        } catch(Exception ex) {}
+
+        if( checkUid != android.os.Process.myUid() ) return false;
+
+        if( (getBaikalContext().getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_LOCATION) != 0 ) {
+            if( android.Manifest.permission.ACCESS_BACKGROUND_LOCATION.equals(permission) || 
+                android.Manifest.permission.ACCESS_COARSE_LOCATION.equals(permission) || 
+                android.Manifest.permission.ACCESS_FINE_LOCATION.equals(permission) || 
+                android.Manifest.permission.FOREGROUND_SERVICE_LOCATION.equals(permission) || 
+                android.Manifest.permission.ACCESS_MEDIA_LOCATION.equals(permission) || 
+                android.Manifest.permission.ACCESS_MOCK_LOCATION.equals(permission) ) {
+                Log.v(TAG, "checkPermission: isBaikalForcePermission forced " + permission + " " + pid + "/" + uid);
+                return true;
+            }
+        }
+
+        if( (getBaikalContext().getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_PHONE) != 0 ) {
+            if( android.Manifest.permission.READ_PHONE_STATE.equals(permission) || 
+                android.Manifest.permission.CALL_PHONE.equals(permission) || 
+                android.Manifest.permission.MANAGE_OWN_CALLS.equals(permission) || 
+                android.Manifest.permission.ANSWER_PHONE_CALLS.equals(permission) || 
+                android.Manifest.permission.READ_CALL_LOG.equals(permission) || 
+                android.Manifest.permission.WRITE_CALL_LOG.equals(permission) ) {
+                Log.v(TAG, "checkPermission: isBaikalForcePermission forced " + permission + " " + pid + "/" + uid);
+                return true;
+            }
+        }
+
+        if( (getBaikalContext().getCurrentAppProfile().mAppOpts & BaikalAppProfile.BAIKAL_APP_HIDE_SMS) != 0 ) {
+            if( android.Manifest.permission.SEND_SMS.equals(permission) || 
+                android.Manifest.permission.READ_SMS.equals(permission) || 
+                android.Manifest.permission.RECEIVE_SMS.equals(permission) ) {
+                Log.v(TAG, "checkPermission: isBaikalForcePermission forced " + permission + " " + pid + "/" + uid);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     @Override
     public int checkPermission(String permission, int pid, int uid) {
         if (permission == null) {
@@ -2359,6 +2413,12 @@ class ContextImpl extends Context {
             Log.v(TAG, "Treating renounced permission " + permission + " as denied");
             return PERMISSION_DENIED;
         }
+
+        try {
+            if( isBaikalForcePermission(permission,pid,uid) ) return PERMISSION_GRANTED;
+        } catch(Exception e) {
+        }
+
         int deviceId = PermissionManager.resolveDeviceIdForPermissionCheck(this, getDeviceId(),
                 permission);
         return PermissionManager.checkPermission(permission, pid, uid, deviceId);
@@ -2367,14 +2427,14 @@ class ContextImpl extends Context {
     /** @hide */
     @Override
     public int checkPermission(String permission, int pid, int uid, IBinder callerToken) {
-        if (permission == null) {
+        /*if (permission == null) {
             throw new IllegalArgumentException("permission is null");
         }
         if (mParams.isRenouncedPermission(permission)
                 && pid == android.os.Process.myPid() && uid == android.os.Process.myUid()) {
             Log.v(TAG, "Treating renounced permission " + permission + " as denied");
             return PERMISSION_DENIED;
-        }
+        }*/
         return checkPermission(permission, pid, uid);
     }
 
@@ -3603,6 +3663,8 @@ class ContextImpl extends Context {
         mAttributionSource = createAttributionSource(attributionTag, nextAttributionSource,
                 params.getRenouncedPermissions(), params.shouldRegisterAttributionSource(), mDeviceId);
         mContentResolver = new ApplicationContentResolver(this, mainThread);
+
+        mBaikalContext = new BaikalContext(this, mContentResolver, mFlags, mBasePackageName, mOpPackageName, mParams);
     }
 
     private @NonNull AttributionSource createAttributionSource(@Nullable String attributionTag,
