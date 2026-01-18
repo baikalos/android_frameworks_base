@@ -497,6 +497,14 @@ DeprecationMismatch: javax.microedition.khronos.egl.EGL10#eglCreatePixmapSurface
     Method javax.microedition.khronos.egl.EGL10.eglCreatePixmapSurface(javax.microedition.khronos.egl.EGLDisplay, javax.microedition.khronos.egl.EGLConfig, Object, int[]): @Deprecated annotation (present) and @deprecated doc tag (not present) do not match
 
 
+HiddenTypeParameter: android.baikalos.BaikalContextImpl#BaikalContextImpl(android.content.Context, android.app.ActivityThread, android.content.ContentResolver, int, String, String, android.content.ContextParams) parameter #1:
+    Parameter mainThread references hidden type android.app.ActivityThread.
+
+
+ReferencesHidden: android.baikalos.BaikalContextImpl#BaikalContextImpl(android.content.Context, android.app.ActivityThread, android.content.ContentResolver, int, String, String, android.content.ContextParams) parameter #1:
+    Class android.app.ActivityThread is hidden but was referenced (in parameter type) from public parameter mainThread in android.baikalos.BaikalContextImpl(android.content.Context context, android.app.ActivityThread mainThread, android.content.ContentResolver contentResolver, int flags, String basePackageName, String opPackageName, android.content.ContextParams params)
+
+
 RequiresPermission: android.accounts.AccountManager#getAccountsByTypeAndFeatures(String, String[], android.accounts.AccountManagerCallback<android.accounts.Account[]>, android.os.Handler):
     Method 'getAccountsByTypeAndFeatures' documentation mentions permissions without declaring @RequiresPermission
 RequiresPermission: android.accounts.AccountManager#hasFeatures(android.accounts.Account, String[], android.accounts.AccountManagerCallback<java.lang.Boolean>, android.os.Handler):
