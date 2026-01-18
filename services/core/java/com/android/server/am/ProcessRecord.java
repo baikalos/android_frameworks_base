@@ -39,6 +39,7 @@ import android.app.BackgroundStartPrivileges;
 import android.app.IApplicationThread;
 import android.app.ProcessMemoryState.HostingComponentType;
 import android.content.ComponentName;
+import android.baikalos.BaikalAppProfile;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManagerInternal;
 import android.content.pm.ProcessInfo;
@@ -88,7 +89,7 @@ import java.util.function.Consumer;
  * Full information about a particular process that
  * is currently running.
  */
-class ProcessRecord extends ProcessRecordInternal implements WindowProcessListener,
+public class ProcessRecord extends ProcessRecordInternal implements WindowProcessListener,
         ProcessServiceRecordInternal.Observer {
     static final String TAG = TAG_WITH_CLASS_NAME ? "ProcessRecord" : TAG_AM;
 
@@ -653,6 +654,16 @@ class ProcessRecord extends ProcessRecordInternal implements WindowProcessListen
         mProfile.init(now);
         mOptRecord.init(now);
         super.init(mWindowProcessController, mProfile, now);
+        BaikalAppProfile baikalAppProfile = null;
+        if( mService.getBaikalAM() != null ) {
+            baikalAppProfile = mService.getBaikalAM().createProfileForProcessRecord(uid,info,isolated,isSdkSandbox,_definingUid,_processName);
+            Slog.d(TAG, "new ProcessRecord:" + baikalAppProfile.serialize());
+        } else {
+            baikalAppProfile = new BaikalAppProfile(uid);
+            Slog.d(TAG, "new ProcessRecord: default profile:" + baikalAppProfile.serialize());
+        }
+        setBaikalAppProfile(baikalAppProfile);
+        getBaikalAppProfile().active(now);
         mPkgList.put(_info.packageName, new ProcessStats.ProcessStateHolder(_info.longVersionCode));
         updateProcessRecordNodes(this);
     }
@@ -1407,6 +1418,7 @@ class ProcessRecord extends ProcessRecordInternal implements WindowProcessListen
                     mService.mProcessStateController.setKilled(this, true);
                     mService.mProcessStateController.setKilledByAm(this, true);
                     mKillTime = SystemClock.uptimeMillis();
+                    getBaikalAppProfile().active(0);
                 }
             }
             Trace.traceEnd(Trace.TRACE_TAG_ACTIVITY_MANAGER);
@@ -1880,7 +1892,7 @@ class ProcessRecord extends ProcessRecordInternal implements WindowProcessListen
     }
 
     public void setWasForceStopped(boolean stopped) {
-        mWasForceStopped = stopped;
+        mWasForceStopped = false; //stopped;
     }
 
     public boolean wasForceStopped() {

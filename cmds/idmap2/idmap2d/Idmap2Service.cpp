@@ -62,7 +62,7 @@ using PolicyBitmask = android::ResTable_overlayable_policy_header::PolicyBitmask
 namespace {
 
 constexpr std::string_view kFrameworkPath = "/system/framework/framework-res.apk";
-constexpr std::string_view kLineagePath = "/system/framework/org.lineageos.platform-res.apk";
+constexpr std::string_view kLineagePath = "/system/framework/org.mineageos.platform-res.apk";
 
 Status ok() {
   return Status::ok();

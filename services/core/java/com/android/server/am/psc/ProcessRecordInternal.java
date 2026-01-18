@@ -40,6 +40,7 @@ import android.app.ActivityManager.ProcessCapability;
 import android.app.ActivityManager.ProcessState;
 import android.app.ApplicationExitInfo;
 import android.app.ProcessMemoryState.HostingComponentType;
+import android.baikalos.BaikalAppProfile;
 import android.os.Process;
 import android.os.SystemClock;
 import android.os.Trace;
@@ -762,6 +763,12 @@ public abstract class ProcessRecordInternal {
     @GuardedBy("mServiceLock")
     private boolean mPendingFinishAttach;
 
+    /**
+     * Seq no. Indicating the latest process start associated with this process record.
+     */
+    @GuardedBy("mServiceLock")
+    private BaikalAppProfile mBaikalAppProfile;
+
     // Below are the cached task info for OomAdjuster only
     private static final int VALUE_INVALID = -1;
     private static final int VALUE_FALSE = 0;
@@ -856,6 +863,16 @@ public abstract class ProcessRecordInternal {
         mObserver = observer;
         mStartedServiceObserver = startedServiceObserver;
         mLastStateTime = now;
+    }
+
+    @GuardedBy("mServiceLock")
+    public BaikalAppProfile getBaikalAppProfile() {
+        return mBaikalAppProfile;
+    }
+
+    @GuardedBy("mServiceLock")
+    public void setBaikalAppProfile(BaikalAppProfile profile) {
+        mBaikalAppProfile = profile;
     }
 
     @GuardedBy(anyOf = {"mServiceLock", "mProcLock"})
@@ -1098,7 +1115,7 @@ public abstract class ProcessRecordInternal {
     }
 
     @GuardedBy(anyOf = {"mServiceLock", "mProcLock"})
-    @ProcessState int getCurProcState() {
+    public @ProcessState int getCurProcState() {
         return mCurProcState;
     }
 
@@ -1711,6 +1728,7 @@ public abstract class ProcessRecordInternal {
     @GuardedBy({"mServiceLock", "mProcLock"})
     void setLastActivityTime(long lastActivityTime) {
         mLastActivityTime = lastActivityTime;
+        if( lastActivityTime > mBaikalAppProfile.getLastActive() ) mBaikalAppProfile.active(lastActivityTime);
     }
 
     @GuardedBy("mProcLock")

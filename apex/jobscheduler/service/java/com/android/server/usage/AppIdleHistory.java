@@ -47,6 +47,10 @@ import android.util.SparseLongArray;
 import android.util.TimeUtils;
 import android.util.Xml;
 
+import com.android.server.LocalServices;
+
+import com.android.server.baikalos.IBaikalAppProfileInternal;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.CollectionUtils;
 import com.android.internal.util.FastXmlSerializer;
@@ -207,11 +211,14 @@ public class AppIdleHistory {
         int lastRestrictReason;
     }
 
+    private final IBaikalAppProfileInternal mBaikalAppProfileService;
+
     AppIdleHistory(File storageDir, long elapsedRealtime) {
         mElapsedSnapshot = elapsedRealtime;
         mScreenOnSnapshot = elapsedRealtime;
         mStorageDir = storageDir;
         readScreenOnTime();
+        mBaikalAppProfileService = LocalServices.getService(IBaikalAppProfileInternal.class);
     }
 
     public void updateDisplay(boolean screenOn, long elapsedRealtime) {
@@ -386,6 +393,8 @@ public class AppIdleHistory {
             appUsageHistory.lastUsedScreenTime = getScreenOnTime(nowElapsedRealtimeMs);
         }
 
+        newBucket = mBaikalAppProfileService.overrideStandbyBucket(packageName,newBucket,0);
+
         if (appUsageHistory.currentBucket >= newBucket) {
             if (appUsageHistory.currentBucket > newBucket) {
                 appUsageHistory.currentBucket = newBucket;
@@ -492,6 +501,9 @@ public class AppIdleHistory {
         ArrayMap<String, AppUsageHistory> userHistory = getUserHistory(userId);
         AppUsageHistory appUsageHistory =
                 getPackageHistory(userHistory, packageName, elapsedRealtime, true);
+
+        bucket = mBaikalAppProfileService.overrideStandbyBucket(packageName,bucket,0);
+
         final boolean changed = appUsageHistory.currentBucket != bucket;
         appUsageHistory.currentBucket = bucket;
         appUsageHistory.bucketingReason = reason;
@@ -830,6 +842,9 @@ public class AppIdleHistory {
                         appUsageHistory.currentBucket = currentBucketString == null
                                 ? STANDBY_BUCKET_ACTIVE
                                 : Integer.parseInt(currentBucketString);
+
+                        appUsageHistory.currentBucket = mBaikalAppProfileService.overrideStandbyBucket(packageName,appUsageHistory.currentBucket,0);
+
                         String bucketingReason =
                                 parser.getAttributeValue(null, ATTR_BUCKETING_REASON);
                         appUsageHistory.lastJobRunTime = getLongValue(parser,

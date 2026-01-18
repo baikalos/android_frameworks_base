@@ -1101,10 +1101,20 @@ class BroadcastQueueImpl extends BroadcastQueue {
             return true;
         }
 
+        if( Intent.ACTION_QUERY_PACKAGE_RESTART.equals(r.intent.getAction()) ) {
+            mRunningColdStart = null;
+            r.resultCode = android.app.Activity.RESULT_CANCELED;
+            finishReceiverActiveLocked(queue, BroadcastRecord.DELIVERY_SKIPPED, "App process is not started");
+            logv("Skipped " + r + "App process is not started");
+            return true;
+        }
+
         final Intent receiverIntent = r.getReceiverIntent(receiver);
         final String skipReason = shouldSkipReceiver(queue, r, index, receiverIntent);
+
         if (skipReason != null) {
             mRunningColdStart = null;
+            r.resultCode = android.app.Activity.RESULT_CANCELED;
             finishReceiverActiveLocked(queue, BroadcastRecord.DELIVERY_SKIPPED, skipReason);
             return true;
         }
@@ -1137,9 +1147,12 @@ class BroadcastQueueImpl extends BroadcastQueue {
         if (queue.app == null) {
             mRunningColdStart = null;
             finishReceiverActiveLocked(queue, BroadcastRecord.DELIVERY_FAILURE,
-                    "startProcessLocked failed");
+                    "startProcessLocked failed for " + info + ", intent=" + r.intent );
             return true;
         }
+
+        mService.getBaikalAM().incBackgroundStartCount(info.uid, r.callingUid, r.callingPid);
+
         queue.setProcessStartInitiatedTimestampMillis(SystemClock.uptimeMillis());
         mService.mProcessList.getAppStartInfoTracker().handleProcessBroadcastStart(
                 startTimeNs, queue.app, receiverIntent, r.alarm /* isAlarm */);

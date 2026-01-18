@@ -38,6 +38,7 @@ import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.IndentingPrintWriter;
 import android.view.Display;
+import android.util.Log;
 
 import com.android.app.tracing.TraceUtils;
 import com.android.internal.R;
@@ -75,6 +76,9 @@ import javax.inject.Inject;
 @DozeScope
 public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachine.Part,
         SensorEventListener {
+
+    private static final String TAG = "DozeService";
+
     private static final boolean DEBUG_AOD_BRIGHTNESS = SystemProperties
             .getBoolean("debug.aod_brightness", false);
     protected static final String ACTION_AOD_BRIGHTNESS =
@@ -163,7 +167,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
                 R.dimen.config_screenBrightnessMinimumDimAmountFloat);
 
         mDefaultDozeBrightness = mDisplayManager.getDefaultDozeBrightness(mContext.getDisplayId());
-        mScreenBrightnessDim = alwaysOnDisplayPolicy.dimBrightness;
+        mScreenBrightnessDim = mDefaultDozeBrightness; // alwaysOnDisplayPolicy.dimBrightness;
         float[] sensorToBrightness =
                 mDisplayManager.getDozeBrightnessSensorValueToBrightness(mContext.getDisplayId());
         if (sensorToBrightness == null) {
@@ -323,6 +327,11 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
     }
 
     private void resetBrightnessToDefault() {
+        Log.i(TAG, "setDozeScreenBrightness: mDefaultDozeBrightness=" + mDefaultDozeBrightness + 
+                   ", clampToUserSettingOrAutoBrightness=" + clampToUserSettingOrAutoBrightness(mDefaultDozeBrightness) +
+                   ", clampToDimBrightnessForScreenOff=" + clampToDimBrightnessForScreenOff(
+                clampToUserSettingOrAutoBrightness(mDefaultDozeBrightness)));
+
         mDozeService.setDozeScreenBrightness(clampToDimBrightnessForScreenOff(
                 clampToUserSettingOrAutoBrightness(mDefaultDozeBrightness)));
         mDozeHost.setAodDimmingScrim(0f);
@@ -366,6 +375,8 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
                 && mState == DozeMachine.State.INITIALIZED;
         if (screenTurningOff
                 && mWakefulnessLifecycle.getLastSleepReason() == GO_TO_SLEEP_REASON_TIMEOUT) {
+            Log.i(TAG, "clampToDimBrightnessForScreenOff: screenTurningOff: 1=" + (brightness - mScreenBrightnessMinimumDimAmount) + ", 2=" + mScreenBrightnessDim);
+
             return Math.max(
                     PowerManager.BRIGHTNESS_MIN,
                     // Use the lower of either the dim brightness, or the current brightness reduced
@@ -373,6 +384,7 @@ public class DozeScreenBrightness extends BroadcastReceiver implements DozeMachi
                     // DisplayPowerController#updatePowerState to apply a minimum dim amount.
                     Math.min(brightness - mScreenBrightnessMinimumDimAmount, mScreenBrightnessDim));
         } else {
+            Log.i(TAG, "clampToDimBrightnessForScreenOff: brightness=" + brightness);
             return brightness;
         }
     }
