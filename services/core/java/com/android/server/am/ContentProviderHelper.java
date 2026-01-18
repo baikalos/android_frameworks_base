@@ -563,6 +563,9 @@ public class ContentProviderHelper {
                                     cpi.shouldRunInPccSandbox(),
                                     callingUid, r != null ? r.processName : null,
                                     name, stable);
+
+                            mService.getBaikalAM().incBackgroundStartCount(cpi.applicationInfo.uid,Binder.getCallingUid(),Binder.getCallingPid());
+
                             proc = mService.startProcessLocked(
                                     cpi.processName, cpr.mAppInfo, false, 0,
                                     hostingRecord,

@@ -133,6 +133,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * AudioManager provides access to volume and ringer mode control.
@@ -1204,6 +1205,7 @@ public class AudioManager {
     @UnsupportedAppUsage
     @RequiresPermission(android.Manifest.permission.MODIFY_AUDIO_ROUTING)
     public int setAppVolume(String packageName, float volume) {
+        getContext().getBaikalContext().setAppVolume(packageName, volume);
         return AudioSystem.setAppVolume(packageName, volume);
     }
 
@@ -1223,7 +1225,23 @@ public class AudioManager {
         if (status != AudioManager.SUCCESS) {
             return new ArrayList<AppVolume>();
         }
-        return volumes;
+
+        boolean hasActive = volumes.stream()
+                .anyMatch(AppVolume::isActive);
+
+        if (hasActive) {
+            return volumes;
+        }
+
+        return volumes.stream()
+                .filter(volume -> !volume.getPackageName().equals("android")
+                        && !volume.getPackageName().equals("com.android.systemui"))
+                .map(volume -> new AppVolume(
+                        volume.getPackageName(),
+                        volume.isMuted(),
+                        volume.getVolume(),
+                        true))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
