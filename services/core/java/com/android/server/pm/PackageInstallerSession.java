@@ -1847,8 +1847,10 @@ public class PackageInstallerSession extends IPackageInstallerSession.Stub {
                 }
             }
         } catch (IOException e) {
-            throw new PrepareFailure(PackageManager.INSTALL_FAILED_BAD_SIGNATURE,
-                    "Failed to enable fs-verity to verify with idsig: " + e);
+            //throw new PrepareFailure(PackageManager.INSTALL_FAILED_BAD_SIGNATURE,
+            //        "Failed to enable fs-verity to verify with idsig: " + e);
+
+            Slog.e(TAG, "Failed to enable fs-verity to verify with idsig: " + e);
         }
     }
 

@@ -794,7 +794,7 @@ public abstract class AndroidKeyStoreKeyPairGeneratorSpi extends KeyPairGenerato
             throw new IllegalStateException("Not initialized");
         }
 
-        final @SecurityLevel int securityLevel =
+        @SecurityLevel int securityLevel = 
                 mSpec.isStrongBoxBacked()
                         ? SecurityLevel.STRONGBOX
                         : SecurityLevel.TRUSTED_ENVIRONMENT;

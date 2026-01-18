@@ -4294,4 +4294,6 @@
   <!-- @FlaggedApi(android.os.Flags.FLAG_MATERIAL_COLORS_10_2024)-->
   <public type="color" name="system_surface_tint_dark" id="0x010600dd" />
 
+  <public type="integer" name="config_criticalBatteryWarningLevel" id="0x010e006c" />
+
 </resources>

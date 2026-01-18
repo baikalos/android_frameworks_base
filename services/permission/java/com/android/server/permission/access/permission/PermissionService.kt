@@ -1038,7 +1038,9 @@ class PermissionService(private val service: AccessCheckingService) :
             permission.isRole -> {
                 if (!canManageRolePermission) {
                     if (reportError) {
-                        throw SecurityException("Permission $permissionName is managed by role")
+                Slog.e(
+                    LOG_TAG,
+                        "Permission $permissionName is managed by role")
                     }
                     return
                 }
@@ -1055,7 +1057,8 @@ class PermissionService(private val service: AccessCheckingService) :
                         !permission.isInstant
                 ) {
                     if (reportError) {
-                        throw SecurityException(
+                Slog.e(
+                    LOG_TAG,
                             "Cannot grant non-instant permission $permissionName to package" +
                                 " $packageName"
                         )
@@ -1065,7 +1068,8 @@ class PermissionService(private val service: AccessCheckingService) :
             }
             else -> {
                 if (reportError) {
-                    throw SecurityException(
+                Slog.e(
+                    LOG_TAG,
                         "Permission $permissionName requested by package $packageName is not a" +
                             " changeable permission type"
                     )

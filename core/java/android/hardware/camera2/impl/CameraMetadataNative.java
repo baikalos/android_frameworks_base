@@ -76,6 +76,7 @@ import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.ServiceSpecificException;
+import android.os.SystemProperties;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
@@ -475,6 +476,19 @@ public class CameraMetadataNative implements Parcelable {
         return get(key.getNativeKey());
     }
 
+
+    private static boolean DISABLE_HDR_PROP = false;
+    private static boolean ENABLE_LOG_PROP = false;
+
+    private static boolean init_ = false;
+    private static void initProp() {    
+        if( !init_ ) {
+            DISABLE_HDR_PROP = SystemProperties.getBoolean("persist.vendor.camera.hdr_disable", false);
+            ENABLE_LOG_PROP = SystemProperties.getBoolean("persist.vendor.camera.log_md", false);
+            init_ = true;
+        }
+    }
+
     /**
      * Look-up a metadata field value by its key.
      *
@@ -483,13 +497,46 @@ public class CameraMetadataNative implements Parcelable {
      */
     public <T> T get(Key<T> key) {
         Objects.requireNonNull(key, "key must not be null");
+        initProp();
 
-        // Check if key has been overridden to use a wrapper class on the java side.
+        T result;
+
         GetCommand g = sGetCommandMap.get(key);
         if (g != null) {
-            return g.getValue(this, key);
+            result = g.getValue(this, key);
+        } else {
+            result = getBase(key);
         }
-        return getBase(key);
+
+        // --- FULL GET LOGGING START ---
+        try {
+            if (DISABLE_HDR_PROP && key != null && key.getTag() == 0x80950005) {
+            // Force override xiaomi.hdr.hdrDetected to 0 (OFF)
+                if( ENABLE_LOG_PROP ) Log.i("MIUI_CAM_GET", "TagID: 0x" + Integer.toHexString(key.getTag()) + " | Name: " + key.getName() + " -> force override -> false");
+
+                if (result instanceof Boolean) {
+                    result = (T) Boolean.FALSE;
+                } else if (result instanceof Byte) {
+                    result = (T) Byte.valueOf((byte) 0);
+                } else if (result instanceof Integer) {
+                    result = (T) Integer.valueOf(0);
+                } else if (result instanceof Long) {
+                    result = (T) Long.valueOf(0);
+                }
+                //return result;
+            }
+
+            if (ENABLE_LOG_PROP && key != null) {
+                String valStr = (result != null) ? formatValue(result) : "null";
+                Log.i("MIUI_CAM_GET", "TagID: 0x" + Integer.toHexString(key.getTag()) + 
+                        " | Name: " + key.getName() + " -> " + valStr);
+            }
+        } catch (Throwable t) {
+            // Guard against rare formatting exceptions
+        }
+        // --- FULL GET LOGGING END ---
+
+        return result;
     }
 
     public synchronized void readFromParcel(Parcel in) {
@@ -530,13 +577,46 @@ public class CameraMetadataNative implements Parcelable {
      * type to the key.
      */
     public <T> void set(Key<T> key, T value) {
+        Objects.requireNonNull(key, "key must not be null");
+        initProp();
+
+        try {
+            if (DISABLE_HDR_PROP && key != null && key.getTag() == 0x80950000) {
+                // Force override xiaomi.hdr.enabled to false (OFF)
+                if( ENABLE_LOG_PROP ) Log.i("MIUI_CAM_SET", "Set TagID: 0x" + Integer.toHexString(key.getTag()) + 
+                            " | Name: " + key.getName() + " -> force override to false");
+                if (value instanceof Boolean) {
+                    value = (T) Boolean.FALSE;
+                } else if (value instanceof Byte) {
+                    value = (T) Byte.valueOf((byte) 0);
+                } else if (value instanceof Integer) {
+                    value = (T) Integer.valueOf(0);
+                } else if (value instanceof Long) {
+                    value = (T) Long.valueOf(0);
+                }
+            }
+        } catch (Throwable t) {
+            // Guard against rare formatting exceptions
+        }
+
         SetCommand s = sSetCommandMap.get(key);
         if (s != null) {
             s.setValue(this, value);
-            return;
+        } else {
+            setBase(key, value);
         }
 
-        setBase(key, value);
+        // --- FULL SET LOGGING START ---
+        try {
+            if (ENABLE_LOG_PROP && key != null) {
+                String valStr = (value != null) ? formatValue(value) : "null";
+                Log.i("MIUI_CAM_SET", "Set TagID: 0x" + Integer.toHexString(key.getTag()) + 
+                        " | Name: " + key.getName() + " -> " + valStr);
+            }
+        } catch (Throwable t) {
+            // Guard against rare formatting exceptions
+        }
+        // --- FULL SET LOGGING END ---
     }
 
     public <T> void set(CaptureRequest.Key<T> key, T value) {
@@ -549,6 +629,18 @@ public class CameraMetadataNative implements Parcelable {
 
     public <T> void set(CameraCharacteristics.Key<T> key, T value) {
         set(key.getNativeKey(), value);
+    }
+
+
+    // Helper method for pretty-printing values, place it inside CameraMetadataNative class
+    private static String formatValue(Object value) {
+        if (value == null) return "null";
+        if (value instanceof int[]) return java.util.Arrays.toString((int[]) value);
+        if (value instanceof byte[]) return java.util.Arrays.toString((byte[]) value);
+        if (value instanceof float[]) return java.util.Arrays.toString((float[]) value);
+        if (value instanceof long[]) return java.util.Arrays.toString((long[]) value);
+        if (value instanceof Object[]) return java.util.Arrays.toString((Object[]) value);
+        return value.toString();
     }
 
     // Keep up-to-date with camera_metadata.h
