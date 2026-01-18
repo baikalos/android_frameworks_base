@@ -227,20 +227,24 @@ final class CoreSettingsObserver extends ContentObserver {
     }
 
     private IntArray getVirtualDeviceIds() {
-        if (mVirtualDeviceManager == null) {
-            mVirtualDeviceManager = mActivityManagerService.mContext.getSystemService(
-                    VirtualDeviceManager.class);
+        try {
             if (mVirtualDeviceManager == null) {
-                return new IntArray(0);
+                mVirtualDeviceManager = mActivityManagerService.mContext.getSystemService(
+                        VirtualDeviceManager.class);
+                if (mVirtualDeviceManager == null) {
+                    return new IntArray(0);
+                }
             }
-        }
 
-        List<VirtualDevice> virtualDevices = mVirtualDeviceManager.getVirtualDevices();
-        IntArray deviceIds = new IntArray(virtualDevices.size());
-        for (int i = 0; i < virtualDevices.size(); i++) {
-            deviceIds.add(virtualDevices.get(i).getDeviceId());
+            List<VirtualDevice> virtualDevices = mVirtualDeviceManager.getVirtualDevices();
+            IntArray deviceIds = new IntArray(virtualDevices.size());
+            for (int i = 0; i < virtualDevices.size(); i++) {
+                deviceIds.add(virtualDevices.get(i).getDeviceId());
+            }
+            return deviceIds;
+        } catch( Exception e ) {
+            return new IntArray(0);
         }
-        return deviceIds;
     }
 
     /**
