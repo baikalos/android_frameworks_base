@@ -114,6 +114,8 @@ public class AdbService extends IAdbManager.Stub {
 
         @Override
         public boolean isAdbEnabled(byte transportType) {
+            Slog.d("AdbService", "isAdbEnabled: " + Binder.getCallingUid());
+
             switch (transportType) {
                 case AdbTransportType.USB:
                     return mIsAdbUsbEnabled;
@@ -431,7 +433,7 @@ public class AdbService extends IAdbManager.Stub {
     }
 
     private void setAdbEnabledDoNotCallDirectly(boolean enable, byte transportType) {
-        Slog.d(
+        /*Slog.d(
                 TAG,
                 "setAdbEnabled("
                         + enable
@@ -440,7 +442,7 @@ public class AdbService extends IAdbManager.Stub {
                         + ", mIsAdbWifiEnabled="
                         + mIsAdbWifiEnabled
                         + ", transportType="
-                        + transportType);
+                        + transportType);*/
 
         switch (transportType) {
             case AdbTransportType.USB:
