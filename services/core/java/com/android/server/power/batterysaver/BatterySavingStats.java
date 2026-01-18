@@ -45,7 +45,7 @@ public class BatterySavingStats {
 
     private static final String TAG = "BatterySavingStats";
 
-    private static final boolean DEBUG = BatterySaverPolicy.DEBUG;
+    public static boolean DEBUG = BatterySaverPolicy.DEBUG;
 
     private final Object mLock;
 

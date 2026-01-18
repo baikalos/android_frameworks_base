@@ -356,6 +356,9 @@ enum RuntimeFlags : uint32_t {
     DEBUG_ENABLE_PTRACE = 1 << 25,
     ENABLE_PAGE_SIZE_APP_COMPAT = 1 << 26,
     AUDIT_OUTGOING_TRANSACTIONS = 1 << 27,
+    BAIKAL_SPOOF_SU = 1 << 28,
+    BAIKAL_DEBUG = 1 << 29,
+    BAIKAL_FILTER_FS = 1 << 30,
 };
 
 enum UnsolicitedZygoteMessageTypes : uint32_t {
@@ -1909,6 +1912,47 @@ static void BindMountStorageDirs(JNIEnv* env, jobjectArray pkg_data_info_list,
   }
 }
 
+static void SetBaikalDebug(uint32_t runtime_flags, uid_t uid) {
+    if ((runtime_flags & RuntimeFlags::BAIKAL_DEBUG)) {
+        setenv("BAIKAL_FILTER_DEBUG", "1", 1);
+    }
+    if ((runtime_flags & RuntimeFlags::BAIKAL_FILTER_FS)) {
+        setenv("BAIKAL_FILTER_ACTIVE", "1", 1);
+    }
+    ALOGI("BaikalFS: sync UID %d - zygote set ready (%d %d)", uid, (runtime_flags & RuntimeFlags::BAIKAL_DEBUG), (runtime_flags & RuntimeFlags::BAIKAL_FILTER_FS));
+    setenv("BAIKAL_ENV_READY", "1", 1);
+}
+
+static void MountBaikalSu(uint32_t runtime_flags, uid_t uid) {
+    if (!(runtime_flags & RuntimeFlags::BAIKAL_SPOOF_SU)) {
+        return;
+    }
+
+    const char* source_layer = "/system/baikalos/bin";
+    const char* target_dir = "/system/xbin";
+
+    struct stat st;
+    if (stat(android::base::StringPrintf("%s/su", source_layer).c_str(), &st) != 0) {
+        ALOGE("BaikalOS: Fake su binary not found in %s", source_layer);
+        return;
+    }
+
+
+    if (mount(target_dir, target_dir, nullptr, MS_BIND | MS_REC, nullptr) == -1) {
+        ALOGE("BaikalOS: Failed to bind self for %s: %s", target_dir, strerror(errno));
+        return;
+    }
+    mount(nullptr, target_dir, nullptr, MS_PRIVATE, nullptr);
+
+    std::string opts = android::base::StringPrintf("lowerdir=%s:%s", source_layer, target_dir);
+
+    if (mount("overlay", target_dir, "overlay", MS_RDONLY, opts.c_str()) == -1) {
+        ALOGE("BaikalOS: Failed to mount su overlay for UID %d: %s", uid, strerror(errno));
+    } else {
+        ALOGW("BaikalOS: Fake su successfully injected for UID %d", uid);
+    }
+}
+
 // Utility routine to specialize a zygote child process.
 static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, jint runtime_flags,
                              jobjectArray rlimits, jlong permitted_capabilities,
@@ -1978,6 +2022,10 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
     if (mount_sysprop_overrides) {
         BindMountSyspropOverride(fail_fn, env);
         MountInitOverride(fail_fn, env);
+    }
+
+    if( uid >= 10000 ) {
+        MountBaikalSu(runtime_flags,uid); 
     }
 
     // If this zygote isn't root, it won't be able to create a process group,
@@ -2186,7 +2234,7 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
     // Make it easier to debug audit logs by setting the main thread's name to the
     // nice name rather than "app_process".
     if (nice_name.has_value()) {
-        ALOGI("Process %d created for %s", getpid(), nice_name.value().c_str());
+        ALOGW("Process %d/%d created for %s", getpid(), getuid(), nice_name.value().c_str());
         SetThreadName(nice_name.value());
     } else if (is_system_server) {
         SetThreadName("system_server");
@@ -2212,6 +2260,10 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
         initUnsolSocketToSystemServer();
     }
 
+    //if( uid >= 10000 ) {
+    SetBaikalDebug(runtime_flags,uid);
+    //}
+
     env->CallStaticVoidMethod(gZygoteClass, gCallPostForkChildHooks, runtime_flags,
                               is_system_server, is_child_zygote, managed_instruction_set);
 
@@ -2221,6 +2273,7 @@ static void SpecializeCommon(JNIEnv* env, uid_t uid, gid_t gid, jintArray gids, 
     if (env->ExceptionCheck()) {
         fail_fn("Error calling post fork hooks.");
     }
+
 }
 
 static uint64_t GetEffectiveCapabilityMask(JNIEnv* env) {

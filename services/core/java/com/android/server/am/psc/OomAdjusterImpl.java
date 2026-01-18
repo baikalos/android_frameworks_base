@@ -105,6 +105,7 @@ import android.util.Slog;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.server.ServiceThread;
+import com.android.server.am.ActivityManagerService;
 import com.android.server.am.Flags;
 import com.android.server.am.ProcessList;
 import com.android.server.am.psc.Constants.OomAdjust;
@@ -606,12 +607,12 @@ public class OomAdjusterImpl extends OomAdjuster {
 
     private int mZramWritebackOomAdj = DEFAULT_ZRAM_WRITEBACK_OOM_ADJ;
 
-    public OomAdjusterImpl(Object serviceLock, Object procLock, ProcessListInternal processList,
+    public OomAdjusterImpl(ActivityManagerService service, Object serviceLock, Object procLock, ProcessListInternal processList,
             ActiveUidsInternal activeUids, ServiceThread adjusterThread, Constants oomConstants,
             @NonNull GlobalState globalState, Injector injector, Callback callback,
             Handler updateHandler,
             HostingTypeProvider hostingTypeProvider) {
-        super(serviceLock, procLock, processList, activeUids, adjusterThread, oomConstants,
+        super(service, serviceLock, procLock, processList, activeUids, adjusterThread, oomConstants,
                 globalState, injector, callback, updateHandler, hostingTypeProvider);
 
         if (Flags.enableCapabilityControllerComputation()
